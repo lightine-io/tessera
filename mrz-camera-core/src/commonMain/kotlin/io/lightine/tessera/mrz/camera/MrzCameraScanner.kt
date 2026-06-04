@@ -16,10 +16,22 @@ import kotlinx.coroutines.flow.Flow
  * [CameraError] on [results] as a [`MrzScanResult.CaptureError`][MrzScanResult.CaptureError] — it never
  * throws from the stream, crashes, or hangs (ADR-020).
  *
- * **Contract shape (provisional).** This interface — and the [MrzFrameAnalyzer.scan] engine it is built
- * on — is the UI-agnostic, frame-source-agnostic contract that iOS mirrors. Per ADR-020 the shape stays
- * provisional until the `0.2.0` tag, validated against the AVFoundation implementation before it locks
- * under [ADR-007](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0007-strict-backward-compat-from-0x.md).
+ * **Contract shape — Kotlin frozen, Swift projection provisional.** This interface — and the
+ * [MrzFrameAnalyzer.scan] engine it is built on — is the UI-agnostic, frame-source-agnostic contract
+ * that iOS mirrors. Two freeze states apply at the `0.2.0` tag under
+ * [ADR-007](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0007-strict-backward-compat-from-0x.md):
+ *
+ * - **Kotlin/Android: freeze-ready and locked at the tag** (validated against the AVFoundation
+ *   implementation). The member shapes here — [results] as a [Flow], [start], [stop] — are stable for
+ *   the whole `0.x` line.
+ * - **Objective-C/Swift projection: provisional through `0.x`.** How these members surface to a Swift
+ *   caller — notably [results] as a Kotlin [Flow] handle rather than a native `AsyncSequence`, and
+ *   `suspend` functions as completion handlers — is explicitly **not** locked at `0.2.0`. Tessera may
+ *   add an idiomatic-Swift surface later in `0.x` (a hand-written `AsyncStream`/callback adapter, or a
+ *   tool such as SKIE) even though that changes the Swift projection of existing members — a change
+ *   ADR-007 would otherwise forbid. Marking the Swift projection provisional now is what keeps that
+ *   later adapter a legal, non-breaking change; see "Swift `Flow` / coroutines ergonomics" in
+ *   `docs/open-questions.md`.
  */
 public interface MrzCameraScanner {
     /**

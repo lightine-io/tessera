@@ -481,7 +481,7 @@ The `Tessera` XCFramework (ADR-019) exposes `MrzCameraScanner.results` as a Kotl
 
 **Source:** Surfaced in the `mrz-camera-ios` SPM packaging slice (the XCFramework header review).
 
-**Status:** Open — deferred. Not a blocker for first iOS distribution (the API is usable from Swift as-is). Revisit when there is a real Swift consumer, or as a 0.3.0+ polish item; weigh SKIE's value against adding a Gradle-plugin dependency to the build (ADR-020's "Swift-friendly headless API" consideration). Connected to whether [ADR-007](decisions/0007-strict-backward-compat-from-0x.md) treats the Swift-facing surface as part of the locked API at 1.0.
+**Status:** Partially resolved — adapter still deferred. The **freeze question this entry raised is decided (2026-06-04, pre-0.2.0 review)**: the Objective-C/Swift *projection* of the camera API (the `Flow`/`suspend` export) is **explicitly marked provisional through `0.x`** — **not** locked at the `0.2.0` tag — recorded in the `MrzCameraScanner` KDoc. So a later idiomatic-Swift surface (a hand-written `AsyncStream`/callback adapter, or [SKIE](https://skie.touchlab.co/)) remains a **legal, non-breaking change** under [ADR-007](decisions/0007-strict-backward-compat-from-0x.md) for the whole `0.x` line, rather than a 1.0-only change. **Still deferred:** building that adapter — not a blocker for first iOS distribution (the API is usable from Swift as-is); revisit when there is a real Swift consumer, or as a 0.3.0+ polish item, weighing SKIE's value against adding a Gradle-plugin dependency to the build (ADR-020's "Swift-friendly headless API" consideration).
 
 ### LICENSE file at project root
 
