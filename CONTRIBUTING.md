@@ -4,6 +4,10 @@ Thanks for your interest. Tessera is in pre-`1.0.0` development; the public API 
 
 The full contributor reference lives in the project documentation. This file is a short pointer.
 
+## Where you fit
+
+Not sure whether a task is open to you on your machine, or which setup document to read first? See [`docs/contributor-map.md`](docs/contributor-map.md) — it lays out the kinds of contributor, what each can work on (the one hard constraint: iOS work needs macOS), and where each should start.
+
 ## First-time setup
 
 If you haven't worked on this project before, start with [`docs/contributor-setup.md`](docs/contributor-setup.md) — a per-platform walkthrough covering cloning, configuring Git identity, and setting up the SSH commit and tag signing required by branch protection on `main`. The rest of this file assumes that setup is done.

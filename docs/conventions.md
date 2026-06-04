@@ -43,6 +43,17 @@ Architecture Decision Records (ADRs) capture significant decisions in a stable, 
 
 ADRs are *fixed* once accepted. If a decision changes, a new ADR supersedes the old one; the old one is marked deprecated but remains in the record. The intent is that the reasoning behind every significant choice is preserved, not lost.
 
+### What Every How-To / Setup Guide Must Include
+
+How-to and setup guides walk a contributor through getting something working — machine setup, a platform toolchain, a development workflow. Unlike feature documents (which describe the SDK), these describe a *procedure*, and a stale or wrong procedure wastes a contributor's time silently. Each how-to / setup guide includes:
+
+- **Prerequisites first** — what must already be true before the steps work, listed at the top, with a reference for where to get each tool. Prerequisites double as the capability gate: "iOS work requires macOS" is a prerequisite stated up front, not a branch discovered halfway down.
+- **One verified happy path** — the single route the project has actually confirmed, written as the main line. Not a copied (and possibly stale) internet guide, and not every theoretical variation — one path known to run.
+- **Targeted troubleshooting** — only the real "if X then Y" problems actually hit on this project, not an exhaustive tree of every possible failure. Full branching rots and bloats; a short list of genuine gotchas stays trustworthy.
+- **A "Verified working: [date]" stamp** — the trust signal recording when this path was last confirmed against reality. It ties to the habit of checking current vendor documentation at write time (see [`.claude/rules/consult-vendor-docs.md`](../.claude/rules/consult-vendor-docs.md)).
+
+This shape applies to **every** how-to / setup guide, on every platform, for the life of the project — mobile today, web / desktop / AR when they arrive. It is defined by *what the document is* (a procedure to get something working), not by which platform or release it covers. An AI assistant editing any guide auto-loads this convention via [`.claude/rules/guide-style.md`](../.claude/rules/guide-style.md); the contributor-facing router that points at these guides is [`contributor-map.md`](contributor-map.md).
+
 ### Cross-References Between Documents
 
 Documents reference each other by relative file path within the repository. References are explicit: "see `architecture.md`" rather than vague allusions like "see the architecture doc somewhere."
