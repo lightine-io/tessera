@@ -130,7 +130,7 @@ jobs:
       # The toolchain version tracks the Kotlin version, so the version catalog is the cache key;
       # restore-keys lets a Kotlin bump fall back to the previous toolchain while it re-provisions.
       - name: Cache Kotlin/Native toolchain
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.konan
           key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
