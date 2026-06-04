@@ -19,14 +19,14 @@ kotlin {
 
     jvmToolchain(21)
 
-    // iOS targets (ADR-017): device arm64 plus the Apple-Silicon and Intel simulators. These three
+    // iOS targets (ADR-017): device arm64 plus the Apple-Silicon simulator. These two
     // standard shortcuts activate Kotlin's default hierarchy template, providing the shared
     // iosMain/iosTest source sets where the AVFoundation/Vision code and its simulator tests live.
-    // Each target also produces a static framework binary; XCFramework("Tessera") bundles all three
-    // into one `Tessera.xcframework` (device + both simulators) via the `assembleTesseraXCFramework`
+    // Each target also produces a static framework binary; XCFramework("Tessera") bundles both slices
+    // into one `Tessera.xcframework` (device + Apple-Silicon simulator) via the `assembleTesseraXCFramework`
     // task — the artifact SPM distributes (ADR-019).
     val xcframework = XCFramework("Tessera")
-    listOf(iosArm64(), iosSimulatorArm64(), iosX64()).forEach { iosTarget ->
+    listOf(iosArm64(), iosSimulatorArm64()).forEach { iosTarget ->
         iosTarget.binaries.framework {
             baseName = "Tessera"
             // Static linkage is the simpler, sign-free shape for an SPM binaryTarget (no embedded

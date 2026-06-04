@@ -33,14 +33,13 @@ kotlin {
         minSdk = 23
     }
 
-    // iOS targets (ADR-017): device arm64 plus the Apple-Silicon and Intel simulators. These three
+    // iOS targets (ADR-017): device arm64 plus the Apple-Silicon simulator. These two
     // standard shortcuts activate Kotlin's default hierarchy template (shared iosMain/iosTest). This
     // core has no platform code of its own — it is pure commonMain — so there is no iosMain here; the
     // targets exist so mrz-camera-ios can resolve this module for its iOS compilations, and so the
     // host tests also run on iosSimulatorArm64 (the ios-compile CI job).
     iosArm64()
     iosSimulatorArm64()
-    iosX64()
 
     sourceSets {
         commonMain {

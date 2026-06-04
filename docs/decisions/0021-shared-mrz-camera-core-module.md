@@ -14,7 +14,7 @@ The iOS module (`mrz-camera-ios`) needs the same contract. [`open-questions.md`]
 
 **Extract the contract into a standalone `mrz-camera-core` module.** `mrz-camera-android` and `mrz-camera-ios` become thin platform-I/O modules that depend on it.
 
-- `mrz-camera-core` declares the full target set — `jvm` (host tests), `android`, and `iosArm64` / `iosSimulatorArm64` / `iosX64` — and is pure `commonMain` (no platform code of its own); it `api`-exports `types`, `mrz-core`, `telemetry`, and kotlinx-coroutines.
+- `mrz-camera-core` declares the full target set — `jvm` (host tests), `android`, and `iosArm64` / `iosSimulatorArm64` (ARM-only; the `iosX64` Intel-simulator target was dropped before the `0.2.0` tag, see [ADR-017](0017-mobile-targets-and-build-stack.md)) — and is pure `commonMain` (no platform code of its own); it `api`-exports `types`, `mrz-core`, `telemetry`, and kotlinx-coroutines.
 - `mrz-camera-android` keeps only `androidMain` (CameraX + ML Kit) and depends on `mrz-camera-core`; it no longer declares a `jvm()` target (the host tests moved with the contract).
 - `mrz-camera-ios` (this slice) holds only `iosMain` (AVFoundation + Apple Vision) and likewise depends on `mrz-camera-core`.
 - The Kotlin package stays `io.lightine.tessera.mrz.camera` across all three modules (a package may span modules); only the Android `namespace` differs per module.

@@ -35,12 +35,11 @@ kotlin {
         minSdk = 23
     }
 
-    // iOS targets (ADR-017): device arm64 plus the Apple-Silicon and Intel simulators. These three
+    // iOS targets (ADR-017): device arm64 plus the Apple-Silicon simulator. These two
     // standard shortcuts activate Kotlin's default hierarchy template, which provides the shared
     // iosMain/iosTest source sets.
     iosArm64()
     iosSimulatorArm64()
-    iosX64()
 
     sourceSets {
         commonTest {
