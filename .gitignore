@@ -71,6 +71,25 @@ logs/
 # working artifacts, not committed project history. Leading slash for the same reason.
 /.conformance/
 
+# Review & decision-logs live in .reviews/ (living decision records from working sessions — reasoning
+# behind structural and collaboration decisions, candid self-critique, and credential-rotation
+# discussion; backward-looking, present-state, and forward decisions braided together). Working
+# notes, not committed project history; some content is deliberately not for the public repo. Same
+# leading-slash rationale as the entries above.
+/.reviews/
+
+# Discovery docs live in .discovery/ (structured tool/approach investigations that precede a decision —
+# research + capability mapping + gaps/solutions, with sources). Working notes, not committed project
+# history; some migrate into other homes (e.g. a future YouTrack KB) once acted on. Same leading-slash
+# rationale as the entries above.
+/.discovery/
+
+# Plans live in .plans/ (execution/action plans derived from reviews — the bridge that graduates
+# decisions into tasks; the filename CATEGORY prefix specializes the type, e.g. ACTION-PLAN-*, PLAN-*,
+# MIGRATION-PLAN-*). Working notes, not committed project history; transient — they dissolve into the
+# real homes (rules / tasks / a future YouTrack) once acted on. Same leading-slash rationale as above.
+/.plans/
+
 # Local reference copies of external specifications live in .spec/ (e.g., ICAO Doc 9303 PDFs
 # downloaded for implementation verification). These are NEVER committed: ICAO's terms restrict
 # redistribution of their materials without written permission. The spec content is consulted
