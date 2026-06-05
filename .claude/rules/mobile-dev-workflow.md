@@ -19,6 +19,8 @@ The full Android model and method — the CLI / skills / Knowledge-Base distinct
 - **Android** — drive via Google's **Android CLI** (the agent-optimized tool wrapping `sdkmanager` / `avdmanager` / `adb`) plus its Skills and Knowledge Base. Use `./gradlew` for builds and tests.
 - **iOS** — drive via the **Xcode MCP** (`mcpbridge`): build, test, run, diagnostics.
 
+These drivers are not advisory only. A PreToolUse `Bash` hook — [`scripts/prefer-dev-wrappers.sh`](../../scripts/prefer-dev-wrappers.sh), wired in [`.claude/settings.json`](../settings.json) — blocks reaching for a **raw vendor tool** when a prescribed driver owns the domain: `sdkmanager` / `avdmanager` → the Android CLI; `xcodebuild` / `xcrun simctl` → the Xcode MCP. Unlike the screenshot border below, it has a deliberate **override** — append `# raw-ok` to the command when the driver genuinely cannot do the job (the override is a conscious choice, not a habit). Plain `adb` (`logcat`, `pm grant`) and `xcrun devicectl` (the physical-device console) are intentionally **not** guarded — those are legitimate raw uses.
+
 ## Inspect state as text — including the screen
 
 Read device, app, and *screen* state as **text**, never as an image:
