@@ -276,6 +276,32 @@ A Cocoa API that takes a *delegate* almost always holds it **weakly** (the frame
 
 ---
 
+## Dangling Working-Tree Changes Riding Across Branches
+
+**The pitfall:** Leaving an uncommitted working-tree change (a `.gitignore` edit, a stray new file) at session end, so it rides along into the *next* session's unrelated feature branch — where it gets mixed into a PR it doesn't belong in, muddying that PR's scope, or is silently dropped when the branch is reset.
+
+**Why it happens:** Momentum at session end. The change feels too small to warrant its own commit, so it gets left "for later." The next session checks out a fresh branch for unrelated work and the dangling change comes with it, now decoupled from the context that explains it.
+
+**Real example.** The `.gitignore` additions for the working-note folders (`.reviews/`, `.discovery/`, `.plans/`) sat uncommitted across a session boundary and had to be rescued into their own PR ([#123](https://github.com/lightine-io/tessera/pull/123)) the next session — after they had already ridden along on unrelated branches.
+
+**What to do instead:** Commit (or stash, or deliberately discard) every working-tree change before ending a session or switching to unrelated work. A dangling change belongs to *some* logical unit — give it its own small focused commit/PR up front rather than letting it contaminate the next branch. `git status` should be clean (or deliberately staged for the work at hand) at every branch switch. This is the operational form of the project's small-focused-PR preference: a change with no home of its own is a change waiting to land in the wrong one.
+
+---
+
+## Reaching for the Raw Vendor Tool When the Rule Can't Reach
+
+**The pitfall:** A project rule prescribes a wrapper/driver over a raw vendor tool — "drive the Android SDK via the `android` CLI, not raw `sdkmanager`/`avdmanager`"; "drive iOS via the Xcode MCP, not raw `xcodebuild`/`xcrun simctl`." But `.claude/rules/` rules are **path-scoped to file edits** — they load when you edit a matching file, not when you run a bash command. In a session that only *runs commands* (no matching file edit), the rule never fires, and habit reaches for the raw vendor tool.
+
+**Why it happens:** The rule exists, so it *feels* covered. But the trigger condition (editing a path-matched file) doesn't occur during pure command-line work, so the guidance is structurally absent at the exact moment it's needed. Habit fills the gap.
+
+**Real example.** The `mobile-dev-workflow` rule prescribes the Android CLI, but it couldn't fire on a bare `sdkmanager` invocation during the 0.2.0 work, so raw `sdkmanager` got used out of habit. Fixed structurally by the [#127](https://github.com/lightine-io/tessera/pull/127) hook (`scripts/prefer-dev-wrappers.sh`), a PreToolUse nudge on `Bash` that steers raw `sdkmanager`/`avdmanager`/`xcodebuild`/`xcrun simctl` toward the prescribed driver (with a `# raw-ok` override for the deliberate exception).
+
+**The meta-lesson — match the mechanism to the failure surface.** A lapse at the *command* layer needs a *hook* (PreToolUse on `Bash`), not a path-scoped rule: a rule that can only fire on file edits is structurally blind to command-line habits. When you catch willpower failing on a command you "know" a rule covers, check whether the rule can even fire there. If not, that's a hook-shaped gap, not a discipline problem. (This is "Prescribe the path, prohibit the border" from `working-patterns.md` applied to enforcement placement: the border has to be enforced where the crossing actually happens.)
+
+**What to do instead:** Use the prescribed driver (now hook-enforced for these tools). And when designing enforcement, pick the mechanism whose trigger actually covers the moment the mistake happens — don't write a file-edit rule to guard a command-line act.
+
+---
+
 ## Maintaining This Document
 
 This document grows when new pitfalls are observed during ongoing work. The bar for adding an entry: *has this mistake actually been made on this project, or is it close enough that it could be?* If yes, document it concretely with the specific pattern. If no, do not add speculative pitfalls — `reading-risks.md` and the principles already cover those.
