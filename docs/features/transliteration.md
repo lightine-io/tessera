@@ -96,6 +96,30 @@ The generator never silently applies a default profile based on inferred locale,
 
 ---
 
+## Usage
+
+The generator applies a profile internally (above); to transliterate outside the generator — or to pre-transliterate a value — use the `transliterate` extension, which composes Unicode normalization with the profile and exposes every step (Principle 5). The example compiles against the shipped API. The consumer chooses the profile by the document's issuing state; the SDK never infers it.
+
+```kotlin
+import io.lightine.tessera.mrz.transliteration.IcaoDefaultTransliterationProfile
+import io.lightine.tessera.mrz.transliteration.transliterate
+import io.lightine.tessera.mrz.transliteration.TransliterationResult
+
+val outcome = IcaoDefaultTransliterationProfile.transliterate("Müller")
+
+println(outcome.originalInput)   // "Müller" — exactly what you passed in
+println(outcome.normalizedInput) // the NFC form the SDK actually mapped (transparency)
+
+when (val result = outcome.result) {
+    is TransliterationResult.Success -> println(result.output) // MRZ-alphabet output
+    is TransliterationResult.Failure -> result.unmappedCharacters.forEach(::println)
+}
+```
+
+The shipped `IcaoDefaultTransliterationProfile` and `AzeTransliterationProfile` always return `Success` — they map any unrecognized character to the filler `<`. A custom profile with no fallback policy can return `Failure`, naming the characters it could not map.
+
+---
+
 ## The ICAO Default Profile
 
 The ICAO default profile implements the recommendations in ICAO Doc 9303 Part 3 Section 6 — specifically §6.A (Annex G, the Latin section). Non-Latin scripts (Cyrillic §6.B, Arabic §6.C) are not in the initial release. It includes:
