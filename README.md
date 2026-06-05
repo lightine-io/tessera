@@ -50,7 +50,7 @@ val result = MrzParser.parse("""
 
 when (result) {
     is ParseResult.Success -> {
-        val doc = result.document as MrzDocument.TD3
+        val doc = result.document as TD3  // io.lightine.tessera.mrz.model.TD3
         println("Name: ${doc.commonFields.primaryIdentifier}, ${doc.commonFields.secondaryIdentifier}")
         println("Document number: ${doc.commonFields.documentNumber}")
         // ... use the parsed data

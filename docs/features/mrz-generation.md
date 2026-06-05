@@ -121,6 +121,30 @@ The actual class names, method names, and parameter shapes are decided at implem
 
 ---
 
+## Usage
+
+The shape above is illustrative; the following example compiles against the shipped API. Generation is the inverse of parsing — `parse(generate(document))` round-trips at the raw-field level — so a common flow is to take a parsed `MrzDocument`, modify it, and re-encode it. There is no `PartialSuccess`: generation either produces a valid MRZ or returns a typed `Failure` (e.g. a field overflowed its fixed width).
+
+```kotlin
+import io.lightine.tessera.mrz.generation.MrzGenerator
+import io.lightine.tessera.mrz.generation.GenerationResult
+
+// `document` is any MrzDocument — e.g. one obtained from MrzParser (then optionally modified)
+// or built directly for an issuance / test-fixture flow.
+when (val result = MrzGenerator.generate(document)) {
+    is GenerationResult.Success -> {
+        val mrz: String = result.mrz.joinToString("\n") // the encoded MRZ lines
+        println(mrz)
+    }
+    is GenerationResult.Failure -> {
+        // A field overflowed its fixed width, or a value could not be encoded — never thrown.
+        println(result.error)
+    }
+}
+```
+
+---
+
 ## Source of Truth for Format Definitions
 
 Format specifications — field positions, field widths, check digit positions, padding rules — live in a single shared definition within `mrz-core`. The parser, generator, and validator all reference this source rather than each maintaining their own copy. Changing a definition in one place updates all three subsystems consistently.

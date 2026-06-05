@@ -88,6 +88,44 @@ The actual class name, method names, and visibility are decided at implementatio
 
 ---
 
+## Usage
+
+The shape above is illustrative; the following example compiles against the shipped API. `parse` never throws on malformed input — structural problems come back as `ParseResult.Failure` and validation problems as `ParseResult.PartialSuccess`, so the consumer always decides what to do with them.
+
+```kotlin
+import io.lightine.tessera.mrz.parsing.MrzParser
+import io.lightine.tessera.mrz.parsing.ParseResult
+import io.lightine.tessera.mrz.model.TD3
+
+val result = MrzParser.parse(
+    """
+    P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<
+    L898902C36UTO7408122F1204159ZE184226B<<<<<10
+    """.trimIndent(),
+)
+
+when (result) {
+    is ParseResult.Success -> {
+        // Clean parse; the validator surfaced no failures (warnings may still be in metadata).
+        val passport = result.document as TD3
+        println(passport.commonFields.documentNumber) // "L898902C3" — verbatim, never corrected
+    }
+    is ParseResult.PartialSuccess -> {
+        // Parsed structurally, but validation failed on one or more fields. The document is
+        // still populated — you decide whether to trust it given the failures.
+        result.metadata.validationFailures.forEach(::println)
+    }
+    is ParseResult.Failure -> {
+        // Wrong shape, characters outside the MRZ alphabet, or no recognized format.
+        println(result.error)
+    }
+}
+```
+
+To parse a known document type strictly — a typed error if the input is something else — call the format-specific entry point instead, e.g. `MrzParser.parseTD3(input)`.
+
+---
+
 ## Auto-Detect Behavior
 
 When `parse(input)` is called without a specified format, the parser identifies the format using structural cues:

@@ -139,11 +139,29 @@ Validation returns a `ValidationResult` (defined in `mrz-data-model.md`) contain
 
 - `validationFailures` — typed validation errors that indicate non-conformance
 - `warnings` — typed warnings that indicate anomalies but not non-conformance
-- `passedChecks` — the validators that ran and passed (exposed for transparency; consumers can confirm what was actually verified, not just what failed)
+- `passedChecks` — **deferred (target shape, not on the shipped result)**: the validators that ran and passed, exposed for transparency so consumers can confirm what was actually verified, not just what failed. The current shipped `ValidationResult` carries `validationFailures` and `warnings` only; the shape of `passedChecks` is itself an open question, tracked in [`open-questions.md`](../open-questions.md) under "`ValidationResult.passedChecks` shape." (The Status of Implementation table above and [`mrz-data-model.md`](mrz-data-model.md) say the same.)
 
 Validation always returns the complete result. Consumers filter according to their own needs. The validator does not omit warnings to "save effort," does not skip checks based on what previous checks found (except where logically required by layering), and does not collapse multiple findings into a single summary value (Principle 5 — Transparency).
 
 There is no `isValid` boolean on the result. Validity depends on what the consumer cares about. A consumer who treats only failures as disqualifying derives that from `validationFailures.isEmpty()`. A consumer who treats both failures and warnings as disqualifying derives that from `validationFailures.isEmpty() && warnings.isEmpty()`. The SDK does not pre-decide.
+
+---
+
+## Usage
+
+The following example compiles against the shipped API. The parser already validates and folds the result into `ParseResult.metadata`, so call the validator directly for the standalone case — e.g. re-checking a document after modifying a field. There is no `isValid` boolean by design; you derive the verdict your use case needs from the returned lists.
+
+```kotlin
+import io.lightine.tessera.mrz.validation.MrzValidator
+
+val report = MrzValidator.validate(document) // document: any MrzDocument
+
+report.validationFailures.forEach(::println) // typed non-conformance, e.g. MrzCheckDigitMismatch(...)
+report.warnings.forEach(::println)           // typed anomalies that are not hard failures
+
+// Derive the verdict yourself — the SDK does not pre-decide:
+val conformant = report.validationFailures.isEmpty()
+```
 
 ---
 
