@@ -63,3 +63,42 @@ kotlin {
         }
     }
 }
+
+// --- ML Kit bundled-model guard (docs/open-questions.md "CI and repository hardening", item 6) ---
+// ML Kit text-recognition must stay the BUNDLED model: the recognition model ships inside the app, so
+// OCR is fully offline with no Play Services model download — the privacy/offline posture a document
+// SDK needs (see the androidMain dependency comment above and docs/reading-risks.md).
+//
+// The discriminator is NOT the absence of the Play Services recognizer
+// (com.google.android.gms:play-services-mlkit-text-recognition): that is a TRANSITIVE dependency of the
+// bundled artifact and is present on the graph either way. The bundled model is identified by the
+// presence of com.google.mlkit:text-recognition-bundled-common, which appears only when the model is
+// linked into the app. If a version bump or transitive change silently switched us to the unbundled
+// (Play-Services-delivered) recognizer, that marker would vanish and this task fails. Belt-and-
+// suspenders: the pinned catalog version already constrains it; this makes the constraint enforced.
+//
+// Resolves androidRuntimeClasspath, so it needs the Android SDK present — it runs in the android-compile
+// CI job (and locally), not the SDK-less JVM `check` runner.
+val verifyMlKitBundledModel by tasks.registering {
+    group = "verification"
+    description =
+        "Fails if ML Kit's bundled text-recognition model (text-recognition-bundled-common) " +
+        "is not on the Android runtime classpath."
+    doLast {
+        val marker = "com.google.mlkit:text-recognition-bundled-common"
+        val present =
+            configurations
+                .getByName("androidRuntimeClasspath")
+                .incoming.resolutionResult.allComponents
+                .any { component -> component.moduleVersion?.let { "${it.group}:${it.name}" } == marker }
+        if (!present) {
+            throw GradleException(
+                "ML Kit bundled-model guard failed: '$marker' is not on androidRuntimeClasspath. " +
+                    "The text-recognition model must ship bundled in the app (offline OCR, no Play " +
+                    "Services model download); something switched to the unbundled, Play-Services-" +
+                    "delivered recognizer. See docs/open-questions.md \"CI and repository hardening\" item 6.",
+            )
+        }
+        logger.lifecycle("ML Kit bundled-model guard: '$marker' present on androidRuntimeClasspath (OK).")
+    }
+}
