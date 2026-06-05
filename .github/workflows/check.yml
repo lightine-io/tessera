@@ -24,6 +24,10 @@
 # - JDK 21 to match each module's jvmToolchain(21); the Gradle daemon is pinned to
 #   JDK 17 (gradle/gradle-daemon-jvm.properties, foojay-provisioned).
 # - Gradle 9.5.1 via the project's wrapper
+# - Every action is pinned to a full commit SHA with a trailing `# vX.Y.Z` version
+#   comment (supply-chain hardening, open-questions "CI and repository hardening"
+#   item 3 — a mutable tag like `@v6` can be repointed). Dependabot's github-actions
+#   updates bump both the SHA and the comment. Keep new actions pinned the same way.
 
 name: check
 
@@ -45,16 +49,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: temurin
           java-version: '21'
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
           # Read-only cache for PR runs; main runs may write fresh entries.
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
@@ -73,10 +77,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: temurin
           java-version: '21'
@@ -98,7 +102,7 @@ jobs:
           fi
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
@@ -119,10 +123,10 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: temurin
           java-version: '21'
@@ -132,14 +136,14 @@ jobs:
       # The toolchain version tracks the Kotlin version, so the version catalog is the cache key;
       # restore-keys lets a Kotlin bump fall back to the previous toolchain while it re-provisions.
       - name: Cache Kotlin/Native toolchain
-        uses: actions/cache@v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/.konan
           key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
           restore-keys: konan-${{ runner.os }}-
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 

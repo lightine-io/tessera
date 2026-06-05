@@ -34,14 +34,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Dependency review
-        # Exact tag: dependency-review-action publishes no moving `v5` major tag
-        # (only point releases like v5.0.0), unlike checkout/setup-java. The
-        # repo-wide SHA-pinning pass (open-questions item 3) will pin this and
-        # every other action to a commit SHA.
-        uses: actions/dependency-review-action@v5.0.0
+        # All actions are pinned to a commit SHA with a version comment (supply-chain
+        # hardening, open-questions item 3); Dependabot's github-actions updates bump
+        # both the SHA and the comment. The comment here also records that
+        # dependency-review-action publishes no moving `v5` major tag — only point
+        # releases like v5.0.0 — unlike checkout/setup-java.
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           # Gate on moderate-or-higher CVEs (low is mostly unfixable transitive noise).
           fail-on-severity: moderate
