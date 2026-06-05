@@ -68,6 +68,50 @@ Both platform scanners are built on one frame-source-agnostic streaming engine �
 
 Still headless: if the consumer wants a live preview, they attach their own preview surface (a "preview hook"); the SDK draws nothing.
 
+## Usage
+
+The illustrative shapes above sketch the surface; the end-to-end example below compiles against the current Android owns-session API. The **Kotlin/Android camera contract locks at the 0.2.0 tag** ([ADR-007](../decisions/0007-strict-backward-compat-from-0x.md)); the **iOS/Swift projection stays provisional through `0.x`** (the iOS scanner mirrors this same contract, but you consume `AVCaptureMrzScanner` from Swift, where the `Flow`→Swift bridging is not yet locked — see the iOS notes under "Errors" and [ADR-019](../decisions/0019-ios-distribution-via-spm.md)), so no Swift example is pinned here yet.
+
+```kotlin
+import io.lightine.tessera.mrz.camera.CameraXMrzScanner
+import io.lightine.tessera.mrz.camera.MrzScanResult
+import io.lightine.tessera.mrz.parsing.ParseResult
+// context, lifecycleOwner, and lifecycleScope are the consumer's standard Android objects.
+
+// The consumer requests/holds the CAMERA permission before start(). CameraXMrzScanner is
+// AutoCloseable — close() releases the analysis executor and the OCR recognizer.
+val scanner = CameraXMrzScanner(context.applicationContext, lifecycleOwner)
+scanner.start() // idempotent; begins streaming on `results`
+
+lifecycleScope.launch {
+    scanner.results.collect { result ->
+        when (result) {
+            is MrzScanResult.Decoded -> {
+                // result.parse is the SAME ParseResult as string parsing — a camera-sourced MRZ
+                // validates identically to a typed-in one; result.recognizedText is the raw OCR.
+                val parse = result.parse
+                if (parse is ParseResult.Success) {
+                    println(parse.document.commonFields.documentNumber)
+                }
+            }
+            is MrzScanResult.NoMrzFound -> {
+                // Normal for a frame not yet showing the MRZ — just wait for the next frame.
+            }
+            is MrzScanResult.CaptureError -> {
+                // Typed, never thrown: result.error is PermissionDenied / CameraUnavailable /
+                // CameraInUse / OcrFailed, each with a stable result.error.code to localize.
+            }
+        }
+    }
+}
+
+// when finished:
+scanner.stop()  // idempotent; the scanner can be start()ed again
+scanner.close() // release the executor + recognizer
+```
+
+For a custom frame source (a USB reader, desktop, or web) rather than the platform camera, feed the lower-level core directly: `MrzFrameAnalyzer(recognizer).analyse(frame)` per frame, or `analyzer.scan(frames)` over a `Flow` of frames.
+
 ## Parsing modes
 
 Consumer-chosen; **strict is the default**, and the **raw OCR reading is always exposed** regardless of mode.
