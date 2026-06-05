@@ -30,11 +30,11 @@ kotlin {
 
     jvm()
 
-    // Android target. compileSdk tracks the latest stable API (37); minSdk 23 per ADR-018.
+    // Android target. compileSdk tracks the latest stable API (36); minSdk 23 per ADR-018.
     // namespace scopes the generated AAR manifest package.
     android {
         namespace = "io.lightine.tessera.mrz"
-        compileSdk = 37
+        compileSdk = 36
         minSdk = 23
     }
 

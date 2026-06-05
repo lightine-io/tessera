@@ -17,12 +17,12 @@ kotlin {
 
     jvmToolchain(21)
 
-    // Android target. compileSdk tracks the latest stable API (37); minSdk 23 per ADR-018. The
+    // Android target. compileSdk tracks the latest stable API (36); minSdk 23 per ADR-018. The
     // androidMain CameraX / ML Kit code compiles here and is verified by the android-compile CI job
     // (a Linux `check` runner has no Android SDK, so it cannot compile this target).
     android {
         namespace = "io.lightine.tessera.mrz.camera"
-        compileSdk = 37
+        compileSdk = 36
         minSdk = 23
         // Enables the androidHostTest source set — local JVM unit tests for this Android-only module
         // (the KMP-library plugin's host-test target). classifyCameraState is a pure function over the
