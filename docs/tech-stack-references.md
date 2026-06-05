@@ -85,6 +85,8 @@ This document is *living*. It is maintained by one rule: **whenever a technology
 | `actions/setup-java` | GitHub | [github.com/actions/setup-java](https://github.com/actions/setup-java) | `.github/workflows/check.yml` | 0.1.0 | 2026-06-05 |
 | `actions/cache` | GitHub | [github.com/actions/cache](https://github.com/actions/cache) | `.github/workflows/check.yml` | 0.2.0 | 2026-06-05 |
 | `gradle/actions/setup-gradle` | Gradle | [github.com/gradle/actions](https://github.com/gradle/actions) | `.github/workflows/check.yml` | 0.1.0 | 2026-06-05 |
+| `gradle/actions/dependency-submission` | Gradle | [github.com/gradle/actions — dependency-submission](https://github.com/gradle/actions/blob/main/docs/dependency-submission.md) | `.github/workflows/dependency-submission.yml` | 0.2.0 | 2026-06-05 |
+| `actions/dependency-review-action` | GitHub | [github.com/actions/dependency-review-action](https://github.com/actions/dependency-review-action) | `.github/workflows/dependency-review.yml` | 0.2.0 | 2026-06-05 |
 | GitHub-hosted runners (`ubuntu-latest`, `macos-latest`) | GitHub | [docs.github.com — GitHub-hosted runners](https://docs.github.com/en/actions/using-github-hosted-runners/using-github-hosted-runners/about-github-hosted-runners) | `.github/workflows/check.yml` | 0.1.0 | 2026-06-05 |
 
 ## Repositories (dependency sources)

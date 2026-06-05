@@ -1,0 +1,52 @@
+# Blocks a pull request that introduces a dependency with a known vulnerability
+# (CVE) at or above the severity threshold, and surfaces license information in
+# the PR. This is the PR *gate* half of the dependency CVE scan (open-questions.md
+# "CI and repository hardening", item 5 / action-plan A4 / Q6); the continuous
+# full-graph alerting half is Dependabot, fed by dependency-submission.yml.
+#
+# A Gradle project's PR graph must be *submitted* for the review to diff it
+# (GitHub can't resolve it natively), so this job waits for dependency-submission
+# to finish via retry-on-snapshot-warnings (up to 600s). On the very first PR —
+# the one that adds these workflows — main has no submitted baseline graph yet,
+# so the diff is trivial; once merged, push-to-main submits the baseline and
+# subsequent PRs diff properly.
+#
+# License GATING (allow-licenses) is intentionally not set yet: an incomplete
+# allow-list would fail legitimate Apache-2.0 / MIT dependencies. Licenses are
+# surfaced in the PR summary now; a curated allow-list can tighten this once the
+# transitive license set is enumerated (a deliberate deferral — see the
+# open-questions item-5 update).
+#
+# First-party (GitHub) action only — consistent with check.yml's stance.
+
+name: dependency review
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write # for comment-summary-in-pr: on-failure
+
+jobs:
+  dependency-review:
+    name: review pull request dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Dependency review
+        # Exact tag: dependency-review-action publishes no moving `v5` major tag
+        # (only point releases like v5.0.0), unlike checkout/setup-java. The
+        # repo-wide SHA-pinning pass (open-questions item 3) will pin this and
+        # every other action to a commit SHA.
+        uses: actions/dependency-review-action@v5.0.0
+        with:
+          # Gate on moderate-or-higher CVEs (low is mostly unfixable transitive noise).
+          fail-on-severity: moderate
+          # Wait for dependency-submission.yml to submit the PR's Gradle graph.
+          retry-on-snapshot-warnings: true
+          retry-on-snapshot-warnings-timeout: 600
+          # Comment the summary only when the gate fails, to keep clean PRs quiet.
+          comment-summary-in-pr: on-failure
