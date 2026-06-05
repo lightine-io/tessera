@@ -87,18 +87,19 @@ jobs:
 
       # ubuntu-latest ships the Android SDK (ANDROID_SDK_ROOT set) with recent platforms preinstalled
       # — including the compileSdk used here, whose platform directory and sdkmanager package id are
-      # `android-37.0` (the API-37 platform carries a `.0` revision). So this is normally a no-op; the
-      # guarded install is only a fallback for a future runner image that drops android-37.0. Using
-      # the preinstalled sdkmanager keeps CI on first-party actions only (no third-party
-      # setup-android action on the supply chain). AGP resolves build-tools itself.
-      - name: Ensure Android SDK platform 37
+      # `android-36` (API 36, the latest *stable* — ADR-017; unlike the beta API-37 platform, which
+      # carries a `.0` revision suffix as `android-37.0`). So this is normally a no-op; the guarded
+      # install is only a fallback for a future runner image that drops android-36. Using the
+      # preinstalled sdkmanager keeps CI on first-party actions only (no third-party setup-android
+      # action on the supply chain). AGP resolves build-tools itself.
+      - name: Ensure Android SDK platform 36
         run: |
           SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
           echo "--- platforms present ---"; ls -1 "$ANDROID_SDK_ROOT/platforms" 2>/dev/null || echo "(none)"
-          if [ ! -d "$ANDROID_SDK_ROOT/platforms/android-37.0" ] && [ ! -d "$ANDROID_SDK_ROOT/platforms/android-37" ]; then
+          if [ ! -d "$ANDROID_SDK_ROOT/platforms/android-36" ]; then
             # `yes` feeds the license prompts; its broken-pipe on the reader's exit is harmless, hence 2>/dev/null.
             yes 2>/dev/null | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
-            "$SDKMANAGER" --install "platforms;android-37.0"
+            "$SDKMANAGER" --install "platforms;android-36"
           fi
 
       - name: Set up Gradle
