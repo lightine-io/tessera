@@ -31,8 +31,14 @@
 # raw uses; adb screenshots are blocked by block-screenshot.sh) and
 # `xcrun devicectl` (the physical-device console loop the Xcode MCP doesn't own).
 #
-# Note: viewing THIS file or the rule doc via Bash `cat`/`grep` can match the
-# patterns below and be blocked — use the Read tool for files, not Bash.
+# Matching is anchored to COMMAND-TOKEN POSITION (start of the command, or right
+# after `&&` / a pipe), not a bare substring. So merely *naming* a raw tool inside
+# argument text — a PR body, a commit message, a `grep` pattern, this file's own
+# path — does not trip the hook; only an actual invocation does. (Earlier this
+# substring-matched and false-positived on `gh pr create --body "...sdkmanager..."`;
+# see .claude/known-pitfalls.md "Reaching for the Raw Vendor Tool When the Rule
+# Can't Reach".) The conscious `# raw-ok` override still covers the rare case where
+# a real invocation must go through.
 
 payload="$(cat 2>/dev/null || true)"
 [ -z "$payload" ] && exit 0
@@ -50,11 +56,25 @@ fi
 # Conscious override — proceed when the prescribed driver genuinely can't.
 printf '%s' "$cmd" | grep -iq 'raw-ok' && exit 0
 
-# Android SDK / AVD raw tools -> the Android CLI. Matches bare or full-path
-# invocations (e.g. .../cmdline-tools/latest/bin/sdkmanager); `android sdk ...`
-# does not contain these names, so the CLI itself is never matched.
-if printf '%s' "$cmd" | grep -Eq '(^|[^[:alnum:]_.-])(sdkmanager|avdmanager)([^[:alnum:]_]|$)'; then
-    raw="$(printf '%s' "$cmd" | grep -oE 'sdkmanager|avdmanager' | head -1)"
+# Flatten newlines/tabs to spaces so a multi-line command (a heredoc body, a
+# quoted PR/commit message) is matched as ONE line: `^` then means "start of the
+# whole command", and a tool name sitting inside argument text stays out of
+# command-token position. (`$cmd` — the original, unflattened — is still shown
+# in the message below.)
+flat="$(printf '%s' "$cmd" | tr '\n\r\t' '   ')"
+
+# A command token = start-of-command, or right after `&&` / a pipe, then an
+# optional path prefix (.../cmdline-tools/latest/bin/sdkmanager). `android sdk ...`
+# never contains these names, so the prescribed CLI is never matched; and a bare
+# MENTION in an argument (preceded by ordinary text or quotes) is intentionally
+# left alone. `;` and bare `&` are deliberately NOT separators here — they appear
+# too often in prose ("the sdkmanager & avdmanager tools") to anchor on safely;
+# the cost is missing the rare `cd x; sdkmanager` form, acceptable for a nudge.
+token='(^|&&|[|])[[:space:]]*([[:alnum:]_./~-]*/)?'
+
+# Android SDK / AVD raw tools -> the Android CLI.
+if printf '%s' "$flat" | grep -Eq "${token}(sdkmanager|avdmanager)([^[:alnum:]_.-]|\$)"; then
+    raw="$(printf '%s' "$flat" | grep -oE "${token}(sdkmanager|avdmanager)" | grep -oE 'sdkmanager|avdmanager' | head -1)"
     {
         echo "prefer-dev-wrappers: BLOCKED — drive Android via the Android CLI, not raw ${raw}."
         echo ""
@@ -71,7 +91,7 @@ if printf '%s' "$cmd" | grep -Eq '(^|[^[:alnum:]_.-])(sdkmanager|avdmanager)([^[
 fi
 
 # iOS build / simulator raw tools -> the Xcode MCP (mcpbridge).
-if printf '%s' "$cmd" | grep -Eiq '(^|[^[:alnum:]_.-])xcodebuild([^[:alnum:]_]|$)|xcrun[^|;&]*simctl'; then
+if printf '%s' "$flat" | grep -Eiq "${token}xcodebuild([^[:alnum:]_.-]|\$)|${token}xcrun[[:space:]][^|;&]*simctl"; then
     {
         echo "prefer-dev-wrappers: BLOCKED — drive iOS build/simulator via the Xcode MCP (mcpbridge), not raw xcodebuild / xcrun simctl."
         echo ""
