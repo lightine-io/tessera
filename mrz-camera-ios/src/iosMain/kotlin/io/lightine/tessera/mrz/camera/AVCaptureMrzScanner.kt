@@ -2,6 +2,7 @@ package io.lightine.tessera.mrz.camera
 
 import io.lightine.tessera.telemetry.NoOpTelemetrySink
 import io.lightine.tessera.telemetry.TelemetrySink
+import io.lightine.tessera.telemetry.TelemetrySinkRegistry
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCObjectVar
@@ -104,14 +105,16 @@ import kotlin.time.TimeSource
  *   recognizer that is [AutoCloseable] is released on [close], since the scanner owns the OCR resource
  *   for its session.
  * @param mode strict (default) or lenient candidate extraction, forwarded to the analyse-frame core.
- * @param telemetry where per-frame [CameraFrameEvent]s go (default [NoOpTelemetrySink]).
+ * @param telemetry where per-frame [CameraFrameEvent]s go. Defaults to the application's registered sink
+ *   ([TelemetrySinkRegistry.current][TelemetrySinkRegistry]; [NoOpTelemetrySink] when none is registered).
+ *   Pass an explicit sink to override per instance.
  * @param cameraPosition which lens to use; defaults to the back camera (documents face the rear lens).
  */
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 public class AVCaptureMrzScanner(
     recognizer: MrzTextRecognizer<CMSampleBufferRef> = VisionMrzTextRecognizer(),
     mode: ParsingMode = ParsingMode.STRICT,
-    telemetry: TelemetrySink = NoOpTelemetrySink,
+    telemetry: TelemetrySink = TelemetrySinkRegistry.current,
     private val cameraPosition: AVCaptureDevicePosition = AVCaptureDevicePositionBack,
 ) : MrzCameraScanner,
     AutoCloseable {

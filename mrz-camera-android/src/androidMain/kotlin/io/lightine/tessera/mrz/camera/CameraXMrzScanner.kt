@@ -13,6 +13,7 @@ import androidx.lifecycle.Observer
 import com.google.common.util.concurrent.ListenableFuture
 import io.lightine.tessera.telemetry.NoOpTelemetrySink
 import io.lightine.tessera.telemetry.TelemetrySink
+import io.lightine.tessera.telemetry.TelemetrySinkRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -73,7 +74,9 @@ import kotlin.coroutines.resumeWithException
  *   and releases on [close]; a consumer-supplied recognizer that is [AutoCloseable] is likewise released
  *   on [close], since the scanner owns the OCR resource for its session.
  * @param mode strict (default) or lenient candidate extraction, forwarded to the analyse-frame core.
- * @param telemetry where per-frame [CameraFrameEvent]s go (default [NoOpTelemetrySink]).
+ * @param telemetry where per-frame [CameraFrameEvent]s go. Defaults to the application's registered sink
+ *   ([TelemetrySinkRegistry.current][TelemetrySinkRegistry]; [NoOpTelemetrySink] when none is registered).
+ *   Pass an explicit sink to override per instance.
  * @param cameraSelector which lens to use; defaults to the back camera (documents face the rear lens).
  */
 public class CameraXMrzScanner(
@@ -81,7 +84,7 @@ public class CameraXMrzScanner(
     private val lifecycleOwner: LifecycleOwner,
     recognizer: MrzTextRecognizer<ImageProxy> = MlKitMrzTextRecognizer(),
     mode: ParsingMode = ParsingMode.STRICT,
-    telemetry: TelemetrySink = NoOpTelemetrySink,
+    telemetry: TelemetrySink = TelemetrySinkRegistry.current,
     private val cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA,
 ) : MrzCameraScanner,
     AutoCloseable {

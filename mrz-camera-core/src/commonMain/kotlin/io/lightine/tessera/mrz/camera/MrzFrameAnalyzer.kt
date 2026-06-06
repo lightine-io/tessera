@@ -9,6 +9,7 @@ import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.telemetry.NoOpTelemetrySink
 import io.lightine.tessera.telemetry.TelemetrySink
+import io.lightine.tessera.telemetry.TelemetrySinkRegistry
 import io.lightine.tessera.types.vocabulary.MrzFormat
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
@@ -44,14 +45,17 @@ import kotlin.time.Instant
  * @param F the platform frame type (e.g. `ImageProxy` on Android).
  * @param recognizer the OCR seam; the sole platform-specific collaborator.
  * @param mode how forgiving candidate extraction is of OCR formatting noise (default [ParsingMode.STRICT]).
- * @param telemetry where per-frame [CameraFrameEvent]s go (default [NoOpTelemetrySink] — discarded).
+ * @param telemetry where per-frame [CameraFrameEvent]s go. Defaults to the application's registered sink
+ *   ([TelemetrySinkRegistry.current][TelemetrySinkRegistry]) — captured at construction, so register at
+ *   startup per the registry's contract; it is [NoOpTelemetrySink] (events discarded) when none is
+ *   registered. Pass an explicit sink to override per instance.
  * @param referenceTimeProvider supplies the reference instant for date-window parsing; override in
  *   tests for determinism, exactly as the string parser's `referenceTime` parameter is overridden.
  */
 public class MrzFrameAnalyzer<F>(
     private val recognizer: MrzTextRecognizer<F>,
     private val mode: ParsingMode = ParsingMode.STRICT,
-    private val telemetry: TelemetrySink = NoOpTelemetrySink,
+    private val telemetry: TelemetrySink = TelemetrySinkRegistry.current,
     private val referenceTimeProvider: () -> Instant = { Clock.System.now() },
 ) {
     /**

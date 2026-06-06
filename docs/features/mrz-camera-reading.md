@@ -34,7 +34,7 @@ fun interface MrzTextRecognizer<in F> {
 class MrzFrameAnalyzer<F>(
     recognizer: MrzTextRecognizer<F>,
     mode: ParsingMode = ParsingMode.STRICT,            // STRICT | LENIENT
-    telemetry: TelemetrySink = NoOpTelemetrySink,      // emits one non-PII CameraFrameEvent per frame
+    telemetry: TelemetrySink = TelemetrySinkRegistry.current, // one non-PII CameraFrameEvent/frame → the registered sink
 ) {
     suspend fun analyse(frame: F): MrzScanResult
 }

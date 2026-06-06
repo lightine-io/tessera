@@ -75,6 +75,31 @@ Registration is a singleton mutable state, matching the precedent set by `Transl
 
 `TelemetrySinkRegistry.reset()` restores the no-op default. This is useful for test isolation; it is not intended as a runtime sink-swap mechanism.
 
+Emitting components default their sink to `TelemetrySinkRegistry.current` (captured at construction), so registering at startup is enough — but they also accept an explicit `telemetry` argument to **override the registered default per instance** (e.g. `CameraXMrzScanner(context, owner, telemetry = mySink)`). With nothing registered and nothing passed, events route to `NoOpTelemetrySink` and are discarded.
+
+---
+
+## Usage
+
+Implement `TelemetrySink`, then register it once at startup; the camera reader (the first emitter, 0.2.0) records to whatever is registered. The example compiles against the shipped API.
+
+```kotlin
+import io.lightine.tessera.telemetry.TelemetryEvent
+import io.lightine.tessera.telemetry.TelemetrySink
+import io.lightine.tessera.telemetry.TelemetrySinkRegistry
+
+// record() may be invoked from any thread once emitting modules are active — keep it thread-safe.
+class LoggingSink : TelemetrySink {
+    override fun record(event: TelemetryEvent) {
+        // event carries non-PII diagnostics (counts, confidence, outcome) — never document fields.
+        println("${event.name}: $event")
+    }
+}
+
+// Register once at application startup, before constructing any SDK component that emits:
+TelemetrySinkRegistry.register(LoggingSink())
+```
+
 ---
 
 ## Redaction

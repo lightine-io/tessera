@@ -6,6 +6,7 @@ import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.telemetry.TelemetryEvent
 import io.lightine.tessera.telemetry.TelemetrySink
+import io.lightine.tessera.telemetry.TelemetrySinkRegistry
 import io.lightine.tessera.types.vocabulary.MrzFormat
 import io.lightine.tessera.types.vocabulary.Sex
 import kotlinx.coroutines.test.runTest
@@ -242,6 +243,27 @@ class MrzFrameAnalyzerTest {
             val rendered = event.toString()
             assertFalse(rendered.contains("ERIKSSON"), "telemetry leaked the name field")
             assertFalse(rendered.contains("L898902"), "telemetry leaked the document number")
+        }
+
+    @Test
+    fun defaults_telemetry_to_the_registered_sink_when_none_is_passed() =
+        runTest {
+            // The documented contract: register a sink at startup and SDK emitters route to it
+            // (telemetry.md / ADR-015). Constructing the analyzer WITHOUT a telemetry argument must
+            // therefore default to TelemetrySinkRegistry.current, not a private no-op.
+            val registered = RecordingSink()
+            TelemetrySinkRegistry.register(registered)
+            try {
+                MrzFrameAnalyzer(
+                    recognizer = recognizerReturning(textOf("UTOPIA", td3Line1, td3Line2)),
+                    referenceTimeProvider = { referenceTime },
+                ).analyse(FakeFrame())
+
+                assertEquals(1, registered.events.size, "the registered sink should receive the frame event by default")
+                assertIs<CameraFrameEvent>(registered.events.single())
+            } finally {
+                TelemetrySinkRegistry.reset()
+            }
         }
 
     @Test
