@@ -13,10 +13,15 @@ paths:
 
 **Self-healing.** Hidden working-note folders (`.handoffs/`, `.recaps/`, `.conformance/`, etc.) materialize on first use — a session writing the first file creates the parent directory if absent. No setup script needed.
 
-**Archiving.** Dated-working-note folders accumulate — a long-running project produces dozens of `SESSION-HANDOFF-*` files. When one grows past roughly **20 files, move all but the most recent ~10 into an `archive/` subfolder** of the same folder (e.g. `.handoffs/archive/`), keeping the filenames unchanged. The recent tail stays immediately visible and the history is preserved, not deleted. Two properties make this safe and self-firing:
+**Archiving.** Dated-working-note folders accumulate, and stale notes bury the live ones. The principle is the same for every such folder — **move what is no longer *active* into an `archive/` subfolder of the same folder, keep what is current, never delete, and never break the lookup that finds the active note** — but *what counts as "active" depends on the kind of note*:
 
-- **"Find the latest" still works.** Tooling that locates the newest note globs the folder *directly* — e.g. CLAUDE.md's `ls -1 .handoffs/SESSION-HANDOFF-*.md | sort -r | head -1`, which does not descend into `archive/` — so the latest *kept* note is always the real latest, and archiving never breaks the lookup. (When reading older history, look in `archive/` too.)
-- **It matches the folder's gitignore status.** For a gitignored folder (`.handoffs/`) the move is pure local housekeeping — no commit; for a committed working-note folder it is an ordinary tracked move. `archive/` inherits the parent's gitignore status.
+- **Time-ordered, read-latest-first** (`.handoffs/`, `.recaps/`, and similar accumulating records like `.conformance/`) — relevance is **recency**. Keep the recent tail and archive the older ones; a rule of thumb is to archive once the folder passes ~20 files, keeping ~the most recent 10. (Applied this way, `.handoffs/` went from 50 files to 10 kept + 40 in `.handoffs/archive/`.)
+- **Reference-until-done** (`.plans/`, `.reviews/`, `.discovery/`) — relevance is **status, not age**. A plan or review stays put while the work it tracks is open and is archived when that work is **completed or superseded** — which is often *not* the newest file. Do **not** archive these by recency; a count threshold is the wrong trigger here.
+
+Two properties keep it safe and self-firing, whichever criterion applies:
+
+- **Finding the active note still works.** Tooling globs the folder *directly* — e.g. CLAUDE.md's `ls -1 .handoffs/SESSION-HANDOFF-*.md | sort -r | head -1` for the latest handoff — and does not descend into `archive/`, so archiving never hides the current note. (When reading older history, look in `archive/` too.)
+- **It matches the folder's gitignore status.** For a gitignored folder (`.handoffs/`, `.plans/`) the move is pure local housekeeping — no commit; for a committed working-note folder it is an ordinary tracked move. `archive/` inherits the parent's gitignore status.
 
 Trigger this opportunistically — a dependency-cadence checkpoint, or any session that notices the clutter — not on a fixed schedule.
 
