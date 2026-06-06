@@ -24,6 +24,10 @@ The complete inventory is whatever has a version pinned in:
 - `settings.gradle.kts`
 - The `jvmToolchain(N)` calls across module `build.gradle.kts` files
 
+## Also sweep deferred dependency risks
+
+At each checkpoint, scan [`docs/open-questions.md`](../../../docs/open-questions.md) for **accepted-risk / deferred-dependency** entries (e.g. the Dependabot build-time-transitive triage accepted at `0.2.0`) and revisit each one: has upstream shipped a fix, is an alternative path now viable, or does the deferral still hold? Update or resolve the entry accordingly. This closes the loop so an accepted risk is re-examined on a schedule rather than forgotten between sessions.
+
 ## How to bump
 
 1. Verify the latest stable of each via web search at upgrade time (knowledge cutoffs drift).
