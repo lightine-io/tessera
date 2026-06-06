@@ -1,0 +1,166 @@
+# Release pipeline — builds and publishes Tessera on a version tag.
+#
+# Triggers:
+#   - push of a `v*` tag → the real release (publishes).
+#   - workflow_dispatch  → a dry-run (builds/packages only; no secrets, publishes nothing),
+#                          used to validate the pipeline before a real tag.
+#
+# One macOS runner does everything: only macOS can build the iOS XCFramework (Kotlin/Native links
+# against Xcode), and it can also run the JVM/Android Maven publish. (When a non-Apple channel like
+# web/npm is added, split that off to a Linux job — see docs/open-questions.md.)
+#
+# Channels:
+#   - JVM + Android → Maven Central, STAGED (automaticRelease=false, ADR-016): the workflow uploads a
+#     staged deployment; a maintainer clicks "release" in the Sonatype Central portal to go live.
+#   - iOS → SPM: the `Tessera` XCFramework is built, zipped, and attached to this repo's GitHub Release;
+#     iOS consumers get it via lightine-io/tessera-swift (ADR-019). For 0.2.0 the tessera-swift
+#     Package.swift + tag is updated BY HAND using the checksum this workflow prints; cross-repo
+#     automation of that step is deferred post-0.2.0 (docs/open-questions.md).
+#
+# Every action is pinned to a full commit SHA with a version comment (supply-chain hardening),
+# matching .github/workflows/check.yml.
+
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build + package only; publishes nothing, needs no secrets"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Real release — only on a `v*` tag. Runs under the protected `release` environment: its required
+  # reviewer is the manual go/no-go gate, and the signing + Sonatype secrets unlock only after that
+  # approval (the environment + secrets are configured in repo settings before the first real tag).
+  release:
+    name: publish + release
+    if: github.event_name == 'push'
+    runs-on: macos-latest
+    environment: release
+    permissions:
+      contents: write # create the GitHub Release and upload the XCFramework asset
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # The Android camera AAR (tessera-mrz-camera-android) publishes here, so the macOS runner needs
+      # the compileSdk platform. macos-latest ships the Android SDK; ensure android-36 is present.
+      - name: Ensure Android SDK platform 36
+        run: |
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -d "$ANDROID_SDK_ROOT/platforms/android-36" ]; then
+            yes 2>/dev/null | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+            "$SDKMANAGER" --install "platforms;android-36"
+          fi
+
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: konan-${{ runner.os }}-
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+
+      - name: Publish to Maven Central (staged)
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: ./gradlew publishToMavenCentral
+
+      - name: Build the Tessera XCFramework
+        run: ./gradlew :mrz-camera-ios:packTesseraXCFramework
+
+      - name: Compute SPM checksum
+        id: checksum
+        run: |
+          ZIP="mrz-camera-ios/build/distributions/Tessera.xcframework.zip"
+          SUM=$(swift package compute-checksum "$ZIP")
+          echo "checksum=$SUM" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release + upload XCFramework
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHECKSUM: ${{ steps.checksum.outputs.checksum }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          ZIP="mrz-camera-ios/build/distributions/Tessera.xcframework.zip"
+          {
+            echo "## Tessera $TAG"
+            echo
+            echo "**iOS (Swift Package Manager):** add \`https://github.com/lightine-io/tessera-swift\` in Xcode and select \`$TAG\`."
+            echo
+            echo "\`Tessera.xcframework.zip\` SHA-256 checksum (for the SPM \`binaryTarget\`):"
+            echo
+            echo '```'
+            echo "$CHECKSUM"
+            echo '```'
+          } > release-notes.md
+          gh release create "$TAG" "$ZIP" --title "$TAG" --notes-file release-notes.md --verify-tag
+
+  # Dry-run — manual only. Validates the pipeline WITHOUT publishing: no environment, no secrets, no
+  # release. Proves the build/package/checksum path and that the publish task graph resolves.
+  dry-run:
+    name: dry-run (no publish)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Ensure Android SDK platform 36
+        run: |
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -d "$ANDROID_SDK_ROOT/platforms/android-36" ]; then
+            yes 2>/dev/null | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+            "$SDKMANAGER" --install "platforms;android-36"
+          fi
+
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: konan-${{ runner.os }}-
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+
+      - name: Validate publish task graph (no upload, no secrets)
+        run: ./gradlew publishToMavenCentral --dry-run
+
+      - name: Build the Tessera XCFramework
+        run: ./gradlew :mrz-camera-ios:packTesseraXCFramework
+
+      - name: Compute SPM checksum (sanity)
+        run: |
+          ZIP="mrz-camera-ios/build/distributions/Tessera.xcframework.zip"
+          swift package compute-checksum "$ZIP"
