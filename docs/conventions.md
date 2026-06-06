@@ -24,11 +24,12 @@ Feature documentation describes a specific capability of the SDK. Each feature d
 - **Platform availability** — which targets the feature is available on, and from which release. If the feature is target-specific (some are, by their nature), this is stated explicitly. If the feature is target-agnostic, this is stated explicitly.
 - **API surface** — the public types, methods, and contracts the feature exposes
 - **Inputs and outputs** — what the feature consumes and what it produces
+- **Usage example** — for any public API a consumer calls, a copy-paste `## Usage` snippet (imports, the call, branching the result) **verified against the shipped API**, not invented or transcribed from an illustrative shape. An illustrative-but-wrong example is worse than none.
 - **Errors and warnings** — every error and warning the feature can produce, typed and named
 - **Related principles** — which project principles inform this feature's design
 - **Related decisions** — which ADRs are relevant to this feature
 
-This list is the minimum. Features may include more sections (examples, diagrams, edge cases) as appropriate.
+This list is the minimum. Features may include more sections (diagrams, edge cases) as appropriate. An AI assistant adding or changing a public API auto-loads the usage-example requirement via [`.claude/rules/usage-example-required.md`](../.claude/rules/usage-example-required.md).
 
 ### What Every Decision Record Must Include
 
