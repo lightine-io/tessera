@@ -20,7 +20,7 @@ This is a *prerequisite*, not a preference: it is stated up front so no one sets
 |---|---|---|---|
 | **Multiplatform-core developer** | The pure parsing / validation / generation core, error taxonomy, lookup tables, telemetry, logging | Any OS (macOS / Linux / Windows) | [`contributor-setup.md`](contributor-setup.md) → [`development-setup.md`](development-setup.md) (JVM section) |
 | **Android developer** | The Android camera surface and Android-specific source | Any OS that runs the Android SDK (macOS / Linux / Windows) | [`development-setup.md`](development-setup.md) → [`mobile/android.md`](mobile/android.md) |
-| **iOS developer** | The iOS camera surface and iOS-specific source | **macOS only** (Xcode is macOS-only) | [`development-setup.md`](development-setup.md) → the iOS development guide (planned, mirroring `mobile/android.md`) |
+| **iOS developer** | The iOS camera surface and iOS-specific source | **macOS only** (Xcode is macOS-only) | [`development-setup.md`](development-setup.md) → [`mobile/ios.md`](mobile/ios.md) |
 | **Docs-only contributor** | Documentation, ADRs, conventions — no code | Any OS; only Git is required | [`CONTRIBUTING.md`](../CONTRIBUTING.md) → [`conventions.md`](conventions.md) |
 | **Maintainer on a new machine** | Anything (re-establishing the full environment) | Per the task above; iOS needs macOS | [`contributor-setup.md`](contributor-setup.md) → [`development-setup.md`](development-setup.md), then platform guides as needed |
 | **Future web / desktop / backend / AR developer** | Not yet real — these targets do not exist today | TBD when the target is added | When such a target lands it gets its own setup path; the target-agnostic core already supports the pattern |

@@ -131,6 +131,7 @@ Camera reading is throughput-sensitive, so the camera modules follow these from 
 - [`contributor-setup.md`](contributor-setup.md) — Git identity and commit/tag signing (do this first).
 - [`publishing-setup.md`](publishing-setup.md) — maintainer-only release credentials.
 - [`mobile/android.md`](mobile/android.md) — the Android development environment: the CLI/skills/Knowledge-Base model, what the tooling does and doesn't do, and the working method. This doc is the *install commands*; that one is the *model and method*.
+- [`mobile/ios.md`](mobile/ios.md) — the iOS development environment: Xcode, the Xcode MCP, and the Simulator/device model and method (the Apple-toolchain sibling of `android.md`). This doc is the Tier 2 *install commands*; that one is the *model and method*.
 - [`.claude/rules/mobile-dev-workflow.md`](../.claude/rules/mobile-dev-workflow.md) — the AI-facing CLI/MCP working method.
 - [`conventions.md`](conventions.md) — project conventions (cross-references this doc).
 - [ADR-017](decisions/0017-mobile-targets-and-build-stack.md), [ADR-018](decisions/0018-platform-minimums-and-managed-raise.md) — build stack and platform minimums.
