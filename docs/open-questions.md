@@ -192,13 +192,21 @@ The repository on GitHub has no topics set, which limits discoverability through
 
 **Resolution:** Pick an initial set and apply via `gh repo edit --add-topic ...`. Establish a maintenance rhythm of reviewing topics at each release milestone — add topics as capabilities land, remove ones that no longer describe scope. Either a small follow-up PR or fold into the next release-prep pass.
 
+### Triage the existing Dependabot alerts before the 0.2.0 tag
+
+After the 0.2.0 camera slices, Dependabot reports **10 vulnerability alerts on the default branch (4 high, 6 moderate)** against the transitive dependency graph — surfaced now that A4's `dependency-submission` job feeds Dependabot the whole tree. These are *existing-tree* CVEs; the per-PR `dependency-review` gate only blocks *newly introduced* moderate+ CVEs, so it does not clear what is already there. For a security-sensitive identity SDK, the high-severity ones in particular should be triaged before the `0.2.0` tag. The maintainer confirmed (2026-06-06) this should be handled pre-tag, "at some point."
+
+**Source:** observed during the 2026-06-06 B2/C5 session (`git push` output + the repo Dependabot dashboard).
+
+**Resolution:** Before tagging `0.2.0`, review the alerts on the repo's Dependabot dashboard; upgrade what is fixable (coordinate with the dependency-upgrade cadence), and for anything not upgradable record a one-line accepted-risk rationale. Not a freeze gate, but a pre-tag security-hygiene step.
+
 ### Code-review subagent (vs. the existing review skills)
 
-A code-*review* subagent — a read-only reviewer in the `doc-consistency-reviewer` / `security-reviewer` / `qa-coverage-reviewer` family, focused on the correctness and quality of a diff — was raised as a possible fourth project agent. It is **deferred pending discussion**, not declined. The real question is whether a dedicated standing subagent earns its keep *over the code-review capability that already exists as skills* (`/code-review`, `/review`, `/simplify`, and `/security-review` for the security slice): a subagent buys an isolated context window and a fixed, project-tuned remit (the value the existing three reviewers provide), but general code review is broad and judgment-heavy — closer to `security-reviewer`'s advise-don't-dictate shape than to the mechanical doc-sync / coverage checks — so the risks are (a) overlap with the skills and (b) the review-**Q9** caution to "defer other agents (conformance, API-ergonomics, …) until a real recurring need shows — avoid the over-build trap."
+A code-*review* subagent — a read-only reviewer in the `doc-consistency-reviewer` / `security-reviewer` / `qa-coverage-reviewer` family, focused on the correctness and quality of a diff — was raised as a possible fourth project agent. It was **declined for now** (2026-06-06, after discussion); the maintainer will revisit it on his own initiative. The question it weighed was whether a dedicated standing subagent earns its keep *over the code-review capability that already exists as skills* (`/code-review`, `/review`, `/simplify`, and `/security-review` for the security slice): a subagent buys an isolated context window and a fixed, project-tuned remit (the value the existing three reviewers provide), but general code review is broad and judgment-heavy — closer to `security-reviewer`'s advise-don't-dictate shape than to the mechanical doc-sync / coverage checks — so the risks are (a) overlap with the skills and (b) the review-**Q9** caution to "defer other agents (conformance, API-ergonomics, …) until a real recurring need shows — avoid the over-build trap."
 
 **Source:** raised by the maintainer 2026-06-06 alongside the `qa-coverage-reviewer` work (action-plan C5); source-of-truth framing for "add one agent, defer the rest" is review **Q9** (`.reviews/REVIEW-2026-06-01-decisions.md`).
 
-**Resolution:** Discuss before building. Decide (a) whether the need is real and recurring enough to justify a standing agent over invoking the existing review skills, (b) if yes, its exact remit and how it avoids duplicating `/code-review` and the other three agents, and (c) whether it stays manually-invoked, like the existing three. Until then, use the review skills for diff-level code review.
+**Resolution:** **Declined for now (2026-06-06).** Use the existing review skills (`/code-review`, `/simplify`, `/security-review`) for diff-level review; no fourth agent is added at this time. The maintainer will revisit on his own initiative if a real recurring need appears. Entry kept (not deleted) so the decision and its framing stay on record.
 
 ### Android target configuration on core modules
 
