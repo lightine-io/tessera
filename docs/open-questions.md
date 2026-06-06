@@ -192,6 +192,14 @@ The repository on GitHub has no topics set, which limits discoverability through
 
 **Resolution:** Pick an initial set and apply via `gh repo edit --add-topic ...`. Establish a maintenance rhythm of reviewing topics at each release milestone — add topics as capabilities land, remove ones that no longer describe scope. Either a small follow-up PR or fold into the next release-prep pass.
 
+### Code-review subagent (vs. the existing review skills)
+
+A code-*review* subagent — a read-only reviewer in the `doc-consistency-reviewer` / `security-reviewer` / `qa-coverage-reviewer` family, focused on the correctness and quality of a diff — was raised as a possible fourth project agent. It is **deferred pending discussion**, not declined. The real question is whether a dedicated standing subagent earns its keep *over the code-review capability that already exists as skills* (`/code-review`, `/review`, `/simplify`, and `/security-review` for the security slice): a subagent buys an isolated context window and a fixed, project-tuned remit (the value the existing three reviewers provide), but general code review is broad and judgment-heavy — closer to `security-reviewer`'s advise-don't-dictate shape than to the mechanical doc-sync / coverage checks — so the risks are (a) overlap with the skills and (b) the review-**Q9** caution to "defer other agents (conformance, API-ergonomics, …) until a real recurring need shows — avoid the over-build trap."
+
+**Source:** raised by the maintainer 2026-06-06 alongside the `qa-coverage-reviewer` work (action-plan C5); source-of-truth framing for "add one agent, defer the rest" is review **Q9** (`.reviews/REVIEW-2026-06-01-decisions.md`).
+
+**Resolution:** Discuss before building. Decide (a) whether the need is real and recurring enough to justify a standing agent over invoking the existing review skills, (b) if yes, its exact remit and how it avoids duplicating `/code-review` and the other three agents, and (c) whether it stays manually-invoked, like the existing three. Until then, use the review skills for diff-level code review.
+
 ### Android target configuration on core modules
 
 Core modules are scaffolded with the JVM target only. The Android target is intentionally deferred until 0.2.0 work begins, when the first Android-touching module (`mrz-camera-android`) is introduced and AGP needs to be added to the build anyway. Adding `androidTarget()` to the pure-logic core modules earlier would buy only theoretical insurance against Android-incompatible APIs sneaking into `commonMain`, at the cost of pulling AGP and its version-coupling constraints into the build before they earn their keep (Principle 2: the option that assumes less wins; Principle 11: don't promote infrastructure before it's justified). The Android SDK is already installed on the development machine; the deferral is by intent, not by tooling gap.
