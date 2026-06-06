@@ -3,15 +3,32 @@ plugins {
     // Android target via Google's KMP-library plugin (ADR-017). Applied right after the Kotlin
     // Multiplatform plugin so the `android {}` target is available inside the `kotlin {}` block.
     alias(libs.plugins.android.kotlin.multiplatform.library)
+    // dokka must be applied before maven.publish (see mrz-core's note): signAllPublications() in the
+    // root build eagerly realizes the Dokka javadoc jar during maven.publish's apply.
+    alias(libs.plugins.dokka)
+    alias(libs.plugins.maven.publish)
 }
 
 // The platform-agnostic camera-reading core (ADR-021): the analyse-frame engine, the streaming
 // scan() contract, the MrzCameraScanner interface, and the shared result/error/quality types.
 // mrz-camera-android and mrz-camera-ios are thin platform-I/O modules that depend on this; the
 // dependency-free seam (MrzTextRecognizer<F>) is also where a future USB/desktop/web frame source
-// plugs in (ADR-020). Intentionally NOT published in this slice — like mrz-camera-android, this
-// module's Maven coordinates and BOM entry are a 0.2.0-release-slice concern, so the vanniktech
-// maven-publish and dokka plugins are deliberately not applied yet.
+// plugs in (ADR-020). Published to Maven Central at the 0.2.0 release as `tessera-mrz-camera-core`
+// (ADR-016/ADR-021); Android consumers of `tessera-mrz-camera-android` pull it transitively.
+
+mavenPublishing {
+    coordinates(group.toString(), "tessera-mrz-camera-core", version.toString())
+
+    pom {
+        name.set("tessera-mrz-camera-core")
+        description.set(
+            "Platform-agnostic camera MRZ-reading core for the Tessera identity-document SDK: the " +
+                "analyse-frame engine, the frame-source-agnostic scan() streaming contract, the " +
+                "MrzCameraScanner owns-session interface, and the shared scan-result, camera-error, " +
+                "and quality types. The Android and iOS platform-I/O modules build on it.",
+        )
+    }
+}
 
 kotlin {
     explicitApi()

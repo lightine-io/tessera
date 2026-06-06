@@ -3,14 +3,31 @@ plugins {
     // Android target via Google's KMP-library plugin (ADR-017). Applied right after the Kotlin
     // Multiplatform plugin so the `android {}` target is available inside the `kotlin {}` block.
     alias(libs.plugins.android.kotlin.multiplatform.library)
+    // dokka before maven.publish (see mrz-core's note) — the javadoc jar is realized during publish apply.
+    alias(libs.plugins.dokka)
+    alias(libs.plugins.maven.publish)
 }
 
 // The Android platform-I/O module: CameraX + ML Kit wiring on top of the platform-agnostic
 // mrz-camera-core contract (ADR-021). Since the analyse-frame core, the scan() engine, and the
 // MrzCameraScanner interface now live in mrz-camera-core, this module is Android-only — it declares
 // no jvm() target (the host tests moved with the contract to mrz-camera-core, which runs them on the
-// JVM `check` runner). Intentionally NOT published in this slice; coordinates and the BOM entry are a
-// 0.2.0-release-slice concern, so maven-publish and dokka are deliberately not applied yet.
+// JVM `check` runner). Published to Maven Central at the 0.2.0 release as `tessera-mrz-camera-android`
+// (ADR-016/ADR-021) — the Android distribution of the camera scanner (iOS ships via SPM, ADR-019).
+
+mavenPublishing {
+    coordinates(group.toString(), "tessera-mrz-camera-android", version.toString())
+
+    pom {
+        name.set("tessera-mrz-camera-android")
+        description.set(
+            "Android camera MRZ reading for the Tessera identity-document SDK: the CameraX " +
+                "owns-the-session scanner (CameraXMrzScanner) and the bundled-model ML Kit OCR seam, " +
+                "built on the platform-agnostic tessera-mrz-camera-core contract. Headless — the " +
+                "consumer supplies any UI.",
+        )
+    }
+}
 
 kotlin {
     explicitApi()
