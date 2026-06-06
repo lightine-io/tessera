@@ -279,6 +279,10 @@ When fixing a bug:
 
 This is standard test-first discipline; the project commits to it because it produces better tests and better fixes than ad-hoc testing.
 
+### Coverage backstop
+
+The coverage commitments above ("What We Commit to Testing") are checked on each change by the read-only `qa-coverage-reviewer` subagent ([`.claude/agents/qa-coverage-reviewer.md`](../.claude/agents/qa-coverage-reviewer.md)): given a diff, it flags any new public API, error type, MRZ format, transliteration profile, or validator that appears to lack a test. It checks *presence* (is there a test?), never *effectiveness* (is the test any good?) — effectiveness stays human judgment — and it does not enforce a coverage percentage (a non-commitment above). It is a backstop a maintainer invokes, not an automated gate: CI *runs* the tests, the agent *notices the missing ones*. This is why the coverage rule lives partly in a human-invoked reviewer rather than entirely in the build — the "is there a test for this new surface?" cross-reference is judgment a Gradle gate cannot perform.
+
 ---
 
 ## Related Principles
