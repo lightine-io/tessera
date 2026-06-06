@@ -13,6 +13,13 @@ paths:
 
 **Self-healing.** Hidden working-note folders (`.handoffs/`, `.recaps/`, `.conformance/`, etc.) materialize on first use — a session writing the first file creates the parent directory if absent. No setup script needed.
 
+**Archiving.** Dated-working-note folders accumulate — a long-running project produces dozens of `SESSION-HANDOFF-*` files. When one grows past roughly **20 files, move all but the most recent ~10 into an `archive/` subfolder** of the same folder (e.g. `.handoffs/archive/`), keeping the filenames unchanged. The recent tail stays immediately visible and the history is preserved, not deleted. Two properties make this safe and self-firing:
+
+- **"Find the latest" still works.** Tooling that locates the newest note globs the folder *directly* — e.g. CLAUDE.md's `ls -1 .handoffs/SESSION-HANDOFF-*.md | sort -r | head -1`, which does not descend into `archive/` — so the latest *kept* note is always the real latest, and archiving never breaks the lookup. (When reading older history, look in `archive/` too.)
+- **It matches the folder's gitignore status.** For a gitignored folder (`.handoffs/`) the move is pure local housekeeping — no commit; for a committed working-note folder it is an ordinary tracked move. `archive/` inherits the parent's gitignore status.
+
+Trigger this opportunistically — a dependency-cadence checkpoint, or any session that notices the clutter — not on a fixed schedule.
+
 ## Cross-references
 
 - Project-level summary lives in [`../../CLAUDE.md`](../../CLAUDE.md) under "Folder and File Organization."
