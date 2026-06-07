@@ -103,7 +103,19 @@ implementation("io.lightine.tessera:tessera-mrz-core:0.2.1")
 </dependency>
 ```
 
-> **Android** ships the same coordinates as AAR artifacts (e.g. `tessera-mrz-camera-android` for live-camera reading). **iOS** is distributed as an `XCFramework` via Swift Package Manager from the [`tessera-swift`](https://github.com/lightine-io/tessera-swift) repository; the SPM coordinates are published with the `0.2.1` release. See [Platforms](#platforms).
+### Swift Package Manager (iOS)
+
+In Xcode: **File → Add Package Dependencies…**, enter `https://github.com/lightine-io/tessera-swift`, and choose `0.2.1`. Or in a `Package.swift`:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/lightine-io/tessera-swift", from: "0.2.1"),
+]
+```
+
+Then `import Tessera`. The iOS binary ships as the `Tessera` XCFramework (minimum deployment target iOS 18, per [ADR-018](docs/decisions/0018-platform-minimums-and-managed-raise.md)). The Swift surface is provisional through the `0.x` line — see [`tessera-swift`](https://github.com/lightine-io/tessera-swift).
+
+> **Android** ships the same coordinates as AAR artifacts (e.g. `tessera-mrz-camera-android` for live-camera reading) — use the Gradle/Maven blocks above. See [Platforms](#platforms) for the per-target capability matrix.
 
 ---
 
