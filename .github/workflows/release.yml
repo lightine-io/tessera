@@ -118,7 +118,14 @@ jobs:
             echo "$CHECKSUM"
             echo '```'
           } > release-notes.md
-          gh release create "$TAG" "$ZIP" --title "$TAG" --notes-file release-notes.md --verify-tag
+          # Re-run-safe: create the release if it doesn't exist yet; otherwise refresh its asset + notes
+          # (so a re-run after a partial failure doesn't error on an already-existing release).
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ZIP" --clobber
+            gh release edit "$TAG" --notes-file release-notes.md
+          else
+            gh release create "$TAG" "$ZIP" --title "$TAG" --notes-file release-notes.md --verify-tag
+          fi
 
   # Dry-run — manual only. Validates the pipeline WITHOUT publishing: no environment, no secrets, no
   # release. Proves the build/package/checksum path and that the publish task graph resolves.

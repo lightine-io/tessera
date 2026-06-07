@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-07
+
 ### Added
 
 - **`tessera-mrz-camera-core` and `tessera-mrz-camera-android` publish to Maven Central** — the deferred release-slice wiring from [ADR-021](docs/decisions/0021-shared-mrz-camera-core-module.md), following the coordinate plan in [ADR-016](docs/decisions/0016-maven-coordinates-and-first-publish.md). Both modules gain the Dokka + vanniktech `maven.publish` plugins with a `mavenPublishing` coordinates/POM block and are added to `tessera-bom`, so the Android camera scanner (`CameraXMrzScanner`) ships via Maven Central alongside the other JVM/Android modules; `mrz-camera-ios` stays SPM-only ([ADR-019](docs/decisions/0019-ios-distribution-via-spm.md)). Verified with `publishToMavenLocal --dry-run` (AAR + KMP metadata + Dokka javadoc + sources + signing). Doc-sync: the `docs/architecture.md` distribution sentence is corrected.
@@ -450,6 +452,7 @@ These are documented commitments that are explicitly *not* in this `[Unreleased]
 - iOS targets, Android targets (waiting on Xcode install / 0.2.0 platform I/O work)
 - Platform I/O modules (`mrz-camera-*`, `emrtd-nfc-*`, `mrz-camera-ui-*`)
 
-[Unreleased]: https://github.com/lightine-io/tessera/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/lightine-io/tessera/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/lightine-io/tessera/releases/tag/v0.2.0
 [0.1.1]: https://github.com/lightine-io/tessera/releases/tag/v0.1.1
 [0.1.0]: https://github.com/lightine-io/tessera/releases/tag/v0.1.0
