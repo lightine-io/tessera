@@ -35,11 +35,11 @@ kotlin {
         minSdk = 23
     }
 
-    // iOS targets (ADR-017): device arm64 plus the Apple-Silicon simulator. These two
-    // standard shortcuts activate Kotlin's default hierarchy template, which provides the shared
-    // iosMain/iosTest source sets.
-    iosArm64()
-    iosSimulatorArm64()
+    // No iOS (Kotlin/Native) targets while this module is an empty placeholder: a module with no
+    // source produces no `.klib`, so publishing its iOS artifact fails
+    // (generateMetadataFileForIosArm64Publication → FileNotFoundException on the missing klib). The
+    // iOS targets are added back with this module's first real source — the same "add platform support
+    // when the code lands" policy used for explicitApi()/abiValidation. See ADR-017.
 
     sourceSets {
         commonTest {
