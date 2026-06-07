@@ -1,0 +1,377 @@
+public final class io/lightine/tessera/types/errors/MrzBirthDateImplausiblyOld : io/lightine/tessera/types/errors/MrzWarning {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlinx/datetime/LocalDate;I)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Lkotlinx/datetime/LocalDate;
+	public final fun component5 ()I
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlinx/datetime/LocalDate;I)Lio/lightine/tessera/types/errors/MrzBirthDateImplausiblyOld;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzBirthDateImplausiblyOld;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlinx/datetime/LocalDate;IILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzBirthDateImplausiblyOld;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getRawDay ()Ljava/lang/String;
+	public final fun getRawMonth ()Ljava/lang/String;
+	public final fun getRawYear ()Ljava/lang/String;
+	public final fun getReferenceDate ()Lkotlinx/datetime/LocalDate;
+	public final fun getThresholdYears ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/MrzCharacterSetViolation : io/lightine/tessera/types/errors/MrzParseError {
+	public fun <init> (CI)V
+	public final fun component1 ()C
+	public final fun component2 ()I
+	public final fun copy (CI)Lio/lightine/tessera/types/errors/MrzCharacterSetViolation;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzCharacterSetViolation;CIILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzCharacterSetViolation;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getOffendingCharacter ()C
+	public final fun getPosition ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/MrzCheckDigitMismatch : io/lightine/tessera/types/errors/MrzValidationError {
+	public fun <init> (Lio/lightine/tessera/types/vocabulary/MrzField;CCI)V
+	public final fun component1 ()Lio/lightine/tessera/types/vocabulary/MrzField;
+	public final fun component2 ()C
+	public final fun component3 ()C
+	public final fun component4 ()I
+	public final fun copy (Lio/lightine/tessera/types/vocabulary/MrzField;CCI)Lio/lightine/tessera/types/errors/MrzCheckDigitMismatch;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzCheckDigitMismatch;Lio/lightine/tessera/types/vocabulary/MrzField;CCIILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzCheckDigitMismatch;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getExpected ()C
+	public final fun getField ()Lio/lightine/tessera/types/vocabulary/MrzField;
+	public final fun getObserved ()C
+	public final fun getPosition ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/MrzDateNotInCalendar : io/lightine/tessera/types/errors/MrzValidationError {
+	public fun <init> (Lio/lightine/tessera/types/vocabulary/MrzField;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V
+	public final fun component1 ()Lio/lightine/tessera/types/vocabulary/MrzField;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()I
+	public final fun copy (Lio/lightine/tessera/types/vocabulary/MrzField;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)Lio/lightine/tessera/types/errors/MrzDateNotInCalendar;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzDateNotInCalendar;Lio/lightine/tessera/types/vocabulary/MrzField;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzDateNotInCalendar;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getField ()Lio/lightine/tessera/types/vocabulary/MrzField;
+	public final fun getPosition ()I
+	public final fun getRawDay ()Ljava/lang/String;
+	public final fun getRawMonth ()Ljava/lang/String;
+	public final fun getRawYear ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class io/lightine/tessera/types/errors/MrzError {
+	public abstract fun getDescription ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/MrzExpiryDateImplausiblyFar : io/lightine/tessera/types/errors/MrzWarning {
+	public fun <init> (Lkotlinx/datetime/LocalDate;Lkotlinx/datetime/LocalDate;I)V
+	public final fun component1 ()Lkotlinx/datetime/LocalDate;
+	public final fun component2 ()Lkotlinx/datetime/LocalDate;
+	public final fun component3 ()I
+	public final fun copy (Lkotlinx/datetime/LocalDate;Lkotlinx/datetime/LocalDate;I)Lio/lightine/tessera/types/errors/MrzExpiryDateImplausiblyFar;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzExpiryDateImplausiblyFar;Lkotlinx/datetime/LocalDate;Lkotlinx/datetime/LocalDate;IILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzExpiryDateImplausiblyFar;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getExpiryDate ()Lkotlinx/datetime/LocalDate;
+	public final fun getReferenceDate ()Lkotlinx/datetime/LocalDate;
+	public final fun getThresholdYears ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/MrzExpiryDatePast : io/lightine/tessera/types/errors/MrzWarning {
+	public fun <init> (Lkotlinx/datetime/LocalDate;Lkotlinx/datetime/LocalDate;)V
+	public final fun component1 ()Lkotlinx/datetime/LocalDate;
+	public final fun component2 ()Lkotlinx/datetime/LocalDate;
+	public final fun copy (Lkotlinx/datetime/LocalDate;Lkotlinx/datetime/LocalDate;)Lio/lightine/tessera/types/errors/MrzExpiryDatePast;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzExpiryDatePast;Lkotlinx/datetime/LocalDate;Lkotlinx/datetime/LocalDate;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzExpiryDatePast;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getExpiryDate ()Lkotlinx/datetime/LocalDate;
+	public final fun getReferenceDate ()Lkotlinx/datetime/LocalDate;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/MrzFormatNotDetected : io/lightine/tessera/types/errors/MrzParseError {
+	public fun <init> (ILjava/util/List;)V
+	public final fun component1 ()I
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (ILjava/util/List;)Lio/lightine/tessera/types/errors/MrzFormatNotDetected;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzFormatNotDetected;ILjava/util/List;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzFormatNotDetected;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getObservedLineCount ()I
+	public final fun getObservedLineLengths ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class io/lightine/tessera/types/errors/MrzGenerationError : io/lightine/tessera/types/errors/MrzError {
+}
+
+public final class io/lightine/tessera/types/errors/MrzGenerationFieldOverflow : io/lightine/tessera/types/errors/MrzGenerationError {
+	public fun <init> (Lio/lightine/tessera/types/vocabulary/MrzFormat;Lio/lightine/tessera/types/vocabulary/MrzField;IILjava/lang/String;)V
+	public final fun component1 ()Lio/lightine/tessera/types/vocabulary/MrzFormat;
+	public final fun component2 ()Lio/lightine/tessera/types/vocabulary/MrzField;
+	public final fun component3 ()I
+	public final fun component4 ()I
+	public final fun component5 ()Ljava/lang/String;
+	public final fun copy (Lio/lightine/tessera/types/vocabulary/MrzFormat;Lio/lightine/tessera/types/vocabulary/MrzField;IILjava/lang/String;)Lio/lightine/tessera/types/errors/MrzGenerationFieldOverflow;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzGenerationFieldOverflow;Lio/lightine/tessera/types/vocabulary/MrzFormat;Lio/lightine/tessera/types/vocabulary/MrzField;IILjava/lang/String;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzGenerationFieldOverflow;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getField ()Lio/lightine/tessera/types/vocabulary/MrzField;
+	public final fun getFormat ()Lio/lightine/tessera/types/vocabulary/MrzFormat;
+	public final fun getMaxLength ()I
+	public final fun getObservedLength ()I
+	public final fun getObservedValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/MrzGenerationNumericInNameField : io/lightine/tessera/types/errors/MrzGenerationError {
+	public fun <init> (Lio/lightine/tessera/types/vocabulary/MrzFormat;Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Lio/lightine/tessera/types/vocabulary/MrzFormat;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Lio/lightine/tessera/types/vocabulary/MrzFormat;Ljava/lang/String;Ljava/util/List;)Lio/lightine/tessera/types/errors/MrzGenerationNumericInNameField;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzGenerationNumericInNameField;Lio/lightine/tessera/types/vocabulary/MrzFormat;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzGenerationNumericInNameField;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getFormat ()Lio/lightine/tessera/types/vocabulary/MrzFormat;
+	public final fun getNumericCharacters ()Ljava/util/List;
+	public final fun getObservedValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/MrzGenerationUnsupportedCharacters : io/lightine/tessera/types/errors/MrzGenerationError {
+	public fun <init> (Lio/lightine/tessera/types/vocabulary/MrzFormat;Lio/lightine/tessera/types/vocabulary/MrzField;Ljava/util/List;Ljava/lang/String;)V
+	public final fun component1 ()Lio/lightine/tessera/types/vocabulary/MrzFormat;
+	public final fun component2 ()Lio/lightine/tessera/types/vocabulary/MrzField;
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun copy (Lio/lightine/tessera/types/vocabulary/MrzFormat;Lio/lightine/tessera/types/vocabulary/MrzField;Ljava/util/List;Ljava/lang/String;)Lio/lightine/tessera/types/errors/MrzGenerationUnsupportedCharacters;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzGenerationUnsupportedCharacters;Lio/lightine/tessera/types/vocabulary/MrzFormat;Lio/lightine/tessera/types/vocabulary/MrzField;Ljava/util/List;Ljava/lang/String;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzGenerationUnsupportedCharacters;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getField ()Lio/lightine/tessera/types/vocabulary/MrzField;
+	public final fun getFormat ()Lio/lightine/tessera/types/vocabulary/MrzFormat;
+	public final fun getObservedValue ()Ljava/lang/String;
+	public final fun getUnmappedCharacters ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/MrzInvalidLength : io/lightine/tessera/types/errors/MrzParseError {
+	public fun <init> (Lio/lightine/tessera/types/vocabulary/MrzFormat;IIILjava/util/List;)V
+	public final fun component1 ()Lio/lightine/tessera/types/vocabulary/MrzFormat;
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun component4 ()I
+	public final fun component5 ()Ljava/util/List;
+	public final fun copy (Lio/lightine/tessera/types/vocabulary/MrzFormat;IIILjava/util/List;)Lio/lightine/tessera/types/errors/MrzInvalidLength;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzInvalidLength;Lio/lightine/tessera/types/vocabulary/MrzFormat;IIILjava/util/List;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzInvalidLength;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getExpectedLineCount ()I
+	public final fun getExpectedLineLength ()I
+	public final fun getFormat ()Lio/lightine/tessera/types/vocabulary/MrzFormat;
+	public final fun getObservedLineCount ()I
+	public final fun getObservedLineLengths ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/MrzInvalidSexValue : io/lightine/tessera/types/errors/MrzValidationError {
+	public fun <init> (CI)V
+	public final fun component1 ()C
+	public final fun component2 ()I
+	public final fun copy (CI)Lio/lightine/tessera/types/errors/MrzInvalidSexValue;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzInvalidSexValue;CIILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzInvalidSexValue;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getObserved ()C
+	public final fun getPosition ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/MrzNameTruncated : io/lightine/tessera/types/errors/MrzWarning {
+	public fun <init> (Ljava/lang/String;I)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun copy (Ljava/lang/String;I)Lio/lightine/tessera/types/errors/MrzNameTruncated;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzNameTruncated;Ljava/lang/String;IILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzNameTruncated;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getPosition ()I
+	public final fun getRawNameField ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class io/lightine/tessera/types/errors/MrzParseError : io/lightine/tessera/types/errors/MrzError {
+}
+
+public final class io/lightine/tessera/types/errors/MrzPersonalNumberCheckDigitFiller : io/lightine/tessera/types/errors/MrzWarning {
+	public fun <init> (Ljava/lang/String;I)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun copy (Ljava/lang/String;I)Lio/lightine/tessera/types/errors/MrzPersonalNumberCheckDigitFiller;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzPersonalNumberCheckDigitFiller;Ljava/lang/String;IILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzPersonalNumberCheckDigitFiller;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getPosition ()I
+	public final fun getRawPersonalNumber ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/MrzSexCharacterX : io/lightine/tessera/types/errors/MrzWarning {
+	public fun <init> (CI)V
+	public final fun component1 ()C
+	public final fun component2 ()I
+	public final fun copy (CI)Lio/lightine/tessera/types/errors/MrzSexCharacterX;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzSexCharacterX;CIILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzSexCharacterX;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getObserved ()C
+	public final fun getPosition ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/MrzUnknownCountryCode : io/lightine/tessera/types/errors/MrzWarning {
+	public fun <init> (Lio/lightine/tessera/types/vocabulary/MrzField;Ljava/lang/String;I)V
+	public final fun component1 ()Lio/lightine/tessera/types/vocabulary/MrzField;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()I
+	public final fun copy (Lio/lightine/tessera/types/vocabulary/MrzField;Ljava/lang/String;I)Lio/lightine/tessera/types/errors/MrzUnknownCountryCode;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzUnknownCountryCode;Lio/lightine/tessera/types/vocabulary/MrzField;Ljava/lang/String;IILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzUnknownCountryCode;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getField ()Lio/lightine/tessera/types/vocabulary/MrzField;
+	public final fun getPosition ()I
+	public final fun getRawCode ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/MrzUnknownDocumentTypeCode : io/lightine/tessera/types/errors/MrzWarning {
+	public fun <init> (Ljava/lang/String;I)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun copy (Ljava/lang/String;I)Lio/lightine/tessera/types/errors/MrzUnknownDocumentTypeCode;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzUnknownDocumentTypeCode;Ljava/lang/String;IILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzUnknownDocumentTypeCode;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getPosition ()I
+	public final fun getRawCode ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class io/lightine/tessera/types/errors/MrzValidationError {
+	public abstract fun getDescription ()Ljava/lang/String;
+}
+
+public abstract class io/lightine/tessera/types/errors/MrzWarning {
+	public abstract fun getDescription ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/vocabulary/CountryCodeCategory : java/lang/Enum {
+	public static final field HISTORICAL Lio/lightine/tessera/types/vocabulary/CountryCodeCategory;
+	public static final field ORGANIZATION Lio/lightine/tessera/types/vocabulary/CountryCodeCategory;
+	public static final field OTHER Lio/lightine/tessera/types/vocabulary/CountryCodeCategory;
+	public static final field REFUGEE Lio/lightine/tessera/types/vocabulary/CountryCodeCategory;
+	public static final field STATE Lio/lightine/tessera/types/vocabulary/CountryCodeCategory;
+	public static final field STATELESS Lio/lightine/tessera/types/vocabulary/CountryCodeCategory;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/vocabulary/CountryCodeCategory;
+	public static fun values ()[Lio/lightine/tessera/types/vocabulary/CountryCodeCategory;
+}
+
+public final class io/lightine/tessera/types/vocabulary/DocumentCategory : java/lang/Enum {
+	public static final field IDENTITY_CARD Lio/lightine/tessera/types/vocabulary/DocumentCategory;
+	public static final field OTHER Lio/lightine/tessera/types/vocabulary/DocumentCategory;
+	public static final field PASSPORT Lio/lightine/tessera/types/vocabulary/DocumentCategory;
+	public static final field RESIDENCE_PERMIT Lio/lightine/tessera/types/vocabulary/DocumentCategory;
+	public static final field VISA Lio/lightine/tessera/types/vocabulary/DocumentCategory;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/vocabulary/DocumentCategory;
+	public static fun values ()[Lio/lightine/tessera/types/vocabulary/DocumentCategory;
+}
+
+public final class io/lightine/tessera/types/vocabulary/MrzField : java/lang/Enum {
+	public static final field COMPOSITE Lio/lightine/tessera/types/vocabulary/MrzField;
+	public static final field DATE_OF_BIRTH Lio/lightine/tessera/types/vocabulary/MrzField;
+	public static final field DATE_OF_EXPIRY Lio/lightine/tessera/types/vocabulary/MrzField;
+	public static final field DOCUMENT_NUMBER Lio/lightine/tessera/types/vocabulary/MrzField;
+	public static final field DOCUMENT_TYPE Lio/lightine/tessera/types/vocabulary/MrzField;
+	public static final field ISSUING_STATE Lio/lightine/tessera/types/vocabulary/MrzField;
+	public static final field NAME_FIELD Lio/lightine/tessera/types/vocabulary/MrzField;
+	public static final field NATIONALITY Lio/lightine/tessera/types/vocabulary/MrzField;
+	public static final field OPTIONAL_DATA Lio/lightine/tessera/types/vocabulary/MrzField;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/vocabulary/MrzField;
+	public static fun values ()[Lio/lightine/tessera/types/vocabulary/MrzField;
+}
+
+public final class io/lightine/tessera/types/vocabulary/MrzFormat : java/lang/Enum {
+	public static final field MRV_A Lio/lightine/tessera/types/vocabulary/MrzFormat;
+	public static final field MRV_B Lio/lightine/tessera/types/vocabulary/MrzFormat;
+	public static final field TD1 Lio/lightine/tessera/types/vocabulary/MrzFormat;
+	public static final field TD2 Lio/lightine/tessera/types/vocabulary/MrzFormat;
+	public static final field TD3 Lio/lightine/tessera/types/vocabulary/MrzFormat;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/vocabulary/MrzFormat;
+	public static fun values ()[Lio/lightine/tessera/types/vocabulary/MrzFormat;
+}
+
+public final class io/lightine/tessera/types/vocabulary/ReadMethod : java/lang/Enum {
+	public static final field BACKEND_STRING_INPUT Lio/lightine/tessera/types/vocabulary/ReadMethod;
+	public static final field LIVE_CAMERA Lio/lightine/tessera/types/vocabulary/ReadMethod;
+	public static final field MANUAL_ENTRY Lio/lightine/tessera/types/vocabulary/ReadMethod;
+	public static final field MIXED Lio/lightine/tessera/types/vocabulary/ReadMethod;
+	public static final field NFC_CHIP Lio/lightine/tessera/types/vocabulary/ReadMethod;
+	public static final field PRE_CAPTURED_IMAGE Lio/lightine/tessera/types/vocabulary/ReadMethod;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/vocabulary/ReadMethod;
+	public static fun values ()[Lio/lightine/tessera/types/vocabulary/ReadMethod;
+}
+
+public final class io/lightine/tessera/types/vocabulary/Sex : java/lang/Enum {
+	public static final field FEMALE Lio/lightine/tessera/types/vocabulary/Sex;
+	public static final field MALE Lio/lightine/tessera/types/vocabulary/Sex;
+	public static final field UNSPECIFIED Lio/lightine/tessera/types/vocabulary/Sex;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/vocabulary/Sex;
+	public static fun values ()[Lio/lightine/tessera/types/vocabulary/Sex;
+}
+
+public final class io/lightine/tessera/types/vocabulary/UnmappedCharacter {
+	public fun <init> (CI)V
+	public final fun component1 ()C
+	public final fun component2 ()I
+	public final fun copy (CI)Lio/lightine/tessera/types/vocabulary/UnmappedCharacter;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/vocabulary/UnmappedCharacter;CIILjava/lang/Object;)Lio/lightine/tessera/types/vocabulary/UnmappedCharacter;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCharacter ()C
+	public final fun getPosition ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+

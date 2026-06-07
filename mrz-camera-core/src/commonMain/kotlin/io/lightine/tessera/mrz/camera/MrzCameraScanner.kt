@@ -35,19 +35,27 @@ import kotlinx.coroutines.flow.Flow
  */
 public interface MrzCameraScanner {
     /**
-     * The stream of results, one per analysed frame, plus any capture-availability failure surfaced as a
-     * terminal [`MrzScanResult.CaptureError`][MrzScanResult.CaptureError]. A hot stream: it emits only
-     * while the scanner is running (between [start] and [stop]); collectors that join late see results
-     * from that point on, not a replay. In a live stream the consumer reads each result and waits for the
-     * next — a noisy frame is simply [`NoMrzFound`][MrzScanResult.NoMrzFound] and the next clean frame
-     * arrives within milliseconds (strict + next-frame retry).
+     * The stream of results, one per analysed frame, plus any capture failure surfaced as an
+     * [`MrzScanResult.CaptureError`][MrzScanResult.CaptureError]. A hot stream: it emits only while the
+     * scanner is running (between [start] and [stop]); collectors that join late see results from that
+     * point on, not a replay. In a live stream the consumer reads each result and waits for the next — a
+     * noisy frame is simply [`NoMrzFound`][MrzScanResult.NoMrzFound] and the next clean frame arrives
+     * within milliseconds (strict + next-frame retry).
+     *
+     * Most [`CaptureError`][MrzScanResult.CaptureError]s are **non-terminal** — a per-frame OCR failure,
+     * or a recoverable camera-in-use / temporarily-unavailable observation — and the stream continues. A
+     * **critical** capture failure (permission denied, fatal hardware) ends the stream. Branch on
+     * [`CaptureError.error`][MrzScanResult.CaptureError] to tell them apart; after the stream ends you
+     * may [start] again (e.g. once the user grants permission).
      */
     public val results: Flow<MrzScanResult>
 
     /**
-     * Starts the camera session and begins emitting on [results]. Idempotent: calling [start] on an
-     * already-running scanner does nothing. The consumer must hold the camera permission first
-     * (the scanner reports, it does not request).
+     * Starts the camera session and begins emitting on [results]. Idempotent while running: calling
+     * [start] on an already-running scanner does nothing. Once the session has ended — via [stop], or
+     * because the stream ended on a terminal capture failure — [start] begins a fresh session (the
+     * prompt-and-retry path). The consumer must hold the camera permission first (the scanner reports,
+     * it does not request).
      *
      * **Threading.** The lifecycle methods ([start], [stop], and a platform `close`) are not
      * thread-safe; call them from a single thread — typically the UI thread / Swift main actor, the

@@ -16,7 +16,6 @@ import io.lightine.tessera.telemetry.TelemetrySink
 import io.lightine.tessera.telemetry.TelemetrySinkRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
@@ -105,11 +104,12 @@ public class CameraXMrzScanner(
         )
     override val results: Flow<MrzScanResult> = mutableResults.asSharedFlow()
 
-    private var sessionJob: Job? = null
+    // Tracks the in-flight session and auto-clears it on completion, so start() works again after the
+    // stream ends on its own (a terminal CaptureError), not only after stop(). See CameraSessionGate.
+    private val session = CameraSessionGate()
 
     override fun start() {
-        if (sessionJob != null) return
-        sessionJob =
+        session.start {
             scope.launch {
                 analyzer
                     .scan(
@@ -118,11 +118,11 @@ public class CameraXMrzScanner(
                         captureErrorFor = ::cameraErrorFor,
                     ).collect(mutableResults::emit)
             }
+        }
     }
 
     override fun stop() {
-        sessionJob?.cancel()
-        sessionJob = null
+        session.stop()
     }
 
     /** Stops the session, releases the analysis executor, and closes the OCR recognizer it owns. */

@@ -10,7 +10,7 @@ If you are a human contributor, [`README.md`](README.md) is the better starting 
 
 Tessera is a vendor-neutral SDK for reading, validating, and generating identity document data — primarily MRZ from passports, ID cards, residence permits, and visas conforming to ICAO Doc 9303. NFC chip reading and other capabilities are planned for later releases.
 
-**Current state:** In active `0.x` development. `v0.1.0` shipped 2026-05-19 — core MRZ parsing/validation/generation for all five ICAO Doc 9303 formats, the error taxonomy, lookup tables, transliteration profiles, and the pluggable telemetry interface on the JVM target. Roadmap through `1.0.0` in [`docs/scope.md`](docs/scope.md); release contents in [`CHANGELOG.md`](CHANGELOG.md).
+**Current state:** In active `0.x` development, published to Maven Central (`io.lightine.tessera`). `v0.1.0` (2026-05-19) shipped the core MRZ parsing/validation/generation for all five ICAO Doc 9303 formats, the error taxonomy, lookup tables, transliteration profiles, and the pluggable telemetry interface; `v0.2.0` adds headless live-camera MRZ reading on Android (CameraX + ML Kit) and iOS (AVFoundation + Apple Vision) across the multiplatform module set. Roadmap through `1.0.0` in [`docs/scope.md`](docs/scope.md); release contents in [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 

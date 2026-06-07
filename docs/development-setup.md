@@ -54,7 +54,7 @@ android skills add --all            # all Skills (or pass specific skill names)
 # 3. SDK packages — SKIP if you already have an SDK (the CLI auto-detects it).
 #    On a fresh machine, `android sdk list` shows exact path-style IDs; install
 #    what you need, plus a `system-images/...` image for the emulator, e.g.:
-android sdk install platform-tools emulator platforms/android-37.0 build-tools/37.0.0
+android sdk install platform-tools emulator platforms/android-36.0 build-tools/36.0.0
 
 # 4. An emulator AVD for instrumented tests (any API >= 26)
 android emulator create medium_phone   # Google's reference-phone profile

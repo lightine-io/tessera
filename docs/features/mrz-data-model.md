@@ -78,7 +78,7 @@ Most fields appear across all ICAO Doc 9303 formats, though their position withi
 - **`dateOfBirth`** — `MrzDate` (see "Dates" below)
 - **`sex`** — `Sex` enum (`MALE`, `FEMALE`, `UNSPECIFIED`)
 - **`dateOfExpiry`** — `MrzDate`
-- **`checkDigits`** — `CheckDigits` aggregate exposing the check digit values present in the MRZ (see "Check Digits" below)
+- **`checkDigits`** — `MrzCheckDigits` aggregate exposing the check digit values present in the MRZ (see "Check Digits" below)
 
 Each field is exposed verbatim: a misspelled name remains misspelled, an unexpected document type code remains unexpected, an empty optional field is exposed as empty.
 
@@ -167,9 +167,9 @@ Consumers who require deterministic century handling — for example, for backen
 
 This design honors Principle 1 (the raw value is always available, the computed value is explicitly labeled as inferred), Principle 5 (nothing is hidden), and Principle 4 (we are honest that the computed year is a best-effort interpretation, not a fact).
 
-### `CheckDigits`
+### `MrzCheckDigits`
 
-The MRZ contains check digits at multiple positions, computed using the algorithm in ICAO Doc 9303 Part 3 (weights 7-3-1, modulus 10). The `CheckDigits` aggregate exposes the values present in the MRZ:
+The MRZ contains check digits at multiple positions, computed using the algorithm in ICAO Doc 9303 Part 3 (weights 7-3-1, modulus 10). The `MrzCheckDigits` aggregate exposes the values present in the MRZ:
 
 - **`documentNumber`** — `Char` for the document number's check digit
 - **`dateOfBirth`** — `Char` for the birth date's check digit

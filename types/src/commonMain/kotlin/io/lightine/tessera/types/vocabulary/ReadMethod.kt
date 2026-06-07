@@ -5,9 +5,9 @@ package io.lightine.tessera.types.vocabulary
  * [`ResultMetadata.readMethod`][io.lightine.tessera.mrz.parsing.ResultMetadata] so
  * consumers can branch on how the data reached the SDK.
  *
- * 0.1.0 SDK code only produces results via direct string input (see
- * [BACKEND_STRING_INPUT]); the other values are committed for use by later releases as
- * the corresponding reading methods activate. See
+ * The string parser and generator produce [BACKEND_STRING_INPUT]; live-camera reading produces
+ * [LIVE_CAMERA]. The remaining values are committed for use as their reading methods activate in
+ * later releases. See
  * [`docs/scope.md`](https://github.com/lightine-io/tessera/blob/main/docs/scope.md)
  * for the release timeline.
  */

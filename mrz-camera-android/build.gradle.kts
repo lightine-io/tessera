@@ -32,6 +32,14 @@ mavenPublishing {
 kotlin {
     explicitApi()
 
+    // ABI tracking — enforces the ADR-007 no-public-API-break promise: snapshots the public API under
+    // api/ and fails `check` on an accidental break. Built-in Kotlin Gradle feature (no extra
+    // dependency, bundled with Kotlin so it never blocks a Kotlin bump). Refresh: `./gradlew updateKotlinAbi`.
+    @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
+    abiValidation {
+        enabled.set(true)
+    }
+
     jvmToolchain(21)
 
     // Android target. compileSdk tracks the latest stable API (36); minSdk 23 per ADR-018. The

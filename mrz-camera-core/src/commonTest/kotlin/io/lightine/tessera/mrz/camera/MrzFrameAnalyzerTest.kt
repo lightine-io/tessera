@@ -8,6 +8,7 @@ import io.lightine.tessera.telemetry.TelemetryEvent
 import io.lightine.tessera.telemetry.TelemetrySink
 import io.lightine.tessera.telemetry.TelemetrySinkRegistry
 import io.lightine.tessera.types.vocabulary.MrzFormat
+import io.lightine.tessera.types.vocabulary.ReadMethod
 import io.lightine.tessera.types.vocabulary.Sex
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
@@ -173,8 +174,22 @@ class MrzFrameAnalyzerTest {
             val decoded =
                 assertIs<MrzScanResult.Decoded>(analyzer(recognizerReturning(textOf(td3Line1, corruptedLine2))).analyse(FakeFrame()))
 
-            assertIs<ParseResult.PartialSuccess>(decoded.parse)
-            assertEquals(MrzParser.parse(candidate, referenceTime), decoded.parse)
+            val partial = assertIs<ParseResult.PartialSuccess>(decoded.parse)
+            val expected = assertIs<ParseResult.PartialSuccess>(MrzParser.parse(candidate, referenceTime))
+            // The verdict is surfaced verbatim — only the read-method provenance differs (live camera).
+            assertEquals(expected.document, partial.document)
+            assertEquals(expected.metadata.validationFailures, partial.metadata.validationFailures)
+            assertEquals(expected.metadata.warnings, partial.metadata.warnings)
+            assertEquals(ReadMethod.LIVE_CAMERA, partial.metadata.readMethod)
+        }
+
+    @Test
+    fun decoded_results_report_live_camera_provenance() =
+        runTest {
+            // The parser alone sees a string and reports BACKEND_STRING_INPUT; the camera core knows the
+            // frame came from a live camera and stamps that provenance honestly (Principle 5).
+            val decoded = assertIs<MrzScanResult.Decoded>(analyzer(recognizerReturning(textOf(td3Line1, td3Line2))).analyse(FakeFrame()))
+            assertEquals(ReadMethod.LIVE_CAMERA, decoded.parse.metadata.readMethod)
         }
 
     @Test

@@ -1,0 +1,32 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.lightine.tessera:telemetry>
+abstract interface io.lightine.tessera.telemetry/TelemetryEvent { // io.lightine.tessera.telemetry/TelemetryEvent|null[0]
+    abstract val name // io.lightine.tessera.telemetry/TelemetryEvent.name|{}name[0]
+        abstract fun <get-name>(): kotlin/String // io.lightine.tessera.telemetry/TelemetryEvent.name.<get-name>|<get-name>(){}[0]
+}
+
+abstract interface io.lightine.tessera.telemetry/TelemetrySink { // io.lightine.tessera.telemetry/TelemetrySink|null[0]
+    abstract fun record(io.lightine.tessera.telemetry/TelemetryEvent) // io.lightine.tessera.telemetry/TelemetrySink.record|record(io.lightine.tessera.telemetry.TelemetryEvent){}[0]
+}
+
+final object io.lightine.tessera.telemetry/NoOpTelemetrySink : io.lightine.tessera.telemetry/TelemetrySink { // io.lightine.tessera.telemetry/NoOpTelemetrySink|null[0]
+    final fun record(io.lightine.tessera.telemetry/TelemetryEvent) // io.lightine.tessera.telemetry/NoOpTelemetrySink.record|record(io.lightine.tessera.telemetry.TelemetryEvent){}[0]
+}
+
+final object io.lightine.tessera.telemetry/Redaction { // io.lightine.tessera.telemetry/Redaction|null[0]
+    final fun redactMrzLine(kotlin/String): kotlin/String // io.lightine.tessera.telemetry/Redaction.redactMrzLine|redactMrzLine(kotlin.String){}[0]
+}
+
+final object io.lightine.tessera.telemetry/TelemetrySinkRegistry { // io.lightine.tessera.telemetry/TelemetrySinkRegistry|null[0]
+    final val current // io.lightine.tessera.telemetry/TelemetrySinkRegistry.current|{}current[0]
+        final fun <get-current>(): io.lightine.tessera.telemetry/TelemetrySink // io.lightine.tessera.telemetry/TelemetrySinkRegistry.current.<get-current>|<get-current>(){}[0]
+
+    final fun register(io.lightine.tessera.telemetry/TelemetrySink) // io.lightine.tessera.telemetry/TelemetrySinkRegistry.register|register(io.lightine.tessera.telemetry.TelemetrySink){}[0]
+    final fun reset() // io.lightine.tessera.telemetry/TelemetrySinkRegistry.reset|reset(){}[0]
+}

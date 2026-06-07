@@ -12,4 +12,4 @@ The entry point for AI assistants is the `CLAUDE.md` file at project root. That 
 - **`gitignore-planning.md`** — What goes into the public repo and what does not. Read before committing anything new.
 - **`session-handoff-template.md`** — Template for ending a Claude Code session with a clear handoff to the next session.
 
-Material in this folder is public — it goes into the open-source repository at the 1.0.0 release. Nothing private should accumulate here. If private notes are needed during development, they live elsewhere (a personal workspace folder outside the repo) and never get committed.
+Material in this folder is public — it is committed to the repository, which is already publicly visible. Nothing private should accumulate here. If private notes are needed during development, they live elsewhere (a personal workspace folder outside the repo) and never get committed.

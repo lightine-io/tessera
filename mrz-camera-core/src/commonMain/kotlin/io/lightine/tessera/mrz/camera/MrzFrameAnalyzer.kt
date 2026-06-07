@@ -11,6 +11,7 @@ import io.lightine.tessera.telemetry.NoOpTelemetrySink
 import io.lightine.tessera.telemetry.TelemetrySink
 import io.lightine.tessera.telemetry.TelemetrySinkRegistry
 import io.lightine.tessera.types.vocabulary.MrzFormat
+import io.lightine.tessera.types.vocabulary.ReadMethod
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -92,7 +93,7 @@ public class MrzFrameAnalyzer<F>(
                 MrzScanResult.NoMrzFound(recognizedText = recognizedText, quality = quality)
             } else {
                 MrzScanResult.Decoded(
-                    parse = MrzParser.parse(candidate, referenceTimeProvider()),
+                    parse = MrzParser.parse(candidate, referenceTimeProvider()).withLiveCameraProvenance(),
                     recognizedText = recognizedText,
                     quality = quality,
                 )
@@ -168,5 +169,22 @@ public class MrzFrameAnalyzer<F>(
             listOf(Td1FormatSpec, Td2FormatSpec, Td3FormatSpec, MrvAFormatSpec, MrvBFormatSpec)
                 .map { MrzLineShape(it.lineCount, it.lineLength) }
                 .toSet()
+    }
+}
+
+// Stamps live-camera provenance onto a parser result. The parser itself sees only a string, so it
+// reports `BACKEND_STRING_INPUT`; the analyse-frame core knows the string came from a live camera and
+// records that honestly (Principle 5 — transparency: report what we know). In 0.x every frame source
+// is a live camera (the Android/iOS owns-session scanners, or a consumer feeding camera frames to
+// [MrzFrameAnalyzer.analyse]); when a non-camera frame source lands (USB/desktop/web — see the
+// `MrzTextRecognizer<F>` seam in the class KDoc), make this provenance a constructor parameter instead.
+// Only the read-method changes; the parser's verdict (document, warnings, validation failures) is
+// surfaced unchanged (reader, not oracle).
+private fun ParseResult.withLiveCameraProvenance(): ParseResult {
+    val cameraMetadata = metadata.copy(readMethod = ReadMethod.LIVE_CAMERA)
+    return when (this) {
+        is ParseResult.Success -> copy(metadata = cameraMetadata)
+        is ParseResult.PartialSuccess -> copy(metadata = cameraMetadata)
+        is ParseResult.Failure -> copy(metadata = cameraMetadata)
     }
 }

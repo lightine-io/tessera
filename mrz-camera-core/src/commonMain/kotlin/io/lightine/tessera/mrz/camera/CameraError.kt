@@ -15,10 +15,10 @@ package io.lightine.tessera.mrz.camera
  * owns-the-camera-session layer ([MrzCameraScanner]) adds the capture-availability failures
  * [CameraUnavailable], [PermissionDenied], and [CameraInUse] — each surfaced when the camera cannot
  * be started, never thrown. Their host-reproducible trigger is the scanner surfacing them as a sealed
- * result; the platform mapping from a real CameraX failure to the right member was verified on a device
- * (the live-device slice) for the [PermissionDenied] and [CameraUnavailable] paths — [CameraInUse]'s
- * code-mapping is in place but its live scenario (another client holding the camera) is not yet
- * device-exercised.
+ * result; the platform mapping from a real failure to the right member was verified on a device (the
+ * live-device slice) for the [PermissionDenied], [CameraUnavailable], and [CameraInUse] paths.
+ * [CameraInUse] is recoverable: it is surfaced **non-terminally** while the session stays bound and the
+ * platform camera framework auto-resumes the stream once the other client releases the camera.
  */
 public sealed interface CameraError {
     /** A stable, switch-on-able English code (e.g. `"camera.ocr_failed"`). Consumers localize it. */
@@ -65,8 +65,11 @@ public sealed interface CameraError {
     }
 
     /**
-     * The camera is held by another client (another app, or another part of this app) and cannot be
-     * opened now. The consumer may retry once the other holder releases it.
+     * The camera is held by another client (another app, or another part of this app). Surfaced as a
+     * **non-terminal** observation while the session stays bound: the platform camera framework (CameraX
+     * on Android, AVFoundation on iOS) auto-recovers and resumes the stream when the other holder
+     * releases the camera. The consumer need not restart — it is reported so a preview/UI can reflect
+     * the interruption.
      */
     public data class CameraInUse(
         override val message: String,

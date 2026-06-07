@@ -261,7 +261,7 @@ Once the maintainer-driven first publish lands and the workflow is proven, futur
 | `SIGNING_KEY_ID` | Signing key ID (short, 8-char) |
 | `SIGNING_KEY_PASSWORD` | Signing key passphrase |
 
-The Actions workflow maps secrets to `ORG_GRADLE_PROJECT_*` env vars before invoking Gradle. That's a separate slice (currently uncaptured); add it when the maintainer decides to move publishing to CI.
+The Actions workflow ([`.github/workflows/release.yml`](../.github/workflows/release.yml)) maps these secrets to `ORG_GRADLE_PROJECT_*` env vars before invoking Gradle's publish task. It runs on a `v*` tag, pauses for `release`-environment approval, stages the deployment to Maven Central (manual release, not auto-published), and builds the iOS XCFramework + GitHub Release. See that workflow for the current CI publishing flow.
 
 ---
 

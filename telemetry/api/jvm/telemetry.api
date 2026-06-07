@@ -1,0 +1,25 @@
+public final class io/lightine/tessera/telemetry/NoOpTelemetrySink : io/lightine/tessera/telemetry/TelemetrySink {
+	public static final field INSTANCE Lio/lightine/tessera/telemetry/NoOpTelemetrySink;
+	public fun record (Lio/lightine/tessera/telemetry/TelemetryEvent;)V
+}
+
+public final class io/lightine/tessera/telemetry/Redaction {
+	public static final field INSTANCE Lio/lightine/tessera/telemetry/Redaction;
+	public final fun redactMrzLine (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public abstract interface class io/lightine/tessera/telemetry/TelemetryEvent {
+	public abstract fun getName ()Ljava/lang/String;
+}
+
+public abstract interface class io/lightine/tessera/telemetry/TelemetrySink {
+	public abstract fun record (Lio/lightine/tessera/telemetry/TelemetryEvent;)V
+}
+
+public final class io/lightine/tessera/telemetry/TelemetrySinkRegistry {
+	public static final field INSTANCE Lio/lightine/tessera/telemetry/TelemetrySinkRegistry;
+	public final fun getCurrent ()Lio/lightine/tessera/telemetry/TelemetrySink;
+	public final fun register (Lio/lightine/tessera/telemetry/TelemetrySink;)V
+	public final fun reset ()V
+}
+

@@ -1,0 +1,25 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.lightine.tessera:mrz-camera-ios>
+final class io.lightine.tessera.mrz.camera/AVCaptureMrzScanner : io.lightine.tessera.mrz.camera/MrzCameraScanner, kotlin/AutoCloseable { // io.lightine.tessera.mrz.camera/AVCaptureMrzScanner|null[0]
+    constructor <init>(io.lightine.tessera.mrz.camera/MrzTextRecognizer<kotlinx.cinterop/CPointer<cnames.structs/opaqueCMSampleBuffer>> = ..., io.lightine.tessera.mrz.camera/ParsingMode = ..., io.lightine.tessera.telemetry/TelemetrySink = ..., kotlin/Long = ...) // io.lightine.tessera.mrz.camera/AVCaptureMrzScanner.<init>|<init>(io.lightine.tessera.mrz.camera.MrzTextRecognizer<kotlinx.cinterop.CPointer<cnames.structs.opaqueCMSampleBuffer>>;io.lightine.tessera.mrz.camera.ParsingMode;io.lightine.tessera.telemetry.TelemetrySink;kotlin.Long){}[0]
+
+    final val results // io.lightine.tessera.mrz.camera/AVCaptureMrzScanner.results|{}results[0]
+        final fun <get-results>(): kotlinx.coroutines.flow/Flow<io.lightine.tessera.mrz.camera/MrzScanResult> // io.lightine.tessera.mrz.camera/AVCaptureMrzScanner.results.<get-results>|<get-results>(){}[0]
+
+    final fun close() // io.lightine.tessera.mrz.camera/AVCaptureMrzScanner.close|close(){}[0]
+    final fun start() // io.lightine.tessera.mrz.camera/AVCaptureMrzScanner.start|start(){}[0]
+    final fun stop() // io.lightine.tessera.mrz.camera/AVCaptureMrzScanner.stop|stop(){}[0]
+}
+
+final class io.lightine.tessera.mrz.camera/VisionMrzTextRecognizer : io.lightine.tessera.mrz.camera/MrzTextRecognizer<kotlinx.cinterop/CPointer<cnames.structs/opaqueCMSampleBuffer>>, kotlin/AutoCloseable { // io.lightine.tessera.mrz.camera/VisionMrzTextRecognizer|null[0]
+    constructor <init>() // io.lightine.tessera.mrz.camera/VisionMrzTextRecognizer.<init>|<init>(){}[0]
+
+    final fun close() // io.lightine.tessera.mrz.camera/VisionMrzTextRecognizer.close|close(){}[0]
+    final suspend fun recognize(kotlinx.cinterop/CPointer<cnames.structs/opaqueCMSampleBuffer>): io.lightine.tessera.mrz.camera/RecognizedText // io.lightine.tessera.mrz.camera/VisionMrzTextRecognizer.recognize|recognize(kotlinx.cinterop.CPointer<cnames.structs.opaqueCMSampleBuffer>){}[0]
+}

@@ -9,7 +9,7 @@ Tessera is a vendor-neutral SDK for reading, validating, and generating identity
 | Latest released `0.x` minor | ✅ |
 | Earlier `0.x` releases | ❌ — upgrade to the latest minor |
 
-Until `1.0.0` (the public-stability commitment per [ADR-010](docs/decisions/0010-apache-2-license.md) and [ADR-011](docs/decisions/0011-open-source-at-public-release.md)), only the latest minor in the `0.x` line receives backports. After `1.0.0`, a longer-support policy will be established and documented here.
+Until `1.0.0` (the public-stability and open-source commitment per [ADR-011](docs/decisions/0011-open-source-at-public-release.md)), only the latest minor in the `0.x` line receives backports. After `1.0.0`, a longer-support policy will be established and documented here.
 
 ## Reporting a Vulnerability
 
@@ -41,7 +41,7 @@ These are targets, not guarantees. Tessera is a small project and timelines depe
 
 ## Scope
 
-Tessera is a pure-logic SDK for MRZ (parsing, generation, validation), the data model, error taxonomy, lookup tables, transliteration profiles, and the telemetry contract. As of `0.1.0`, the SDK does no I/O — no network calls, no file system writes beyond consumer-initiated paths, no environment-variable reads.
+Tessera is a pure-logic SDK for MRZ (parsing, generation, validation), the data model, error taxonomy, lookup tables, transliteration profiles, and the telemetry contract. Its core does no I/O. As of `0.2.0`, the optional camera-reading modules (`mrz-camera-*`) perform **camera input only** — reading frames in memory to locate and OCR the MRZ, releasing them promptly — and still make no network calls, write no files, and store nothing. The SDK never phones home.
 
 Reports concerning the following are in scope:
 

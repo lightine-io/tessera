@@ -42,7 +42,7 @@ The validator uses specific thresholds for date plausibility checks (130 years f
 
 **Source:** `mrz-validation.md` ("Date Range Conventions")
 
-**Resolution:** Confirm or adjust thresholds during implementation; document the chosen values in `mrz-validation.md`.
+**Resolution:** Resolved — the defaults are implemented and documented (e.g. the 130-year date-of-birth plausibility window) in [`mrz-validation.md`](features/mrz-validation.md). They remain configurable; further tuning would update that doc.
 
 ### Validator string-input and explicit-format overloads
 
@@ -338,7 +338,7 @@ Several significant decisions made during design (Kotlin Multiplatform choice, n
 
 **Source:** Implicit; conventions document the ADR format but no ADRs exist yet.
 
-**Resolution:** Resolved — fifteen ADRs exist in `docs/decisions/` as of the `0.1.0` tag. See [`docs/decisions/README.md`](decisions/README.md) for the current index. Additional ADRs may be added in the future as new significant decisions are made.
+**Resolution:** Resolved — the foundational decisions are recorded as ADRs in `docs/decisions/`. See [`docs/decisions/README.md`](decisions/README.md) for the current index. Additional ADRs are added as new significant decisions are made.
 
 ### README
 
@@ -561,7 +561,7 @@ Core modules (`mrz-core`, `emrtd-core`, `types`, `telemetry`, `logging`) are sca
 
 **Source:** Pre-implementation scaffolding session; depends on Xcode install.
 
-**Resolution:** Resolved (2026-05-29 0.2.0 pre-release review) — **Xcode is now present** (26.5 on the development machine), lifting the toolchain gate noted above ("not installed" is no longer true). The three iOS targets are enabled on the core modules per [ADR-017](decisions/0017-mobile-targets-and-build-stack.md), with the Normalization `expect`/`actual` ([ADR-014](decisions/0014-unicode-normalization-strategy.md)) gaining an iOS `actual`; the committed iOS deployment minimum is **18** ([ADR-018](decisions/0018-platform-minimums-and-managed-raise.md)), not the 15.0 this entry's original text referenced. **Executed (2026-05-30)** in the 0.2.0 iOS build-foundation slice: `iosArm64`/`iosSimulatorArm64`/`iosX64` declared on all five modules, the iOS `actual` for `normalizeForTransliteration` backed by Foundation's `NSString.precomposedStringWithCanonicalMapping`. Verified on Xcode 26.5 — Konan compiles `commonMain` for all three iOS targets and the full 577-test common suite passes on the `iosSimulatorArm64` target (alongside the JVM). iOS *distribution* (SPM, [ADR-019](decisions/0019-ios-distribution-via-spm.md)) is separate and lands later in 0.2.0.
+**Resolution:** Resolved (2026-05-29 0.2.0 pre-release review) — **Xcode is now present** (26.5 on the development machine), lifting the toolchain gate noted above ("not installed" is no longer true). The iOS targets are enabled on the core modules per [ADR-017](decisions/0017-mobile-targets-and-build-stack.md), with the Normalization `expect`/`actual` ([ADR-014](decisions/0014-unicode-normalization-strategy.md)) gaining an iOS `actual`; the committed iOS deployment minimum is **18** ([ADR-018](decisions/0018-platform-minimums-and-managed-raise.md)), not the 15.0 this entry's original text referenced. **Executed (2026-05-30)** in the 0.2.0 iOS build-foundation slice: `iosArm64`/`iosSimulatorArm64` declared on all five modules (the `iosX64` Intel-simulator target was enabled at this point then **dropped before the 0.2.0 tag** — ARM-only Mac dev, [ADR-017](decisions/0017-mobile-targets-and-build-stack.md)), the iOS `actual` for `normalizeForTransliteration` backed by Foundation's `NSString.precomposedStringWithCanonicalMapping`. Verified on Xcode 26.5 — Konan compiles `commonMain` for both iOS targets and the full 577-test common suite passes on the `iosSimulatorArm64` target (alongside the JVM). iOS *distribution* (SPM, [ADR-019](decisions/0019-ios-distribution-via-spm.md)) is separate and lands later in 0.2.0.
 
 ---
 

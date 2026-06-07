@@ -156,5 +156,8 @@ jobs:
       # slices, so the framework's `export(...)` surface is validated on every PR — a broken export
       # (e.g. a removed api dependency) fails CI here instead of at the release slice. (Debug, not
       # release: same export wiring, faster link; the release variant is built at the 0.2.0 release.)
-      - name: Compile iOS targets, run simulator tests, assemble the XCFramework
-        run: ./gradlew iosSimulatorArm64Test compileKotlinIosArm64 :mrz-camera-ios:assembleTesseraDebugXCFramework
+      # :mrz-camera-ios:checkKotlinAbi validates the iOS-only module's public ABI against its committed
+      # api/ baseline here, where the iOS targets actually compile (the ubuntu `check` job only infers
+      # iOS targets). The JVM `check` job covers the JVM-bearing modules' common ABI baselines.
+      - name: Compile iOS targets, run simulator tests, assemble the XCFramework, check iOS ABI
+        run: ./gradlew iosSimulatorArm64Test compileKotlinIosArm64 :mrz-camera-ios:assembleTesseraDebugXCFramework :mrz-camera-ios:checkKotlinAbi

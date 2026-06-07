@@ -1,0 +1,493 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.lightine.tessera:types>
+final enum class io.lightine.tessera.types.vocabulary/CountryCodeCategory : kotlin/Enum<io.lightine.tessera.types.vocabulary/CountryCodeCategory> { // io.lightine.tessera.types.vocabulary/CountryCodeCategory|null[0]
+    enum entry HISTORICAL // io.lightine.tessera.types.vocabulary/CountryCodeCategory.HISTORICAL|null[0]
+    enum entry ORGANIZATION // io.lightine.tessera.types.vocabulary/CountryCodeCategory.ORGANIZATION|null[0]
+    enum entry OTHER // io.lightine.tessera.types.vocabulary/CountryCodeCategory.OTHER|null[0]
+    enum entry REFUGEE // io.lightine.tessera.types.vocabulary/CountryCodeCategory.REFUGEE|null[0]
+    enum entry STATE // io.lightine.tessera.types.vocabulary/CountryCodeCategory.STATE|null[0]
+    enum entry STATELESS // io.lightine.tessera.types.vocabulary/CountryCodeCategory.STATELESS|null[0]
+
+    final val entries // io.lightine.tessera.types.vocabulary/CountryCodeCategory.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.types.vocabulary/CountryCodeCategory> // io.lightine.tessera.types.vocabulary/CountryCodeCategory.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.types.vocabulary/CountryCodeCategory // io.lightine.tessera.types.vocabulary/CountryCodeCategory.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.types.vocabulary/CountryCodeCategory> // io.lightine.tessera.types.vocabulary/CountryCodeCategory.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.types.vocabulary/DocumentCategory : kotlin/Enum<io.lightine.tessera.types.vocabulary/DocumentCategory> { // io.lightine.tessera.types.vocabulary/DocumentCategory|null[0]
+    enum entry IDENTITY_CARD // io.lightine.tessera.types.vocabulary/DocumentCategory.IDENTITY_CARD|null[0]
+    enum entry OTHER // io.lightine.tessera.types.vocabulary/DocumentCategory.OTHER|null[0]
+    enum entry PASSPORT // io.lightine.tessera.types.vocabulary/DocumentCategory.PASSPORT|null[0]
+    enum entry RESIDENCE_PERMIT // io.lightine.tessera.types.vocabulary/DocumentCategory.RESIDENCE_PERMIT|null[0]
+    enum entry VISA // io.lightine.tessera.types.vocabulary/DocumentCategory.VISA|null[0]
+
+    final val entries // io.lightine.tessera.types.vocabulary/DocumentCategory.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.types.vocabulary/DocumentCategory> // io.lightine.tessera.types.vocabulary/DocumentCategory.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.types.vocabulary/DocumentCategory // io.lightine.tessera.types.vocabulary/DocumentCategory.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.types.vocabulary/DocumentCategory> // io.lightine.tessera.types.vocabulary/DocumentCategory.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.types.vocabulary/MrzField : kotlin/Enum<io.lightine.tessera.types.vocabulary/MrzField> { // io.lightine.tessera.types.vocabulary/MrzField|null[0]
+    enum entry COMPOSITE // io.lightine.tessera.types.vocabulary/MrzField.COMPOSITE|null[0]
+    enum entry DATE_OF_BIRTH // io.lightine.tessera.types.vocabulary/MrzField.DATE_OF_BIRTH|null[0]
+    enum entry DATE_OF_EXPIRY // io.lightine.tessera.types.vocabulary/MrzField.DATE_OF_EXPIRY|null[0]
+    enum entry DOCUMENT_NUMBER // io.lightine.tessera.types.vocabulary/MrzField.DOCUMENT_NUMBER|null[0]
+    enum entry DOCUMENT_TYPE // io.lightine.tessera.types.vocabulary/MrzField.DOCUMENT_TYPE|null[0]
+    enum entry ISSUING_STATE // io.lightine.tessera.types.vocabulary/MrzField.ISSUING_STATE|null[0]
+    enum entry NAME_FIELD // io.lightine.tessera.types.vocabulary/MrzField.NAME_FIELD|null[0]
+    enum entry NATIONALITY // io.lightine.tessera.types.vocabulary/MrzField.NATIONALITY|null[0]
+    enum entry OPTIONAL_DATA // io.lightine.tessera.types.vocabulary/MrzField.OPTIONAL_DATA|null[0]
+
+    final val entries // io.lightine.tessera.types.vocabulary/MrzField.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.types.vocabulary/MrzField> // io.lightine.tessera.types.vocabulary/MrzField.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.types.vocabulary/MrzField // io.lightine.tessera.types.vocabulary/MrzField.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.types.vocabulary/MrzField> // io.lightine.tessera.types.vocabulary/MrzField.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.types.vocabulary/MrzFormat : kotlin/Enum<io.lightine.tessera.types.vocabulary/MrzFormat> { // io.lightine.tessera.types.vocabulary/MrzFormat|null[0]
+    enum entry MRV_A // io.lightine.tessera.types.vocabulary/MrzFormat.MRV_A|null[0]
+    enum entry MRV_B // io.lightine.tessera.types.vocabulary/MrzFormat.MRV_B|null[0]
+    enum entry TD1 // io.lightine.tessera.types.vocabulary/MrzFormat.TD1|null[0]
+    enum entry TD2 // io.lightine.tessera.types.vocabulary/MrzFormat.TD2|null[0]
+    enum entry TD3 // io.lightine.tessera.types.vocabulary/MrzFormat.TD3|null[0]
+
+    final val entries // io.lightine.tessera.types.vocabulary/MrzFormat.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.types.vocabulary/MrzFormat> // io.lightine.tessera.types.vocabulary/MrzFormat.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.types.vocabulary/MrzFormat // io.lightine.tessera.types.vocabulary/MrzFormat.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.types.vocabulary/MrzFormat> // io.lightine.tessera.types.vocabulary/MrzFormat.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.types.vocabulary/ReadMethod : kotlin/Enum<io.lightine.tessera.types.vocabulary/ReadMethod> { // io.lightine.tessera.types.vocabulary/ReadMethod|null[0]
+    enum entry BACKEND_STRING_INPUT // io.lightine.tessera.types.vocabulary/ReadMethod.BACKEND_STRING_INPUT|null[0]
+    enum entry LIVE_CAMERA // io.lightine.tessera.types.vocabulary/ReadMethod.LIVE_CAMERA|null[0]
+    enum entry MANUAL_ENTRY // io.lightine.tessera.types.vocabulary/ReadMethod.MANUAL_ENTRY|null[0]
+    enum entry MIXED // io.lightine.tessera.types.vocabulary/ReadMethod.MIXED|null[0]
+    enum entry NFC_CHIP // io.lightine.tessera.types.vocabulary/ReadMethod.NFC_CHIP|null[0]
+    enum entry PRE_CAPTURED_IMAGE // io.lightine.tessera.types.vocabulary/ReadMethod.PRE_CAPTURED_IMAGE|null[0]
+
+    final val entries // io.lightine.tessera.types.vocabulary/ReadMethod.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.types.vocabulary/ReadMethod> // io.lightine.tessera.types.vocabulary/ReadMethod.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.types.vocabulary/ReadMethod // io.lightine.tessera.types.vocabulary/ReadMethod.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.types.vocabulary/ReadMethod> // io.lightine.tessera.types.vocabulary/ReadMethod.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.types.vocabulary/Sex : kotlin/Enum<io.lightine.tessera.types.vocabulary/Sex> { // io.lightine.tessera.types.vocabulary/Sex|null[0]
+    enum entry FEMALE // io.lightine.tessera.types.vocabulary/Sex.FEMALE|null[0]
+    enum entry MALE // io.lightine.tessera.types.vocabulary/Sex.MALE|null[0]
+    enum entry UNSPECIFIED // io.lightine.tessera.types.vocabulary/Sex.UNSPECIFIED|null[0]
+
+    final val entries // io.lightine.tessera.types.vocabulary/Sex.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.types.vocabulary/Sex> // io.lightine.tessera.types.vocabulary/Sex.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.types.vocabulary/Sex // io.lightine.tessera.types.vocabulary/Sex.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.types.vocabulary/Sex> // io.lightine.tessera.types.vocabulary/Sex.values|values#static(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld : io.lightine.tessera.types.errors/MrzWarning { // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld|null[0]
+    constructor <init>(kotlin/String, kotlin/String, kotlin/String, kotlinx.datetime/LocalDate, kotlin/Int) // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlinx.datetime.LocalDate;kotlin.Int){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.description.<get-description>|<get-description>(){}[0]
+    final val rawDay // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.rawDay|{}rawDay[0]
+        final fun <get-rawDay>(): kotlin/String // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.rawDay.<get-rawDay>|<get-rawDay>(){}[0]
+    final val rawMonth // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.rawMonth|{}rawMonth[0]
+        final fun <get-rawMonth>(): kotlin/String // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.rawMonth.<get-rawMonth>|<get-rawMonth>(){}[0]
+    final val rawYear // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.rawYear|{}rawYear[0]
+        final fun <get-rawYear>(): kotlin/String // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.rawYear.<get-rawYear>|<get-rawYear>(){}[0]
+    final val referenceDate // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.referenceDate|{}referenceDate[0]
+        final fun <get-referenceDate>(): kotlinx.datetime/LocalDate // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.referenceDate.<get-referenceDate>|<get-referenceDate>(){}[0]
+    final val thresholdYears // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.thresholdYears|{}thresholdYears[0]
+        final fun <get-thresholdYears>(): kotlin/Int // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.thresholdYears.<get-thresholdYears>|<get-thresholdYears>(){}[0]
+
+    final fun component1(): kotlin/String // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.component1|component1(){}[0]
+    final fun component2(): kotlin/String // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.component2|component2(){}[0]
+    final fun component3(): kotlin/String // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.component3|component3(){}[0]
+    final fun component4(): kotlinx.datetime/LocalDate // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.component4|component4(){}[0]
+    final fun component5(): kotlin/Int // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.component5|component5(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlinx.datetime/LocalDate = ..., kotlin/Int = ...): io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.copy|copy(kotlin.String;kotlin.String;kotlin.String;kotlinx.datetime.LocalDate;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/MrzCharacterSetViolation : io.lightine.tessera.types.errors/MrzParseError { // io.lightine.tessera.types.errors/MrzCharacterSetViolation|null[0]
+    constructor <init>(kotlin/Char, kotlin/Int) // io.lightine.tessera.types.errors/MrzCharacterSetViolation.<init>|<init>(kotlin.Char;kotlin.Int){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzCharacterSetViolation.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzCharacterSetViolation.description.<get-description>|<get-description>(){}[0]
+    final val offendingCharacter // io.lightine.tessera.types.errors/MrzCharacterSetViolation.offendingCharacter|{}offendingCharacter[0]
+        final fun <get-offendingCharacter>(): kotlin/Char // io.lightine.tessera.types.errors/MrzCharacterSetViolation.offendingCharacter.<get-offendingCharacter>|<get-offendingCharacter>(){}[0]
+    final val position // io.lightine.tessera.types.errors/MrzCharacterSetViolation.position|{}position[0]
+        final fun <get-position>(): kotlin/Int // io.lightine.tessera.types.errors/MrzCharacterSetViolation.position.<get-position>|<get-position>(){}[0]
+
+    final fun component1(): kotlin/Char // io.lightine.tessera.types.errors/MrzCharacterSetViolation.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // io.lightine.tessera.types.errors/MrzCharacterSetViolation.component2|component2(){}[0]
+    final fun copy(kotlin/Char = ..., kotlin/Int = ...): io.lightine.tessera.types.errors/MrzCharacterSetViolation // io.lightine.tessera.types.errors/MrzCharacterSetViolation.copy|copy(kotlin.Char;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzCharacterSetViolation.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzCharacterSetViolation.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzCharacterSetViolation.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/MrzCheckDigitMismatch : io.lightine.tessera.types.errors/MrzValidationError { // io.lightine.tessera.types.errors/MrzCheckDigitMismatch|null[0]
+    constructor <init>(io.lightine.tessera.types.vocabulary/MrzField, kotlin/Char, kotlin/Char, kotlin/Int) // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.<init>|<init>(io.lightine.tessera.types.vocabulary.MrzField;kotlin.Char;kotlin.Char;kotlin.Int){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.description.<get-description>|<get-description>(){}[0]
+    final val expected // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.expected|{}expected[0]
+        final fun <get-expected>(): kotlin/Char // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.expected.<get-expected>|<get-expected>(){}[0]
+    final val field // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.field|{}field[0]
+        final fun <get-field>(): io.lightine.tessera.types.vocabulary/MrzField // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.field.<get-field>|<get-field>(){}[0]
+    final val observed // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.observed|{}observed[0]
+        final fun <get-observed>(): kotlin/Char // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.observed.<get-observed>|<get-observed>(){}[0]
+    final val position // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.position|{}position[0]
+        final fun <get-position>(): kotlin/Int // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.position.<get-position>|<get-position>(){}[0]
+
+    final fun component1(): io.lightine.tessera.types.vocabulary/MrzField // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.component1|component1(){}[0]
+    final fun component2(): kotlin/Char // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.component2|component2(){}[0]
+    final fun component3(): kotlin/Char // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.component3|component3(){}[0]
+    final fun component4(): kotlin/Int // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.component4|component4(){}[0]
+    final fun copy(io.lightine.tessera.types.vocabulary/MrzField = ..., kotlin/Char = ..., kotlin/Char = ..., kotlin/Int = ...): io.lightine.tessera.types.errors/MrzCheckDigitMismatch // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.copy|copy(io.lightine.tessera.types.vocabulary.MrzField;kotlin.Char;kotlin.Char;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzCheckDigitMismatch.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/MrzDateNotInCalendar : io.lightine.tessera.types.errors/MrzValidationError { // io.lightine.tessera.types.errors/MrzDateNotInCalendar|null[0]
+    constructor <init>(io.lightine.tessera.types.vocabulary/MrzField, kotlin/String, kotlin/String, kotlin/String, kotlin/Int) // io.lightine.tessera.types.errors/MrzDateNotInCalendar.<init>|<init>(io.lightine.tessera.types.vocabulary.MrzField;kotlin.String;kotlin.String;kotlin.String;kotlin.Int){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzDateNotInCalendar.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzDateNotInCalendar.description.<get-description>|<get-description>(){}[0]
+    final val field // io.lightine.tessera.types.errors/MrzDateNotInCalendar.field|{}field[0]
+        final fun <get-field>(): io.lightine.tessera.types.vocabulary/MrzField // io.lightine.tessera.types.errors/MrzDateNotInCalendar.field.<get-field>|<get-field>(){}[0]
+    final val position // io.lightine.tessera.types.errors/MrzDateNotInCalendar.position|{}position[0]
+        final fun <get-position>(): kotlin/Int // io.lightine.tessera.types.errors/MrzDateNotInCalendar.position.<get-position>|<get-position>(){}[0]
+    final val rawDay // io.lightine.tessera.types.errors/MrzDateNotInCalendar.rawDay|{}rawDay[0]
+        final fun <get-rawDay>(): kotlin/String // io.lightine.tessera.types.errors/MrzDateNotInCalendar.rawDay.<get-rawDay>|<get-rawDay>(){}[0]
+    final val rawMonth // io.lightine.tessera.types.errors/MrzDateNotInCalendar.rawMonth|{}rawMonth[0]
+        final fun <get-rawMonth>(): kotlin/String // io.lightine.tessera.types.errors/MrzDateNotInCalendar.rawMonth.<get-rawMonth>|<get-rawMonth>(){}[0]
+    final val rawYear // io.lightine.tessera.types.errors/MrzDateNotInCalendar.rawYear|{}rawYear[0]
+        final fun <get-rawYear>(): kotlin/String // io.lightine.tessera.types.errors/MrzDateNotInCalendar.rawYear.<get-rawYear>|<get-rawYear>(){}[0]
+
+    final fun component1(): io.lightine.tessera.types.vocabulary/MrzField // io.lightine.tessera.types.errors/MrzDateNotInCalendar.component1|component1(){}[0]
+    final fun component2(): kotlin/String // io.lightine.tessera.types.errors/MrzDateNotInCalendar.component2|component2(){}[0]
+    final fun component3(): kotlin/String // io.lightine.tessera.types.errors/MrzDateNotInCalendar.component3|component3(){}[0]
+    final fun component4(): kotlin/String // io.lightine.tessera.types.errors/MrzDateNotInCalendar.component4|component4(){}[0]
+    final fun component5(): kotlin/Int // io.lightine.tessera.types.errors/MrzDateNotInCalendar.component5|component5(){}[0]
+    final fun copy(io.lightine.tessera.types.vocabulary/MrzField = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Int = ...): io.lightine.tessera.types.errors/MrzDateNotInCalendar // io.lightine.tessera.types.errors/MrzDateNotInCalendar.copy|copy(io.lightine.tessera.types.vocabulary.MrzField;kotlin.String;kotlin.String;kotlin.String;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzDateNotInCalendar.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzDateNotInCalendar.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzDateNotInCalendar.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar : io.lightine.tessera.types.errors/MrzWarning { // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar|null[0]
+    constructor <init>(kotlinx.datetime/LocalDate, kotlinx.datetime/LocalDate, kotlin/Int) // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar.<init>|<init>(kotlinx.datetime.LocalDate;kotlinx.datetime.LocalDate;kotlin.Int){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar.description.<get-description>|<get-description>(){}[0]
+    final val expiryDate // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar.expiryDate|{}expiryDate[0]
+        final fun <get-expiryDate>(): kotlinx.datetime/LocalDate // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar.expiryDate.<get-expiryDate>|<get-expiryDate>(){}[0]
+    final val referenceDate // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar.referenceDate|{}referenceDate[0]
+        final fun <get-referenceDate>(): kotlinx.datetime/LocalDate // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar.referenceDate.<get-referenceDate>|<get-referenceDate>(){}[0]
+    final val thresholdYears // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar.thresholdYears|{}thresholdYears[0]
+        final fun <get-thresholdYears>(): kotlin/Int // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar.thresholdYears.<get-thresholdYears>|<get-thresholdYears>(){}[0]
+
+    final fun component1(): kotlinx.datetime/LocalDate // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar.component1|component1(){}[0]
+    final fun component2(): kotlinx.datetime/LocalDate // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar.component3|component3(){}[0]
+    final fun copy(kotlinx.datetime/LocalDate = ..., kotlinx.datetime/LocalDate = ..., kotlin/Int = ...): io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar.copy|copy(kotlinx.datetime.LocalDate;kotlinx.datetime.LocalDate;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/MrzExpiryDatePast : io.lightine.tessera.types.errors/MrzWarning { // io.lightine.tessera.types.errors/MrzExpiryDatePast|null[0]
+    constructor <init>(kotlinx.datetime/LocalDate, kotlinx.datetime/LocalDate) // io.lightine.tessera.types.errors/MrzExpiryDatePast.<init>|<init>(kotlinx.datetime.LocalDate;kotlinx.datetime.LocalDate){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzExpiryDatePast.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDatePast.description.<get-description>|<get-description>(){}[0]
+    final val expiryDate // io.lightine.tessera.types.errors/MrzExpiryDatePast.expiryDate|{}expiryDate[0]
+        final fun <get-expiryDate>(): kotlinx.datetime/LocalDate // io.lightine.tessera.types.errors/MrzExpiryDatePast.expiryDate.<get-expiryDate>|<get-expiryDate>(){}[0]
+    final val referenceDate // io.lightine.tessera.types.errors/MrzExpiryDatePast.referenceDate|{}referenceDate[0]
+        final fun <get-referenceDate>(): kotlinx.datetime/LocalDate // io.lightine.tessera.types.errors/MrzExpiryDatePast.referenceDate.<get-referenceDate>|<get-referenceDate>(){}[0]
+
+    final fun component1(): kotlinx.datetime/LocalDate // io.lightine.tessera.types.errors/MrzExpiryDatePast.component1|component1(){}[0]
+    final fun component2(): kotlinx.datetime/LocalDate // io.lightine.tessera.types.errors/MrzExpiryDatePast.component2|component2(){}[0]
+    final fun copy(kotlinx.datetime/LocalDate = ..., kotlinx.datetime/LocalDate = ...): io.lightine.tessera.types.errors/MrzExpiryDatePast // io.lightine.tessera.types.errors/MrzExpiryDatePast.copy|copy(kotlinx.datetime.LocalDate;kotlinx.datetime.LocalDate){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzExpiryDatePast.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzExpiryDatePast.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDatePast.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/MrzFormatNotDetected : io.lightine.tessera.types.errors/MrzParseError { // io.lightine.tessera.types.errors/MrzFormatNotDetected|null[0]
+    constructor <init>(kotlin/Int, kotlin.collections/List<kotlin/Int>) // io.lightine.tessera.types.errors/MrzFormatNotDetected.<init>|<init>(kotlin.Int;kotlin.collections.List<kotlin.Int>){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzFormatNotDetected.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzFormatNotDetected.description.<get-description>|<get-description>(){}[0]
+    final val observedLineCount // io.lightine.tessera.types.errors/MrzFormatNotDetected.observedLineCount|{}observedLineCount[0]
+        final fun <get-observedLineCount>(): kotlin/Int // io.lightine.tessera.types.errors/MrzFormatNotDetected.observedLineCount.<get-observedLineCount>|<get-observedLineCount>(){}[0]
+    final val observedLineLengths // io.lightine.tessera.types.errors/MrzFormatNotDetected.observedLineLengths|{}observedLineLengths[0]
+        final fun <get-observedLineLengths>(): kotlin.collections/List<kotlin/Int> // io.lightine.tessera.types.errors/MrzFormatNotDetected.observedLineLengths.<get-observedLineLengths>|<get-observedLineLengths>(){}[0]
+
+    final fun component1(): kotlin/Int // io.lightine.tessera.types.errors/MrzFormatNotDetected.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<kotlin/Int> // io.lightine.tessera.types.errors/MrzFormatNotDetected.component2|component2(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin.collections/List<kotlin/Int> = ...): io.lightine.tessera.types.errors/MrzFormatNotDetected // io.lightine.tessera.types.errors/MrzFormatNotDetected.copy|copy(kotlin.Int;kotlin.collections.List<kotlin.Int>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzFormatNotDetected.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzFormatNotDetected.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzFormatNotDetected.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/MrzGenerationFieldOverflow : io.lightine.tessera.types.errors/MrzGenerationError { // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow|null[0]
+    constructor <init>(io.lightine.tessera.types.vocabulary/MrzFormat, io.lightine.tessera.types.vocabulary/MrzField, kotlin/Int, kotlin/Int, kotlin/String) // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.<init>|<init>(io.lightine.tessera.types.vocabulary.MrzFormat;io.lightine.tessera.types.vocabulary.MrzField;kotlin.Int;kotlin.Int;kotlin.String){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.description.<get-description>|<get-description>(){}[0]
+    final val field // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.field|{}field[0]
+        final fun <get-field>(): io.lightine.tessera.types.vocabulary/MrzField // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.field.<get-field>|<get-field>(){}[0]
+    final val format // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.format|{}format[0]
+        final fun <get-format>(): io.lightine.tessera.types.vocabulary/MrzFormat // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.format.<get-format>|<get-format>(){}[0]
+    final val maxLength // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.maxLength|{}maxLength[0]
+        final fun <get-maxLength>(): kotlin/Int // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.maxLength.<get-maxLength>|<get-maxLength>(){}[0]
+    final val observedLength // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.observedLength|{}observedLength[0]
+        final fun <get-observedLength>(): kotlin/Int // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.observedLength.<get-observedLength>|<get-observedLength>(){}[0]
+    final val observedValue // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.observedValue|{}observedValue[0]
+        final fun <get-observedValue>(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.observedValue.<get-observedValue>|<get-observedValue>(){}[0]
+
+    final fun component1(): io.lightine.tessera.types.vocabulary/MrzFormat // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.component1|component1(){}[0]
+    final fun component2(): io.lightine.tessera.types.vocabulary/MrzField // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.component3|component3(){}[0]
+    final fun component4(): kotlin/Int // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.component4|component4(){}[0]
+    final fun component5(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.component5|component5(){}[0]
+    final fun copy(io.lightine.tessera.types.vocabulary/MrzFormat = ..., io.lightine.tessera.types.vocabulary/MrzField = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/String = ...): io.lightine.tessera.types.errors/MrzGenerationFieldOverflow // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.copy|copy(io.lightine.tessera.types.vocabulary.MrzFormat;io.lightine.tessera.types.vocabulary.MrzField;kotlin.Int;kotlin.Int;kotlin.String){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/MrzGenerationNumericInNameField : io.lightine.tessera.types.errors/MrzGenerationError { // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField|null[0]
+    constructor <init>(io.lightine.tessera.types.vocabulary/MrzFormat, kotlin/String, kotlin.collections/List<kotlin/Char>) // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField.<init>|<init>(io.lightine.tessera.types.vocabulary.MrzFormat;kotlin.String;kotlin.collections.List<kotlin.Char>){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField.description.<get-description>|<get-description>(){}[0]
+    final val format // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField.format|{}format[0]
+        final fun <get-format>(): io.lightine.tessera.types.vocabulary/MrzFormat // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField.format.<get-format>|<get-format>(){}[0]
+    final val numericCharacters // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField.numericCharacters|{}numericCharacters[0]
+        final fun <get-numericCharacters>(): kotlin.collections/List<kotlin/Char> // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField.numericCharacters.<get-numericCharacters>|<get-numericCharacters>(){}[0]
+    final val observedValue // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField.observedValue|{}observedValue[0]
+        final fun <get-observedValue>(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField.observedValue.<get-observedValue>|<get-observedValue>(){}[0]
+
+    final fun component1(): io.lightine.tessera.types.vocabulary/MrzFormat // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField.component1|component1(){}[0]
+    final fun component2(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/List<kotlin/Char> // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField.component3|component3(){}[0]
+    final fun copy(io.lightine.tessera.types.vocabulary/MrzFormat = ..., kotlin/String = ..., kotlin.collections/List<kotlin/Char> = ...): io.lightine.tessera.types.errors/MrzGenerationNumericInNameField // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField.copy|copy(io.lightine.tessera.types.vocabulary.MrzFormat;kotlin.String;kotlin.collections.List<kotlin.Char>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters : io.lightine.tessera.types.errors/MrzGenerationError { // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters|null[0]
+    constructor <init>(io.lightine.tessera.types.vocabulary/MrzFormat, io.lightine.tessera.types.vocabulary/MrzField, kotlin.collections/List<io.lightine.tessera.types.vocabulary/UnmappedCharacter>, kotlin/String) // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.<init>|<init>(io.lightine.tessera.types.vocabulary.MrzFormat;io.lightine.tessera.types.vocabulary.MrzField;kotlin.collections.List<io.lightine.tessera.types.vocabulary.UnmappedCharacter>;kotlin.String){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.description.<get-description>|<get-description>(){}[0]
+    final val field // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.field|{}field[0]
+        final fun <get-field>(): io.lightine.tessera.types.vocabulary/MrzField // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.field.<get-field>|<get-field>(){}[0]
+    final val format // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.format|{}format[0]
+        final fun <get-format>(): io.lightine.tessera.types.vocabulary/MrzFormat // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.format.<get-format>|<get-format>(){}[0]
+    final val observedValue // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.observedValue|{}observedValue[0]
+        final fun <get-observedValue>(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.observedValue.<get-observedValue>|<get-observedValue>(){}[0]
+    final val unmappedCharacters // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.unmappedCharacters|{}unmappedCharacters[0]
+        final fun <get-unmappedCharacters>(): kotlin.collections/List<io.lightine.tessera.types.vocabulary/UnmappedCharacter> // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.unmappedCharacters.<get-unmappedCharacters>|<get-unmappedCharacters>(){}[0]
+
+    final fun component1(): io.lightine.tessera.types.vocabulary/MrzFormat // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.component1|component1(){}[0]
+    final fun component2(): io.lightine.tessera.types.vocabulary/MrzField // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/List<io.lightine.tessera.types.vocabulary/UnmappedCharacter> // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.component3|component3(){}[0]
+    final fun component4(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.component4|component4(){}[0]
+    final fun copy(io.lightine.tessera.types.vocabulary/MrzFormat = ..., io.lightine.tessera.types.vocabulary/MrzField = ..., kotlin.collections/List<io.lightine.tessera.types.vocabulary/UnmappedCharacter> = ..., kotlin/String = ...): io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.copy|copy(io.lightine.tessera.types.vocabulary.MrzFormat;io.lightine.tessera.types.vocabulary.MrzField;kotlin.collections.List<io.lightine.tessera.types.vocabulary.UnmappedCharacter>;kotlin.String){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationUnsupportedCharacters.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/MrzInvalidLength : io.lightine.tessera.types.errors/MrzParseError { // io.lightine.tessera.types.errors/MrzInvalidLength|null[0]
+    constructor <init>(io.lightine.tessera.types.vocabulary/MrzFormat, kotlin/Int, kotlin/Int, kotlin/Int, kotlin.collections/List<kotlin/Int>) // io.lightine.tessera.types.errors/MrzInvalidLength.<init>|<init>(io.lightine.tessera.types.vocabulary.MrzFormat;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.collections.List<kotlin.Int>){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzInvalidLength.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzInvalidLength.description.<get-description>|<get-description>(){}[0]
+    final val expectedLineCount // io.lightine.tessera.types.errors/MrzInvalidLength.expectedLineCount|{}expectedLineCount[0]
+        final fun <get-expectedLineCount>(): kotlin/Int // io.lightine.tessera.types.errors/MrzInvalidLength.expectedLineCount.<get-expectedLineCount>|<get-expectedLineCount>(){}[0]
+    final val expectedLineLength // io.lightine.tessera.types.errors/MrzInvalidLength.expectedLineLength|{}expectedLineLength[0]
+        final fun <get-expectedLineLength>(): kotlin/Int // io.lightine.tessera.types.errors/MrzInvalidLength.expectedLineLength.<get-expectedLineLength>|<get-expectedLineLength>(){}[0]
+    final val format // io.lightine.tessera.types.errors/MrzInvalidLength.format|{}format[0]
+        final fun <get-format>(): io.lightine.tessera.types.vocabulary/MrzFormat // io.lightine.tessera.types.errors/MrzInvalidLength.format.<get-format>|<get-format>(){}[0]
+    final val observedLineCount // io.lightine.tessera.types.errors/MrzInvalidLength.observedLineCount|{}observedLineCount[0]
+        final fun <get-observedLineCount>(): kotlin/Int // io.lightine.tessera.types.errors/MrzInvalidLength.observedLineCount.<get-observedLineCount>|<get-observedLineCount>(){}[0]
+    final val observedLineLengths // io.lightine.tessera.types.errors/MrzInvalidLength.observedLineLengths|{}observedLineLengths[0]
+        final fun <get-observedLineLengths>(): kotlin.collections/List<kotlin/Int> // io.lightine.tessera.types.errors/MrzInvalidLength.observedLineLengths.<get-observedLineLengths>|<get-observedLineLengths>(){}[0]
+
+    final fun component1(): io.lightine.tessera.types.vocabulary/MrzFormat // io.lightine.tessera.types.errors/MrzInvalidLength.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // io.lightine.tessera.types.errors/MrzInvalidLength.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // io.lightine.tessera.types.errors/MrzInvalidLength.component3|component3(){}[0]
+    final fun component4(): kotlin/Int // io.lightine.tessera.types.errors/MrzInvalidLength.component4|component4(){}[0]
+    final fun component5(): kotlin.collections/List<kotlin/Int> // io.lightine.tessera.types.errors/MrzInvalidLength.component5|component5(){}[0]
+    final fun copy(io.lightine.tessera.types.vocabulary/MrzFormat = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin.collections/List<kotlin/Int> = ...): io.lightine.tessera.types.errors/MrzInvalidLength // io.lightine.tessera.types.errors/MrzInvalidLength.copy|copy(io.lightine.tessera.types.vocabulary.MrzFormat;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.collections.List<kotlin.Int>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzInvalidLength.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzInvalidLength.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzInvalidLength.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/MrzInvalidSexValue : io.lightine.tessera.types.errors/MrzValidationError { // io.lightine.tessera.types.errors/MrzInvalidSexValue|null[0]
+    constructor <init>(kotlin/Char, kotlin/Int) // io.lightine.tessera.types.errors/MrzInvalidSexValue.<init>|<init>(kotlin.Char;kotlin.Int){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzInvalidSexValue.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzInvalidSexValue.description.<get-description>|<get-description>(){}[0]
+    final val observed // io.lightine.tessera.types.errors/MrzInvalidSexValue.observed|{}observed[0]
+        final fun <get-observed>(): kotlin/Char // io.lightine.tessera.types.errors/MrzInvalidSexValue.observed.<get-observed>|<get-observed>(){}[0]
+    final val position // io.lightine.tessera.types.errors/MrzInvalidSexValue.position|{}position[0]
+        final fun <get-position>(): kotlin/Int // io.lightine.tessera.types.errors/MrzInvalidSexValue.position.<get-position>|<get-position>(){}[0]
+
+    final fun component1(): kotlin/Char // io.lightine.tessera.types.errors/MrzInvalidSexValue.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // io.lightine.tessera.types.errors/MrzInvalidSexValue.component2|component2(){}[0]
+    final fun copy(kotlin/Char = ..., kotlin/Int = ...): io.lightine.tessera.types.errors/MrzInvalidSexValue // io.lightine.tessera.types.errors/MrzInvalidSexValue.copy|copy(kotlin.Char;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzInvalidSexValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzInvalidSexValue.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzInvalidSexValue.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/MrzNameTruncated : io.lightine.tessera.types.errors/MrzWarning { // io.lightine.tessera.types.errors/MrzNameTruncated|null[0]
+    constructor <init>(kotlin/String, kotlin/Int) // io.lightine.tessera.types.errors/MrzNameTruncated.<init>|<init>(kotlin.String;kotlin.Int){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzNameTruncated.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzNameTruncated.description.<get-description>|<get-description>(){}[0]
+    final val position // io.lightine.tessera.types.errors/MrzNameTruncated.position|{}position[0]
+        final fun <get-position>(): kotlin/Int // io.lightine.tessera.types.errors/MrzNameTruncated.position.<get-position>|<get-position>(){}[0]
+    final val rawNameField // io.lightine.tessera.types.errors/MrzNameTruncated.rawNameField|{}rawNameField[0]
+        final fun <get-rawNameField>(): kotlin/String // io.lightine.tessera.types.errors/MrzNameTruncated.rawNameField.<get-rawNameField>|<get-rawNameField>(){}[0]
+
+    final fun component1(): kotlin/String // io.lightine.tessera.types.errors/MrzNameTruncated.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // io.lightine.tessera.types.errors/MrzNameTruncated.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/Int = ...): io.lightine.tessera.types.errors/MrzNameTruncated // io.lightine.tessera.types.errors/MrzNameTruncated.copy|copy(kotlin.String;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzNameTruncated.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzNameTruncated.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzNameTruncated.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/MrzPersonalNumberCheckDigitFiller : io.lightine.tessera.types.errors/MrzWarning { // io.lightine.tessera.types.errors/MrzPersonalNumberCheckDigitFiller|null[0]
+    constructor <init>(kotlin/String, kotlin/Int) // io.lightine.tessera.types.errors/MrzPersonalNumberCheckDigitFiller.<init>|<init>(kotlin.String;kotlin.Int){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzPersonalNumberCheckDigitFiller.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzPersonalNumberCheckDigitFiller.description.<get-description>|<get-description>(){}[0]
+    final val position // io.lightine.tessera.types.errors/MrzPersonalNumberCheckDigitFiller.position|{}position[0]
+        final fun <get-position>(): kotlin/Int // io.lightine.tessera.types.errors/MrzPersonalNumberCheckDigitFiller.position.<get-position>|<get-position>(){}[0]
+    final val rawPersonalNumber // io.lightine.tessera.types.errors/MrzPersonalNumberCheckDigitFiller.rawPersonalNumber|{}rawPersonalNumber[0]
+        final fun <get-rawPersonalNumber>(): kotlin/String // io.lightine.tessera.types.errors/MrzPersonalNumberCheckDigitFiller.rawPersonalNumber.<get-rawPersonalNumber>|<get-rawPersonalNumber>(){}[0]
+
+    final fun component1(): kotlin/String // io.lightine.tessera.types.errors/MrzPersonalNumberCheckDigitFiller.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // io.lightine.tessera.types.errors/MrzPersonalNumberCheckDigitFiller.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/Int = ...): io.lightine.tessera.types.errors/MrzPersonalNumberCheckDigitFiller // io.lightine.tessera.types.errors/MrzPersonalNumberCheckDigitFiller.copy|copy(kotlin.String;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzPersonalNumberCheckDigitFiller.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzPersonalNumberCheckDigitFiller.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzPersonalNumberCheckDigitFiller.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/MrzSexCharacterX : io.lightine.tessera.types.errors/MrzWarning { // io.lightine.tessera.types.errors/MrzSexCharacterX|null[0]
+    constructor <init>(kotlin/Char, kotlin/Int) // io.lightine.tessera.types.errors/MrzSexCharacterX.<init>|<init>(kotlin.Char;kotlin.Int){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzSexCharacterX.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzSexCharacterX.description.<get-description>|<get-description>(){}[0]
+    final val observed // io.lightine.tessera.types.errors/MrzSexCharacterX.observed|{}observed[0]
+        final fun <get-observed>(): kotlin/Char // io.lightine.tessera.types.errors/MrzSexCharacterX.observed.<get-observed>|<get-observed>(){}[0]
+    final val position // io.lightine.tessera.types.errors/MrzSexCharacterX.position|{}position[0]
+        final fun <get-position>(): kotlin/Int // io.lightine.tessera.types.errors/MrzSexCharacterX.position.<get-position>|<get-position>(){}[0]
+
+    final fun component1(): kotlin/Char // io.lightine.tessera.types.errors/MrzSexCharacterX.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // io.lightine.tessera.types.errors/MrzSexCharacterX.component2|component2(){}[0]
+    final fun copy(kotlin/Char = ..., kotlin/Int = ...): io.lightine.tessera.types.errors/MrzSexCharacterX // io.lightine.tessera.types.errors/MrzSexCharacterX.copy|copy(kotlin.Char;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzSexCharacterX.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzSexCharacterX.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzSexCharacterX.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/MrzUnknownCountryCode : io.lightine.tessera.types.errors/MrzWarning { // io.lightine.tessera.types.errors/MrzUnknownCountryCode|null[0]
+    constructor <init>(io.lightine.tessera.types.vocabulary/MrzField, kotlin/String, kotlin/Int) // io.lightine.tessera.types.errors/MrzUnknownCountryCode.<init>|<init>(io.lightine.tessera.types.vocabulary.MrzField;kotlin.String;kotlin.Int){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzUnknownCountryCode.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzUnknownCountryCode.description.<get-description>|<get-description>(){}[0]
+    final val field // io.lightine.tessera.types.errors/MrzUnknownCountryCode.field|{}field[0]
+        final fun <get-field>(): io.lightine.tessera.types.vocabulary/MrzField // io.lightine.tessera.types.errors/MrzUnknownCountryCode.field.<get-field>|<get-field>(){}[0]
+    final val position // io.lightine.tessera.types.errors/MrzUnknownCountryCode.position|{}position[0]
+        final fun <get-position>(): kotlin/Int // io.lightine.tessera.types.errors/MrzUnknownCountryCode.position.<get-position>|<get-position>(){}[0]
+    final val rawCode // io.lightine.tessera.types.errors/MrzUnknownCountryCode.rawCode|{}rawCode[0]
+        final fun <get-rawCode>(): kotlin/String // io.lightine.tessera.types.errors/MrzUnknownCountryCode.rawCode.<get-rawCode>|<get-rawCode>(){}[0]
+
+    final fun component1(): io.lightine.tessera.types.vocabulary/MrzField // io.lightine.tessera.types.errors/MrzUnknownCountryCode.component1|component1(){}[0]
+    final fun component2(): kotlin/String // io.lightine.tessera.types.errors/MrzUnknownCountryCode.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // io.lightine.tessera.types.errors/MrzUnknownCountryCode.component3|component3(){}[0]
+    final fun copy(io.lightine.tessera.types.vocabulary/MrzField = ..., kotlin/String = ..., kotlin/Int = ...): io.lightine.tessera.types.errors/MrzUnknownCountryCode // io.lightine.tessera.types.errors/MrzUnknownCountryCode.copy|copy(io.lightine.tessera.types.vocabulary.MrzField;kotlin.String;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzUnknownCountryCode.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzUnknownCountryCode.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzUnknownCountryCode.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode : io.lightine.tessera.types.errors/MrzWarning { // io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode|null[0]
+    constructor <init>(kotlin/String, kotlin/Int) // io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode.<init>|<init>(kotlin.String;kotlin.Int){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode.description.<get-description>|<get-description>(){}[0]
+    final val position // io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode.position|{}position[0]
+        final fun <get-position>(): kotlin/Int // io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode.position.<get-position>|<get-position>(){}[0]
+    final val rawCode // io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode.rawCode|{}rawCode[0]
+        final fun <get-rawCode>(): kotlin/String // io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode.rawCode.<get-rawCode>|<get-rawCode>(){}[0]
+
+    final fun component1(): kotlin/String // io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/Int = ...): io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode // io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode.copy|copy(kotlin.String;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.types.vocabulary/UnmappedCharacter { // io.lightine.tessera.types.vocabulary/UnmappedCharacter|null[0]
+    constructor <init>(kotlin/Char, kotlin/Int) // io.lightine.tessera.types.vocabulary/UnmappedCharacter.<init>|<init>(kotlin.Char;kotlin.Int){}[0]
+
+    final val character // io.lightine.tessera.types.vocabulary/UnmappedCharacter.character|{}character[0]
+        final fun <get-character>(): kotlin/Char // io.lightine.tessera.types.vocabulary/UnmappedCharacter.character.<get-character>|<get-character>(){}[0]
+    final val position // io.lightine.tessera.types.vocabulary/UnmappedCharacter.position|{}position[0]
+        final fun <get-position>(): kotlin/Int // io.lightine.tessera.types.vocabulary/UnmappedCharacter.position.<get-position>|<get-position>(){}[0]
+
+    final fun component1(): kotlin/Char // io.lightine.tessera.types.vocabulary/UnmappedCharacter.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // io.lightine.tessera.types.vocabulary/UnmappedCharacter.component2|component2(){}[0]
+    final fun copy(kotlin/Char = ..., kotlin/Int = ...): io.lightine.tessera.types.vocabulary/UnmappedCharacter // io.lightine.tessera.types.vocabulary/UnmappedCharacter.copy|copy(kotlin.Char;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.vocabulary/UnmappedCharacter.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.vocabulary/UnmappedCharacter.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.vocabulary/UnmappedCharacter.toString|toString(){}[0]
+}
+
+sealed class io.lightine.tessera.types.errors/MrzError { // io.lightine.tessera.types.errors/MrzError|null[0]
+    abstract val description // io.lightine.tessera.types.errors/MrzError.description|{}description[0]
+        abstract fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzError.description.<get-description>|<get-description>(){}[0]
+}
+
+sealed class io.lightine.tessera.types.errors/MrzGenerationError : io.lightine.tessera.types.errors/MrzError // io.lightine.tessera.types.errors/MrzGenerationError|null[0]
+
+sealed class io.lightine.tessera.types.errors/MrzParseError : io.lightine.tessera.types.errors/MrzError // io.lightine.tessera.types.errors/MrzParseError|null[0]
+
+sealed class io.lightine.tessera.types.errors/MrzValidationError { // io.lightine.tessera.types.errors/MrzValidationError|null[0]
+    abstract val description // io.lightine.tessera.types.errors/MrzValidationError.description|{}description[0]
+        abstract fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzValidationError.description.<get-description>|<get-description>(){}[0]
+}
+
+sealed class io.lightine.tessera.types.errors/MrzWarning { // io.lightine.tessera.types.errors/MrzWarning|null[0]
+    abstract val description // io.lightine.tessera.types.errors/MrzWarning.description|{}description[0]
+        abstract fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzWarning.description.<get-description>|<get-description>(){}[0]
+}

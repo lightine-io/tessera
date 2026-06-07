@@ -18,6 +18,7 @@ This document is *living*. It is maintained by one rule: **whenever a technology
 | Language | JetBrains | [kotlinlang.org/docs](https://kotlinlang.org/docs/home.html) | `libs.versions.toml` `kotlin` | 0.1.0 | 2026-06-05 |
 | Kotlin Multiplatform plugin (`org.jetbrains.kotlin.multiplatform`) | JetBrains | [kotlinlang.org/docs/multiplatform-intro](https://kotlinlang.org/docs/multiplatform-intro.html) | `libs.versions.toml` `kotlin-multiplatform` | 0.1.0 | 2026-06-05 |
 | Kotlin/Native (iOS compilation) | JetBrains | [kotlinlang.org/docs/native-overview](https://kotlinlang.org/docs/native-overview.html) | bundled with Kotlin (`kotlin` version) | 0.2.0 | 2026-06-05 |
+| ABI validation (`abiValidation`, built-in) | JetBrains | [kotlinlang.org/docs/gradle-binary-compatibility-validation](https://kotlinlang.org/docs/gradle-binary-compatibility-validation.html) | bundled with Kotlin (`kotlin` version); enabled per-module in `*/build.gradle.kts`, baselines in `*/api/` | 0.2.0 | 2026-06-07 |
 
 ## Build & toolchain
 

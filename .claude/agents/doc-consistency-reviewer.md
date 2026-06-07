@@ -36,7 +36,7 @@ For each changed file, check the corresponding "Y" doc per the rules above. Cros
 
 ## Specific patterns to watch for
 
-- A code change in `mrz-core/`, `nfc-core/`, or any source module → did the corresponding `docs/features/*.md` file get a matching update?
+- A code change in `mrz-core/`, `mrz-camera-core/`, or any source module → did the corresponding `docs/features/*.md` file get a matching update?
 - A new sealed-class case or new public type in source → does the relevant feature doc mention it?
 - A new ADR being added → is it numbered correctly (next sequential 4-digit prefix)? Is it cross-referenced from any older ADR or feature doc that should mention it?
 - A change to `docs/open-questions.md` → is each modified entry either a clean "Resolved" annotation (with reference) or a new deferred entry (with rationale)? Are any entries silently deleted?

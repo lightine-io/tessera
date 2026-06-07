@@ -109,6 +109,9 @@ logs/
 # tracked — analogous to any .lock file.
 /.claude/scheduled_tasks.lock
 
+# Per-machine Claude Code settings (local permissions / env overrides); never shared across clones.
+/.claude/settings.local.json
+
 # Coverage reports
 coverage/
 *.lcov

@@ -48,7 +48,6 @@ kotlin {
         commonMain {
             dependencies {
                 api(project(":types"))
-                implementation(project(":logging"))
             }
         }
         commonTest {

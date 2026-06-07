@@ -13,7 +13,6 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.value
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
@@ -146,7 +145,9 @@ public class AVCaptureMrzScanner(
         )
     override val results: Flow<MrzScanResult> = mutableResults.asSharedFlow()
 
-    private var sessionJob: Job? = null
+    // Tracks the in-flight session and auto-clears it on completion, so start() works again after the
+    // stream ends on its own (a terminal CaptureError), not only after stop(). See CameraSessionGate.
+    private val session = CameraSessionGate()
 
     // STRONG reference to the capture delegate, held for the whole session. AVCaptureVideoDataOutput holds
     // its sample-buffer delegate WEAKLY (Cocoa convention). Kotlin/Native objects are reclaimed by the GC,
@@ -157,8 +158,7 @@ public class AVCaptureMrzScanner(
     private var captureDelegate: SampleBufferDelegate? = null
 
     override fun start() {
-        if (sessionJob != null) return
-        sessionJob =
+        session.start {
             scope.launch {
                 analyzer
                     .scan(
@@ -167,11 +167,11 @@ public class AVCaptureMrzScanner(
                         captureErrorFor = ::cameraErrorFor,
                     ).collect(mutableResults::emit)
             }
+        }
     }
 
     override fun stop() {
-        sessionJob?.cancel()
-        sessionJob = null
+        session.stop()
     }
 
     /** Stops the session and closes the OCR recognizer it owns. */

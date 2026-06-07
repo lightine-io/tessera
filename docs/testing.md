@@ -61,7 +61,7 @@ Tests for code that crosses module boundaries, especially when platform I/O is i
 - An NFC tag is read, BAC/PACE protocols execute, data groups are extracted, and the result is parsed
 - A full read flow exercises the camera or NFC module end-to-end
 
-Integration tests live in platform-specific test sources (`androidUnitTest`, `iosTest`, etc.) because they require platform APIs. They are slower than unit tests and are run less frequently — typically per-commit on CI rather than on every save during development.
+Integration tests live in platform-specific test sources (`androidHostTest`, `iosTest`, etc.) because they require platform APIs. They are slower than unit tests and are run less frequently — typically per-commit on CI rather than on every save during development.
 
 ### Platform-Specific Tests
 

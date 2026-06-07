@@ -12,10 +12,11 @@ import io.lightine.tessera.types.vocabulary.ReadMethod
  * failures observed.
  *
  * - [readMethod] — the provenance of the input (see
- *   [`ReadMethod`][io.lightine.tessera.types.vocabulary.ReadMethod]). 0.1.0 SDK code
- *   reports [`ReadMethod.BACKEND_STRING_INPUT`][io.lightine.tessera.types.vocabulary.ReadMethod.BACKEND_STRING_INPUT]
- *   because the SDK's only input path is plain strings; later releases produce other
- *   values as the corresponding reading methods activate.
+ *   [`ReadMethod`][io.lightine.tessera.types.vocabulary.ReadMethod]). The string parser and
+ *   generator report [`ReadMethod.BACKEND_STRING_INPUT`][io.lightine.tessera.types.vocabulary.ReadMethod.BACKEND_STRING_INPUT]
+ *   (their input is a plain string); live-camera reading reports
+ *   [`ReadMethod.LIVE_CAMERA`][io.lightine.tessera.types.vocabulary.ReadMethod.LIVE_CAMERA]. Further
+ *   values activate as their reading methods land in later releases.
  * - [warnings] — informational observations that do not prevent the result from being
  *   usable. Empty list when there are none.
  * - [validationFailures] — per-field validation failures. Non-empty for

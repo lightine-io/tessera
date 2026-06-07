@@ -124,7 +124,7 @@ The redaction surface is deliberately minimal in 0.1.0 because there are no even
 
 Telemetry is **distinct from logging**. The `telemetry` module is for consumer-observable events that flow out of the SDK; the `logging` module (planned alongside the first I/O modules) is for SDK-internal diagnostic logging that the SDK itself writes. The boundary is recorded in [`docs/architecture.md`](../architecture.md).
 
-Telemetry is also **not analytics**, **not crash reporting**, and **not licensing**. The SDK does not phone home for any reason. Consumers wire telemetry into whatever observability stack they already operate; the SDK has no opinion on where events go or what consumers do with them. This is part of [Principle 8](../principles.md) (data minimisation by default).
+Telemetry is also **not analytics**, **not crash reporting**, and **not licensing**. The SDK does not phone home for any reason. Consumers wire telemetry into whatever observability stack they already operate; the SDK has no opinion on where events go or what consumers do with them. This is part of [Principle 10](../principles.md) (Privacy by Default).
 
 ---
 
@@ -162,5 +162,5 @@ The empty 0.1.0 emission set is a property of the dependency graph, not an overs
 - [ADR-015](../decisions/0015-telemetry-contract-only-at-0-1-0.md) — the decision recording this slice.
 - [`docs/architecture.md`](../architecture.md) — module dependency graph and the `telemetry`/`logging` distinction.
 - [`docs/scope.md`](../scope.md) — 0.1.0 release commitment that scopes this work.
-- [`docs/principles.md`](../principles.md) — Principles 4, 5, 8, 9 referenced above.
+- [`docs/principles.md`](../principles.md) — Principles 4, 5, 9, 10 referenced above.
 - [`docs/glossary.md`](../glossary.md) — definition of Telemetry.
