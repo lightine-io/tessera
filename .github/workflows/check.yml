@@ -45,7 +45,7 @@ concurrency:
 
 jobs:
   check:
-    name: gradle check (JVM)
+    name: build & test · JVM
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -73,7 +73,7 @@ jobs:
         run: bash scripts/check-markdown-links.sh
 
   android-compile:
-    name: android compile
+    name: build & test · Android
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -118,7 +118,7 @@ jobs:
         run: ./gradlew compileAndroidMain :mrz-camera-android:testAndroidHostTest :mrz-camera-android:verifyMlKitBundledModel
 
   ios-compile:
-    name: ios compile
+    name: build & test · iOS
     # Apple targets can only be built on macOS (Kotlin/Native links against the Xcode toolchain);
     # a Linux runner cannot build them at all. macos-latest ships a current Xcode, which Konan uses.
     runs-on: macos-latest

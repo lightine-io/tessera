@@ -38,7 +38,7 @@ concurrency:
 
 jobs:
   dependency-submission:
-    name: submit dependency graph
+    name: dependency graph
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

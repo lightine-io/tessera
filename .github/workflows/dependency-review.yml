@@ -30,7 +30,7 @@ permissions:
 
 jobs:
   dependency-review:
-    name: review pull request dependencies
+    name: dependency review
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

@@ -45,7 +45,7 @@ jobs:
   # reviewer is the manual go/no-go gate, and the signing + Sonatype secrets unlock only after that
   # approval (the environment + secrets are configured in repo settings before the first real tag).
   release:
-    name: publish + release
+    name: release · publish
     if: github.event_name == 'push'
     runs-on: macos-latest
     environment: release
@@ -130,7 +130,7 @@ jobs:
   # Dry-run — manual only. Validates the pipeline WITHOUT publishing: no environment, no secrets, no
   # release. Proves the build/package/checksum path and that the publish task graph resolves.
   dry-run:
-    name: dry-run (no publish)
+    name: release · dry-run
     if: github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     steps:
