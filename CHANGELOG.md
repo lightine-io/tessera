@@ -6,7 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-06-07
+
+First published release of the `0.2.x` line. `v0.2.0` was tagged but its release run **failed at the publish step before anything was published** — the empty placeholder modules (`emrtd-core`, `logging`) declared iOS targets but had no source, so the iOS Maven publication threw on a missing `.klib` (the fix is the `emrtd-core`/`logging` entry under **[0.2.0]** below). `0.2.1` ships that fix on top of the full `0.2.0` feature set — headless live-camera MRZ reading on Android and iOS, public-ABI validation, the live-camera provenance and scanner-restart fixes, and the pre-tag audit remediation. **Nothing was ever published under `0.2.0`; `0.2.1` is the first installable release of this line** — see the **[0.2.0]** section below for the complete contents.
+
 ## [0.2.0] - 2026-06-07
+
+> **Tagged 2026-06-07; the release run failed before publishing** (the empty-module iOS-publish bug, fixed in the `emrtd-core`/`logging` entry under Fixed). Nothing was published under `0.2.0` — its contents shipped as **[0.2.1]**, the first installable release of the line.
 
 ### Added
 

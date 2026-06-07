@@ -9,7 +9,7 @@ A vendor-neutral SDK for reading, validating, and generating identity document d
 
 Tessera reads Machine Readable Zones (MRZ) from passports, national ID cards, residence permits, machine-readable visas, and similar travel documents conforming to ICAO Doc 9303. It returns extracted data verbatim, with structured validation results — leaving all trust decisions to the integrating application.
 
-> **Status:** In active `0.x` development. `v0.2.0` is the current release on Maven Central (`io.lightine.tessera`), adding headless live-camera MRZ reading on Android and iOS — see [Installation](#installation) and [`CHANGELOG.md`](CHANGELOG.md). The `1.0.0` milestone marks the public-stability and open-source release commitment per [ADR-011](docs/decisions/0011-open-source-at-public-release.md); pre-`1.0.0` releases follow the same strict backward-compatibility commitments as post-`1.0.0` releases. See [`docs/versioning.md`](docs/versioning.md) for the policy.
+> **Status:** In active `0.x` development. `v0.2.1` is the current release on Maven Central (`io.lightine.tessera`), adding headless live-camera MRZ reading on Android and iOS — see [Installation](#installation) and [`CHANGELOG.md`](CHANGELOG.md). The `1.0.0` milestone marks the public-stability and open-source release commitment per [ADR-011](docs/decisions/0011-open-source-at-public-release.md); pre-`1.0.0` releases follow the same strict backward-compatibility commitments as post-`1.0.0` releases. See [`docs/versioning.md`](docs/versioning.md) for the policy.
 
 ---
 
@@ -72,7 +72,7 @@ The result type makes the three possible outcomes explicit. The consumer cannot 
 
 ## Installation
 
-Tessera is published to Maven Central under the `io.lightine.tessera` group. The current release is `0.2.0` (JVM + Android; iOS via Swift Package Manager — see [Platforms](#platforms)).
+Tessera is published to Maven Central under the `io.lightine.tessera` group. The current release is `0.2.1` (JVM + Android; iOS via Swift Package Manager — see [Platforms](#platforms)).
 
 ### Gradle (Kotlin DSL)
 
@@ -80,7 +80,7 @@ Use the BOM to keep every Tessera module on one version:
 
 ```kotlin
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:0.2.0"))
+    implementation(platform("io.lightine.tessera:tessera-bom:0.2.1"))
     implementation("io.lightine.tessera:tessera-mrz-core")  // MRZ parsing, validation, generation
 }
 ```
@@ -88,7 +88,7 @@ dependencies {
 Or pin the module version directly, without the BOM:
 
 ```kotlin
-implementation("io.lightine.tessera:tessera-mrz-core:0.2.0")
+implementation("io.lightine.tessera:tessera-mrz-core:0.2.1")
 ```
 
 `tessera-mrz-core` pulls in `tessera-types` transitively — most integrators need only this one module.
@@ -99,11 +99,11 @@ implementation("io.lightine.tessera:tessera-mrz-core:0.2.0")
 <dependency>
     <groupId>io.lightine.tessera</groupId>
     <artifactId>tessera-mrz-core</artifactId>
-    <version>0.2.0</version>
+    <version>0.2.1</version>
 </dependency>
 ```
 
-> **Android** ships the same coordinates as AAR artifacts (e.g. `tessera-mrz-camera-android` for live-camera reading). **iOS** is distributed as an `XCFramework` via Swift Package Manager from the [`tessera-swift`](https://github.com/lightine-io/tessera-swift) repository; the SPM coordinates are published with the `0.2.0` release. See [Platforms](#platforms).
+> **Android** ships the same coordinates as AAR artifacts (e.g. `tessera-mrz-camera-android` for live-camera reading). **iOS** is distributed as an `XCFramework` via Swift Package Manager from the [`tessera-swift`](https://github.com/lightine-io/tessera-swift) repository; the SPM coordinates are published with the `0.2.1` release. See [Platforms](#platforms).
 
 ---
 
@@ -139,7 +139,7 @@ The project's documentation is structured for two audiences: integrators (who wa
 
 Tessera is built with Kotlin Multiplatform. Targets activate per-release as the corresponding reading methods land — see [`docs/scope.md`](docs/scope.md) for the full roadmap.
 
-Active as of `0.2.0`:
+Active as of `0.2.1`:
 
 - **JVM** — the pure core logic (parsing, validation, generation, lookup tables, transliteration profiles, telemetry contract)
 - **Android** — core logic plus headless live-camera reading (CameraX + ML Kit). Minimum API level 23 (Android 6.0), per [ADR-018](docs/decisions/0018-platform-minimums-and-managed-raise.md)
