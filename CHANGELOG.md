@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **Session-handoff system hardened against cross-session context loss** (AI-collaboration infrastructure; no code or public-API change). A second confirmed context-loss instance pinned the root cause: handoffs are snapshots of the closing session's working memory, and standing obligations (deferred action-plan items whose triggers fire later) had no structural path back into a new session. Now: action-plan items carry checkbox status; the CLAUDE.md session-start ritual sweeps open plans; the handoff template (`.claude/session-handoff-template.md`) is rewritten for its actual reader — the next AI session — with a mandatory "⭐ START HERE" state snapshot, a "Standing Obligations" sweep filled by looking rather than remembering, a "Superseded This Session" section, and an exact-reference rule; and a `SessionStart` hook (`scripts/standing-obligations.sh`) injects unchecked plan items into every session automatically. Resolves the "decided context is being lost across sessions" entry in [`docs/open-questions.md`](docs/open-questions.md).
+
 ## [0.2.1] - 2026-06-07
 
 First published release of the `0.2.x` line. `v0.2.0` was tagged but its release run **failed at the publish step before anything was published** — the empty placeholder modules (`emrtd-core`, `logging`) declared iOS targets but had no source, so the iOS Maven publication threw on a missing `.klib` (the fix is the `emrtd-core`/`logging` entry under **[0.2.0]** below). `0.2.1` ships that fix on top of the full `0.2.0` feature set — headless live-camera MRZ reading on Android and iOS, public-ABI validation, the live-camera provenance and scanner-restart fixes, and the pre-tag audit remediation. **Nothing was ever published under `0.2.0`; `0.2.1` is the first installable release of this line** — see the **[0.2.0]** section below for the complete contents.

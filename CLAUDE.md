@@ -19,9 +19,10 @@ Tessera is a vendor-neutral SDK for reading, validating, and generating identity
 If you are starting a new session:
 
 1. Look for the most recent `SESSION-HANDOFF-YYYY-MM-DD-HHMM-<slug>.md` in `.handoffs/`. The current convention is date + UTC time (4 digits, no separator) + kebab-case slug, so `ls -1 .handoffs/SESSION-HANDOFF-*.md | sort -r | head -1` returns the canonical latest within the new form. The `YYYY-MM-DD` prefix ensures date order across all forms; within any single date, all handoffs share the form current at that time, so within-date mixing is not expected. Older dates may use either legacy form — `SESSION-HANDOFF-YYYY-MM-DD-<slug>.md` (date + slug, no time) or `SESSION-HANDOFF-YYYY-MM-DD.md` (date only, no slug). Treat all forms the same when reading.
-2. If no handoff exists, briefly skim [`docs/principles.md`](docs/principles.md) to refresh the foundational stance (10 min).
-3. Check [`docs/open-questions.md`](docs/open-questions.md) for what is currently in flight.
-4. Engage with the user's request.
+2. Sweep standing obligations: `grep -n '\- \[ \]' .plans/*.md` — unchecked action-plan items are open work **even if the latest handoff says nothing is in flight** (a handoff is one session's snapshot; plans are the ledger). A SessionStart hook also injects these automatically.
+3. If no handoff exists, briefly skim [`docs/principles.md`](docs/principles.md) to refresh the foundational stance (10 min).
+4. Check [`docs/open-questions.md`](docs/open-questions.md) for what is currently in flight.
+5. Engage with the user's request.
 
 Do not draft major changes without first understanding what is already in place. The documentation captures decisions that are easy to accidentally undo.
 
