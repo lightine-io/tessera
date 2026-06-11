@@ -32,9 +32,12 @@ mavenPublishing {
 kotlin {
     explicitApi()
 
-    // ABI tracking — enforces the ADR-007 no-public-API-break promise: snapshots the public API under
-    // api/ and fails `check` on an accidental break. Built-in Kotlin Gradle feature (no extra
-    // dependency, bundled with Kotlin so it never blocks a Kotlin bump). Refresh: `./gradlew updateKotlinAbi`.
+    // ABI tracking (ADR-007) — KNOWN GAP for this module: Kotlin's abiValidation does not dump the
+    // AGP-KMP `android {}` target, so there is no api/ baseline here and `checkKotlinAbi` passes
+    // vacuously. The Android-only public surface (CameraXMrzScanner, MlKitMrzTextRecognizer) is NOT
+    // machine-gated — review it by hand on change; see docs/open-questions.md ("mrz-camera-android
+    // ABI baseline"). Kept enabled so a baseline appears the moment the tooling gains android-target
+    // support (re-checked at each dependency cadence). Refresh: `./gradlew updateKotlinAbi`.
     @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
     abiValidation {
         enabled.set(true)

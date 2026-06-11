@@ -312,6 +312,21 @@ The analyse-frame core locates an MRZ by finding a run of consecutive recognized
 
 **Trigger:** When the Android convenience layer needs to reliably decode — the 0.3.0 still-image / tolerant-mode work, or earlier if device testing against a printed OCR-B sample or a real document is pursued.
 
+### 0.3.0 scope decisions (parked) — platform scope, OCR-core module shape, tolerant mode, EXIF metadata
+
+**Parked 2026-06-08 (maintainer), at the close of the 0.3.0 pre-release tech-stack review.** The review (a six-dimension read-only pass per the [`pre-release-tech-stack-review`](../.claude/skills/pre-release-tech-stack-review/SKILL.md) skill) found the `0.2.x` foundation extends to 0.3.0 (pre-captured image reading) with **no architectural change, no new Android/iOS dependencies, and no new local tooling** — the analyse-frame seam (`MrzFrameAnalyzer` + `MrzTextRecognizer<F>`, [ADR-020](decisions/0020-camera-reading-architecture.md)/[ADR-021](decisions/0021-shared-mrz-camera-core-module.md)) is the reuse point, and both platform OCR engines already accept still images. Four maintainer-owned forks remain open; **#1 and #2 gate the start of 0.3.0 code**, #3 and #4 size the release. This entry is the committed anchor of that parked state (the review's full working record is a maintainer-local note).
+
+1. **Platform scope** — Android+iOS only (mirrors the 0.2.0 camera precedent; JVM stays pure string parsing), vs. adding a JVM/desktop OCR path (requires a Tesseract-class native-binary dependency: heavy maintenance + supply-chain surface, a third OCR vendor). *Technical lean: Android+iOS only.*
+2. **Shared OCR-core module shape** — keep `mrz-camera-core` as the shared core a still-image module depends on (zero coordinate churn; a "camera"-named dependency for a non-camera feature is a naming wart, not a defect), vs. introducing a neutral `mrz-ocr-core` (cleaner name, but `tessera-mrz-camera-core` is already published at `0.2.1`, so a rename now means deprecating a published coordinate under [ADR-007](decisions/0007-strict-backward-compat-from-0x.md)). *Technical lean: keep.*
+3. **Tolerant mode in 0.3.0** — include check-digit-guided candidate-surfacing per ADR-020's deferral (requires settling the surfaced-candidate result shape pre-start — it lands on locked types and must surface, never overwrite), vs. shipping only the internal length-tolerant candidate matcher and deferring tolerant mode again. *Lean: include, per the ADR-020 plan; the matcher fix is likely necessary either way (see "Camera MRZ-candidate detection vs real OCR output" above).*
+4. **EXIF/capture-metadata exposure in 0.3.0** — include (see "Image and capture metadata exposure" above; GPS as a distinct, gated, never-default-logged PII surface; the type *shape* settled pre-start, the field list growable), vs. defer to keep 0.3.0 focused on the core read + opt-in. *Genuinely close; no lean recorded.*
+
+Pre-start API-stability locks the review flagged regardless of the forks (ADR-007 locks each at ship): the **opt-in mechanism** for saved-image reading (lean: a required, non-defaulted capability parameter — no permissive default, not a bare `Boolean`; the safe default is "cannot read saved images", so there must be no default), making **provenance a constructor parameter** on `MrzFrameAnalyzer` (its KDoc already prescribes this when a non-camera source lands; default `LIVE_CAMERA` keeps it non-breaking), and the **still-image input type `F`** per platform.
+
+**Source:** 0.3.0 pre-release tech-stack review (2026-06-08); parked by the maintainer pending his calls.
+
+**Resolution:** When the maintainer makes the four calls, record them in the `scope.md` 0.3.0 pre-release-review block (mirroring the 0.1.0/0.2.0 blocks), plus an ADR if the module-shape or opt-in decision warrants one, then mark this entry Resolved.
+
 ---
 
 ## Deferred to a Future Document
@@ -564,6 +579,16 @@ Core modules (`mrz-core`, `emrtd-core`, `types`, `telemetry`, `logging`) are sca
 **Source:** Pre-implementation scaffolding session; depends on Xcode install.
 
 **Resolution:** Resolved (2026-05-29 0.2.0 pre-release review) — **Xcode is now present** (26.5 on the development machine), lifting the toolchain gate noted above ("not installed" is no longer true). The iOS targets are enabled on the core modules per [ADR-017](decisions/0017-mobile-targets-and-build-stack.md), with the Normalization `expect`/`actual` ([ADR-014](decisions/0014-unicode-normalization-strategy.md)) gaining an iOS `actual`; the committed iOS deployment minimum is **18** ([ADR-018](decisions/0018-platform-minimums-and-managed-raise.md)), not the 15.0 this entry's original text referenced. **Executed (2026-05-30)** in the 0.2.0 iOS build-foundation slice: `iosArm64`/`iosSimulatorArm64` declared on the core modules (the `iosX64` Intel-simulator target was enabled at this point then **dropped before the 0.2.0 tag** — ARM-only Mac dev, [ADR-017](decisions/0017-mobile-targets-and-build-stack.md); and the **empty** placeholders `emrtd-core`/`logging` had their iOS targets **removed before the 0.2.0 tag** — an empty module produces no `.klib`, which breaks iOS Maven publication, see CHANGELOG), the iOS `actual` for `normalizeForTransliteration` backed by Foundation's `NSString.precomposedStringWithCanonicalMapping`. Verified on Xcode 26.5 — Konan compiles `commonMain` for both iOS targets and the full 577-test common suite passes on the `iosSimulatorArm64` target (alongside the JVM). iOS *distribution* (SPM, [ADR-019](decisions/0019-ios-distribution-via-spm.md)) is separate and lands later in 0.2.0.
+
+### `mrz-camera-android` ABI baseline — the AGP-KMP android target is not covered by Kotlin's abiValidation
+
+**Accepted gap (in force since the `0.2.x` releases; first committed record 2026-06-10).** `abiValidation` is enabled on every published module, but Kotlin's tool only dumps targets registered through the Kotlin `targets` DSL (JVM, iOS, …). The android target configured via Google's `com.android.kotlin.multiplatform.library` plugin's `android {}` block is not seen by it, so `mrz-camera-android` has **no committed `api/` baseline** and its `checkKotlinAbi` passes **vacuously** (empty compared to empty). An accidental public-API break in the Android-only surface (`CameraXMrzScanner`, `MlKitMrzTextRecognizer`) would **not** be caught by CI — unlike every other published module, whose baselines are committed and gated. This is a tooling limitation, not a configuration miss. Until 2026-06-10 the acceptance was recorded only in a machine-local handoff, and the module's build-file comment overclaimed protection (fixed alongside this entry).
+
+**Compensating control:** review the Android-only public surface by hand on every change to `mrz-camera-android` — [ADR-007](decisions/0007-strict-backward-compat-from-0x.md) still applies; it is just not machine-gated for this one target. The shared contract types live in `mrz-camera-core`, which **is** baselined — the uncovered surface is only the Android-side layer.
+
+**Source:** `0.2.x` abiValidation rollout (PR [#152](https://github.com/lightine-io/tessera/pull/152)); the vacuous-gate behavior verified and root-caused in the 2026-06-10 gaps audit.
+
+**Resolution / trigger:** at each dependency-cadence checkpoint (next 2026-10-01), re-check whether Kotlin's `abiValidation` (or an AGP-side equivalent) has gained android-target dumping — adopt it and commit the baseline the moment it exists. If the consumer audience grows before then, consider interim hardening: a CI assertion that baselined modules' dumps are non-empty, or a third-party Android ABI-check tool.
 
 ---
 
