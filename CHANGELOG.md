@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **`docs/publishing-setup.md` brought to post-`0.2.1` reality** (maintainer docs; no code change). The guide still presented local credential storage (`~/.gradle/gradle.properties`) as the recommended path and CI publishing as forward-looking — superseded since the `0.2.x` releases publish from GitHub Actions with credentials in GitHub `release`-environment secrets only, never on the maintainer's machine. The CI path is now the single documented path (local storage demoted to a retired-historical note with an incident rule), the verification section reflects that the maintainer machine holds no publishing credentials, and the **SPM release runbook executed at `v0.2.1`** is recorded in the guide — with [ADR-019](docs/decisions/0019-ios-distribution-via-spm.md)'s execution notes marked executed, including the artifact-authenticity decision actually taken (checksum published in the release body). Closes the committed-doc half of the resolved "decided context is being lost" entry in [`docs/open-questions.md`](docs/open-questions.md).
+
 ## [0.2.1] - 2026-06-07
 
 First published release of the `0.2.x` line. `v0.2.0` was tagged but its release run **failed at the publish step before anything was published** — the empty placeholder modules (`emrtd-core`, `logging`) declared iOS targets but had no source, so the iOS Maven publication threw on a missing `.klib` (the fix is the `emrtd-core`/`logging` entry under **[0.2.0]** below). `0.2.1` ships that fix on top of the full `0.2.0` feature set — headless live-camera MRZ reading on Android and iOS, public-ABI validation, the live-camera provenance and scanner-restart fixes, and the pre-tag audit remediation. **Nothing was ever published under `0.2.0`; `0.2.1` is the first installable release of this line** — see the **[0.2.0]** section below for the complete contents.

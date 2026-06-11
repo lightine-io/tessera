@@ -1,8 +1,8 @@
 # Publishing Setup (Maintainer Guide)
 
-This document is for the person who publishes Tessera artifacts to Maven Central — currently the project maintainer. It walks through the one-time setup behind publishing Tessera: a PGP signing key, Sonatype Central Portal access and a user token, and credential storage. This setup was completed for the first publish (`v0.1.1`, the publishing infrastructure committed in [ADR-016](decisions/0016-maven-coordinates-and-first-publish.md)); the guide now serves as the reference for recreating it — credential rotation, a new maintainer's machine, or moving publishing to CI.
+This document is for the person who publishes Tessera artifacts to Maven Central — currently the project maintainer. It walks through the one-time setup behind publishing Tessera: a PGP signing key, Sonatype Central Portal access and a user token, and credential storage. This setup was completed for the first publish (`v0.1.1`, the publishing infrastructure committed in [ADR-016](decisions/0016-maven-coordinates-and-first-publish.md)); the guide now serves as the reference for recreating it after a credential rotation or on a new maintainer machine. **Publishing itself runs from CI** — GitHub Actions with credentials in GitHub repository secrets only, never on the maintainer's machine (section 4).
 
-This document is living. As the publishing process evolves (CI takes over, rotations happen, additional registries are added), this document updates.
+This document is living. As the publishing process evolves (rotations happen, additional registries are added), this document updates.
 
 **Contributors do not need to do any of this.** The per-contributor machine setup (cloning, Git signing, JDK toolchain) lives in [`contributor-setup.md`](contributor-setup.md). This document is the maintainer-side counterpart — the steps a contributor explicitly does NOT need per `contributor-setup.md`'s "You do not need a Sonatype account, a GPG key for artifact signing, or any other release-time tooling" line.
 
@@ -15,9 +15,9 @@ Before the SDK can publish to Maven Central:
 1. A **PGP signing key** in the maintainer's local GnuPG keyring, with its public key uploaded to a public keyserver
 2. Sonatype Central Publishing Portal **account access** for the `io.lightine` namespace (already done — the namespace was claimed and verified during the [Distribution channels deferral resolution](open-questions.md), banked in PR [#75](https://github.com/lightine-io/tessera/pull/75) and locked under [ADR-016](decisions/0016-maven-coordinates-and-first-publish.md))
 3. A Sonatype Central Portal **user token** (generated; distinct from the account login password)
-4. **Credentials stored** where Gradle can read them — either user-level `gradle.properties` or environment variables
+4. **Credentials stored** where the release workflow can read them — GitHub Actions secrets in the `release` environment; never on the maintainer's machine
 
-Steps below cover each in order. All four are in place as of `v0.1.1` — signing and Sonatype Central Portal publishing are wired and the first publish has shipped. The steps are the reference for recreating this setup on a new machine, after a key or token rotation, or when moving publishing to CI.
+Steps below cover each in order. All four are in place — signing and Sonatype Central Portal publishing are wired; the first publish shipped maintainer-side at `v0.1.1`, and publishing moved to CI for the `0.2.x` line (`v0.2.1`, 2026-06-07, with credentials rotated to the CI-only posture beforehand). The steps are the reference for recreating this setup after a key or token rotation.
 
 ---
 
@@ -148,69 +148,37 @@ The token pair (username + password) is what Gradle uses to authenticate publish
 
 ---
 
-## 4. Store credentials where Gradle can read them
+## 4. Store credentials where the release workflow can read them
 
 Vanniktech's `gradle-maven-publish-plugin` (wired up in PR [#80](https://github.com/lightine-io/tessera/pull/80)) reads five credential values:
 
 | What | Gradle property | Env var (cross-platform) |
 |---|---|---|
-| Signing key (ASCII-armored, multi-line as `\n`-joined single line) | `signingInMemoryKey` | `ORG_GRADLE_PROJECT_signingInMemoryKey` |
+| Signing key (ASCII-armored) | `signingInMemoryKey` | `ORG_GRADLE_PROJECT_signingInMemoryKey` |
 | Signing key ID (short, 8-char) | `signingInMemoryKeyId` | `ORG_GRADLE_PROJECT_signingInMemoryKeyId` |
 | Signing key passphrase | `signingInMemoryKeyPassword` | `ORG_GRADLE_PROJECT_signingInMemoryKeyPassword` |
 | Sonatype token username | `mavenCentralUsername` | `ORG_GRADLE_PROJECT_mavenCentralUsername` |
 | Sonatype token password | `mavenCentralPassword` | `ORG_GRADLE_PROJECT_mavenCentralPassword` |
 
-Pick **one** storage approach.
+**The current path — decided and in force since the `0.2.x` releases: the five values live in GitHub Actions secrets only, and publishing runs from CI. Credentials never live on the maintainer's machine.** (The local `~/.gradle/gradle.properties` used for the first publish was deleted at the pre-`0.2.0` cleanup, 2026-06-07.)
 
-### Option A — user-level `~/.gradle/gradle.properties` (recommended for the first publish)
+### GitHub Actions secrets (the one supported path)
 
-The user-level Gradle properties file is per-machine and is never committed to any project. Edit `~/.gradle/gradle.properties` (create it if it doesn't exist) and add:
+| Secret (release environment) | Value |
+|---|---|
+| `MAVEN_CENTRAL_USERNAME` | Sonatype token username (step 3) |
+| `MAVEN_CENTRAL_PASSWORD` | Sonatype token password (step 3) |
+| `SIGNING_KEY` | ASCII-armored secret key — multi-line preserved; GitHub secrets and env vars handle it natively, no `\n` escaping |
+| `SIGNING_KEY_ID` | Signing key ID — the **short 8-char** form (step 1); the plugin rejects the 16-char long form |
+| `SIGNING_KEY_PASSWORD` | Signing key passphrase |
 
-```properties
-# Tessera Maven Central publishing — credentials, do not share
-signingInMemoryKey=-----BEGIN PGP PRIVATE KEY BLOCK-----\n\nlQc...\n-----END PGP PRIVATE KEY BLOCK-----
-# short 8-char key ID (last 8 of the long ID), NOT the 16-char long form
-signingInMemoryKeyId=EF567890
-signingInMemoryKeyPassword=<your passphrase>
-mavenCentralUsername=<token username from step 3>
-mavenCentralPassword=<token password from step 3>
-```
+The release workflow ([`.github/workflows/release.yml`](../.github/workflows/release.yml)) maps these secrets to the `ORG_GRADLE_PROJECT_*` env vars in the table above before invoking Gradle. It runs on a `v*` tag, pauses for `release`-environment approval — the secrets are scoped to that environment, so nothing is exposed before the approval — stages the deployment to the Central Portal (manual release on the Portal UI, not auto-published), and builds the iOS XCFramework + GitHub Release. A `release · dry-run` job is available via `workflow_dispatch`.
 
-**Important:** the PGP key is a multi-line block, but Gradle properties don't support multi-line values. The vanniktech plugin parses literal `\n` two-character sequences as newlines. Convert the multi-line key to a single line:
+To set or rotate a secret: repository Settings → Environments → `release` → secrets, or `gh secret set <NAME> --env release`. Export the key for the `SIGNING_KEY` value with `gpg --export-secret-keys --armor <KEY_ID>` and paste it whole — do not write it to a file on disk.
 
-**macOS:**
+### Historical: local credential storage (retired — do not recreate)
 
-```bash
-gpg --export-secret-keys --armor <KEY_ID> | awk '{printf "%s\\n", $0}' | pbcopy
-```
-
-The result on your clipboard is one long line; paste after `signingInMemoryKey=`.
-
-**Linux:**
-
-```bash
-gpg --export-secret-keys --armor <KEY_ID> | awk '{printf "%s\\n", $0}' | xclip -selection clipboard
-```
-
-(Or pipe to a file and copy manually.)
-
-### Option B — environment variables per release (better for CI later)
-
-```bash
-export ORG_GRADLE_PROJECT_signingInMemoryKey="$(gpg --export-secret-keys --armor <KEY_ID>)"
-export ORG_GRADLE_PROJECT_signingInMemoryKeyId="EF567890"  # short 8-char key ID
-export ORG_GRADLE_PROJECT_signingInMemoryKeyPassword="<passphrase>"
-export ORG_GRADLE_PROJECT_mavenCentralUsername="<token username>"
-export ORG_GRADLE_PROJECT_mavenCentralPassword="<token password>"
-
-./gradlew publishToMavenCentral  # uploads a staged deployment to the Central Portal
-```
-
-Env vars don't persist across shells; you set them each release. Pair with a secrets manager (1Password CLI, AWS Secrets Manager, etc.) to populate them on demand. The multi-line PGP key works naturally with env vars (no `\n` escaping needed).
-
-### Recommendation for the first publish
-
-Option A (`~/.gradle/gradle.properties`) is the path of least friction for the first 0.1.1 publish. Later, when CI takes over publishing, switch to Option B's env-var pattern populated by GitHub Actions secrets.
+The first publish (`v0.1.1`) ran maintainer-side with these five values in user-level `~/.gradle/gradle.properties` (Gradle properties cannot hold multi-line values, so the key needed literal `\n`-joining — a constraint that does not exist in the CI path). That option is **retired by decision**: credentials never live on the laptop. If a local file holding any of these values reappears, treat it as an incident — delete it and rotate the affected credentials (sections 1 and 3). Do not read credential-bearing local files into tools or session transcripts either; that is how a prior exposure happened.
 
 ---
 
@@ -227,47 +195,36 @@ gpg --list-secret-keys --keyid-format LONG
 gpg --keyserver keys.openpgp.org --recv-keys <KEY_ID>
 # Should retrieve cleanly, not "key not found"
 
-# Confirm Gradle reads the credentials and signs (signing is wired as of v0.1.1)
+# Pre-tag structural check (run before ANY release tag): executes the
+# publication-metadata tasks that `build` and `publishToMavenCentral --dry-run`
+# skip — the 0.2.1 lesson (an empty-module publication failure only surfaced
+# at the authenticated tag publish until this check was adopted)
 ./gradlew publishToMavenLocal --console=plain
 ```
 
-The `publishToMavenLocal` invocation produces `.asc` signature files alongside each artifact, e.g.:
-
-```
-~/.m2/repository/io/lightine/tessera/tessera-mrz-core/0.1.1/tessera-mrz-core-0.1.1.jar
-~/.m2/repository/io/lightine/tessera/tessera-mrz-core/0.1.1/tessera-mrz-core-0.1.1.jar.asc
-~/.m2/repository/io/lightine/tessera/tessera-mrz-core/0.1.1/tessera-mrz-core-0.1.1.pom
-~/.m2/repository/io/lightine/tessera/tessera-mrz-core/0.1.1/tessera-mrz-core-0.1.1.pom.asc
-```
-
-Verify a signature manually:
-
-```bash
-gpg --verify ~/.m2/repository/io/lightine/tessera/tessera-mrz-core/0.1.1/tessera-mrz-core-0.1.1.jar.asc
-# Should report "Good signature from Asker Asadov ... <asker.asadov@gmail.com>"
-```
-
----
-
-## Forward-looking: when CI publishes
-
-Once the maintainer-driven first publish lands and the workflow is proven, future releases likely move to a GitHub Actions workflow. The setup is similar but credentials live in repository secrets rather than local files:
-
-| Repository secret | Value |
-|---|---|
-| `MAVEN_CENTRAL_USERNAME` | Sonatype token username |
-| `MAVEN_CENTRAL_PASSWORD` | Sonatype token password |
-| `SIGNING_KEY` | ASCII-armored secret key (multi-line preserved — env vars handle it natively) |
-| `SIGNING_KEY_ID` | Signing key ID (short, 8-char) |
-| `SIGNING_KEY_PASSWORD` | Signing key passphrase |
-
-The Actions workflow ([`.github/workflows/release.yml`](../.github/workflows/release.yml)) maps these secrets to `ORG_GRADLE_PROJECT_*` env vars before invoking Gradle's publish task. It runs on a `v*` tag, pauses for `release`-environment approval, stages the deployment to Maven Central (manual release, not auto-published), and builds the iOS XCFramework + GitHub Release. See that workflow for the current CI publishing flow.
+The maintainer machine holds no publishing credentials, so the local check verifies publication *structure*, not the signed upload. The signed path is verified in CI: the `release · dry-run` job (`workflow_dispatch`), and the staged, environment-gated publish on the release tag itself. On a machine that does hold signing credentials (CI), the publish also produces `.asc` signature files alongside each artifact; `gpg --verify <artifact>.asc` should report a good signature from the maintainer key.
 
 ---
 
 ## iOS distribution (Swift Package Manager)
 
-This guide covers **Maven Central** (JVM + Android). The iOS modules (`mrz-camera-*`) are **not** published to Maven Central — iOS distributes through **Swift Package Manager**, a different channel with no PGP/Sonatype credentials ([ADR-019](decisions/0019-ios-distribution-via-spm.md)). The packaging is wired (`./gradlew :mrz-camera-ios:packTesseraXCFramework` produces `build/distributions/Tessera.xcframework.zip`); the release-time steps — attach the zip to the GitHub release, `swift package compute-checksum` it, and write `Package.swift` in the dedicated distribution repo — are in the [ADR-019 execution notes](decisions/0019-ios-distribution-via-spm.md#execution-notes-020-ios-slice) and land with the `0.2.0` release cut. A full SPM-release runbook section is added here when that step is executed.
+This guide covers **Maven Central** (JVM + Android). The iOS modules (`mrz-camera-*`) are **not** published to Maven Central — iOS distributes through **Swift Package Manager**, a different channel with no PGP/Sonatype credentials ([ADR-019](decisions/0019-ios-distribution-via-spm.md)). The release-time steps were executed for the first time at `v0.2.1` (2026-06-07); the runbook below records the verified flow.
+
+### SPM release runbook
+
+**Verified working: 2026-06-07 (`v0.2.1`).**
+
+Prerequisites: the release workflow ran on the `v*` tag — it builds `Tessera.xcframework.zip` (`./gradlew :mrz-camera-ios:packTesseraXCFramework`), attaches it to the main repo's GitHub Release, and prints the zip's SHA-256 into the release body (the second authenticity channel — see below). The `lightine-io/tessera-swift` distribution repo exists (created at `v0.2.1`) and is protected: PR-required, signed commits, immutable `v*` tags, no bypass — and signing there is configured per-clone.
+
+1. Take the checksum from the GitHub Release body — or recompute it independently: download the asset and run `swift package compute-checksum Tessera.xcframework.zip`. The two must match.
+2. In `tessera-swift`, update `Package.swift`: point the `binaryTarget(name: "Tessera", url: …, checksum: …)` at this tag's release-asset URL with the verified checksum. The manifest needs `swift-tools-version:6.0` — `.iOS(.v18)` is rejected under 5.9 (`swift package dump-package` catches it).
+3. Verify locally **before** tagging: `swift package compute-checksum` matches, and `swift package dump-package` parses.
+4. Open a PR in `tessera-swift`, merge, then create the **signed** `vX.Y.Z` tag matching the main repo's release tag. Tags there are immutable — verify before tagging, not after.
+5. Done — `import Tessera` resolves for SPM consumers pinned to the tag.
+
+**Artifact authenticity (decided at `v0.2.1`):** the zip's SHA-256 is published in the main repo's GitHub Release body as an independent second channel — an attacker would have to compromise both repos to swap the binary unnoticed. Apple Developer ID codesigning of the framework slices stays deferred; revisit if the consumer audience grows (ADR-019).
+
+Automating this cross-repo flow is tracked in [`open-questions.md`](open-questions.md) ("Automate the cross-repo SPM (iOS) publish").
 
 ---
 
