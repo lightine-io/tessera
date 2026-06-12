@@ -98,6 +98,6 @@ Generation never silently emits an invalid MRZ — input that cannot produce a c
 ## Where to go next
 
 - [Feature guides index](features/README.md) — every capability, each with a Usage section.
-- [Android integration](guides/android-integration.md) — from empty app to a working live-camera scan.
+- [Android integration](guides/android-integration.md) / [iOS integration](guides/ios-integration.md) — from empty app to a working live-camera scan.
 - [MRZ Camera Reading](features/mrz-camera-reading.md) — the camera capability reference (Android and iOS).
 - [Reading risks](reading-risks.md) — what each reading method does and does not establish; read before trusting any single method.

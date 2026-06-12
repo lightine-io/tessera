@@ -130,6 +130,7 @@ The project's documentation is structured for two audiences: integrators (who wa
 - [`docs/scope.md`](docs/scope.md) — what the SDK supports, what it does not, and what is planned
 - [`docs/getting-started.md`](docs/getting-started.md) — dependency → parse → validate → generate in ten minutes
 - [`docs/guides/android-integration.md`](docs/guides/android-integration.md) — Android: from empty app to a working live-camera MRZ scan
+- [`docs/guides/ios-integration.md`](docs/guides/ios-integration.md) — iOS: the same journey in Swift, including the provisional Flow-collection pattern
 - [`docs/features/`](docs/features/README.md) — usage guides for every capability, each with a copy-paste Usage example
 - [`docs/reading-risks.md`](docs/reading-risks.md) — what each reading method establishes, what it does not, and what additional verification might be needed
 - [`docs/glossary.md`](docs/glossary.md) — definitions of MRZ, eMRTD, BAC, PACE, and other terms used throughout the documentation
