@@ -106,13 +106,37 @@ jobs:
           CHECKSUM: ${{ steps.checksum.outputs.checksum }}
         run: |
           TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
           ZIP="mrz-camera-ios/build/distributions/Tessera.xcframework.zip"
+          # Consumer-facing notes: install blocks + this version's CHANGELOG section (the
+          # Keep-a-Changelog discipline guarantees the section exists at tag time) + the SPM
+          # checksum, which stays in the release body as the independent second authenticity
+          # channel (ADR-019). Earlier releases generated checksum-only notes — that read as
+          # an empty release to consumers evaluating the project.
           {
             echo "## Tessera $TAG"
             echo
+            echo "### Install"
+            echo
+            echo '**Gradle (Kotlin DSL):**'
+            echo '```kotlin'
+            echo "implementation(platform(\"io.lightine.tessera:tessera-bom:$VERSION\"))"
+            echo 'implementation("io.lightine.tessera:tessera-mrz-core")            // parse / validate / generate'
+            echo 'implementation("io.lightine.tessera:tessera-mrz-camera-android")  // Android live-camera scanning'
+            echo '```'
+            echo
             echo "**iOS (Swift Package Manager):** add \`https://github.com/lightine-io/tessera-swift\` in Xcode and select \`$TAG\`."
             echo
-            echo "\`Tessera.xcframework.zip\` SHA-256 checksum (for the SPM \`binaryTarget\`):"
+            echo "### What's in this release"
+            echo
+            # index(...) == 1 anchors the match to the exact heading prefix, so e.g. tag 0.2.1
+            # can never match a future "## [0.2.10]" heading by substring.
+            awk -v ver="## [$VERSION] " '
+              /^## \[/ { inblock = index($0, ver) == 1; next }
+              inblock  { print }
+            ' CHANGELOG.md
+            echo
+            echo "\`Tessera.xcframework.zip\` SHA-256 checksum (for the SPM \`binaryTarget\` — the independent second authenticity channel):"
             echo
             echo '```'
             echo "$CHECKSUM"

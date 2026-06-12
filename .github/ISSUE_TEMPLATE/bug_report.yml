@@ -1,0 +1,47 @@
+name: Bug report
+description: Something the SDK does wrong — a parse, validation, generation, or camera-reading problem.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > ⚠️ **Never paste data from a real document.** MRZ lines encode personal data (name, document number, birth date). Reproduce the problem with **synthetic data** — the SDK's own generator (`MrzGenerator`) produces valid MRZs, and the ICAO specimen (`ERIKSSON`/Utopia) is safe. Issues containing real document data will be edited or deleted on sight.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did the SDK do, and what did you expect instead?
+      placeholder: "parse() returned PartialSuccess with MrzCheckDigitMismatch on a synthetic TD3 that should be clean…"
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction (synthetic data only)
+      description: The smallest input + code that shows the problem. Generate the MRZ or use the ICAO specimen — no real documents.
+      render: kotlin
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: SDK version
+      placeholder: "0.2.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - JVM / backend
+        - Android
+        - iOS (Swift / SPM)
+        - Other / multiple
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment (platform versions, device if camera-related)
+      placeholder: "Android 15 / Pixel 9, minSdk 23, CameraXMrzScanner defaults…"
