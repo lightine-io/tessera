@@ -14,6 +14,13 @@
 set -euo pipefail
 
 root="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+
+# Session marker for the Stop-hook handoff check (scripts/stop-handoff-check.sh):
+# mark when this session started and clear the once-per-session reminder flag.
+mkdir -p "$root/.handoffs"
+touch "$root/.handoffs/.session-started"
+rm -f "$root/.handoffs/.handoff-reminded"
+
 plans_dir="$root/.plans"
 [ -d "$plans_dir" ] || exit 0
 
