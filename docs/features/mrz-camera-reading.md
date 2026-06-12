@@ -70,7 +70,7 @@ Still headless: if the consumer wants a live preview, they attach their own prev
 
 ## Usage
 
-The illustrative shapes above sketch the surface; the end-to-end example below compiles against the current Android owns-session API. The **Kotlin/Android camera contract locks at the 0.2.0 tag** ([ADR-007](../decisions/0007-strict-backward-compat-from-0x.md)); the **iOS/Swift projection stays provisional through `0.x`** (the iOS scanner mirrors this same contract, but you consume `AVCaptureMrzScanner` from Swift, where the `Flow`→Swift bridging is not yet locked — see the iOS notes under "Errors" and [ADR-019](../decisions/0019-ios-distribution-via-spm.md)), so no Swift example is pinned here yet.
+The illustrative shapes above sketch the surface; the end-to-end example below compiles against the current Android owns-session API. The **Kotlin/Android camera contract locks at the 0.2.0 tag** ([ADR-007](../decisions/0007-strict-backward-compat-from-0x.md)); the **iOS/Swift projection stays provisional through `0.x`** (the iOS scanner mirrors this same contract, but you consume `AVCaptureMrzScanner` from Swift, where the `Flow`→Swift bridging is not yet locked — the *verified* Swift consumption pattern lives in the [iOS integration guide](../guides/ios-integration.md)). For the task-oriented walkthroughs — empty app to working scan, permission flow, troubleshooting — see the integration guides: [Android](../guides/android-integration.md), [iOS](../guides/ios-integration.md).
 
 ```kotlin
 import io.lightine.tessera.mrz.camera.CameraXMrzScanner
@@ -111,6 +111,27 @@ scanner.close() // release the executor + recognizer
 ```
 
 For a custom frame source (a USB reader, desktop, or web) rather than the platform camera, feed the lower-level core directly: `MrzFrameAnalyzer(recognizer).analyse(frame)` per frame, or `analyzer.scan(frames)` over a `Flow` of frames.
+
+### Dependency surface (what the artifact brings)
+
+The Android artifact is **`io.lightine.tessera:tessera-mrz-camera-android`**; it brings CameraX (`camera-core`, `camera-lifecycle`, and the `camera2` backend at runtime) and the **bundled-model** ML Kit text recognizer transitively — **the consumer adds neither**. Bundled-model means OCR runs on-device with no model download and no network; ML Kit does pull Google Play Services / data-transport libraries transitively, none of which the SDK initializes — that surface is documented in [reading-risks.md](../reading-risks.md). One nuance: passing a custom `cameraSelector` or `recognizer` puts CameraX types in your code, which then needs `androidx.camera:camera-core` on your own compile classpath; the default-arguments path needs nothing (verified against a consumer app declaring only the Tessera artifact). The iOS side has no third-party OCR dependency at all — Apple Vision and AVFoundation are system frameworks, shipped inside the `Tessera` XCFramework's interop.
+
+### Optional constructor parameters
+
+Both owns-session scanners take the same optional parameters beyond the required Android `appContext`/`lifecycleOwner`:
+
+| Parameter | Default | Notes |
+|---|---|---|
+| `recognizer` | the platform OCR engine (bundled ML Kit / Apple Vision) | The scanner owns its recognizer: a consumer-supplied one that is `AutoCloseable` is released by `close()` |
+| `mode` | `ParsingMode.STRICT` | `LENIENT` forgives benign format noise; no mode changes a data value |
+| `telemetry` | `TelemetrySinkRegistry.current` (no-op when none registered) | Per-instance override |
+| lens (`cameraSelector` / `cameraPosition`) | back camera | Documents face the rear lens |
+
+Kotlin default arguments do not project into Swift — a Swift consumer passes all arguments explicitly (see the [iOS guide](../guides/ios-integration.md)).
+
+### Threading and back-pressure
+
+On Android, `results` emits on the **main dispatcher**; OCR and analysis run on an internal single-thread executor, and the stream buffers newest-first (`DROP_OLDEST`) — a slow collector never stalls the camera, it just misses stale frames. On iOS, analysis runs on `Dispatchers.Default` (off the main thread), the capture delegate runs on its own serial queue, and analysis is throttled internally to ~5 frames/sec (Apple Vision is heavy; a held document needs no more — the camera and any consumer preview still run at full rate). `close()` is required on both platforms when done with a scanner instance: it releases the analysis executor/session and the owned OCR recognizer.
 
 ## Parsing modes
 
