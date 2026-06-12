@@ -5,6 +5,7 @@ paths:
   - "CONTRIBUTING.md"
   - "docs/contributor-map.md"
   - "docs/getting-started.md"
+  - "docs/guides/**"
 ---
 
 # Guide-style convention
