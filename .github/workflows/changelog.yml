@@ -1,0 +1,43 @@
+# Enforces the CHANGELOG discipline (CLAUDE.md "Required Discipline": every non-trivial PR
+# updates CHANGELOG.md [Unreleased]) structurally instead of by willpower. A PR that does not
+# touch CHANGELOG.md fails this check unless it carries the `no-changelog` label (the recorded
+# trivial-PR escape hatch — apply it WITH the one-line justification in the PR description).
+#
+# Separate workflow (not a job in check.yml) on purpose: it re-runs on label add/remove
+# (`labeled`/`unlabeled` types) without re-running the build matrix — the macOS job in
+# check.yml would otherwise re-run on every label change.
+#
+# Action pinned to a full commit SHA per the repo convention (see check.yml header).
+
+name: changelog
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changelog:
+    name: changelog · entry present
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-changelog') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+
+      - name: Require a CHANGELOG.md entry (or the no-changelog label)
+        run: |
+          if git diff --name-only "origin/${{ github.base_ref }}"...HEAD | grep -qx 'CHANGELOG.md'; then
+            echo "CHANGELOG.md touched — ok"
+          else
+            echo "::error::This PR does not touch CHANGELOG.md. Add an [Unreleased] entry (CLAUDE.md 'Required Discipline'), or apply the 'no-changelog' label with a one-line justification in the PR description."
+            exit 1
+          fi

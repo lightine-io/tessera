@@ -48,7 +48,7 @@ Edit code, write tests, update relevant feature docs and ADRs as commitments are
 
 ### 3. Update `CHANGELOG.md`
 
-Every non-trivial PR adds entries to the `[Unreleased]` section, grouped per [Keep a Changelog](https://keepachangelog.com/) categories: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`. Trivial PRs (typo fixes, single-character edits) can skip the changelog with an explanation in the PR description.
+Every non-trivial PR adds entries to the `[Unreleased]` section, grouped per [Keep a Changelog](https://keepachangelog.com/) categories: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`. Trivial PRs (typo fixes, single-character edits) can skip the changelog with an explanation in the PR description **and the `no-changelog` label** — CI enforces this (`.github/workflows/changelog.yml` fails any PR that neither touches `CHANGELOG.md` nor carries the label; adding/removing the label re-runs the check without re-running the builds).
 
 When `0.1.0` is tagged, the `[Unreleased]` section becomes `[0.1.0] - YYYY-MM-DD` and a new `[Unreleased]` section is opened.
 

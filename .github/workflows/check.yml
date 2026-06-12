@@ -35,6 +35,12 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Weekly scheduled run (Mon 06:00 UTC): catches toolchain/dependency rot between PRs —
+  # a remote action deprecation, an SDK download breaking, a cache going stale — on a repo
+  # that can sit quiet for days. workflow_dispatch allows an on-demand full-matrix run.
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read

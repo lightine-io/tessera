@@ -1,0 +1,39 @@
+# Opens a reminder issue at each dependency-upgrade cadence checkpoint (CLAUDE.md:
+# six-monthly, April 1 / October 1) so the checkpoint fires structurally instead of
+# relying on someone re-reading CLAUDE.md at the right moment. The issue points at the
+# dependency-upgrade-cadence skill, which holds the full procedure (including the
+# accepted-risk sweep and the CLAUDE.md health review).
+#
+# Idempotent: skips if an open issue with the marker label already exists.
+# No checkout needed — `gh` operates via the API.
+
+name: cadence reminder
+
+on:
+  schedule:
+    - cron: "0 9 1 4,10 *" # 09:00 UTC, April 1 and October 1
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  remind:
+    name: open cadence checkpoint issue
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create the checkpoint issue (if none open)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          existing=$(gh issue list -R "$REPO" --label dependency-cadence --state open --json number --jq 'length')
+          if [ "$existing" -gt 0 ]; then
+            echo "An open cadence issue already exists — skipping."
+            exit 0
+          fi
+          gh label create dependency-cadence -R "$REPO" --description "Six-monthly dependency-upgrade cadence checkpoint" --color 0e8a16 2>/dev/null || true
+          gh issue create -R "$REPO" \
+            --title "Dependency-upgrade cadence checkpoint ($(date -u +%Y-%m))" \
+            --label dependency-cadence \
+            --body "Six-monthly cadence checkpoint (CLAUDE.md \"Dependency Upgrade Cadence\"). Run the \`dependency-upgrade-cadence\` skill: bump toolchain/dependencies to current stable, sweep the accepted-risk entries (Dependabot triage, wrapper \`distributionSha256Sum\`, the \`mrz-camera-android\` ABI-tooling re-check), and do the 5-minute CLAUDE.md health review. Procedure: \`.claude/skills/dependency-upgrade-cadence/SKILL.md\`."
