@@ -248,6 +248,8 @@ The format is "complete" when Phase 3 lands.
 
 Code style follows the idiomatic conventions of each target language and platform — Kotlin code reads as idiomatic Kotlin, Swift wrappers read as idiomatic Swift, and so on. The overarching commitment is: code is written to be readable by people who do not have the original author's context.
 
+**No per-file license headers** (decided 2026-06-12). Source files carry no Apache-2.0 header blocks: the repository-level `LICENSE`, the published POM/SPM license metadata, and GitHub's license detection carry the licensing; per-file headers add noise to every file and churn (year updates) without legal necessity — Apache-2.0 does not require them. If this is ever reversed, Spotless's `licenseHeader()` is the enforcement point so headers stay consistent mechanically.
+
 ### Kotlin
 
 The project uses the **Kotlin official code style** (`kotlin.code.style=official` in `gradle.properties`). Formatting and linting are enforced through:

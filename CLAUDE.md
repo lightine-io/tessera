@@ -129,7 +129,7 @@ The project uses **GitHub Flow**: `main` is the trunk; feature branches off `mai
 - **When making a significant decision**, draft a new ADR in [`docs/decisions/`](docs/decisions/) and add it to the index.
 - **When implementation reveals a doc gap or contradiction**, surface it and update the doc — do not silently work around it.
 - **When adding a new test category or testing commitment**, update [`docs/testing.md`](docs/testing.md).
-- **When resolving an item in [`docs/open-questions.md`](docs/open-questions.md)**, mark it Resolved with a reference to where the resolution was made. Do not delete.
+- **When resolving an item in [`docs/open-questions.md`](docs/open-questions.md)**, mark it Resolved with a reference to where the resolution was made. Do not delete; fully-resolved entries graduate to `docs/open-questions-resolved.md` in housekeeping passes.
 - **When deferring a new decision**, add an entry to [`docs/open-questions.md`](docs/open-questions.md).
 
 ### Verification Before Acting
