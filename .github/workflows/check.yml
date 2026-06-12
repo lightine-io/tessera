@@ -117,11 +117,14 @@ jobs:
       # + CameraX scanner). Most host tests run in the `check` job via each module's jvm target;
       # mrz-camera-android is Android-only (no jvm target), so its androidHostTest unit tests — the
       # CameraState recoverable/critical classification — run here, where the Android SDK is present.
+      # The four source-bearing common modules enable withHostTest{}, so their COMMON test suites also
+      # execute against the Android target here (~600 tests on the JVM host with the Android variant) —
+      # the Android target is no longer compile-only on CI.
       # verifyMlKitBundledModel asserts ML Kit stays the bundled (offline) text-recognition model — it
       # resolves androidRuntimeClasspath, so it needs the Android SDK this job provides.
       # Still no emulator / instrumented / live-camera tests (those run locally on a device).
       - name: Compile Android targets, run Android host tests, verify ML Kit bundled model
-        run: ./gradlew compileAndroidMain :mrz-camera-android:testAndroidHostTest :mrz-camera-android:verifyMlKitBundledModel
+        run: ./gradlew compileAndroidMain :mrz-camera-android:testAndroidHostTest :types:testAndroidHostTest :mrz-core:testAndroidHostTest :telemetry:testAndroidHostTest :mrz-camera-core:testAndroidHostTest :mrz-camera-android:verifyMlKitBundledModel
 
   ios-compile:
     name: build & test · iOS

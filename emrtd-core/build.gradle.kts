@@ -44,17 +44,9 @@ kotlin {
     // iOS targets are added back with this module's first real source — the same "add platform support
     // when the code lands" policy used for explicitApi()/abiValidation. See ADR-017.
 
-    sourceSets {
-        commonMain {
-            dependencies {
-                api(project(":types"))
-            }
-        }
-        commonTest {
-            dependencies {
-                implementation(kotlin("test"))
-                implementation(libs.kotest.property)
-            }
-        }
-    }
+    // No sourceSets block while this module is an empty placeholder: there is no source to depend
+    // on anything, so declaring dependencies (the `api(:types)` this once carried, test libraries)
+    // only pollutes the published POM and the test classpath. Dependencies return with the first
+    // real source — the same "when the code lands" policy as the iOS targets / explicitApi /
+    // abiValidation above.
 }

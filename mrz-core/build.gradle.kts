@@ -44,6 +44,9 @@ kotlin {
         namespace = "io.lightine.tessera.mrz"
         compileSdk = 36
         minSdk = 23
+        // Run the common test suite against the Android target on the JVM host (androidHostTest) —
+        // executed by the android-compile CI job, closing the "Android target is compile-only" gap.
+        withHostTest {}
     }
 
     // iOS targets (ADR-017): device arm64 plus the Apple-Silicon simulator. These two
