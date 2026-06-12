@@ -148,6 +148,10 @@ The country or organization that issued the document. In the MRZ, the issuing st
 
 The standardized layout of data on an eMRTD chip, defined by ICAO Doc 9303 Part 10. The LDS organizes data into data groups (DG1, DG2, etc.) and includes the Security Object that signs them collectively.
 
+### Lenient Mode
+
+A consumer-chosen parsing mode in the camera layer that forgives benign format noise (for example, stray whitespace) without changing any data value. Strict remains the default, and the raw OCR reading is always exposed regardless of mode. See `mrz-camera-reading.md`.
+
 ### Lookup Table
 
 A reference dataset shipped with the SDK that maps codes to display names and metadata. The SDK ships lookup tables for country codes and document type codes. See `lookup-tables.md`.
@@ -270,7 +274,11 @@ A heuristic for inferring the four-digit year from a two-digit year in the MRZ. 
 
 ### Strict Mode
 
-The parser's default behavior, in which any deviation from ICAO Doc 9303 structural conformance produces a parse error or a typed validation failure. Lenient and tolerant modes are not currently supported but may be added in future releases. See `mrz-parsing.md`.
+The parser's default behavior, in which any deviation from ICAO Doc 9303 structural conformance produces a parse error or a typed validation failure. A consumer-chosen lenient mode ships in the camera layer (see Lenient Mode); tolerant mode remains deferred (see Tolerant Mode). See `mrz-parsing.md` and `mrz-camera-reading.md`.
+
+### Swift Package Manager (SPM)
+
+Apple's first-party dependency manager, and the SDK's iOS distribution channel: iOS consumers add the `tessera-swift` package, which wraps the Tessera XCFramework attached to each GitHub release. See the iOS integration guide and `decisions/0019-ios-distribution-via-spm.md`.
 
 ---
 
@@ -287,6 +295,10 @@ The ICAO Doc 9303 MRZ format for mid-sized documents (some official travel docum
 ### TD3
 
 The ICAO Doc 9303 MRZ format for passport booklets. Two lines of 44 characters. The most common MRZ format in everyday use. See ICAO Doc 9303 Part 4.
+
+### Tolerant Mode
+
+A planned — not yet shipped — parsing mode that would use check-digit-guided disambiguation to recover from common OCR confusions. When built, it must *surface* candidate corrections rather than silently overwrite values (reader, not oracle). Deferred to the still-image reading work. See `open-questions.md` ("Lenient and tolerant parsing modes").
 
 ### Telemetry
 
@@ -319,6 +331,14 @@ The principle that the SDK reproduces field values exactly as they appear in the
 ### Warning
 
 Data that is structurally valid and conforms to the MRZ specification, but is anomalous in a way the consumer might want to know about (e.g., expired document, truncated name, MRZ-vs-chip mismatch). Warnings appear in result metadata; consumers may surface them, log them, or ignore them. Distinct from errors and validation failures. See `mrz-error-taxonomy.md`.
+
+---
+
+## X
+
+### XCFramework
+
+Apple's multi-architecture binary framework format. The SDK's iOS build ships as a single `Tessera` XCFramework (device and simulator slices), attached as a zip to each GitHub release and consumed through Swift Package Manager. See `mrz-camera-reading.md` and `decisions/0019-ios-distribution-via-spm.md`.
 
 ---
 

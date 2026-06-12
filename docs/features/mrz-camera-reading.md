@@ -3,10 +3,10 @@
 Headless live-camera reading of the Machine Readable Zone: the SDK receives camera frames, locates and OCRs the MRZ region, and returns the same structured, validated result that string parsing produces — with no UI of its own. The consumer owns all presentation (camera preview, overlay, prompts); a ready-made scanner UI is a later release (0.5.0).
 
 **Status:** Living
-**Available since:** 0.2.0
+**Available since:** 0.2.0 *(first published as 0.2.1 — the `v0.2.0` release run failed before publishing anything; see `CHANGELOG.md`)*
 **Platform availability:** Android (CameraX + ML Kit Text Recognition) and iOS (AVFoundation + Apple Vision). The analyse-frame core is frame-source-agnostic, so future sources (USB document readers, web, desktop) can feed the same API.
 
-> The Kotlin-flavored API shapes below are **illustrative, not authoritative** — exact names, signatures, and visibility are finalized as the 0.2.0 slices land and are locked at the 0.2.0 tag (per [ADR-007](../decisions/0007-strict-backward-compat-from-0x.md)). The architectural decisions behind this feature are recorded in [ADR-020](../decisions/0020-camera-reading-architecture.md).
+> The Kotlin-flavored API shapes below are **illustrative, not authoritative** — exact names, signatures, and visibility were finalized as the 0.2.0 slices landed and are locked as of the 0.2.0 line (per [ADR-007](../decisions/0007-strict-backward-compat-from-0x.md)). The architectural decisions behind this feature are recorded in [ADR-020](../decisions/0020-camera-reading-architecture.md).
 
 ---
 
@@ -25,7 +25,7 @@ The public API ships in two layers; the convenience is built on the core (see [A
 The low-level entry point: hand it a platform frame, get a result. It owns no camera, so it is unit-testable with injected frames + mock OCR, and it is the seam any frame source feeds. The OCR engine is itself injected through a generic seam, `MrzTextRecognizer<F>`, whose frame type `F` is the extension point — Android binds `F = ImageProxy`; a future USB/desktop/web source binds its own.
 
 ```kotlin
-// Illustrative — not authoritative. Shapes as of the analyse-frame slice; locked at the 0.2.0 tag.
+// Illustrative — not authoritative. Shapes as of the analyse-frame slice; locked since the 0.2.0 line.
 fun interface MrzTextRecognizer<in F> {
     suspend fun recognize(frame: F): RecognizedText   // OCR only; throwing surfaces CameraError.OcrFailed
 }
@@ -50,7 +50,7 @@ val analyzer = MrzFrameAnalyzer(MlKitMrzTextRecognizer())
 The common path: the SDK runs the platform camera internally and streams results. The consumer never touches `bindToLifecycle` / `ImageAnalysis` / `AVCaptureSession`.
 
 ```kotlin
-// Illustrative — not authoritative. Shapes as of the headless-contract slice; locked at the 0.2.0 tag.
+// Illustrative — not authoritative. Shapes as of the headless-contract slice; locked since the 0.2.0 line.
 interface MrzCameraScanner {
     val results: Flow<MrzScanResult>   // hot stream: emits between start() and stop(); Compose-friendly, bridges to Swift
     fun start()                        // idempotent; the consumer holds the CAMERA permission first
@@ -70,7 +70,7 @@ Still headless: if the consumer wants a live preview, they attach their own prev
 
 ## Usage
 
-The illustrative shapes above sketch the surface; the end-to-end example below compiles against the current Android owns-session API. The **Kotlin/Android camera contract locks at the 0.2.0 tag** ([ADR-007](../decisions/0007-strict-backward-compat-from-0x.md)); the **iOS/Swift projection stays provisional through `0.x`** (the iOS scanner mirrors this same contract, but you consume `AVCaptureMrzScanner` from Swift, where the `Flow`→Swift bridging is not yet locked — the *verified* Swift consumption pattern lives in the [iOS integration guide](../guides/ios-integration.md)). For the task-oriented walkthroughs — empty app to working scan, permission flow, troubleshooting — see the integration guides: [Android](../guides/android-integration.md), [iOS](../guides/ios-integration.md).
+The illustrative shapes above sketch the surface; the end-to-end example below compiles against the current Android owns-session API. The **Kotlin/Android camera contract is locked as of the 0.2.0 line** ([ADR-007](../decisions/0007-strict-backward-compat-from-0x.md)); the **iOS/Swift projection stays provisional through `0.x`** (the iOS scanner mirrors this same contract, but you consume `AVCaptureMrzScanner` from Swift, where the `Flow`→Swift bridging is not yet locked — the *verified* Swift consumption pattern lives in the [iOS integration guide](../guides/ios-integration.md)). For the task-oriented walkthroughs — empty app to working scan, permission flow, troubleshooting — see the integration guides: [Android](../guides/android-integration.md), [iOS](../guides/ios-integration.md).
 
 ```kotlin
 import io.lightine.tessera.mrz.camera.CameraXMrzScanner

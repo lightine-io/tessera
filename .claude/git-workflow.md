@@ -111,7 +111,7 @@ The build runs spotless, ktlint, all unit tests, and property tests. All must pa
 
 ### 6. Commit
 
-Per the existing commit-message style: short imperative subject, blank line, body explaining the *why*. Use HEREDOC for the body to preserve formatting. Always include the Co-Authored-By trailer for commits Claude makes:
+Per the existing commit-message style: short imperative subject, blank line, body explaining the *why*. Use HEREDOC for the body to preserve formatting. Always include the Co-Authored-By trailer for commits Claude makes, naming the **current session's model** (the placeholder below — don't copy a stale model name from an old commit; the trailer records which model co-authored):
 
 ```sh
 git commit -m "$(cat <<'EOF'
@@ -120,7 +120,7 @@ Short imperative subject
 Body explaining what changed and why. The why is more valuable than
 the what; the diff already shows the what.
 
-Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+Co-Authored-By: Claude <current model name> <noreply@anthropic.com>
 EOF
 )"
 ```

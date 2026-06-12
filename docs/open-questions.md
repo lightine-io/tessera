@@ -192,6 +192,8 @@ The repository on GitHub has no topics set, which limits discoverability through
 
 **Resolution:** Pick an initial set and apply via `gh repo edit --add-topic ...`. Establish a maintenance rhythm of reviewing topics at each release milestone — add topics as capabilities land, remove ones that no longer describe scope. Either a small follow-up PR or fold into the next release-prep pass.
 
+**Resolved (2026-06-12):** applied via `gh repo edit` — `kotlin`, `kotlin-multiplatform`, `mrz`, `icao-9303`, `passport`, `identity-document`, plus `android` and `ios` now that the platform I/O modules are published. The maintenance rhythm stands: review topics at each release milestone (e.g. add `nfc`/`emrtd` when 0.6.0 ships).
+
 ### Triage the existing Dependabot alerts before the 0.2.0 tag
 
 After the 0.2.0 camera slices, Dependabot reports **10 vulnerability alerts on the default branch (4 high, 6 moderate)** against the transitive dependency graph — surfaced now that A4's `dependency-submission` job feeds Dependabot the whole tree. These are *existing-tree* CVEs; the per-PR `dependency-review` gate only blocks *newly introduced* moderate+ CVEs, so it does not clear what is already there. For a security-sensitive identity SDK, the high-severity ones in particular should be triaged before the `0.2.0` tag. The maintainer confirmed (2026-06-06) this should be handled pre-tag, "at some point."
@@ -611,6 +613,18 @@ The patterns established during this project's design — dispute-driven discuss
 These are not deferred decisions and not blocking. They are improvements to the project's documentation system or process that may be worth making *if certain conditions arise*. Each entry includes the trigger that would justify revisiting.
 
 The list is intentionally short. Premature improvements are noise; trigger-based items get acted on when relevant rather than gathering dust.
+
+### Gradle wrapper `distributionSha256Sum` pinning
+
+The wrapper downloads the Gradle distribution over HTTPS with `validateDistributionUrl=true` but no `distributionSha256Sum` checksum pin — a supply-chain hardening gap relative to the project's otherwise-pinned posture (SHA-pinned GitHub Actions, content-filtered repositories). Parked, on a date: **pin it at the next wrapper bump (the 2026-10-01 dependency cadence)**, taking the checksum from Gradle's official distribution-checksums page. (This parking was previously recorded only in a gitignored plan file; re-recorded here 2026-06-12 so it survives.)
+
+**Trigger:** the 2026-10-01 dependency-upgrade cadence (wrapper bump), or any earlier wrapper change.
+
+### Binary-size / performance posture
+
+The project has no measured size baseline (AAR, XCFramework) and no dependency-size evaluation policy — camera/OCR SDKs are size-sensitive for mobile consumers, and without a baseline there is no warning system if a dependency bloats. Deliberately deferred (recorded 2026-06-12, from the gaps audit): no targets are set now; the cheap first step is measuring and recording a baseline at a release-prep pass.
+
+**Trigger:** the next release-prep pass (record a baseline), a consumer raising size concerns, or the 1.0.0 readiness review (decide whether to commit targets).
 
 ### Document Evolution section in conventions.md
 

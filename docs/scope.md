@@ -128,6 +128,7 @@ The SDK commits to supporting these platforms across the initial release wave. A
 
 - **Android** — minimum `minSdk` 23 (Android 6.0), committed when the Android target activates in 0.2.0. Kept low (matching the AndroidX libraries' own default) to maximize the consumer apps that can adopt the SDK.
 - **iOS** — minimum deployment target 18, committed when the iOS target activates in 0.2.0.
+- **JVM** — Java 21 or newer at runtime: the published JVM artifacts target JVM 21 bytecode (the build's `jvmToolchain(21)`, with no lower `jvmTarget` override). Confirmed as a deliberate floor (maintainer decision, 2026-06-12), not a toolchain accident. The managed-raise discipline applies in the same spirit as the mobile minimums — lowering the floor is non-breaking; raising it is a documented breaking change ([ADR-018](decisions/0018-platform-minimums-and-managed-raise.md)).
 
 Each minimum is documented per release. The build compiles against the latest stable SDKs ([ADR-017](decisions/0017-mobile-targets-and-build-stack.md)); the run-time floors above follow the **managed-raise policy** — raising a minimum is a documented breaking release made only when forced (vendor end-of-life, an unpatched security issue, or a rising toolchain floor), while lowering one is non-breaking ([ADR-018](decisions/0018-platform-minimums-and-managed-raise.md)).
 
