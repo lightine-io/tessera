@@ -2,7 +2,7 @@
 
 Usage guides for every SDK capability. Each guide explains what the capability does, shows a copy-paste **Usage** example verified against the shipped API, documents the public contract, and states the current implementation status — so a guide is both the how-to and the reference for its capability.
 
-If you are new to the SDK, start with the parsing guide — most integrations begin there. For platform integration (Android camera scanning, iOS), see the README's installation section and the camera-reading guide below.
+If you are new to the SDK, start with [Getting Started](../getting-started.md) (dependency → parse → validate → generate in ten minutes), then the parsing guide — most integrations begin there. For platform integration (Android camera scanning, iOS), see the README's installation section and the camera-reading guide below.
 
 ## Core MRZ operations
 

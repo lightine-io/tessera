@@ -4,6 +4,7 @@ paths:
   - "**/*-setup.md"
   - "CONTRIBUTING.md"
   - "docs/contributor-map.md"
+  - "docs/getting-started.md"
 ---
 
 # Guide-style convention
