@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **`docs/features/README.md` — an index page for the feature guides** (docs only). The nine capability guides existed but the folder had no landing page, so a visitor browsing the repo saw a bare file list and concluded the project had no usage guides (observed with a real evaluator). The index groups the guides (core MRZ operations, reading methods, reference data/infrastructure) with a one-line description each, and the README now routes to it: the "For integrators" section calls the guides what they are ("usage guides for every capability, each with a copy-paste Usage example"), a "More examples" pointer follows the Quick example, and the Quick example's stale "illustrative — the actual API may differ" disclaimer is replaced with the accurate statement that the example is verified against the published API (it is — re-verified symbol-by-symbol in this change, per the usage-example rule).
+
 ### Changed
 
 - **Session-handoff system hardened against cross-session context loss** (AI-collaboration infrastructure; no code or public-API change). A second confirmed context-loss instance pinned the root cause: handoffs are snapshots of the closing session's working memory, and standing obligations (deferred action-plan items whose triggers fire later) had no structural path back into a new session. Now: action-plan items carry checkbox status; the CLAUDE.md session-start ritual sweeps open plans; the handoff template (`.claude/session-handoff-template.md`) is rewritten for its actual reader — the next AI session — with a mandatory "⭐ START HERE" state snapshot, a "Standing Obligations" sweep filled by looking rather than remembering, a "Superseded This Session" section, and an exact-reference rule; and a `SessionStart` hook (`scripts/standing-obligations.sh`) injects unchecked plan items into every session automatically. Resolves the "decided context is being lost across sessions" entry in [`docs/open-questions.md`](docs/open-questions.md).

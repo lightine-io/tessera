@@ -40,7 +40,7 @@ These are deliberate boundaries. See [`docs/principles.md`](docs/principles.md) 
 
 ## Quick example
 
-The following is illustrative — the actual API may differ in detail. See [`docs/features/`](docs/features/) for the current contracts.
+This example compiles against the published API (verified symbol-by-symbol; the project's documentation rules require it). The public API follows strict backward compatibility throughout `0.x` ([ADR-007](docs/decisions/0007-strict-backward-compat-from-0x.md)).
 
 ```kotlin
 val result = MrzParser.parse("""
@@ -67,6 +67,8 @@ when (result) {
 ```
 
 The result type makes the three possible outcomes explicit. The consumer cannot accidentally treat a `PartialSuccess` as a `Success`.
+
+**More examples** — validation, generation, transliteration, live-camera scanning — are in the [feature guides](docs/features/README.md); every guide has a copy-paste Usage section.
 
 ---
 
@@ -126,7 +128,7 @@ The project's documentation is structured for two audiences: integrators (who wa
 ### For integrators
 
 - [`docs/scope.md`](docs/scope.md) — what the SDK supports, what it does not, and what is planned
-- [`docs/features/`](docs/features/) — feature-by-feature documentation of every capability
+- [`docs/features/`](docs/features/README.md) — usage guides for every capability, each with a copy-paste Usage example
 - [`docs/reading-risks.md`](docs/reading-risks.md) — what each reading method establishes, what it does not, and what additional verification might be needed
 - [`docs/glossary.md`](docs/glossary.md) — definitions of MRZ, eMRTD, BAC, PACE, and other terms used throughout the documentation
 - [`docs/versioning.md`](docs/versioning.md) — versioning policy and release commitments
