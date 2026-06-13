@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **`known-pitfalls.md`: recorded the "patching one handoff in place across a long session" failure mode** (AI-collaboration infrastructure; no code change). A real 2026-06-13 case — one handoff edited ~8 times across a multi-day session drifted in four spots at once (a stale "one open item" count, a both-blocked-and-closed status, a "next session should" pointing at finished work, a link to a since-archived file) while its headline stayed accurate and masked the fray. The entry names the "Standing Obligations" section as the canary (it must agree with the live sweep) and prescribes a fresh `Supersedes:` handoff over repeated in-place patching.
+
 ### Added
 
 - **`docs/guides/ios-integration.md` — the iOS integration guide** (docs only). The Swift mirror of the Android guide: SPM install, `NSCameraUsageDescription` + the consumer-owned permission flow, the all-explicit-arguments constructor (Kotlin defaults do not project into Swift), the verified Kotlin-`Flow` collection pattern (`FlowCollector` adapter — transcribed from the device-tested harness, with the provisional-through-`0.x` framing stated up front), the flattened sealed-variant casts (`MrzScanResultDecoded` …), backgrounding/auto-resume and terminal-vs-recoverable error semantics, `stop()`/`close()`, the ~5 fps analysis-throttle note, and the same honest decode-reliability limitation section (with the iOS real-document decode on record).

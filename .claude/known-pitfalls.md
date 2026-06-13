@@ -302,6 +302,20 @@ A Cocoa API that takes a *delegate* almost always holds it **weakly** (the frame
 
 ---
 
+## Patching One Handoff in Place Across a Long Session
+
+**The pitfall:** A single long (often multi-day) session keeps *editing the same `SESSION-HANDOFF` file in place* as work progresses, instead of writing a fresh superseding handoff. Each in-place edit patches prose without re-deriving it, so contradictions accumulate: a "done" item still listed as blocked, a "Next Session Should" pointing at finished work, a moved file's old path, a count that no longer matches reality.
+
+**Why it happens:** Editing the existing handoff feels cheaper than writing a new one, and each individual edit looks locally correct. But the handoff template assumes you are *writing* a handoff (regenerate the sweep, snapshot the state), not *re-editing* one — so repeated patches drift from the live state without any single edit looking wrong.
+
+**Real example (2026-06-13).** The `consumer-docs-track` handoff was edited ~8 times across a 06-12→06-13 session and drifted in four spots at once: the "Standing Obligations" section said "exactly one" open item when the sweep returned two (P8 had been added later); "What Is in Flight" listed B2 as both `BLOCKED` and "closed" in the same section; "Next Session Should" told the next session to do already-shipped work; and two links pointed at a review file that had been archived to `.reviews/archive/`. The headline (`⭐ START HERE`) stayed accurate, masking the frayed details. Fixed by writing a fresh superseding handoff.
+
+**The tell:** the "Standing Obligations" section is the canary. It is defined as *sweep-derived, never remembered* — so if it disagrees with `grep -n '\- \[ \]' .plans/*.md`, the whole handoff has drifted and is overdue for a rewrite.
+
+**What to do instead:** `/clear` between distinct tasks (CLAUDE.md Session Discipline) so handoffs stay session-sized. When a long session *has* materially moved on, write a **fresh handoff with a `Supersedes:` line** rather than patching the old one a ninth time — `sort -r | head -1` makes the newest win, so the stale one becomes inert history. If you must edit in place, **re-run the sweep and re-check every status line** against reality instead of trusting the prose already there.
+
+---
+
 ## Maintaining This Document
 
 This document grows when new pitfalls are observed during ongoing work. The bar for adding an entry: *has this mistake actually been made on this project, or is it close enough that it could be?* If yes, document it concretely with the specific pattern. If no, do not add speculative pitfalls — `reading-risks.md` and the principles already cover those.
