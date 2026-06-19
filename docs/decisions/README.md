@@ -33,6 +33,7 @@ The format is documented in `conventions.md`. ADRs are *fixed* once accepted: if
 | [019](0019-ios-distribution-via-spm.md) | iOS distribution via Swift Package Manager | Accepted |
 | [020](0020-camera-reading-architecture.md) | Camera reading architecture | Accepted |
 | [021](0021-shared-mrz-camera-core-module.md) | Shared `mrz-camera-core` module | Accepted |
+| [022](0022-operating-model-and-roles.md) | Operating model and project roles | Accepted |
 
 ---
 

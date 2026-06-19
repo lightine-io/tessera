@@ -458,6 +458,8 @@ Deferred because at the project's current scale (single maintainer, narrow 0.1.x
 
 ### Cross-project planning tool (YouTrack vs GitHub Projects vs current setup)
 
+**Resolved (2026-06-19):** Adopted **YouTrack** as the inner planning + Knowledge-Base tool for Tessera — ahead of the original two-project trigger below. The operating model and roles are recorded in [ADR-022](decisions/0022-operating-model-and-roles.md) and [`workflow.md`](workflow.md); session access is gated by [`.claude/rules/youtrack.md`](../.claude/rules/youtrack.md). The original deferral is retained below for the record; it graduates to [`open-questions-resolved.md`](open-questions-resolved.md) in a future housekeeping pass.
+
 When future projects under `io.lightine` start (potentially with shared contributors), unified visibility across projects may justify a dedicated project-management tool. The current setup (GitHub Issues + `docs/open-questions.md`, `.handoffs/`, ADRs, `CHANGELOG.md`) is sufficient for a single active project; adding tooling now would create stale data and split the source of truth across more places (Principle 11 — internal/simple first, promote when justified).
 
 Three realistic options when this is revisited:

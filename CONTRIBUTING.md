@@ -14,6 +14,7 @@ If you haven't worked on this project before, start with [`docs/contributor-setu
 
 ## Where the rules live
 
+- **[`docs/workflow.md`](docs/workflow.md)** — how work flows (the board lifecycle, Definition of Ready / Done, per-type flows) and the project roles (Owner / Maintainer / Developer) — who is trusted to do what; the reasoning is in [ADR-022](docs/decisions/0022-operating-model-and-roles.md)
 - **[`docs/conventions.md`](docs/conventions.md)** — branch naming, PR flow, naming conventions for new types, the procedure for adding new MRZ formats, code-style commitments
 - **[`.claude/git-workflow.md`](.claude/git-workflow.md)** — the end-to-end commit + push + PR workflow, including the private-content scan that runs before every push
 - **[`docs/versioning.md`](docs/versioning.md)** — Semantic Versioning rules and the project's strict-backcompat-from-`0.x` stance

@@ -41,8 +41,13 @@ Every how-to / setup guide in this project — the ones this map points at, and 
 
 ---
 
+## A second axis: authority roles
+
+This map routes by *platform* — what a contributor can work on given their operating system. There is a second, independent axis: **authority** — who is trusted to review, merge, and decide. That model (Owner / Maintainer / Developer) and the work lifecycle it governs live in [`workflow.md`](workflow.md). A person has one authority role *and* one or more platform types from the table above.
+
 ## Related documents
 
+- [`workflow.md`](workflow.md) — the work lifecycle and the authority roles (Owner / Maintainer / Developer)
 - [`CONTRIBUTING.md`](../CONTRIBUTING.md) — the contributor entry point and the rules
 - [`contributor-setup.md`](contributor-setup.md) — one-time machine setup (clone, Git identity, SSH signing)
 - [`development-setup.md`](development-setup.md) — the build/dev toolchain (JDK, Android SDK, Xcode, agent tooling)
