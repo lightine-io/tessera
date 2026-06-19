@@ -33,7 +33,7 @@ If you haven't worked on this project before, start with [`docs/contributor-setu
 
 ## Review process
 
-Every PR to `main` requires approval from a CODEOWNER (currently only the project author, listed in [`.github/CODEOWNERS`](.github/CODEOWNERS)). Branch protection rules enforce this.
+Every PR to `main` must pass the required status checks (build, tests, changelog) before it can merge — branch protection enforces that. [`.github/CODEOWNERS`](.github/CODEOWNERS) lists the project author as owner of all paths; **required CODEOWNER approval before merge turns on as the project gains contributors** (today, with a solo author who can't approve their own PR, it isn't yet enforced — see [`docs/workflow.md`](docs/workflow.md) → "What is wired today").
 
 The project follows **GitHub Flow**: PR for every change, no direct pushes to `main`, linear history. Squash or rebase merge — no merge commits.
 
