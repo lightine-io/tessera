@@ -28,7 +28,7 @@ A contributor's *local* checks — a hook, an advisory agent — carry **zero tr
 Misalignment with the project's principles is *prevented* at the **Definition of Ready** — the approach is agreed and principle-aligned in the inner space *before* a line is written — and *caught* at the **required review** (the merge gate). Alignment-with-principles is an explicit Definition of Done criterion: the machine-checkable parts become CI rules; the judgment part is the reviewer's call.
 
 **4. Three roles — Owner, Maintainer, Developer.**
-Authority is tiered: **Owners** decide everything (roadmap, Epics, Decisions, final say); **Maintainers / Tech Leads** are the review gate (review and merge others' work); **Developers** do the work (file tasks, build, propose). The authority that matters — the merge — is held in GitHub, not on the YouTrack board; the board *reflects* reality and is kept honest (a task cannot be "Done" without a merged PR). The full capability matrix and the work lifecycle live in [`../workflow.md`](../workflow.md).
+Authority is tiered: **Owners** decide everything (roadmap, Epics, Decisions, final say); **Maintainers / Tech Leads** are the review gate (review and merge others' work); **Developers** do the work (file tasks, build, propose). The authority that matters — the merge — is held in GitHub, not on the YouTrack board; the board *reflects* reality and is kept honest — it cannot show more progress than git and the release history back. The full capability matrix and the work lifecycle live in [`../workflow.md`](../workflow.md).
 
 ## Consequences
 
@@ -49,7 +49,7 @@ Authority is tiered: **Owners** decide everything (roadmap, Epics, Decisions, fi
 
 ## Alternatives Considered
 
-- **Enforce authority on the YouTrack board** (role-gated stage transitions). Rejected as the *primary* control: the board is poll-only and a board move is just a claim; the real gate is the GitHub merge, which is event-driven and enforced. A board rule is worth keeping only for *integrity* ("Done requires a merged PR"), not for authority.
+- **Enforce authority on the YouTrack board** (role-gated stage transitions). Rejected as the *primary* control: the board is poll-only and a board move is just a claim; the real gate is the GitHub merge, which is event-driven and enforced. A board rule is worth keeping only for *integrity* (a stage cannot claim more than git backs), not for authority.
 - **Trust a contributor's local checks** (treat "I ran security/QA" as sufficient). Rejected: local checks are disable-and-revert with no trace; trust must rest on what re-runs on our side.
 - **A flat role model** (everyone a Contributor, distinguished only at the merge). Workable at two people, but it does not express the Maintainer / Tech-Lead review tier the project will need, and would force a later migration; the three-tier model is the standard shape and avoids that.
 
