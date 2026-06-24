@@ -41,10 +41,24 @@ A file stays in **git only if git, future-me, or Maven needs it to be there.** A
 **Trips one → it stays in git. Trips none → it does not belong in git** — it goes to YouTrack (or stays Local
 if it is a working note). The default is **move/create outside git**; a place in git must point at one of these three needs.
 
-> Things that trip *none* and therefore live in YouTrack: ADRs, feature docs, architecture, conventions,
-> principles, glossary, reading-risks, testing, versioning, scope, the detailed guides, setup docs, open-questions.
-> They explain the product or hold our thinking — nothing mechanically needs them in the repo. (`working-patterns`
-> and `known-pitfalls` are the exception that *stays* — see the Future-me gate above.)
+> **Passing the gate is necessary, not sufficient.** A doc that trips none of the three gates is only a
+> *candidate* to move. In practice most are still **anchored** and therefore **stay in git anyway**:
+>
+> - **KDoc-coupled** — linked from shipped `.kt` KDoc (most feature docs; many ADRs — e.g. ADR-020 in 11 files).
+>   Moving means rewriting shipped code.
+> - **Agent-read** — read at runtime by a subagent (`qa-coverage-reviewer` ← `testing.md`;
+>   `doc-consistency-reviewer` ← feature docs). Moving it to the KB breaks the agent (agents run in the git checkout).
+> - **Co-versioned** — changes in lockstep with code or carries compile-checked examples (`getting-started`,
+>   the guides, `tech-stack-references`, and feature docs per `usage-example-required`).
+>
+> So a doc **moves only if** it trips no gate **AND** `git grep -l <name> -- '*.kt'` is empty **AND** it is not
+> agent-read **AND** it is not co-versioned. That leaves a *small* set — mostly the gitignored inner notes plus
+> the rare standalone reference. **Default = STAY in git.** (`working-patterns`/`known-pitfalls` stay via the
+> Future-me gate above.)
+>
+> **Do not infer a doc's location from this rule — check the file.** A doc is in the KB *iff* it no longer exists
+> in git (`git ls-files <path>` empty). As of the first migration, only `glossary` (public) and
+> `open-questions-resolved` (internal) have moved; everything else is still in git.
 
 ---
 
