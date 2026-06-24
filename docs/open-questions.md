@@ -2,7 +2,7 @@
 
 This document tracks decisions that have been deliberately deferred — to implementation time, to a future release, or to a moment when more information is available. The purpose is to ensure no deferred item is forgotten between design and implementation.
 
-This document is living. Items are added when a decision is deferred during design. When a decision is made, the entry is marked **Resolved** with a reference to where the resolution was recorded (a feature doc, an ADR, or scope.md) — never deleted. Once an entry is *fully* resolved (no open sub-question, no live trigger), a housekeeping pass graduates it verbatim to [`open-questions-resolved.md`](open-questions-resolved.md), keeping this file lean for its actual job: what is open *now*. Partially-resolved entries stay here until every part closes. An entry that lingers without progress is itself a signal that the question may need attention.
+This document is living. Items are added when a decision is deferred during design. When a decision is made, the entry is marked **Resolved** with a reference to where the resolution was recorded (a feature doc, an ADR, or scope.md) — never deleted. Once an entry is *fully* resolved (no open sub-question, no live trigger), a housekeeping pass graduates it verbatim to the [resolved archive in YouTrack](https://lightine.youtrack.cloud/articles/TES-A-2), keeping this file lean for its actual job: what is open *now*. Partially-resolved entries stay here until every part closes. An entry that lingers without progress is itself a signal that the question may need attention.
 
 Each entry includes a short description of the question, where it was deferred from, and what kind of resolution it requires.
 
@@ -458,7 +458,7 @@ Deferred because at the project's current scale (single maintainer, narrow 0.1.x
 
 ### Cross-project planning tool (YouTrack vs GitHub Projects vs current setup)
 
-**Resolved (2026-06-19):** Adopted **YouTrack** as the inner planning + Knowledge-Base tool for Tessera — ahead of the original two-project trigger below. The operating model and roles are recorded in [ADR-022](decisions/0022-operating-model-and-roles.md) and [`workflow.md`](workflow.md); session access is gated by [`.claude/rules/youtrack.md`](../.claude/rules/youtrack.md). The original deferral is retained below for the record; it graduates to [`open-questions-resolved.md`](open-questions-resolved.md) in a future housekeeping pass.
+**Resolved (2026-06-19):** Adopted **YouTrack** as the inner planning + Knowledge-Base tool for Tessera — ahead of the original two-project trigger below. The operating model and roles are recorded in [ADR-022](decisions/0022-operating-model-and-roles.md) and [`workflow.md`](workflow.md); session access is gated by [`.claude/rules/youtrack.md`](../.claude/rules/youtrack.md). The original deferral is retained below for the record; it graduates to the [resolved archive in YouTrack](https://lightine.youtrack.cloud/articles/TES-A-2) in a future housekeeping pass.
 
 When future projects under `io.lightine` start (potentially with shared contributors), unified visibility across projects may justify a dedicated project-management tool. The current setup (GitHub Issues + `docs/open-questions.md`, `.handoffs/`, ADRs, `CHANGELOG.md`) is sufficient for a single active project; adding tooling now would create stale data and split the source of truth across more places (Principle 11 — internal/simple first, promote when justified).
 
@@ -490,7 +490,7 @@ When making a deferred decision:
 
 1. Find the entry here
 2. Make and record the decision in the appropriate document
-3. Mark the entry **Resolved** with a reference to the resolution — do not delete it. A later housekeeping pass moves fully-resolved entries to [`open-questions-resolved.md`](open-questions-resolved.md); partially-resolved entries stay until every part closes.
+3. Mark the entry **Resolved** with a reference to the resolution — do not delete it. A later housekeeping pass moves fully-resolved entries to the [resolved archive in YouTrack](https://lightine.youtrack.cloud/articles/TES-A-2); partially-resolved entries stay until every part closes.
 
 When deferring a new decision during design or implementation:
 

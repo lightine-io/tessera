@@ -301,6 +301,12 @@ Project folders and files follow a consistent placement-and-naming convention: v
 
 Full operational detail in the [`folder-organization`](../.claude/rules/folder-organization.md) rule (path-scoped, auto-loaded when working with markdown files), with a short summary in [`CLAUDE.md`](../CLAUDE.md).
 
+### Content Placement (git / YouTrack / local)
+
+Folder-organization decides *naming within a home*; **content placement decides which home a piece of content belongs in at all.** There are three: **git** (the product and the machinery), **YouTrack** (explanations as KB articles, work as Issues), and **local** (the gitignored working notes, unchanged). The test for staying in git is narrow — a file stays only if **git/CI, the AI session, or Maven mechanically needs it present**; everything else (the explaining docs and the planning/thinking) belongs in YouTrack. User-facing usage docs are split deliberately: a short per-platform quickstart lives in the README (its snippets compiled by CI so they cannot drift), while the detailed guides live as KB articles. Cross-home links are always by URL, and the repo never *depends* on YouTrack (it is an enhancement, never a dependency).
+
+Full operational detail in the [`content-placement`](../.claude/rules/content-placement.md) rule (path-scoped, auto-loaded when working with markdown files); it sits alongside [`workflow.md`](workflow.md) (how work flows) and the [`youtrack`](../.claude/rules/youtrack.md) activation rule.
+
 ### Swift, other languages
 
 Conventions for Swift wrappers and any future languages are added to this document when those source sets are introduced. The same principle applies: idiomatic per-language style, enforced by the language's standard tooling (e.g., SwiftLint for Swift), with configuration committed at the project root.

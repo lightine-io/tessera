@@ -102,8 +102,11 @@ while IFS= read -r md_file; do
         # entry is "LINE:[text](target)"
         line_no="${entry%%:*}"
         match="${entry#*:}"
-        # Strip "[text](" prefix and ")" suffix to extract target.
-        target="${match#*\(}"
+        # Strip "[text](" prefix and ")" suffix to extract target. Anchor on the
+        # `](` boundary, not the first `(`, so a `(` inside the link *text*
+        # (e.g. "[Glossary (KB)](url)") does not truncate the target. The grep
+        # regex guarantees no `]` in the text, so `](` is unambiguous.
+        target="${match#*\]\(}"
         target="${target%\)}"
 
         # Strip anchor and query.

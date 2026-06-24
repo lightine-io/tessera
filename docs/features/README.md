@@ -32,4 +32,4 @@ If you are new to the SDK, start with [Getting Started](../getting-started.md) (
 
 - [`../scope.md`](../scope.md) — what the SDK supports, what it deliberately does not, and the release roadmap.
 - [`../reading-risks.md`](../reading-risks.md) — what each reading method establishes about the data and what it cannot; read this before trusting any single method.
-- [`../glossary.md`](../glossary.md) — MRZ, TD3, eMRTD, and the rest of the vocabulary.
+- [Glossary — YouTrack KB](https://lightine.youtrack.cloud/articles/TES-A-4) — MRZ, TD3, eMRTD, and the rest of the vocabulary.

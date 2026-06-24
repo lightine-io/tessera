@@ -163,4 +163,4 @@ The empty 0.1.0 emission set is a property of the dependency graph, not an overs
 - [`docs/architecture.md`](../architecture.md) — module dependency graph and the `telemetry`/`logging` distinction.
 - [`docs/scope.md`](../scope.md) — 0.1.0 release commitment that scopes this work.
 - [`docs/principles.md`](../principles.md) — Principles 4, 5, 9, 10 referenced above.
-- [`docs/glossary.md`](../glossary.md) — definition of Telemetry.
+- [Glossary — YouTrack KB](https://lightine.youtrack.cloud/articles/TES-A-4) — definition of Telemetry.

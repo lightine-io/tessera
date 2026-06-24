@@ -41,7 +41,7 @@ If you are looking for...
 | Versioning and release rules | [`docs/versioning.md`](docs/versioning.md) |
 | Testing discipline | [`docs/testing.md`](docs/testing.md) |
 | The risk profile of each reading method | [`docs/reading-risks.md`](docs/reading-risks.md) |
-| Definitions of MRZ, BAC, PACE, etc. | [`docs/glossary.md`](docs/glossary.md) |
+| Definitions of MRZ, BAC, PACE, etc. | [Glossary — YouTrack KB](https://lightine.youtrack.cloud/articles/TES-A-4) |
 | What is currently deferred or in flight | [`docs/open-questions.md`](docs/open-questions.md) |
 | Why a significant decision was made | [`docs/decisions/`](docs/decisions/) |
 | A specific feature's design | [`docs/features/`](docs/features/) |
@@ -54,6 +54,7 @@ If you are looking for...
 | The Android development environment (CLI, skills, Knowledge Base, how to work) | [`docs/mobile/android.md`](docs/mobile/android.md) |
 | The iOS development environment (Xcode, the Xcode MCP, the Simulator, how to work) | [`docs/mobile/ios.md`](docs/mobile/ios.md) |
 | How AI sessions use the YouTrack planning instance (the activation gate) | [`.claude/rules/youtrack.md`](.claude/rules/youtrack.md) |
+| Where new content lives (git vs YouTrack vs local) and how to link across the three | [`.claude/rules/content-placement.md`](.claude/rules/content-placement.md) |
 
 ---
 
@@ -131,7 +132,7 @@ The project uses **GitHub Flow**: `main` is the trunk; feature branches off `mai
 - **When making a significant decision**, draft a new ADR in [`docs/decisions/`](docs/decisions/) and add it to the index.
 - **When implementation reveals a doc gap or contradiction**, surface it and update the doc — do not silently work around it.
 - **When adding a new test category or testing commitment**, update [`docs/testing.md`](docs/testing.md).
-- **When resolving an item in [`docs/open-questions.md`](docs/open-questions.md)**, mark it Resolved with a reference to where the resolution was made. Do not delete; fully-resolved entries graduate to `docs/open-questions-resolved.md` in housekeeping passes.
+- **When resolving an item in [`docs/open-questions.md`](docs/open-questions.md)**, mark it Resolved with a reference to where the resolution was made. Do not delete; fully-resolved entries graduate to the [resolved archive in YouTrack](https://lightine.youtrack.cloud/articles/TES-A-2) in housekeeping passes.
 - **When deferring a new decision**, add an entry to [`docs/open-questions.md`](docs/open-questions.md).
 
 ### Verification Before Acting
@@ -174,7 +175,7 @@ When new content needs a home, use this guidance.
 | A mistake to avoid | [`.claude/known-pitfalls.md`](.claude/known-pitfalls.md) |
 | A deferred decision | [`docs/open-questions.md`](docs/open-questions.md) |
 | A significant architectural or scope decision | A new ADR in [`docs/decisions/`](docs/decisions/) |
-| A new domain term | [`docs/glossary.md`](docs/glossary.md) |
+| A new domain term | [Glossary — YouTrack KB](https://lightine.youtrack.cloud/articles/TES-A-4) |
 | A new API or capability | The relevant feature doc in [`docs/features/`](docs/features/) |
 | A testing commitment | [`docs/testing.md`](docs/testing.md) |
 | A risk profile for a new reading method | [`docs/reading-risks.md`](docs/reading-risks.md) |
