@@ -34,18 +34,52 @@ Both time and slug are mandatory: the time makes `ls -1 .handoffs/SESSION-HANDOF
 
 ---
 
+## Status vocabulary
+
+Handoffs tag every work item with one of these four words. Their meaning is fixed
+here, so a handoff just uses the word — it does not re-explain it.
+
+- **DONE** — finished and verified; nothing left on this thread. Carries its exact
+  reference (PR #, commit, `file:line`).
+- **IN-FLIGHT** — actively in progress: partly built, with one concrete next action
+  named.
+- **PARKED** — deliberately paused, *not* dropped. The work is still intended; it is
+  waiting on something — a decision, a required order ("do X first"), or a chosen
+  slower pace. A PARKED item must always say two things: **what un-parks it**, and
+  **what it means for the next session** (e.g. "continue, but one slice at a time —
+  do not do it all at once").
+  - **Separate the approach from the rollout.** The *approach* (the plan or idea) can
+    be alive while the *rollout* (executing it) is the part that's paused. A parked
+    rollout is **not** a dropped approach — say which one is parked, or the next
+    session will read "we paused the work" as "we abandoned the plan." (This exact
+    mix-up has happened — see [`known-pitfalls.md`](known-pitfalls.md).)
+- **BLOCKED(on …)** — cannot move until the named thing resolves (an external
+  dependency, an unanswered question, a pending merge). Always name the blocker in
+  the parentheses.
+
+---
+
 ## The Template
 
 ```markdown
 # Session Handoff — YYYY-MM-DD HHMM UTC (<slug>)
 
-Supersedes: <previous handoff filename, when this one replaces a same-arc handoff; omit otherwise>
+Supersedes: <previous handoff filename, when this one replaces a same-arc handoff; omit otherwise.
+When present, START HERE must restate the whole current plan, not just the delta — see below.>
 
 ## ⭐ START HERE
 
-[The state snapshot, 3–6 bullets. Version, `main` commit, branch/working-tree state
-(clean/dirty), and the open threads by name with one-line status each. This is the
-section the next session acts on; everything below is supporting detail.]
+[The state snapshot, 3–6 bullets. Lead with the plan and where it stands — what we're doing
+and the open threads by name, each with a one-line status — then version, `main` commit, and
+branch/working-tree state (clean/dirty). Put cautions LAST, never first: a stack of "don't"
+at the top of START HERE gets read as the headline. This is the section the next session acts
+on; everything below is supporting detail.
+
+If a `Supersedes:` line is present, the next session never saw the superseded handoff — so
+restate the WHOLE current plan here, affirmatively (what we're doing, why, where it stands,
+how it proceeds), not just what changed. The delta goes in "Superseded This Session"; the
+state goes here. (See known-pitfalls.md "Writing a Correcting Handoff as a Diff Instead of a
+Fresh Statement.")]
 
 ## What This Session Did
 

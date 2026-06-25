@@ -316,6 +316,57 @@ A Cocoa API that takes a *delegate* almost always holds it **weakly** (the frame
 
 ---
 
+## Writing a Correcting Handoff as a Diff Instead of a Fresh Statement
+
+**The pitfall:** A handoff that supersedes an earlier one is written as a *correction* —
+"we're no longer doing X" — without restating, in plain affirmative terms, what the plan
+now *is*. Because the next session reads only the latest handoff (CLAUDE.md: read the most
+recent first), the affirmative plan that lived in the superseded file is invisible. The
+reader reconstructs intent from the negation — and a negation under-determines the
+positive, so they often reconstruct it wrong.
+
+**Why it happens:** Superseding feels like editing: you note what changed since the prior
+handoff and assume the reader carries the rest. The `Supersedes:` line and the "Superseded
+This Session" section both encourage a diff mindset. But the next session never saw the
+prior handoff — the diff is all they get, and a diff is not a state.
+
+**What's wrong with it (two shapes that compound):**
+- **Negation without restatement.** "The move-everything plan is parked" says what is *not*
+  happening, never what *is*. The hole gets filled by whatever signal is loudest nearby —
+  usually the surrounding prohibitions.
+- **Tone leaking into state.** A handoff that frames a result as a *retreat* from the prior
+  session's ambition ("smaller," "parked," "possibly none") reads as "we pulled back," even
+  when the facts are a *success* ("we built a placement rule, and it correctly concluded
+  that little should move, done deliberately"). The reader inherits the tone, not the facts:
+  a **paused rollout** gets read as a **dropped approach**.
+
+**Real example (2026-06-24 → 06-25).** The `youtrack-content-placement` handoff superseded
+`youtrack-migration-and-graduation`. The prior handoff held an affirmative "Locked plan:
+re-home Bucket A inner notes → YouTrack." The superseding handoff led with "migration
+PARKED pending reassessment," "the real move-list is small," "most of docs/ stays in git,"
+"possibly none" — and never restated the live plan (a deliberate content-placement rule,
+executed one slice at a time). A fresh session read it as "the migration is cancelled /
+almost nothing moves" and proposed standing down — when the real state was a healthy
+approach being rolled out incrementally. The maintainer had to correct it across several
+turns.
+
+**What to do instead:**
+- When a handoff carries a `Supersedes:` line, **restate the whole current plan
+  affirmatively** — what we're doing, why, where it stands, how it proceeds — as if the
+  reader never saw the prior handoff (they didn't). The delta belongs in "Superseded This
+  Session"; the *state* belongs in START HERE.
+- **Separate the approach from the rollout** — say which is paused. A parked rollout is not
+  a dropped approach. (Pinned in the handoff template's Status vocabulary section, under
+  PARKED.)
+- **Lead with intent, end with warnings.** Don't let prohibitions be the first thing START
+  HERE shows; a stack of "don't" at the top gets weighted as the headline.
+
+This is the sibling of "Patching One Handoff in Place Across a Long Session" above — that
+one is a handoff drifting from too many in-place edits; this one is a *fresh* superseding
+handoff that correctly retires the old state but forgets to install the new one.
+
+---
+
 ## Maintaining This Document
 
 This document grows when new pitfalls are observed during ongoing work. The bar for adding an entry: *has this mistake actually been made on this project, or is it close enough that it could be?* If yes, document it concretely with the specific pattern. If no, do not add speculative pitfalls — `reading-risks.md` and the principles already cover those.
