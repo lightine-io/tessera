@@ -11,7 +11,7 @@ package io.lightine.tessera.types.vocabulary
  * - [UNSPECIFIED] is encoded as the filler character `<` per the spec (Note p/f: *"the
  *   filler character `<` shall be used in this field in the MRZ and an X in this field
  *   in the VIZ"*). Consumer demand for emitting `X` in the MRZ from the generator side is
- *   tracked as a deferred enhancement in [`docs/open-questions.md`](https://github.com/lightine-io/tessera/blob/main/docs/open-questions.md)
+ *   tracked as a deferred enhancement in the project's issue tracker
  *   under "Sex field encoding choice (`<` vs `X`)".
  *
  * On the parse side, three outcomes for the sex field:

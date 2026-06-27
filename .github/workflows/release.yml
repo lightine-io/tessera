@@ -7,7 +7,7 @@
 #
 # One macOS runner does everything: only macOS can build the iOS XCFramework (Kotlin/Native links
 # against Xcode), and it can also run the JVM/Android Maven publish. (When a non-Apple channel like
-# web/npm is added, split that off to a Linux job — see docs/open-questions.md.)
+# web/npm is added, split that off to a Linux job — see the project's issue tracker.)
 #
 # Channels:
 #   - JVM + Android → Maven Central, STAGED (automaticRelease=false, ADR-016): the workflow uploads a
@@ -15,7 +15,7 @@
 #   - iOS → SPM: the `Tessera` XCFramework is built, zipped, and attached to this repo's GitHub Release;
 #     iOS consumers get it via lightine-io/tessera-swift (ADR-019). For 0.2.0 the tessera-swift
 #     Package.swift + tag is updated BY HAND using the checksum this workflow prints; cross-repo
-#     automation of that step is deferred post-0.2.0 (docs/open-questions.md).
+#     automation of that step is deferred post-0.2.0 (the project's issue tracker).
 #
 # Every action is pinned to a full commit SHA with a version comment (supply-chain hardening),
 # matching .github/workflows/check.yml.

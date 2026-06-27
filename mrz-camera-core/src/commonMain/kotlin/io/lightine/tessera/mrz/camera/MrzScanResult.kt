@@ -6,7 +6,7 @@ import io.lightine.tessera.mrz.parsing.ParseResult
  * The outcome of analysing one camera frame ([MrzFrameAnalyzer.analyse]). A sealed result, surfaced
  * rather than thrown, so a per-frame loop can branch exhaustively. Every variant carries [quality]
  * — observed signals exposed as metadata, never used to gate a result
- * ([ADR-020](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0020-camera-reading-architecture.md),
+ * ([ADR-020](https://lightine.youtrack.cloud/articles/TES-A-49),
  * Principle 5).
  *
  * **Contains document PII — do not log verbatim.** A [Decoded] result holds the parsed [`ParseResult`][ParseResult]

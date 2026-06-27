@@ -2,9 +2,9 @@ package io.lightine.tessera.mrz.transliteration
 
 /**
  * Public end-to-end transliteration entry point. Composes Unicode normalization (per
- * [ADR-014](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0014-unicode-normalization-strategy.md),
+ * [ADR-014](https://lightine.youtrack.cloud/articles/TES-A-47),
  * internal) with profile application (per
- * [ADR-009](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0009-transliteration-profiles.md)),
+ * [ADR-009](https://lightine.youtrack.cloud/articles/TES-A-42)),
  * surfacing the post-normalization, pre-transliteration form alongside the original
  * input and the profile's output per Principle 5.
  *

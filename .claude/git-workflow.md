@@ -151,7 +151,7 @@ The template has these sections:
 - **Summary** — 1-3 sentences on what the PR does and why.
 - **Documentation Impact** — every doc the PR touches or should touch.
 - **Tests** — what was added, total count, any flakiness.
-- **Open Questions Touched** — items in `docs/open-questions.md` resolved, modified, or added.
+- **Open Questions Touched** — items in the project's issue tracker resolved, modified, or added.
 - **Changelog** — confirm `CHANGELOG.md` `[Unreleased]` is updated.
 - **Verification** — checklist (`./gradlew build`, cross-references, private-content scan, branch name).
 
@@ -202,14 +202,14 @@ Or let Claude Code clean up automatically when the next session creates a new wo
 - **`gh auth setup-git`** is the bridge between Git's HTTPS push and `gh`'s credentials. Without it, `git push` will hit "could not read Username for 'https://github.com'" even when `gh auth status` shows logged in.
 - **PR template** at `.github/pull_request_template.md` auto-applies to web-UI PR creation. For CLI creation, the body is provided explicitly via `--body` — paste the template sections in.
 - **CHANGELOG-on-every-PR** is the discipline. The PR template has a checkbox; future sessions should default to updating the changelog rather than treating it as optional.
-- **Private-content scan** is mandatory before every push to a public-or-soon-to-be-public remote. Automated for Claude via the PreToolUse hook in `.claude/settings.json` calling `scripts/private-content-scan.sh`; manual pushes run the script directly. Scan terms live in the gitignored `.claude/private-content-terms.local` (per-contributor). Sole documented false positive: `InvalidData` in `mrz-error-taxonomy.md` (substring matches but is generic English, not private context). Country names (e.g., Azerbaijan) are not in the scan and not in the false-positive list — see "Run the private-content scan" above for why.
+- **Private-content scan** is mandatory before every push to a public-or-soon-to-be-public remote. Automated for Claude via the PreToolUse hook in `.claude/settings.json` calling `scripts/private-content-scan.sh`; manual pushes run the script directly. Scan terms live in the gitignored `.claude/private-content-terms.local` (per-contributor). Sole documented false positive: `InvalidData` in [Feature: MRZ Error Taxonomy](https://lightine.youtrack.cloud/articles/TES-A-28) (substring matches but is generic English, not private context). Country names (e.g., Azerbaijan) are not in the scan and not in the false-positive list — see "Run the private-content scan" above for why.
 
 ---
 
 ## Related Documents
 
 - [`CLAUDE.md`](../CLAUDE.md) — project root rules; this document is the operational expansion of the "Git and GitHub Workflow" section there.
-- [`docs/conventions.md`](../docs/conventions.md) — naming conventions, code style.
-- [`docs/versioning.md`](../docs/versioning.md) — Keep a Changelog format and SemVer rules.
+- [`docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20) — naming conventions, code style.
+- [`docs/versioning.md`](https://lightine.youtrack.cloud/articles/TES-A-8) — Keep a Changelog format and SemVer rules.
 - `.github/pull_request_template.md` — auto-applied PR description template.
 - `scripts/private-content-scan.sh` — runs the private-content scan; reads terms from the gitignored `.claude/private-content-terms.local` (per-contributor). Called automatically by the PreToolUse hook in `.claude/settings.json` and runnable manually before any push.

@@ -25,7 +25,7 @@
 #   JDK 17 (gradle/gradle-daemon-jvm.properties, foojay-provisioned).
 # - Gradle 9.5.1 via the project's wrapper
 # - Every action is pinned to a full commit SHA with a trailing `# vX.Y.Z` version
-#   comment (supply-chain hardening, open-questions "CI and repository hardening"
+#   comment (supply-chain hardening, the issue tracker ("CI and repository hardening")
 #   item 3 — a mutable tag like `@v6` can be repointed). Dependabot's github-actions
 #   updates bump both the SHA and the comment. Keep new actions pinned the same way.
 

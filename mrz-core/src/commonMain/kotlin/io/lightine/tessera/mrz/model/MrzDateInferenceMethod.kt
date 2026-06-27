@@ -5,7 +5,7 @@ package io.lightine.tessera.mrz.model
  * consumers can distinguish "we picked a century via the sliding window" from "we couldn't
  * infer anything; only the raw two-digit components are populated."
  *
- * See [ADR-008](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0008-date-inference-hybrid.md)
+ * See [ADR-008](https://lightine.youtrack.cloud/articles/TES-A-38)
  * for the rationale.
  */
 public enum class MrzDateInferenceMethod {

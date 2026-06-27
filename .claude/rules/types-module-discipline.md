@@ -28,7 +28,7 @@ paths:
 
 Broadly-named modules — `common`, `core`, `utils` — accumulate unrelated helpers over years until no one remembers the original boundary. The result is a junk drawer that every module depends on and no module should. Once that has happened, splitting the module back apart is a substantial migration; preventing it costs one Gradle file.
 
-The name `types` is unambiguous in a way `core` or `common` is not. A contributor seeing a top-level utility function in `types/` should immediately recognize that something is misplaced. The published artifactId at first Maven Central release is the deliberately-chosen `tessera-types`, locked under [ADR-007](../../docs/decisions/0007-strict-backward-compat-from-0x.md) once 0.1.1 ships per [ADR-016](../../docs/decisions/0016-maven-coordinates-and-first-publish.md); the discipline rule preserves the meaning the name promises.
+The name `types` is unambiguous in a way `core` or `common` is not. A contributor seeing a top-level utility function in `types/` should immediately recognize that something is misplaced. The published artifactId at first Maven Central release is the deliberately-chosen `tessera-types`, locked under [ADR-007](https://lightine.youtrack.cloud/articles/TES-A-37) once 0.1.1 ships per [ADR-016](https://lightine.youtrack.cloud/articles/TES-A-53); the discipline rule preserves the meaning the name promises.
 
 ## When you need shared non-type code
 
@@ -42,7 +42,7 @@ Applies to source under `types/src/` — both `commonMain` and platform-specific
 
 ## Cross-references
 
-- Human-facing summary lives in [`../../docs/conventions.md`](../../docs/conventions.md) under "Module Boundaries."
-- Module structure described in [`../../docs/architecture.md`](../../docs/architecture.md).
-- Naming and `tessera-<module>` artifact pattern in [`../../docs/decisions/0016-maven-coordinates-and-first-publish.md`](../../docs/decisions/0016-maven-coordinates-and-first-publish.md).
+- Human-facing summary lives in [`../../docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20) under "Module Boundaries."
+- Module structure described in [`../../docs/architecture.md`](https://lightine.youtrack.cloud/articles/TES-A-9).
+- Naming and `tessera-<module>` artifact pattern in [`../../docs/decisions/0016-maven-coordinates-and-first-publish.md`](https://lightine.youtrack.cloud/articles/TES-A-53).
 - The original "name your modules deliberately" reasoning sits in the conversation that produced ADR-016 and the `domain` → `types` rename (PRs [#76](https://github.com/lightine-io/tessera/pull/76) and [#78](https://github.com/lightine-io/tessera/pull/78)).

@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.map
  * stream of [MrzScanResult]s by running each frame through this analyse-frame core, in order. This is
  * the platform-agnostic, frame-source-agnostic engine the [MrzCameraScanner]s build on — Android feeds
  * a CameraX `ImageProxy` stream, iOS an AVFoundation sample-buffer stream, and both reuse this unchanged
- * ([ADR-020](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0020-camera-reading-architecture.md)).
+ * ([ADR-020](https://lightine.youtrack.cloud/articles/TES-A-49)).
  * Because it is a pure `Flow` transform over the injected analyzer, it is fully host-testable with a
  * fake frame `Flow` and a mock recognizer — no device.
  *

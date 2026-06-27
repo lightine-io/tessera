@@ -1,6 +1,6 @@
 # Blocks a pull request that introduces a dependency with a known vulnerability
 # (CVE) at or above the severity threshold, and surfaces license information in
-# the PR. This is the PR *gate* half of the dependency CVE scan (open-questions.md
+# the PR. This is the PR *gate* half of the dependency CVE scan (the project's issue tracker
 # "CI and repository hardening", item 5 / action-plan A4 / Q6); the continuous
 # full-graph alerting half is Dependabot, fed by dependency-submission.yml.
 #
@@ -15,7 +15,7 @@
 # allow-list would fail legitimate Apache-2.0 / MIT dependencies. Licenses are
 # surfaced in the PR summary now; a curated allow-list can tighten this once the
 # transitive license set is enumerated (a deliberate deferral — see the
-# open-questions item-5 update).
+# issue-tracker item-5 update).
 #
 # First-party (GitHub) action only — consistent with check.yml's stance.
 
@@ -38,7 +38,7 @@ jobs:
 
       - name: Dependency review
         # All actions are pinned to a commit SHA with a version comment (supply-chain
-        # hardening, open-questions item 3); Dependabot's github-actions updates bump
+        # hardening, issue-tracker item 3); Dependabot's github-actions updates bump
         # both the SHA and the comment. The comment here also records that
         # dependency-review-action publishes no moving `v5` major tag — only point
         # releases like v5.0.0 — unlike checkout/setup-java.

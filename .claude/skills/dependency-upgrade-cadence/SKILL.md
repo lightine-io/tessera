@@ -26,7 +26,7 @@ The complete inventory is whatever has a version pinned in:
 
 ## Also sweep deferred dependency risks
 
-At each checkpoint, scan [`docs/open-questions.md`](../../../docs/open-questions.md) for **accepted-risk / deferred-dependency** entries (e.g. the Dependabot build-time-transitive triage accepted at `0.2.0`) and revisit each one: has upstream shipped a fix, is an alternative path now viable, or does the deferral still hold? Update or resolve the entry accordingly. This closes the loop so an accepted risk is re-examined on a schedule rather than forgotten between sessions.
+At each checkpoint, scan the project's issue tracker for **accepted-risk / deferred-dependency** entries (e.g. the Dependabot build-time-transitive triage accepted at `0.2.0`) and revisit each one: has upstream shipped a fix, is an alternative path now viable, or does the deferral still hold? Update or resolve the entry accordingly. This closes the loop so an accepted risk is re-examined on a schedule rather than forgotten between sessions.
 
 ## How to bump
 
@@ -47,5 +47,5 @@ The split keeps blast radius small if any single bump breaks something.
 
 ## Cross-references
 
-- Human-facing summary in [`../../../docs/conventions.md`](../../../docs/conventions.md) under "Dependency Upgrade Cadence."
+- Human-facing summary in [`../../../docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20) under "Dependency Upgrade Cadence."
 - Project-level summary and the "next date" reminder live in [`../../../CLAUDE.md`](../../../CLAUDE.md) under "Dependency Upgrade Cadence."

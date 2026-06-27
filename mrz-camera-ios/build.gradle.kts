@@ -46,7 +46,7 @@ kotlin {
             // vocabulary (types), and the telemetry sink (telemetry). Exported explicitly rather than via
             // the experimental transitiveExport — which also tries to export coroutines' internal atomicfu
             // interop klib (not exportable). coroutines itself is intentionally not exported: Flow does not
-            // bridge cleanly to Swift yet (tracked in open-questions), so leaving it unexported avoids the
+            // bridge cleanly to Swift yet (tracked in the issue tracker), so leaving it unexported avoids the
             // atomicfu warning without changing the (already-Kotlin-handle) Swift Flow experience.
             export(project(":mrz-camera-core"))
             export(project(":mrz-core"))

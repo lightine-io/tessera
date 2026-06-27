@@ -4,7 +4,7 @@ package io.lightine.tessera.mrz.transliteration
  * Per-state mapping of consumer-supplied text into the MRZ alphabet (`A`–`Z`, `0`–`9`,
  * filler `<`).
  *
- * Per [ADR-009](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0009-transliteration-profiles.md):
+ * Per [ADR-009](https://lightine.youtrack.cloud/articles/TES-A-42):
  * the SDK does not infer which profile applies — the consumer chooses based on the
  * issuing state of the document being generated. The SDK ships
  * [IcaoDefaultTransliterationProfile] (ICAO Doc 9303 Part 3 Section 6 recommendations)

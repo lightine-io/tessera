@@ -9,7 +9,7 @@ paths:
 
 # Keep the tech-stack index current
 
-**When you add — or remove — a technology, tool, or dependency, update [`docs/tech-stack-references.md`](../../docs/tech-stack-references.md) in the same change.** That file is the single exhaustive index of the stack; it is only trustworthy if it never drifts from reality. The paths above are where the stack actually changes: a new dependency or version-catalog entry, a new plugin, a Gradle/JDK bump, a new CI action.
+**When you add — or remove — a technology, tool, or dependency, update [`docs/tech-stack-references.md`](https://lightine.youtrack.cloud/articles/TES-A-23) in the same change.** That file is the single exhaustive index of the stack; it is only trustworthy if it never drifts from reality. The paths above are where the stack actually changes: a new dependency or version-catalog entry, a new plugin, a Gradle/JDK bump, a new CI action.
 
 ## What a new row needs
 
@@ -28,5 +28,5 @@ Fires on dependency/build/CI changes. It is the recording half of the stack-hygi
 
 ## Cross-references
 
-- The index itself: [`docs/tech-stack-references.md`](../../docs/tech-stack-references.md).
+- The index itself: [`docs/tech-stack-references.md`](https://lightine.youtrack.cloud/articles/TES-A-23).
 - The reading habit: [`consult-vendor-docs.md`](consult-vendor-docs.md).

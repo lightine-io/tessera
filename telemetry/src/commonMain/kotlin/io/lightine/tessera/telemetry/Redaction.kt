@@ -7,7 +7,7 @@ package io.lightine.tessera.telemetry
  * date-of-birth, etc.) are added alongside the events that need them, in the releases
  * of the emitting modules. Speculating on the surface for events that do not yet exist
  * would lock the wrong API under
- * [ADR-007](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0007-strict-backward-compat-from-0x.md).
+ * [ADR-007](https://lightine.youtrack.cloud/articles/TES-A-37).
  */
 public object Redaction {
     /**

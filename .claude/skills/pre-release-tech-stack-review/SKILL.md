@@ -32,5 +32,5 @@ Not a full design review of the upcoming release. The release's own design lives
 
 ## Cross-references
 
-- Human-facing summary in [`../../../docs/conventions.md`](../../../docs/conventions.md) under "Pre-Release Tech-Stack Review."
+- Human-facing summary in [`../../../docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20) under "Pre-Release Tech-Stack Review."
 - Project-level summary lives in [`../../../CLAUDE.md`](../../../CLAUDE.md) under "Pre-Release Tech-Stack Review."

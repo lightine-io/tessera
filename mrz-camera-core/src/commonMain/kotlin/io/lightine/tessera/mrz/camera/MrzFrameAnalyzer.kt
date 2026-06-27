@@ -18,7 +18,7 @@ import kotlin.time.Instant
 
 /**
  * The analyse-frame core of camera reading: one camera [frame][analyse] in, one [MrzScanResult] out
- * ([ADR-020](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0020-camera-reading-architecture.md)).
+ * ([ADR-020](https://lightine.youtrack.cloud/articles/TES-A-49)).
  * It owns no camera and reads no document data of its own — it orchestrates one platform-agnostic
  * pipeline:
  *

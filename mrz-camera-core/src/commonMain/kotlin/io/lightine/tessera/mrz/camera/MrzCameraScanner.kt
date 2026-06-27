@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
  * The owns-the-camera-session convenience: the SDK runs the platform camera internally and streams a
  * [MrzScanResult] per analysed frame, so the consumer never touches `bindToLifecycle` / `ImageAnalysis`
  * (Android) or `AVCaptureSession` (iOS). It is the second of the two camera-reading layers
- * ([ADR-020](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0020-camera-reading-architecture.md)),
+ * ([ADR-020](https://lightine.youtrack.cloud/articles/TES-A-49)),
  * built on top of the analyse-frame core ([MrzFrameAnalyzer]) — the same OCR → extract → parse pipeline,
  * now driven by a live frame stream instead of a single hand-supplied frame.
  *
@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.Flow
  * **Contract shape — Kotlin frozen, Swift projection provisional.** This interface — and the
  * [MrzFrameAnalyzer.scan] engine it is built on — is the UI-agnostic, frame-source-agnostic contract
  * that iOS mirrors. Two freeze states apply at the `0.2.0` tag under
- * [ADR-007](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0007-strict-backward-compat-from-0x.md):
+ * [ADR-007](https://lightine.youtrack.cloud/articles/TES-A-37):
  *
  * - **Kotlin/Android: freeze-ready and locked at the tag** (validated against the AVFoundation
  *   implementation). The member shapes here — [results] as a [Flow], [start], [stop] — are stable for
@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.Flow
  *   tool such as SKIE) even though that changes the Swift projection of existing members — a change
  *   ADR-007 would otherwise forbid. Marking the Swift projection provisional now is what keeps that
  *   later adapter a legal, non-breaking change; see "Swift `Flow` / coroutines ergonomics" in
- *   `docs/open-questions.md`.
+ *   the project's issue tracker.
  */
 public interface MrzCameraScanner {
     /**

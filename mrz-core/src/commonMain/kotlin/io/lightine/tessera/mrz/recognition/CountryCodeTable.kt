@@ -20,7 +20,7 @@ import io.lightine.tessera.types.vocabulary.CountryCodeCategory
  * Codes not present in this table surface as
  * [`MrzUnknownCountryCode`][io.lightine.tessera.types.errors.MrzUnknownCountryCode]
  * warnings rather than validation failures, per
- * [ADR-013](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0013-recognition-failures-are-warnings.md).
+ * [ADR-013](https://lightine.youtrack.cloud/articles/TES-A-44).
  *
  * **Note on countries in transition.** ISO 3166-1 occasionally updates entries (name
  * changes, code additions, code reservations). This table reflects the assignments as of

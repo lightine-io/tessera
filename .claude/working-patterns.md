@@ -89,7 +89,7 @@ The user's project, the user's identity, the user's name, the user's brand, busi
 
 When the user has agency over a choice — and they almost always do — present the options with honest trade-offs and let them decide. Do not collapse multiple options into a single recommendation without showing the alternatives. Do not make decisions on their behalf because "they probably want X."
 
-This is [Principle 1 — Reader, not oracle](../docs/principles.md) applied to collaboration: the user has agency over their own choices; your role is to surface options, not to remove their choice.
+This is [Principle 1 — Reader, not oracle](https://lightine.youtrack.cloud/articles/TES-A-5) applied to collaboration: the user has agency over their own choices; your role is to surface options, not to remove their choice.
 
 The form looks like:
 
@@ -138,7 +138,7 @@ When in doubt about whether to check in: check in.
 
 ### Acknowledge deferred items explicitly
 
-When a decision is deferred (to implementation, to a future release, to a moment when more information is available), record it explicitly in `docs/open-questions.md`. Do not let deferred items linger in conversation only — they will be lost. The discipline of writing them down preserves the work even if memory fades.
+When a decision is deferred (to implementation, to a future release, to a moment when more information is available), record it explicitly in the project's issue tracker. Do not let deferred items linger in conversation only — they will be lost. The discipline of writing them down preserves the work even if memory fades.
 
 ### Respect existing decisions
 
@@ -152,7 +152,7 @@ Before committing to a path on a *foundational* decision, verify alignment with 
 
 Distinguish between two kinds of source:
 
-- **Primary sources** — the actual committed docs (`scope.md`, ADRs, `open-questions.md`, feature docs). These are the source of truth.
+- **Primary sources** — the actual committed docs ([Scope](https://lightine.youtrack.cloud/articles/TES-A-62), ADRs, the project's issue tracker, feature docs). These are the source of truth.
 - **Derived sources** — recaps, summaries, session handoffs, prior interpretations *of* the primary docs. Useful, but they can drift from the primary over time. Acting on a drifted derived source propagates the drift forward into new decisions.
 
 **The check:** when about to act on a recap, summary, or interpretation that will shape a foundational decision, read the underlying primary doc first. If they agree, proceed. If they don't, surface the drift explicitly and fix the derived source before proceeding.
@@ -162,7 +162,7 @@ This is not "verify everything." Most decisions are routine and the default ("tr
 - **Trigger the check on:** anything ADR-007 will lock at tag time, tech-stack decisions, scope-defining language, decisions surfaced during a Pre-Release Tech-Stack Review.
 - **Don't trigger on:** routine implementation slices, well-trodden patterns, doc fixes within established conventions, anything cheaply reversible.
 
-**Working example.** PR [#33](https://github.com/lightine-io/tessera/pull/33) (May 2026). The pre-`0.1.0` recap (derived source) had over-stated 0.1.0's mobile-target requirements. `scope.md` (primary) actually said target enablement is per-release. The recap drift had been carried forward into the Path-A vs Path-B discussion before the user surfaced it. The fix was a 6-line `scope.md` tightening that prevents the same misreading from recurring. The pattern was named in the same session that produced the catch.
+**Working example.** PR [#33](https://github.com/lightine-io/tessera/pull/33) (May 2026). The pre-`0.1.0` recap (derived source) had over-stated 0.1.0's mobile-target requirements. [Scope](https://lightine.youtrack.cloud/articles/TES-A-62) (primary) actually said target enablement is per-release. The recap drift had been carried forward into the Path-A vs Path-B discussion before the user surfaced it. The fix was a 6-line [Scope](https://lightine.youtrack.cloud/articles/TES-A-62) tightening that prevents the same misreading from recurring. The pattern was named in the same session that produced the catch.
 
 ### Align before propose
 

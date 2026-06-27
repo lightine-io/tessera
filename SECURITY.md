@@ -9,7 +9,7 @@ Tessera is a vendor-neutral SDK for reading, validating, and generating identity
 | Latest released `0.x` minor | ✅ |
 | Earlier `0.x` releases | ❌ — upgrade to the latest minor |
 
-Until `1.0.0` (the public-stability and open-source commitment per [ADR-011](docs/decisions/0011-open-source-at-public-release.md)), only the latest minor in the `0.x` line receives backports. After `1.0.0`, a longer-support policy will be established and documented here.
+Until `1.0.0` (the public-stability and open-source commitment per [ADR-011](https://lightine.youtrack.cloud/articles/TES-A-41)), only the latest minor in the `0.x` line receives backports. After `1.0.0`, a longer-support policy will be established and documented here.
 
 ## Reporting a Vulnerability
 

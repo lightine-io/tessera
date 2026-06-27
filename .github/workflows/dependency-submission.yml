@@ -3,7 +3,7 @@
 # project's transitive graph on its own, so without this submission Dependabot
 # alerts and the PR gate (dependency-review.yml) see only the directly-declared
 # dependencies. With it, the whole tree is enumerated for CVE alerting — the
-# continuous half of the dependency CVE scan (open-questions.md "CI and
+# continuous half of the dependency CVE scan (the project's issue tracker "CI and
 # repository hardening", item 5 / action-plan A4 / Q6).
 #
 # Runs on push to main (keeps the baseline graph current, so Dependabot alerts

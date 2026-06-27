@@ -8,7 +8,7 @@ package io.lightine.tessera.types.vocabulary
  * The string parser and generator produce [BACKEND_STRING_INPUT]; live-camera reading produces
  * [LIVE_CAMERA]. The remaining values are committed for use as their reading methods activate in
  * later releases. See
- * [`docs/scope.md`](https://github.com/lightine-io/tessera/blob/main/docs/scope.md)
+ * [`docs/scope.md`](https://lightine.youtrack.cloud/articles/TES-A-62)
  * for the release timeline.
  */
 public enum class ReadMethod {

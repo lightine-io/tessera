@@ -9,7 +9,7 @@ description: >
 
 This project uses a private YouTrack instance for planning (issues / board) and a Knowledge Base.
 It is an **optional enhancement layered on top of git — never a dependency.** The committed git repo
-is always self-sufficient; if you cannot reach YouTrack you are missing nothing required, and you
+is always self-sufficient; if you cannot reach YouTrack you are missing nothing required to build, test, or operate at baseline, and you
 must not block, stall, or treat that as an error.
 
 ## Activation gate — run before any YouTrack action; pass ALL three, or stay dormant

@@ -19,7 +19,7 @@ import io.lightine.tessera.types.vocabulary.UnmappedCharacter
  *    return this when the supplied profile's result is
  *    [`TransliterationResult.Failure`][io.lightine.tessera.mrz.transliteration.TransliterationResult.Failure].
  *
- * See [`docs/features/transliteration.md`](https://github.com/lightine-io/tessera/blob/main/docs/features/transliteration.md)
+ * See [`docs/features/transliteration.md`](https://lightine.youtrack.cloud/articles/TES-A-24)
  * for the profile interface and ADR-009 for the rationale.
  */
 public data class MrzGenerationUnsupportedCharacters(

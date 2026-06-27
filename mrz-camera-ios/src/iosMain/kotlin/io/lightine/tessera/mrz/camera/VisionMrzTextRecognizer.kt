@@ -72,7 +72,7 @@ import platform.posix.memcpy
  * `performRequests` is synchronous: Vision has finished reading before the next frame overwrites the
  * buffer. (The capture *stall* seen during bring-up was a **separate** bug — the camera session's
  * sample-buffer delegate being garbage-collected, fixed in `AVCaptureMrzScanner` by holding a strong
- * reference — not anything about this buffer; see that class and `docs/open-questions.md`.)
+ * reference — not anything about this buffer; see that class and the project's issue tracker.)
  *
  * **Threading.** Vision's `performRequests` is synchronous and CPU-bound; [recognize] runs it on the
  * calling coroutine's thread. The owns-the-camera-session layer drives frames on a background dispatch

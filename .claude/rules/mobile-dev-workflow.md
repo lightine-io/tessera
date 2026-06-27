@@ -10,9 +10,9 @@ paths:
 
 # Mobile Development Workflow
 
-This rule loads when working on Tessera's mobile (Android / iOS) code. It defines **how mobile development is driven** here. The human-facing setup counterpart is [`docs/development-setup.md`](../../docs/development-setup.md).
+This rule loads when working on Tessera's mobile (Android / iOS) code. It defines **how mobile development is driven** here. The human-facing setup counterpart is [`docs/development-setup.md`](https://lightine.youtrack.cloud/articles/TES-A-13).
 
-The full Android model and method — the CLI / skills / Knowledge-Base distinction, what the tooling does and doesn't do, and how to work with it — live in [`docs/mobile/android.md`](../../docs/mobile/android.md). This rule is the **enforced operating subset** of that (the screenshot border, text-first inspection, testing layers); when in doubt about *how* to use the Android CLI, read that doc.
+The full Android model and method — the CLI / skills / Knowledge-Base distinction, what the tooling does and doesn't do, and how to work with it — live in [`docs/mobile/android.md`](https://lightine.youtrack.cloud/articles/TES-A-19). This rule is the **enforced operating subset** of that (the screenshot border, text-first inspection, testing layers); when in doubt about *how* to use the Android CLI, read that doc.
 
 ## Drive everything from the command line / agent tooling
 
@@ -41,6 +41,6 @@ A screenshot pulled into an assistant's context can blow past image-size limits 
 - **Physical device** — the only place a live lens is validated end-to-end.
 
 ## Cross-references
-- Full Android model + method: [`docs/mobile/android.md`](../../docs/mobile/android.md).
-- Human setup + toolchain: [`docs/development-setup.md`](../../docs/development-setup.md).
+- Full Android model + method: [`docs/mobile/android.md`](https://lightine.youtrack.cloud/articles/TES-A-19).
+- Human setup + toolchain: [`docs/development-setup.md`](https://lightine.youtrack.cloud/articles/TES-A-13).
 - Document map: [`CLAUDE.md`](../../CLAUDE.md).

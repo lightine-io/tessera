@@ -59,7 +59,7 @@ import kotlin.time.TimeSource
  * The iOS owns-the-camera-session scanner: runs an `AVCaptureSession` internally and streams a
  * [MrzScanResult] per analysed frame, so the consumer never touches `AVCaptureSession` /
  * `AVCaptureVideoDataOutput`
- * ([ADR-020](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0020-camera-reading-architecture.md)).
+ * ([ADR-020](https://lightine.youtrack.cloud/articles/TES-A-49)).
  * It is the iOS analogue of the Android `CameraXMrzScanner`, built on the same platform-agnostic
  * [scan][MrzFrameAnalyzer.scan] engine: it adds an [AVCaptureVideoDataOutput] to the session
  * (`alwaysDiscardsLateVideoFrames = true` — the iOS counterpart of CameraX's
@@ -98,7 +98,7 @@ import kotlin.time.TimeSource
  * an *interruption* is recoverable — the `videoDeviceInUseByAnotherClient` reason is surfaced as a
  * **non-terminal** [CameraError.CameraInUse] while the session stays bound and AVFoundation resumes capture
  * when the interruption ends (the other reasons recover silently). The live in-use scenario — a second client
- * taking then releasing the camera — is device-verified (see `docs/open-questions.md`).
+ * taking then releasing the camera — is device-verified (see the project's issue tracker).
  *
  * @param recognizer the OCR seam. Defaults to the Apple Vision recognizer; a consumer-supplied
  *   recognizer that is [AutoCloseable] is released on [close], since the scanner owns the OCR resource

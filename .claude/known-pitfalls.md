@@ -62,11 +62,11 @@ Each of these *feels* helpful. Each of them violates Principle 1 (Reader, not or
 
 ## Forward References That Become Stale
 
-**The pitfall:** Writing "see `mrz-validation.md` when written" in `mrz-data-model.md`, then forgetting to update once `mrz-validation.md` exists.
+**The pitfall:** Writing "see [Feature: MRZ Validation](https://lightine.youtrack.cloud/articles/TES-A-32) when written" in [Feature: MRZ Data Model](https://lightine.youtrack.cloud/articles/TES-A-33), then forgetting to update once [Feature: MRZ Validation](https://lightine.youtrack.cloud/articles/TES-A-32) exists.
 
 **Why it happens:** Forward references are explicitly allowed by the project's conventions (better to point to intent than not to point at all). But they need to be revisited when the referenced document materializes.
 
-**What to do instead:** Maintain a mental list (or, better, an explicit list in `open-questions.md`) of forward references. When the referenced document is written, update the source reference to remove the "when written" qualifier. A grep check at major milestones catches lingering qualifiers like "when written," "to be written," "will be written."
+**What to do instead:** Maintain a mental list (or, better, an explicit list in the project's issue tracker) of forward references. When the referenced document is written, update the source reference to remove the "when written" qualifier. A grep check at major milestones catches lingering qualifiers like "when written," "to be written," "will be written."
 
 ---
 
@@ -161,8 +161,8 @@ The branch lifecycle is documented in `.claude/git-workflow.md`.
 
 **What to do instead:** When you notice a doc tension during implementation, surface it explicitly. Lay out the readings, propose a resolution (which doc to update, or whether to introduce intermediate types that satisfy both), and either get the user's call or make the call yourself with reasoning recorded. Real examples that have happened on this project:
 
-- `architecture.md` "country and nationality codes" in `domain` vs. `mrz-data-model.md` `CountryCode` consuming a lookup table in `mrz-core` → resolved by ADR-012 introducing the rule that recognition-bearing value classes live with their tables.
-- `mrz-data-model.md` `MrzParseError` vs `mrz-error-taxonomy.md` flat `MrzError` → resolved by introducing `MrzParseError` and `MrzGenerationError` intermediate sealed types under `MrzError`, plus updating the taxonomy doc with a "Sub-Categorization by Operation" section.
+- [Architecture](https://lightine.youtrack.cloud/articles/TES-A-9) "country and nationality codes" in `domain` vs. [Feature: MRZ Data Model](https://lightine.youtrack.cloud/articles/TES-A-33) `CountryCode` consuming a lookup table in `mrz-core` → resolved by ADR-012 introducing the rule that recognition-bearing value classes live with their tables.
+- [Feature: MRZ Data Model](https://lightine.youtrack.cloud/articles/TES-A-33) `MrzParseError` vs [Feature: MRZ Error Taxonomy](https://lightine.youtrack.cloud/articles/TES-A-28) flat `MrzError` → resolved by introducing `MrzParseError` and `MrzGenerationError` intermediate sealed types under `MrzError`, plus updating the taxonomy doc with a "Sub-Categorization by Operation" section.
 
 Each resolution required a written decision. Each became a small commit alongside the implementation slice that surfaced it. Do not silently work around tensions; resolve them.
 
@@ -170,13 +170,13 @@ Each resolution required a written decision. Each became a small commit alongsid
 
 ## Carrying Forward A Recap's Interpretation Without Checking The Primary Doc
 
-**The pitfall:** A recap, summary, or session-handoff note describes the state of the project at a moment in time. Later, a new decision needs to be made and the recap gets used as the source of truth. But the recap is a *derived* source — an interpretation of the primary docs (`scope.md`, ADRs, `open-questions.md`, feature docs). It can drift, subtly over- or under-state what the primary docs actually say, or fall behind as the primary docs evolve. Acting on a drifted recap without re-checking the primary doc propagates the drift forward into the new decision.
+**The pitfall:** A recap, summary, or session-handoff note describes the state of the project at a moment in time. Later, a new decision needs to be made and the recap gets used as the source of truth. But the recap is a *derived* source — an interpretation of the primary docs ([Scope](https://lightine.youtrack.cloud/articles/TES-A-62), ADRs, the project's issue tracker, feature docs). It can drift, subtly over- or under-state what the primary docs actually say, or fall behind as the primary docs evolve. Acting on a drifted recap without re-checking the primary doc propagates the drift forward into the new decision.
 
 **Why it happens:** Recaps are easier to read than primary docs. They compress decisions into digestible narratives. Once you've read the recap, going back to the original docs feels redundant. The general principle of trusting the doc system (per the `feedback_trust_existing_docs.md` memory) is healthy — but it applies to *primary* sources, not to derived ones, and the same level of trust should not extend to recaps and summaries when the cost of being wrong is high.
 
 **What's wrong with it:** Decisions made on a drifted recap inherit the drift. If ADR-007 backward-compatibility will lock the decision at `0.1.0`, the drift becomes a permanent error. Fixing the recap after the fact does not undo the decision the recap shaped.
 
-**Real example.** In May 2026, the pre-`0.1.0` recap stated that 0.1.0's readiness required mobile-target enablement (Android + iOS). This shaped the framing of a Path-A vs Path-B vs Path-C 0.1.0 strategy discussion — Path B looked materially heavier because it appeared to require Android/iOS target work. The user surfaced the question "are we sure Android/iOS are in 0.1.0?" prompting a direct read of `scope.md`. The primary doc said target enablement is per-release-need: mobile activates in 0.2.0 alongside camera reading. The recap had drifted from `scope.md`. The fix ([PR #33](https://github.com/lightine-io/tessera/pull/33)) was 6 lines of `scope.md` tightening to prevent recurrence; the cost of *not* catching the drift would have been weeks of incorrect 0.1.0 planning.
+**Real example.** In May 2026, the pre-`0.1.0` recap stated that 0.1.0's readiness required mobile-target enablement (Android + iOS). This shaped the framing of a Path-A vs Path-B vs Path-C 0.1.0 strategy discussion — Path B looked materially heavier because it appeared to require Android/iOS target work. The user surfaced the question "are we sure Android/iOS are in 0.1.0?" prompting a direct read of [Scope](https://lightine.youtrack.cloud/articles/TES-A-62). The primary doc said target enablement is per-release-need: mobile activates in 0.2.0 alongside camera reading. The recap had drifted from [Scope](https://lightine.youtrack.cloud/articles/TES-A-62). The fix ([PR #33](https://github.com/lightine-io/tessera/pull/33)) was 6 lines of [Scope](https://lightine.youtrack.cloud/articles/TES-A-62) tightening to prevent recurrence; the cost of *not* catching the drift would have been weeks of incorrect 0.1.0 planning.
 
 **What to do instead:** When acting on a recap, summary, or session-handoff that will shape a foundational decision, read the underlying primary doc first. If they agree, proceed. If they don't, surface the drift explicitly, fix the derived source, and re-base the decision on the primary doc. This is the operational pattern named in `CLAUDE.md` under "Verification Before Acting" ("Before committing to a foundational decision...") and described in full in `.claude/working-patterns.md` under "Pre-commitment alignment check."
 
@@ -192,7 +192,7 @@ The trigger for slowing down is *cost of being wrong is high*, not *I want to fe
 
 **What's wrong with it:** Pre-1.0, the project follows ADR-007 (strict backward compatibility from 0.x onward). Tagging `0.1.0` creates real consumer commitments — anything claimed `Available since 0.1.0` becomes part of the API consumers may depend on. If features are claimed but not implemented, the release ships with a documentation lie that's hard to fix later (renaming or repurposing claimed-but-empty surfaces is a breaking change).
 
-For Tessera specifically: `scope.md` defines `0.1.0` as "Pure parsing, generation, and validation for all ICAO Doc 9303 MRZ formats. Includes lookup tables, transliteration profiles, error taxonomy, and pluggable telemetry." That's a substantial scope. Tagging `0.1.0` before generation, validation, transliteration, country code tables, and the other format parsers exist would lock in claims that aren't backed by implementation.
+For Tessera specifically: [Scope](https://lightine.youtrack.cloud/articles/TES-A-62) defines `0.1.0` as "Pure parsing, generation, and validation for all ICAO Doc 9303 MRZ formats. Includes lookup tables, transliteration profiles, error taxonomy, and pluggable telemetry." That's a substantial scope. Tagging `0.1.0` before generation, validation, transliteration, country code tables, and the other format parsers exist would lock in claims that aren't backed by implementation.
 
 **What to do instead:** Before any release tag, audit the scope-vs-implementation gap. Either (a) implement everything claimed for the release, or (b) re-scope the release downward and update the affected docs. The project's Code/Doc Alignment Recap process (see `RECAP-CODE-DOC-ALIGNMENT-*.md` working notes) is the right tool for this; run it before tagging.
 
@@ -231,7 +231,7 @@ The MrzCheckDigitMismatch type currently uses the qualifying approach: `${this.f
 
 ## Claiming a Gap Without Verifying the Files
 
-When reviewing for missing or stale content, it is tempting to assert "X is missing" or "Y is wrong" from memory or from a derived summary. The "a no-issues-found verification is suspicious" rule has a mirror: **a *found* issue is just as suspicious until verified against the actual file.** In the 0.2.0 work, two confident "this is a gap" calls were wrong — `reading-risks.md` already had a Live-Camera section, and the JDK-17 daemon pin (`gradle-daemon-jvm.properties`) already existed — caught only because the files were re-read before acting. Asserting a gap that isn't there wastes a fix cycle and risks "correcting" something already right.
+When reviewing for missing or stale content, it is tempting to assert "X is missing" or "Y is wrong" from memory or from a derived summary. The "a no-issues-found verification is suspicious" rule has a mirror: **a *found* issue is just as suspicious until verified against the actual file.** In the 0.2.0 work, two confident "this is a gap" calls were wrong — [Reading Risks](https://lightine.youtrack.cloud/articles/TES-A-11) already had a Live-Camera section, and the JDK-17 daemon pin (`gradle-daemon-jvm.properties`) already existed — caught only because the files were re-read before acting. Asserting a gap that isn't there wastes a fix cycle and risks "correcting" something already right.
 
 **Fix:** Before asserting something is missing, wrong, or stale, open the actual file (or run the actual check) and confirm. Found-issues need the same verification as no-issues. State confidence honestly: "I believe X is missing" vs "X is missing (verified at `file:line`)."
 
@@ -252,7 +252,7 @@ This is the sibling of "Claiming a Gap Without Verifying the Files" above. That 
 - An SDK-provenance claim ("removed — it's not in `/Applications`") was wrong: the SDK was a Toolbox install at `~/Library/Android/sdk`. One guessed location stood in for "where the SDK authoritatively lives."
 
 **What to do instead:** Before asserting state, identify the *authoritative* form and check that one:
-- For a **decision** — the committed doc (ADR / `scope.md` / `open-questions.md`), not a handoff, recap, or machine-local memory. If a decision matters and lives only in a machine-local note, *that's the bug*: commit it.
+- For a **decision** — the committed doc (ADR / [Scope](https://lightine.youtrack.cloud/articles/TES-A-62) / the project's issue tracker), not a handoff, recap, or machine-local memory. If a decision matters and lives only in a machine-local note, *that's the bug*: commit it.
 - For **what's tracked** — `git ls-files` / `git show HEAD:path`, not the working tree of the moment.
 - For **what a tool reads** — the actual config it consumes (the SDK's default location, the `local.properties` the build reads), not a path you assumed.
 
@@ -272,7 +272,7 @@ Some files hold secrets even though you need only one non-secret line — notabl
 
 A Cocoa API that takes a *delegate* almost always holds it **weakly** (the framework assumes the caller keeps it alive). In Swift that's automatic — ARC retains your strong reference deterministically. In **Kotlin/Native it is not**: bridged Objective-C objects are reclaimed by the **GC**, not ARC, so a delegate with no strong Kotlin reference is alive only until the next GC pass — after which the framework's weak pointer goes `nil` and the callbacks silently stop. This cost most of two sessions on `AVCaptureMrzScanner`: `AVCaptureVideoDataOutput.setSampleBufferDelegate` was handed a delegate created **inline** (no field, no `val` kept alive), so after a few seconds the GC collected it and the camera stopped delivering frames — with no error, no interruption, and **zero dropped-frame callbacks** (there was no delegate to deliver to). The stall *looked* like a buffer-pool / memory-pressure problem because it struck sooner under heavier per-frame allocation (more allocation → GC fires sooner → delegate dies sooner), which sent the investigation chasing the wrong layer (copying buffers, IOSurface backing, OCR-rate throttling) for two sessions.
 
-**Fix:** Hold a **strong reference for the whole lifetime of the thing using it** — a class field (`private var captureDelegate: …`), set when wiring up, cleared on teardown. The decisive diagnostic was forcing `GC.collect()` every frame: it reproduced the stall after a *single* frame, pinpointing the GC as the trigger and the weakly-held delegate as the only GC-reclaimable, callback-critical object. **General rule:** when bridging to any Cocoa API that stores a weak delegate/observer/target (capture delegates, `NSNotificationCenter` block tokens, `CADisplayLink`/timer targets, KVO observers), assume nothing retains it for you and keep an explicit strong reference on the Kotlin side. Verify on a *device over time* — a GC may not fire on the simulator or in a short run, hiding the bug. (Root cause + the JetBrains [ARC-integration](https://kotlinlang.org/docs/native-arc-integration.html) reasoning are in the resolved `open-questions.md` camera-stall entry.)
+**Fix:** Hold a **strong reference for the whole lifetime of the thing using it** — a class field (`private var captureDelegate: …`), set when wiring up, cleared on teardown. The decisive diagnostic was forcing `GC.collect()` every frame: it reproduced the stall after a *single* frame, pinpointing the GC as the trigger and the weakly-held delegate as the only GC-reclaimable, callback-critical object. **General rule:** when bridging to any Cocoa API that stores a weak delegate/observer/target (capture delegates, `NSNotificationCenter` block tokens, `CADisplayLink`/timer targets, KVO observers), assume nothing retains it for you and keep an explicit strong reference on the Kotlin side. Verify on a *device over time* — a GC may not fire on the simulator or in a short run, hiding the bug. (Root cause + the JetBrains [ARC-integration](https://kotlinlang.org/docs/native-arc-integration.html) reasoning are in the resolved the project's issue tracker camera-stall entry.)
 
 ---
 
@@ -369,6 +369,6 @@ handoff that correctly retires the old state but forgets to install the new one.
 
 ## Maintaining This Document
 
-This document grows when new pitfalls are observed during ongoing work. The bar for adding an entry: *has this mistake actually been made on this project, or is it close enough that it could be?* If yes, document it concretely with the specific pattern. If no, do not add speculative pitfalls — `reading-risks.md` and the principles already cover those.
+This document grows when new pitfalls are observed during ongoing work. The bar for adding an entry: *has this mistake actually been made on this project, or is it close enough that it could be?* If yes, document it concretely with the specific pattern. If no, do not add speculative pitfalls — [Reading Risks](https://lightine.youtrack.cloud/articles/TES-A-11) and the principles already cover those.
 
 Removed entries: when a pitfall has been so thoroughly internalized that it no longer surfaces, the entry can be moved to a historical note or archived. Most entries should stay — the discipline of remembering is the value.

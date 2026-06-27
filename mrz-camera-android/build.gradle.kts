@@ -35,7 +35,7 @@ kotlin {
     // ABI tracking (ADR-007) — KNOWN GAP for this module: Kotlin's abiValidation does not dump the
     // AGP-KMP `android {}` target, so there is no api/ baseline here and `checkKotlinAbi` passes
     // vacuously. The Android-only public surface (CameraXMrzScanner, MlKitMrzTextRecognizer) is NOT
-    // machine-gated — review it by hand on change; see docs/open-questions.md ("mrz-camera-android
+    // machine-gated — review it by hand on change; see the project's issue tracker ("mrz-camera-android
     // ABI baseline"). Kept enabled so a baseline appears the moment the tooling gains android-target
     // support (re-checked at each dependency cadence). Refresh: `./gradlew updateKotlinAbi`.
     @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
@@ -92,7 +92,7 @@ kotlin {
     }
 }
 
-// --- ML Kit bundled-model guard (docs/open-questions.md "CI and repository hardening", item 6) ---
+// --- ML Kit bundled-model guard (the project's issue tracker "CI and repository hardening", item 6) ---
 // ML Kit text-recognition must stay the BUNDLED model: the recognition model ships inside the app, so
 // OCR is fully offline with no Play Services model download — the privacy/offline posture a document
 // SDK needs (see the androidMain dependency comment above and docs/reading-risks.md).
@@ -124,7 +124,7 @@ val verifyMlKitBundledModel by tasks.registering {
                 "ML Kit bundled-model guard failed: '$marker' is not on androidRuntimeClasspath. " +
                     "The text-recognition model must ship bundled in the app (offline OCR, no Play " +
                     "Services model download); something switched to the unbundled, Play-Services-" +
-                    "delivered recognizer. See docs/open-questions.md \"CI and repository hardening\" item 6.",
+                    "delivered recognizer. See the project's issue tracker \"CI and repository hardening\" item 6.",
             )
         }
         logger.lifecycle("ML Kit bundled-model guard: '$marker' present on androidRuntimeClasspath (OK).")

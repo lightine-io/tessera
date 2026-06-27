@@ -11,7 +11,7 @@ import kotlin.time.Instant
  * recorded on the document, together with the SDK's inference of which full
  * [`LocalDate`][kotlinx.datetime.LocalDate] those components most likely represent.
  *
- * Per [ADR-008](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0008-date-inference-hybrid.md):
+ * Per [ADR-008](https://lightine.youtrack.cloud/articles/TES-A-38):
  * the SDK exposes both the raw components and the computed date so consumers can decide
  * which to trust. The [inferenceMethod] enum records how the computed date (if any) was
  * picked.

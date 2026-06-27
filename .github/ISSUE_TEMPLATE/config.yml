@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/lightine-io/tessera/security/advisories/new
     about: Use a private security advisory (or the contact in SECURITY.md) — not a public issue.
   - name: Ask a question / discuss usage
-    url: https://github.com/lightine-io/tessera/blob/main/docs/getting-started.md
+    url: https://lightine.youtrack.cloud/articles/TES-A-10
     about: Check the getting-started guide and the per-capability usage guides in docs/features/ first.

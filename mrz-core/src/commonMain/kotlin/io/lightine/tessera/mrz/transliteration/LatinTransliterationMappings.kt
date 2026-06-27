@@ -4,7 +4,7 @@ package io.lightine.tessera.mrz.transliteration
 // whose conventions align with ICAO Doc 9303 Part 3 Section 6 (Annex G).
 //
 // This is implementation sharing, not profile inheritance: the public API has
-// no inheritance mechanism (see docs/open-questions.md, "Profile inheritance
+// no inheritance mechanism (see the project's issue tracker, "Profile inheritance
 // for transliteration"). Profiles that want to diverge from these defaults
 // build a copy and apply their own overrides; profiles whose conventions are
 // not Latin-aligned do not use this helper at all.

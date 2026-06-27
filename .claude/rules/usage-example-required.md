@@ -1,6 +1,5 @@
 ---
 paths:
-  - "docs/features/**"
   - "**/commonMain/**/*.kt"
   - "**/androidMain/**/*.kt"
   - "**/iosMain/**/*.kt"
@@ -27,5 +26,5 @@ Fires on feature documents and public source (`commonMain` and the platform main
 ## Cross-references
 
 - The test sibling: [`CLAUDE.md`](../../CLAUDE.md) → "Tests for every new public API."
-- Human-facing mirror: [`../../docs/conventions.md`](../../docs/conventions.md) → "What Every Feature Document Must Include."
+- Human-facing mirror: [`../../docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20) → "What Every Feature Document Must Include."
 - The authoring duty to surface what's reusable or exposable: [`future-proof-duty.md`](future-proof-duty.md).

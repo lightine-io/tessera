@@ -1,18 +1,14 @@
 ---
 paths:
-  - "docs/mobile/**"
   - "**/*-setup.md"
   - "CONTRIBUTING.md"
-  - "docs/contributor-map.md"
-  - "docs/getting-started.md"
-  - "docs/guides/**"
 ---
 
 # Guide-style convention
 
 **This rule loads because you are editing a how-to or setup guide** — a document whose job is to get a contributor *running* (machine setup, a platform toolchain, a development workflow, the contributor router). These are not feature docs; they describe a procedure, and a stale or wrong procedure wastes a contributor's time silently. Write every such guide to one shape so it can be trusted.
 
-The shape is defined once in [`docs/conventions.md`](../../docs/conventions.md) under "What Every How-To / Setup Guide Must Include". When editing a guide, hold to it:
+The shape is defined once in [`docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20) under "What Every How-To / Setup Guide Must Include". When editing a guide, hold to it:
 
 1. **Prerequisites first** — what must already be true before the steps work, at the top, with a reference for where to get each tool. Prerequisites *are* the capability gate ("iOS work requires macOS" is a prerequisite, not a branch discovered halfway down).
 2. **One verified happy path** — the single route the project has actually confirmed. Not a copied internet guide, not every theoretical variation — one path known to run.
@@ -25,7 +21,7 @@ The "verified" stamp is a promise, so earn it: when a guide covers vendor toolin
 
 ## Who the guide serves
 
-Before writing or revising a guide, check who it is for and what they can do, in [`docs/contributor-map.md`](../../docs/contributor-map.md) — the router of contributor types and their OS constraints. A guide that assumes capabilities a reader does not have (e.g. iOS steps for a Linux contributor) fails them silently; the map is where that gating lives.
+Before writing or revising a guide, check who it is for and what they can do, in [`docs/contributor-map.md`](https://lightine.youtrack.cloud/articles/TES-A-6) — the router of contributor types and their OS constraints. A guide that assumes capabilities a reader does not have (e.g. iOS steps for a Linux contributor) fails them silently; the map is where that gating lives.
 
 ## Scope
 
@@ -33,6 +29,6 @@ Applies to the loaded paths — the mobile development guides, any `*-setup.md`,
 
 ## Cross-references
 
-- The convention's canonical text: [`docs/conventions.md`](../../docs/conventions.md) → "What Every How-To / Setup Guide Must Include".
-- The contributor router: [`docs/contributor-map.md`](../../docs/contributor-map.md).
+- The convention's canonical text: [`docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20) → "What Every How-To / Setup Guide Must Include".
+- The contributor router: [`docs/contributor-map.md`](https://lightine.youtrack.cloud/articles/TES-A-6).
 - Vendor-doc verification habit: [`consult-vendor-docs.md`](consult-vendor-docs.md).

@@ -15,14 +15,14 @@ import kotlin.test.assertTrue
  * Two host-testable seams stand in for the live camera the iOS Simulator does not have. (1) The *terminal*
  * capture-failure → [CameraError] mapping (`cameraErrorFor`): a setup failure (permission / no camera) or a
  * session *runtime error* — the latter a genuine media-services / hardware fault that cannot be summoned
- * even on a device (see `docs/open-questions.md`) — is surfaced as the correct typed [CameraError] carrying
+ * even on a device (see the project's issue tracker) — is surfaced as the correct typed [CameraError] carrying
  * the original message, never thrown. (2) The *recoverable* in-use trigger (`isVideoDeviceInUseReason`):
  * which `AVCaptureSession` interruption reason the scanner treats as "another client took the camera" and
  * surfaces as a **non-terminal** [CameraError.CameraInUse] (the session stays bound and AVFoundation
  * resumes when the interruption ends) — the Android counterpart host-tested this way is `classifyCameraState`.
  * Together they are the iOS half of the "report the observable failure as a sealed result, never throw,
  * never decide for the caller" contract
- * ([ADR-020](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0020-camera-reading-architecture.md);
+ * ([ADR-020](https://lightine.youtrack.cloud/articles/TES-A-49);
  * reader-not-oracle). The exceptions and the two functions are `internal` purely to make this reachable.
  */
 @OptIn(ExperimentalForeignApi::class)

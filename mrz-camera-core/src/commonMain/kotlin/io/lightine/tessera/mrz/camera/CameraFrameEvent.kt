@@ -7,7 +7,7 @@ import io.lightine.tessera.types.vocabulary.MrzFormat
  * Telemetry emitted once per analysed frame. Camera reading is the first SDK component to emit
  * telemetry — the [`TelemetrySink`][io.lightine.tessera.telemetry.TelemetrySink] contract has
  * shipped since 0.1.0 with no emitters
- * ([ADR-015](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0015-telemetry-contract-only-at-0-1-0.md)).
+ * ([ADR-015](https://lightine.youtrack.cloud/articles/TES-A-48)).
  *
  * Carries **diagnostics only and no document data**: counts, booleans, a coarse confidence, the
  * detected format, and an outcome label. It never includes recognized text or any parsed field, so a

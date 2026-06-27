@@ -23,7 +23,7 @@ import io.lightine.tessera.mrz.parsing.isMrzAlphabetCharacter
  * 2026-05-18 pre-`0.1.0` conformance audit — Latin-1 Supplement (U+00C0-00DE), Latin
  * Extended-A (U+0100-017D), and the capital sharp s (U+1E9E), both cases. Non-Latin
  * scripts (Cyrillic §6.B, Arabic §6.C, and the Greek table) are not yet implemented;
- * Adding entries is a non-breaking change. Tracked in `docs/open-questions.md` under
+ * Adding entries is a non-breaking change. Tracked in the project's issue tracker under
  * "Transliteration profile coverage completeness".
  *
  * Country-specific divergences from this profile are captured by separate profiles such

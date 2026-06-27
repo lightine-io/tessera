@@ -6,11 +6,11 @@ package io.lightine.tessera.telemetry
  * `TelemetryEvent` is an **open interface**, not a sealed hierarchy. Future event types
  * are added in the releases of the modules that emit them (camera in 0.2.0, NFC in
  * 0.6.0, possibly others). Open-interface additions are non-breaking under
- * [ADR-007](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0007-strict-backward-compat-from-0x.md)
+ * [ADR-007](https://lightine.youtrack.cloud/articles/TES-A-37)
  * because consumers cannot exhaustively pattern-match on an open interface. The
  * divergence from the project's sealed result-type pattern (`ParseResult`,
  * `TransliterationResult`, etc.) is intentional and recorded in
- * [ADR-015](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0015-telemetry-contract-only-at-0-1-0.md).
+ * [ADR-015](https://lightine.youtrack.cloud/articles/TES-A-48).
  *
  * **0.1.0 ships no concrete implementations.** Consumers can implement custom event
  * types if they want to test their sink wiring, but the first SDK-emitted events ship

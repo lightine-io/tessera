@@ -13,7 +13,7 @@ import kotlin.jvm.JvmInline
  * generation). Lookup failures are not errors — see [isRecognized] and
  * [`MrzUnknownDocumentTypeCode`][io.lightine.tessera.types.errors.MrzUnknownDocumentTypeCode]
  * for the recognition-failure flow per
- * [ADR-013](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0013-recognition-failures-are-warnings.md).
+ * [ADR-013](https://lightine.youtrack.cloud/articles/TES-A-44).
  */
 @JvmInline
 public value class DocumentType(

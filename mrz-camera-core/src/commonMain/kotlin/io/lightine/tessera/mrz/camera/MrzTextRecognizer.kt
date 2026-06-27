@@ -4,7 +4,7 @@ package io.lightine.tessera.mrz.camera
  * The OCR seam: turns a platform camera [frame] into recognized text lines.
  *
  * This is the only platform-specific collaborator of [MrzFrameAnalyzer] and the deliberate
- * extension point named in [ADR-020](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0020-camera-reading-architecture.md):
+ * extension point named in [ADR-020](https://lightine.youtrack.cloud/articles/TES-A-49):
  * any frame source — a phone camera (Android `ImageProxy`, iOS `CMSampleBuffer`), a USB document
  * reader, a webcam, a desktop or web capture — implements this interface for its own frame type [F],
  * and the analyse-frame core works unchanged. The Android implementation wraps ML Kit Text

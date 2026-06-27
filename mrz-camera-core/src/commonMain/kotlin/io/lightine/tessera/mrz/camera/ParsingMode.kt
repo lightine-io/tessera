@@ -3,7 +3,7 @@ package io.lightine.tessera.mrz.camera
 /**
  * How forgiving the analyse-frame core is of OCR formatting noise when it extracts a candidate MRZ
  * from recognized text. Consumer-chosen; the default is [STRICT]
- * ([ADR-020](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0020-camera-reading-architecture.md)).
+ * ([ADR-020](https://lightine.youtrack.cloud/articles/TES-A-49)).
  *
  * Neither mode ever changes a data character — the difference is only which lines qualify as an MRZ
  * candidate. (Both fold case to upper, which recovers the intended glyph since the MRZ alphabet is

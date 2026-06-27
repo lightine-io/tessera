@@ -7,13 +7,13 @@ package io.lightine.tessera.telemetry
  * **0.1.0 behavior:** no SDK module emits events in 0.1.0. Registering a sink succeeds
  * but has no observable effect until the first emitting module ships (camera-based
  * reading in 0.2.0; NFC chip reading in 0.6.0). See
- * [ADR-015](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0015-telemetry-contract-only-at-0-1-0.md)
+ * [ADR-015](https://lightine.youtrack.cloud/articles/TES-A-48)
  * for the reasoning.
  *
  * **Threading:** once SDK modules begin emitting events, [record] may be invoked from any
  * thread. Implementations must be thread-safe. The 0.1.0 release does not enforce this
  * — there are no callers — but the contract is documented now and locked under
- * [ADR-007](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0007-strict-backward-compat-from-0x.md).
+ * [ADR-007](https://lightine.youtrack.cloud/articles/TES-A-37).
  */
 public interface TelemetrySink {
     public fun record(event: TelemetryEvent)

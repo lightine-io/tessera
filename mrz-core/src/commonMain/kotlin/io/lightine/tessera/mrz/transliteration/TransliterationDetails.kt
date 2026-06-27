@@ -6,7 +6,7 @@ import io.lightine.tessera.types.vocabulary.MrzField
  * Per-field audit trail of transliteration applied during MRZ generation. Exposed on
  * [`ResultMetadata.transliterationDetails`][io.lightine.tessera.mrz.parsing.ResultMetadata]
  * per Principle 5 (transparency) and
- * [ADR-014](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0014-unicode-normalization-strategy.md):
+ * [ADR-014](https://lightine.youtrack.cloud/articles/TES-A-47):
  * consumers can inspect the post-normalization, pre-transliteration form for each field
  * the SDK rewrote, alongside the original input and the encoded output.
  *

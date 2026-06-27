@@ -18,7 +18,7 @@ import kotlin.test.assertIs
  * the JVM (the codes are compile-time `static final int` constants, inlined — no Android runtime is
  * touched). This is the Android counterpart of mrz-camera-ios's `AVCaptureMrzScannerErrorMappingTest`:
  * report every observable capture failure as the correct sealed result, never throw, never decide for the
- * caller ([ADR-020](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0020-camera-reading-architecture.md);
+ * caller ([ADR-020](https://lightine.youtrack.cloud/articles/TES-A-49);
  * reader-not-oracle).
  */
 class CameraXMrzScannerStateClassificationTest {

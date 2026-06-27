@@ -37,7 +37,7 @@ import kotlin.coroutines.resumeWithException
 /**
  * The Android owns-the-camera-session scanner: runs CameraX internally and streams a [MrzScanResult] per
  * analysed frame, so the consumer never touches `ImageAnalysis` / `bindToLifecycle`
- * ([ADR-020](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0020-camera-reading-architecture.md)).
+ * ([ADR-020](https://lightine.youtrack.cloud/articles/TES-A-49)).
  * It binds an [ImageAnalysis] use case (back-pressure [STRATEGY_KEEP_ONLY_LATEST][ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST]
  * — only the newest frame is analysed; intermediate frames are dropped, which is exactly what a live MRZ
  * scan wants) to the supplied [lifecycleOwner], pipes each `ImageProxy` through [MrzFrameAnalyzer.scan],
@@ -63,7 +63,7 @@ import kotlin.coroutines.resumeWithException
  * blocker clears. The permission/fatal (critical) path was device-verified to surface
  * [CameraError.PermissionDenied]; the live in-use (recoverable) scenario — a second client taking then
  * releasing the camera — is device-verified separately (the Simulator/emulator cannot stage camera
- * contention; see `docs/open-questions.md`).
+ * contention; see the project's issue tracker).
  *
  * @param appContext an application [Context] (held for the camera-provider lookup; pass
  *   `context.applicationContext` to avoid leaking an Activity).

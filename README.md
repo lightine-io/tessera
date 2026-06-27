@@ -9,7 +9,7 @@ A vendor-neutral SDK for reading, validating, and generating identity document d
 
 Tessera reads Machine Readable Zones (MRZ) from passports, national ID cards, residence permits, machine-readable visas, and similar travel documents conforming to ICAO Doc 9303. It returns extracted data verbatim, with structured validation results — leaving all trust decisions to the integrating application.
 
-> **Status:** In active `0.x` development. `v0.2.1` is the current release on Maven Central (`io.lightine.tessera`), adding headless live-camera MRZ reading on Android and iOS — see [Installation](#installation) and [`CHANGELOG.md`](CHANGELOG.md). The `1.0.0` milestone marks the public-stability and open-source release commitment per [ADR-011](docs/decisions/0011-open-source-at-public-release.md); pre-`1.0.0` releases follow the same strict backward-compatibility commitments as post-`1.0.0` releases. See [`docs/versioning.md`](docs/versioning.md) for the policy.
+> **Status:** In active `0.x` development. `v0.2.1` is the current release on Maven Central (`io.lightine.tessera`), adding headless live-camera MRZ reading on Android and iOS — see [Installation](#installation) and [`CHANGELOG.md`](CHANGELOG.md). The `1.0.0` milestone marks the public-stability and open-source release commitment per [ADR-011](https://lightine.youtrack.cloud/articles/TES-A-41); pre-`1.0.0` releases follow the same strict backward-compatibility commitments as post-`1.0.0` releases. See [`docs/versioning.md`](https://lightine.youtrack.cloud/articles/TES-A-8) for the policy.
 
 ---
 
@@ -19,7 +19,7 @@ Tessera reads Machine Readable Zones (MRZ) from passports, national ID cards, re
 - **Validates** structurally, by check digit, and semantically — without making trust decisions
 - **Generates** valid MRZs from structured input, supporting round-trip use cases
 - **Exposes everything it extracts** — raw fields, computed values, validation results, and warnings — so the consumer always knows what was observed and what was inferred
-- **Reads MRZ from a live camera** — headless: Android (CameraX + ML Kit) and iOS (AVFoundation + Apple Vision) feed frames through the same parser, with the consumer owning all UI. You can also supply the MRZ string directly. Pre-captured images, manual entry, and NFC-chip reading are planned for later releases (pre-captured image `0.3.0`, manual entry `0.4.0`, NFC `0.6.0` — see the [roadmap](docs/scope.md)).
+- **Reads MRZ from a live camera** — headless: Android (CameraX + ML Kit) and iOS (AVFoundation + Apple Vision) feed frames through the same parser, with the consumer owning all UI. You can also supply the MRZ string directly. Pre-captured images, manual entry, and NFC-chip reading are planned for later releases (pre-captured image `0.3.0`, manual entry `0.4.0`, NFC `0.6.0` — see the [roadmap](https://lightine.youtrack.cloud/articles/TES-A-62)).
 - **Runs anywhere the core technology stack supports** — initial mobile targets (Android, iOS) plus future support for backend, desktop, and web
 
 ---
@@ -34,13 +34,13 @@ Tessera is a reader, not an oracle. It surfaces observations; the consumer makes
 - Store any data — no persistence, no caching, no telemetry by default
 - Phone home — no network calls, no analytics, no licensing checks
 
-These are deliberate boundaries. See [`docs/principles.md`](docs/principles.md) for the reasoning.
+These are deliberate boundaries. See [`docs/principles.md`](https://lightine.youtrack.cloud/articles/TES-A-5) for the reasoning.
 
 ---
 
 ## Quick example
 
-This example compiles against the published API (verified symbol-by-symbol; the project's documentation rules require it). The public API follows strict backward compatibility throughout `0.x` ([ADR-007](docs/decisions/0007-strict-backward-compat-from-0x.md)).
+This example compiles against the published API (verified symbol-by-symbol; the project's documentation rules require it). The public API follows strict backward compatibility throughout `0.x` ([ADR-007](https://lightine.youtrack.cloud/articles/TES-A-37)).
 
 ```kotlin
 val result = MrzParser.parse("""
@@ -68,7 +68,7 @@ when (result) {
 
 The result type makes the three possible outcomes explicit. The consumer cannot accidentally treat a `PartialSuccess` as a `Success`.
 
-**More examples** — validation, generation, transliteration, live-camera scanning — are in the [feature guides](docs/features/README.md); every guide has a copy-paste Usage section.
+**More examples** — validation, generation, transliteration, live-camera scanning — are in the [feature guides](https://lightine.youtrack.cloud/articles/TES-A-16); every guide has a copy-paste Usage section.
 
 ---
 
@@ -115,7 +115,7 @@ dependencies: [
 ]
 ```
 
-Then `import Tessera`. The iOS binary ships as the `Tessera` XCFramework (minimum deployment target iOS 18, per [ADR-018](docs/decisions/0018-platform-minimums-and-managed-raise.md)). The Swift surface is provisional through the `0.x` line — see [`tessera-swift`](https://github.com/lightine-io/tessera-swift).
+Then `import Tessera`. The iOS binary ships as the `Tessera` XCFramework (minimum deployment target iOS 18, per [ADR-018](https://lightine.youtrack.cloud/articles/TES-A-45)). The Swift surface is provisional through the `0.x` line — see [`tessera-swift`](https://github.com/lightine-io/tessera-swift).
 
 > **Android** ships the same coordinates as AAR artifacts (e.g. `tessera-mrz-camera-android` for live-camera reading) — use the Gradle/Maven blocks above. See [Platforms](#platforms) for the per-target capability matrix.
 
@@ -127,41 +127,41 @@ The project's documentation is structured for two audiences: integrators (who wa
 
 ### For integrators
 
-- [`docs/scope.md`](docs/scope.md) — what the SDK supports, what it does not, and what is planned
-- [`docs/getting-started.md`](docs/getting-started.md) — dependency → parse → validate → generate in ten minutes
-- [`docs/guides/android-integration.md`](docs/guides/android-integration.md) — Android: from empty app to a working live-camera MRZ scan
-- [`docs/guides/ios-integration.md`](docs/guides/ios-integration.md) — iOS: the same journey in Swift, including the provisional Flow-collection pattern
-- [`docs/features/`](docs/features/README.md) — usage guides for every capability, each with a copy-paste Usage example
-- **API reference** — KDoc ships as javadoc jars with every module on Maven Central (your IDE picks them up automatically); a hosted Dokka site is a tracked deferral in [`docs/open-questions.md`](docs/open-questions.md)
-- [`docs/reading-risks.md`](docs/reading-risks.md) — what each reading method establishes, what it does not, and what additional verification might be needed
+- [`docs/scope.md`](https://lightine.youtrack.cloud/articles/TES-A-62) — what the SDK supports, what it does not, and what is planned
+- [`docs/getting-started.md`](https://lightine.youtrack.cloud/articles/TES-A-10) — dependency → parse → validate → generate in ten minutes
+- [`docs/guides/android-integration.md`](https://lightine.youtrack.cloud/articles/TES-A-14) — Android: from empty app to a working live-camera MRZ scan
+- [`docs/guides/ios-integration.md`](https://lightine.youtrack.cloud/articles/TES-A-18) — iOS: the same journey in Swift, including the provisional Flow-collection pattern
+- [`docs/features/`](https://lightine.youtrack.cloud/articles/TES-A-16) — usage guides for every capability, each with a copy-paste Usage example
+- **API reference** — KDoc ships as javadoc jars with every module on Maven Central (your IDE picks them up automatically); a hosted Dokka site is a tracked deferral in the project's issue tracker
+- [`docs/reading-risks.md`](https://lightine.youtrack.cloud/articles/TES-A-11) — what each reading method establishes, what it does not, and what additional verification might be needed
 - [Glossary — YouTrack KB](https://lightine.youtrack.cloud/articles/TES-A-4) — definitions of MRZ, eMRTD, BAC, PACE, and other terms used throughout the documentation
-- [`docs/versioning.md`](docs/versioning.md) — versioning policy and release commitments
+- [`docs/versioning.md`](https://lightine.youtrack.cloud/articles/TES-A-8) — versioning policy and release commitments
 
 ### For contributors
 
-- [`docs/principles.md`](docs/principles.md) — the foundational principles every design decision honors
-- [`docs/architecture.md`](docs/architecture.md) — module structure, dependency graph, and technology choices
-- [`docs/conventions.md`](docs/conventions.md) — how documentation is written, how decisions are made, how contributions happen
-- [`docs/testing.md`](docs/testing.md) — testing discipline (tests alongside implementation, synthetic data only)
-- [`docs/contributor-setup.md`](docs/contributor-setup.md) — one-time machine setup for contributors (clone, Git identity, SSH commit signing)
-- [`docs/decisions/`](docs/decisions/) — Architecture Decision Records capturing the reasoning behind major choices
-- [`docs/open-questions.md`](docs/open-questions.md) — decisions that have been deliberately deferred, tracked so they are not forgotten
+- [`docs/principles.md`](https://lightine.youtrack.cloud/articles/TES-A-5) — the foundational principles every design decision honors
+- [`docs/architecture.md`](https://lightine.youtrack.cloud/articles/TES-A-9) — module structure, dependency graph, and technology choices
+- [`docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20) — how documentation is written, how decisions are made, how contributions happen
+- [`docs/testing.md`](https://lightine.youtrack.cloud/articles/TES-A-15) — testing discipline (tests alongside implementation, synthetic data only)
+- [`docs/contributor-setup.md`](https://lightine.youtrack.cloud/articles/TES-A-12) — one-time machine setup for contributors (clone, Git identity, SSH commit signing)
+- [`docs/decisions/`](https://lightine.youtrack.cloud/articles/TES-A-17) — Architecture Decision Records capturing the reasoning behind major choices
+- the project's issue tracker — decisions that have been deliberately deferred, tracked so they are not forgotten
 
 ### For maintainers
 
-- [`docs/publishing-setup.md`](docs/publishing-setup.md) — one-time setup for publishing to Maven Central (PGP signing key, Sonatype Central Portal user token, Gradle credential storage). Maintainer-only; contributors do not need this
+- [`docs/publishing-setup.md`](https://lightine.youtrack.cloud/articles/TES-A-57) — one-time setup for publishing to Maven Central (PGP signing key, Sonatype Central Portal user token, Gradle credential storage). Maintainer-only; contributors do not need this
 
 ---
 
 ## Platforms
 
-Tessera is built with Kotlin Multiplatform. Targets activate per-release as the corresponding reading methods land — see [`docs/scope.md`](docs/scope.md) for the full roadmap.
+Tessera is built with Kotlin Multiplatform. Targets activate per-release as the corresponding reading methods land — see [`docs/scope.md`](https://lightine.youtrack.cloud/articles/TES-A-62) for the full roadmap.
 
 Active as of `0.2.1`:
 
 - **JVM** — the pure core logic (parsing, validation, generation, lookup tables, transliteration profiles, telemetry contract)
-- **Android** — core logic plus headless live-camera reading (CameraX + ML Kit). Minimum API level 23 (Android 6.0), per [ADR-018](docs/decisions/0018-platform-minimums-and-managed-raise.md)
-- **iOS** — core logic plus headless live-camera reading (AVFoundation + Apple Vision), distributed as an XCFramework via Swift Package Manager. Minimum deployment target iOS 18, per [ADR-018](docs/decisions/0018-platform-minimums-and-managed-raise.md)
+- **Android** — core logic plus headless live-camera reading (CameraX + ML Kit). Minimum API level 23 (Android 6.0), per [ADR-018](https://lightine.youtrack.cloud/articles/TES-A-45)
+- **iOS** — core logic plus headless live-camera reading (AVFoundation + Apple Vision), distributed as an XCFramework via Swift Package Manager. Minimum deployment target iOS 18, per [ADR-018](https://lightine.youtrack.cloud/articles/TES-A-45)
 
 The architecture supports further targets — Web (JS / Wasm), Desktop (JVM and native) — without changes to the core logic. They are not part of the initial releases but can be activated when there is a use case.
 
@@ -169,13 +169,13 @@ The architecture supports further targets — Web (JS / Wasm), Desktop (JVM and 
 
 ## Versioning
 
-Tessera follows [Semantic Versioning 2.0.0](https://semver.org/) with strict backward-compatibility commitments from the first release onward — including the 0.x line. This is stricter than the convention in many open source projects, where 0.x signals "API may change without notice." The choice is deliberate: see [`docs/versioning.md`](docs/versioning.md) for the reasoning.
+Tessera follows [Semantic Versioning 2.0.0](https://semver.org/) with strict backward-compatibility commitments from the first release onward — including the 0.x line. This is stricter than the convention in many open source projects, where 0.x signals "API may change without notice." The choice is deliberate: see [`docs/versioning.md`](https://lightine.youtrack.cloud/articles/TES-A-8) for the reasoning.
 
 ---
 
 ## License
 
-Tessera is released under the Apache License 2.0. The full license text is in the [`LICENSE`](LICENSE) file at the project root. See [`docs/decisions/0010-apache-2-license.md`](docs/decisions/0010-apache-2-license.md) for the reasoning behind the license choice.
+Tessera is released under the Apache License 2.0. The full license text is in the [`LICENSE`](LICENSE) file at the project root. See [`docs/decisions/0010-apache-2-license.md`](https://lightine.youtrack.cloud/articles/TES-A-39) for the reasoning behind the license choice.
 
 ---
 
@@ -187,13 +187,13 @@ Tessera is used in trust-related contexts. Security reports are taken seriously 
 
 ## Contributing
 
-[`CONTRIBUTING.md`](CONTRIBUTING.md) is the short pointer for new contributors; [`docs/conventions.md`](docs/conventions.md) holds the full contribution rules; [`docs/contributor-setup.md`](docs/contributor-setup.md) covers one-time machine setup. The short version:
+[`CONTRIBUTING.md`](CONTRIBUTING.md) is the short pointer for new contributors; [`docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20) holds the full contribution rules; [`docs/contributor-setup.md`](https://lightine.youtrack.cloud/articles/TES-A-12) covers one-time machine setup. The short version:
 
 - Decisions of architectural or scope significance are recorded as ADRs
 - Disagreement is welcome — the project's culture is dispute-driven, grounded in the principles
 - New conventions are added through normal contribution: proposal, discussion, agreement, then an edit
 
-The project is in active `0.x` development. The formal open-source release happens at `1.0.0` per [ADR-011](docs/decisions/0011-open-source-at-public-release.md).
+The project is in active `0.x` development. The formal open-source release happens at `1.0.0` per [ADR-011](https://lightine.youtrack.cloud/articles/TES-A-41).
 
 ---
 

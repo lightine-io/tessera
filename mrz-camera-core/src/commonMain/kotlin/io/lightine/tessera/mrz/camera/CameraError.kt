@@ -3,8 +3,8 @@ package io.lightine.tessera.mrz.camera
 /**
  * A capture-layer failure, surfaced on [`MrzScanResult.CaptureError`][MrzScanResult.CaptureError]
  * as a sealed result — never thrown, never crashing or hanging
- * ([ADR-020](https://github.com/lightine-io/tessera/blob/main/docs/decisions/0020-camera-reading-architecture.md)).
- * This is the `Camera…` family the [error taxonomy](https://github.com/lightine-io/tessera/blob/main/docs/features/mrz-error-taxonomy.md)
+ * ([ADR-020](https://lightine.youtrack.cloud/articles/TES-A-49)).
+ * This is the `Camera…` family the [error taxonomy](https://lightine.youtrack.cloud/articles/TES-A-28)
  * names, kept distinct from the `mrz-core` parse/validation taxonomy: it describes a failure to
  * *obtain* a reading, not a judgement about a reading's content.
  *

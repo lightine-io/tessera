@@ -12,7 +12,7 @@ import kotlinx.datetime.LocalDate
  * A warning rather than a validation failure because the SDK does not commit to "this
  * document is invalid" based on expiry plausibility alone (Principle 1 — reader, not
  * oracle). Configurable thresholds are a deferred enhancement; see
- * [`docs/open-questions.md`](https://github.com/lightine-io/tessera/blob/main/docs/open-questions.md).
+ * the project's issue tracker.
  */
 public data class MrzExpiryDateImplausiblyFar(
     val expiryDate: LocalDate,

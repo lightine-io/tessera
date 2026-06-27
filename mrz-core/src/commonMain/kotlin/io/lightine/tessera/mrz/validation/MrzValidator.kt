@@ -55,7 +55,7 @@ import kotlin.time.Instant
  * tests or callers re-validating a document constructed from primitive inputs.
  *
  * See
- * [`docs/features/mrz-validation.md`](https://github.com/lightine-io/tessera/blob/main/docs/features/mrz-validation.md)
+ * [`docs/features/mrz-validation.md`](https://lightine.youtrack.cloud/articles/TES-A-32)
  * for the full feature description.
  */
 public object MrzValidator {

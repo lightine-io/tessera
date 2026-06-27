@@ -8,7 +8,7 @@
 List every doc this PR touches or should have touched. If a doc was updated, name it.
 If a commitment in a doc is now implemented, name the doc + the commitment.
 If this PR introduces a new "deliberate gap" (intentionally incomplete behavior), say so
-and link to where it's tracked (`docs/open-questions.md` entry, file-level comment, locked test).
+and link to where it's tracked (the project's issue tracker entry, file-level comment, locked test).
 
 Examples:
 - Updated `docs/features/mrz-data-model.md` to clarify `documentType` trimming rule.
@@ -28,7 +28,7 @@ Examples:
 ## Open Questions Touched
 
 <!--
-Items in `docs/open-questions.md` that this PR resolves, modifies, or adds.
+Items in the project's issue tracker that this PR resolves, modifies, or adds.
 - Resolved: <entry>
 - Added: <entry>
 - Modified: <entry>

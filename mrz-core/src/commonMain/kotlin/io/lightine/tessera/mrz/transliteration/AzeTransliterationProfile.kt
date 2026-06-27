@@ -35,7 +35,7 @@ import io.lightine.tessera.mrz.parsing.isMrzAlphabetCharacter
  * the rules during the pre-`0.1.0` audit (2026-05-19) for `Ç`, `Ğ`, `İ`, `I`, `Ə`.
  * `X → KH`, `Ş → SH`, `Q → G`, `J → ZH`, `C → J` rest on a fluent speaker's testimony
  * plus the ALA-LC chain; the deferred sub-question on the empirical basis of `J → ZH`
- * and `C → J` is tracked in `docs/open-questions.md`.
+ * and `C → J` is tracked in the project's issue tracker.
  *
  * **Inherits from ICAO Annex G without override** (where the default is correct for AZE):
  * `İ → I`, `I → I`, `Ö → O`, `Ü → U`, plus every letter not listed in the table above.

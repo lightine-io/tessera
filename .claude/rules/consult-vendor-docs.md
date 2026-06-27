@@ -35,4 +35,4 @@ Applies whenever the loaded paths are touched. This is an epistemic habit (verif
 ## Cross-references
 
 - Advisory counterpart in [`CLAUDE.md`](../../CLAUDE.md): "Verification Before Acting" (dependency justification, primary-source alignment). This rule is the auto-firing structural form of that habit.
-- Mobile operating method: [`mobile-dev-workflow.md`](mobile-dev-workflow.md) and [`docs/mobile/android.md`](../../docs/mobile/android.md).
+- Mobile operating method: [`mobile-dev-workflow.md`](mobile-dev-workflow.md) and [`docs/mobile/android.md`](https://lightine.youtrack.cloud/articles/TES-A-19).

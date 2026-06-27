@@ -1,7 +1,6 @@
 ---
 paths:
   - "**/*.kt"
-  - "docs/**"
 ---
 
 # Future-proofing — the duty to look
@@ -26,13 +25,13 @@ Once an opportunity is surfaced, any of **now / defer / park** is a good outcome
 
 - **Now** — do it while the context is hot.
 - **Defer deliberately** — decide explicitly to wait (e.g. keep a throttle private until a real user reports slowness). A recorded, reasoned deferral *is* future-proofing.
-- **Park** — log it in [`docs/open-questions.md`](../../docs/open-questions.md) for later.
+- **Park** — log it in the project's issue tracker for later.
 
 Choosing "defer" or "park" is never the failure. **Not spotting or not surfacing** is the only failure.
 
 ## This is not oracle-overreach
 
-Do not confuse this with [Principle 1 — reader, not oracle](../../docs/principles.md), which binds the **SDK's** behavior toward its users (never guess the user's intent, never make trust decisions for them). That constraint is about the SDK. This duty is about **us building the project**: we hold the full inputs — scope, ADRs, the whole codebase — so seeing "this helps NFC later" or "this belongs in `mrz-camera-core`" is just reading our *own* situation well, which we have every right and obligation to do.
+Do not confuse this with [Principle 1 — reader, not oracle](https://lightine.youtrack.cloud/articles/TES-A-5), which binds the **SDK's** behavior toward its users (never guess the user's intent, never make trust decisions for them). That constraint is about the SDK. This duty is about **us building the project**: we hold the full inputs — scope, ADRs, the whole codebase — so seeing "this helps NFC later" or "this belongs in `mrz-camera-core`" is just reading our *own* situation well, which we have every right and obligation to do.
 
 ## Scope
 
@@ -41,5 +40,5 @@ Loads on Kotlin source and `docs/`. The duty itself spans code, docs, and proces
 ## Cross-references
 
 - The clearest concrete instance: [`working-patterns.md`](../working-patterns.md) → "Internal packages first" (spot reuse → extract a clean boundary) and "Present, don't decide" (surface with a recommendation, decide together).
-- [`../../docs/conventions.md`](../../docs/conventions.md) → "Internal Packages First" and "How New Conventions Are Added".
+- [`../../docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20) → "Internal Packages First" and "How New Conventions Are Added".
 - [`../../CLAUDE.md`](../../CLAUDE.md) → Principle 11 (internal packages first) and the "Working Style" stance on surfacing reasoning.
