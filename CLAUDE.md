@@ -19,7 +19,7 @@ Tessera is a vendor-neutral SDK for reading, validating, and generating identity
 If you are starting a new session:
 
 1. Look for the most recent `SESSION-HANDOFF-YYYY-MM-DD-HHMM-<slug>.md` in `.handoffs/`. The current convention is date + UTC time (4 digits, no separator) + kebab-case slug, so `ls -1 .handoffs/SESSION-HANDOFF-*.md | sort -r | head -1` returns the canonical latest within the new form. The `YYYY-MM-DD` prefix ensures date order across all forms; within any single date, all handoffs share the form current at that time, so within-date mixing is not expected. Older dates may use either legacy form — `SESSION-HANDOFF-YYYY-MM-DD-<slug>.md` (date + slug, no time) or `SESSION-HANDOFF-YYYY-MM-DD.md` (date only, no slug). Treat all forms the same when reading.
-2. Sweep standing obligations: `grep -n '\- \[ \]' .plans/*.md` — unchecked action-plan items are open work **even if the latest handoff says nothing is in flight** (a handoff is one session's snapshot; plans are the ledger). A SessionStart hook also injects these automatically.
+2. Sweep local plans: `grep -n '\- \[ \]' .plans/*.md` (a SessionStart hook also injects these) — a secondary catch for any *local* in-flight plan checkboxes. **The backlog of record is now the YouTrack board (Issues)** — the deferred-work ledger graduated to Issues, so `.plans/` is usually empty (see step 4).
 3. If no handoff exists, briefly skim [`docs/principles.md`](https://lightine.youtrack.cloud/articles/TES-A-5) to refresh the foundational stance (10 min).
 4. Check the project's issue tracker for what is currently in flight.
 5. Engage with the user's request.
@@ -155,7 +155,7 @@ A known failure mode: declaring work "ready" prematurely, only to find gaps unde
 
 ## Maintaining the Documentation System
 
-When new content needs a home, use this guidance.
+When new content needs a home, **first decide the home with [`content-placement.md`](.claude/rules/content-placement.md)** — git (machinery + the offline floor) · **public KB** (contributor + consumer docs + the decision record) · **internal KB / Issues** (private process) · local (gitignored notes + copyright). Then use these specifics.
 
 **AI-facing rules and workflows** (the placement test: *would removing this cause Claude to make mistakes?* — see Anthropic's [memory-files guidance](https://code.claude.com/docs/en/memory) for the full reasoning):
 
@@ -176,9 +176,9 @@ When new content needs a home, use this guidance.
 | A deferred decision | the project's issue tracker |
 | A significant architectural or scope decision | A new ADR in [the ADRs (KB)](https://lightine.youtrack.cloud/articles/TES-A-17) |
 | A new domain term | [Glossary — YouTrack KB](https://lightine.youtrack.cloud/articles/TES-A-4) |
-| A new API or capability | The relevant feature doc in [the feature docs (KB)](https://lightine.youtrack.cloud/articles/TES-A-16) |
-| A testing commitment | [`docs/testing.md`](https://lightine.youtrack.cloud/articles/TES-A-15) |
-| A risk profile for a new reading method | [`docs/reading-risks.md`](https://lightine.youtrack.cloud/articles/TES-A-11) |
+| A new API or capability | the relevant feature KB article (under [the feature index](https://lightine.youtrack.cloud/articles/TES-A-16)) |
+| A testing commitment | the Testing KB article ([TES-A-15](https://lightine.youtrack.cloud/articles/TES-A-15)) |
+| A risk profile for a new reading method | the Reading Risks KB article ([TES-A-11](https://lightine.youtrack.cloud/articles/TES-A-11)) |
 
 Some rules and patterns serve **multiple audiences** — both AI assistants and human contributors. When that's the case, place the content in its primary home and cross-reference from secondary homes. The established precedent in this project: rules and skills that also affect human contributors get a short cross-reference subsection in [`docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20). Before placing a new rule, ask: *who does this serve — future AI sessions, future human contributors, or both?* Place and cross-reference accordingly. Memories serve a narrower audience (one Claude on one machine) and are appropriate when the content is genuinely local; rules that apply to any contributor or any AI on the repo belong in committed files instead.
 

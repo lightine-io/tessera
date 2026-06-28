@@ -9,6 +9,11 @@
 # items are open work regardless of what the latest handoff says, so they are injected
 # into every session mechanically — structural, not willpower.
 #
+# Note (since the 2026-06 doc migration): the deferred-work backlog now lives in
+# YouTrack Issues, so .plans/ is usually empty. This hook still (a) maintains the
+# session markers below and (b) catches any *local* .plans items; the YouTrack board
+# is the backlog of record (surfaced via .claude/rules/youtrack.md).
+#
 # See CLAUDE.md "What to Do First" and .claude/session-handoff-template.md
 # ("Standing Obligations").
 set -euo pipefail
