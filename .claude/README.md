@@ -1,8 +1,8 @@
 # `.claude/` Folder
 
-This folder contains material specifically for AI assistants (primarily Claude Code) working on this project. The content is intentionally separate from `docs/` because it serves a different audience and a different purpose.
+This folder contains material specifically for AI assistants (primarily Claude Code) working on this project. The content is intentionally separate from the project documentation — the human-facing docs now live in the YouTrack KB — because it serves a different audience and a different purpose.
 
-`docs/` is for humans (and AI) understanding the project itself.
+The YouTrack KB is for humans (and AI) understanding the project itself.
 `.claude/` is for AI assistants understanding how to work effectively *on* the project.
 
 The entry point for AI assistants is the `CLAUDE.md` file at project root. That file is the orientation document and should be read first. The files in this folder are deeper material loaded as needed:

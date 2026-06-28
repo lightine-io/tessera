@@ -25,7 +25,7 @@ A proper `.gitignore` file will be generated when implementation begins. This do
 
 ### Documentation
 
-- The entire `docs/` folder (principles, architecture, scope, conventions, versioning, features, decisions, etc.)
+- Human-facing documentation now lives in the **YouTrack KB**, not git (principles, architecture, scope, conventions, versioning, feature docs, ADRs — migrated 2026-06).
 - The entire `.claude/` folder (working patterns, known pitfalls, this file, session handoff template)
 - The project root `README.md`
 - The project root `CLAUDE.md`
@@ -108,7 +108,7 @@ A pre-commit hook or CI check should catch any of these. Even with such a check,
 - Build outputs (`build/`, `target/`, `out/`, `Pods/`, `DerivedData/`)
 - Temporary backup files (editor-specific)
 - Local environment files (`local.properties`, `.env.local`)
-- **Working notes in dot-prefix directories** — three categories of AI-session-driven working content that live in hidden folders, each gitignored as a whole directory: session handoffs (`.handoffs/SESSION-HANDOFF-*.md`, per-session end-of-work records), code/doc alignment recaps (`.recaps/RECAP-*.md`, periodic audits checking docs still match code), and spec conformance notes (`.conformance/CONFORMANCE-NOTES-*.md`, per-release audits verifying SDK behavior against external specifications). The handoff template lives in `.claude/session-handoff-template.md` and is committed; the directories themselves and their dated working notes are not.
+- **Working notes in dot-prefix directories** — three categories of AI-session-driven working content that live in hidden folders, each gitignored as a whole directory: session handoffs (`.handoffs/SESSION-HANDOFF-*.md`, per-session end-of-work records), code/doc alignment recaps (`.recaps/RECAP-*.md`, periodic audits checking docs still match code), and spec conformance notes (`.conformance/CONFORMANCE-NOTES-*.md`, per-release audits verifying SDK behavior against external specifications). The handoff template lives in `.claude/session-handoff-template.md` and is committed; the directories themselves and their dated working notes are not. *(The `.recaps/`, `.reviews/`, and `.discovery/` notes graduated to the internal KB in the 2026-06 migration; their local copies are archived and remain gitignored.)*
 - **External specification reference copies** (`.spec/`) — local copies of external technical specifications (primarily ICAO Doc 9303 PDFs and text-extracted equivalents) consulted during implementation. Never committed: redistribution of external specs may be restricted by their licensing terms. The project's "cite-and-implement" approach references section numbers in code/docs, never verbatim spec content.
 
 ---

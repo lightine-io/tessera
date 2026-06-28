@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file orients AI assistants — particularly Claude Code — picking up this project. Read this first; load deeper material from `docs/` and `.claude/` as needed.
+This file orients AI assistants — particularly Claude Code — picking up this project. Read this first; load deeper material from `.claude/` and the YouTrack KB as needed.
 
 If you are a human contributor, [`README.md`](README.md) is the better starting point.
 
@@ -103,7 +103,7 @@ The operational ruleset. Each rule is concrete and triggers on a specific situat
 
 ### Folder and File Organization
 
-Visible folders (`docs/`, `scripts/`, source modules) hold project deliverables; dot-prefix folders (`.claude/`, `.handoffs/`, `.recaps/`, `.conformance/`, `.spec/`) hold project infrastructure. Naming is purpose-driven: dated working notes use `<CATEGORY>-YYYY-MM-DD[-HHMM][-<slug>].md`, evergreen docs use lowercase-hyphen `.md`, root-level files use UPPERCASE. Full rule (with examples and scope) in [`.claude/rules/folder-organization.md`](.claude/rules/folder-organization.md) — auto-loaded when working with markdown files. Cross-reference for human contributors in [`docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20).
+Visible folders (`scripts/`, source modules, root files) hold project deliverables; **human-facing docs now live in the YouTrack KB, not git.** Dot-prefix folders (`.claude/`, `.handoffs/`, `.plans/`, `.conformance/`, `.spec/`) hold project infrastructure — the internal-thinking notes (`.recaps/.reviews/.discovery`) graduated to the internal KB. Naming is purpose-driven: dated working notes use `<CATEGORY>-YYYY-MM-DD[-HHMM][-<slug>].md`, evergreen docs use lowercase-hyphen `.md`, root-level files use UPPERCASE. Full rule (with examples and scope) in [`.claude/rules/folder-organization.md`](.claude/rules/folder-organization.md) — auto-loaded when working with markdown files. Cross-reference for human contributors in [`docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20).
 
 ### Dependency Upgrade Cadence
 

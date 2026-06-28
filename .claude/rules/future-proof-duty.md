@@ -35,7 +35,7 @@ Do not confuse this with [Principle 1 — reader, not oracle](https://lightine.y
 
 ## Scope
 
-Loads on Kotlin source and `docs/`. The duty itself spans code, docs, and process; when working on process/tooling outside these paths (e.g. `.claude/`), carry the same habit even though this file did not auto-load. It is a meta-habit, so its real test is whether opportunities actually get surfaced — if they stop, escalate the enforcement (e.g. a task-end hook), don't just leave the rule unread.
+Loads on Kotlin source. The duty itself spans code, docs, and process; when working on process/tooling outside these paths (e.g. `.claude/`), carry the same habit even though this file did not auto-load. It is a meta-habit, so its real test is whether opportunities actually get surfaced — if they stop, escalate the enforcement (e.g. a task-end hook), don't just leave the rule unread.
 
 ## Cross-references
 
