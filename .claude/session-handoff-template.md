@@ -75,6 +75,12 @@ branch/working-tree state (clean/dirty). Put cautions LAST, never first: a stack
 at the top of START HERE gets read as the headline. This is the section the next session acts
 on; everything below is supporting detail.
 
+**One exception** — a single *"this looks broken but it's intentional"* orientation note may
+lead, but only when the most likely fresh-session mistake is *undoing finished work* (e.g.
+restoring a folder that was deleted on purpose). This is not a "don't" caution; it stops the
+reader from reversing completed work before they reach the plan. Keep it to one short block;
+everything else still goes last.
+
 If a `Supersedes:` line is present, the next session never saw the superseded handoff — so
 restate the WHOLE current plan here, affirmatively (what we're doing, why, where it stands,
 how it proceeds), not just what changed. The delta goes in "Superseded This Session"; the
