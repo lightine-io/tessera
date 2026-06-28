@@ -213,6 +213,16 @@ For external-facing defaults — minimum platform versions, distribution channel
 
 ---
 
+## YouTrack Operating Patterns
+
+### Task-first for internal work
+
+When the maintainer asks for a piece of internal work, **open a YouTrack Issue first** and run it through the board (Backlog → Develop → Review → Test → Staging → Done) — the Issue is the unit of work, not the conversation alone. This is for the **internal team** (Owner / Maintainer / Developer); public contributors work via GitHub fork + PR and need no YouTrack. Follow it even when it is just the maintainer-and-AI, because the model has to scale to a team.
+
+### Have YouTrack → use it; don't → you don't
+
+The internal team works from YouTrack — the board for work, the KB for reference and planning. A guest, or anyone with YouTrack unreachable, works from git + the **public** KB and simply lacks the internal context: no workaround, graceful degradation. The repo must always build and the AI operate at baseline with YouTrack off. Where each piece of content lives — and how to link across git ↔ YouTrack — is the [content-placement rule](rules/content-placement.md); the session activation gate is [youtrack.md](rules/youtrack.md). New content authored while YouTrack is down is written locally and synced when it returns.
+
 ## Maintaining This Document
 
 These patterns evolved from observation during the project's design phase. They will continue to evolve. New patterns can be added when they are observed; outdated patterns can be removed when they are no longer relevant.
