@@ -200,6 +200,27 @@ public final class io/lightine/tessera/mrz/camera/RecognizedText {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/lightine/tessera/mrz/camera/SavedImageMrzReader {
+	public fun <init> (Lio/lightine/tessera/mrz/camera/SavedImageReadingAcknowledgement;Lio/lightine/tessera/mrz/camera/MrzTextRecognizer;Lio/lightine/tessera/mrz/camera/ParsingMode;Lio/lightine/tessera/telemetry/TelemetrySink;Lkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Lio/lightine/tessera/mrz/camera/SavedImageReadingAcknowledgement;Lio/lightine/tessera/mrz/camera/MrzTextRecognizer;Lio/lightine/tessera/mrz/camera/ParsingMode;Lio/lightine/tessera/telemetry/TelemetrySink;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun read (Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class io/lightine/tessera/mrz/camera/SavedImageReadingAcknowledgement {
+	public fun <init> ()V
+}
+
+public final class io/lightine/tessera/mrz/camera/SavedImageScanResult {
+	public fun <init> (Lio/lightine/tessera/mrz/camera/MrzScanResult;)V
+	public final fun component1 ()Lio/lightine/tessera/mrz/camera/MrzScanResult;
+	public final fun copy (Lio/lightine/tessera/mrz/camera/MrzScanResult;)Lio/lightine/tessera/mrz/camera/SavedImageScanResult;
+	public static synthetic fun copy$default (Lio/lightine/tessera/mrz/camera/SavedImageScanResult;Lio/lightine/tessera/mrz/camera/MrzScanResult;ILjava/lang/Object;)Lio/lightine/tessera/mrz/camera/SavedImageScanResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getScan ()Lio/lightine/tessera/mrz/camera/MrzScanResult;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class io/lightine/tessera/mrz/camera/ScanQuality {
 	public fun <init> (ZLjava/lang/Float;I)V
 	public final fun component1 ()Z
