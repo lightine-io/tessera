@@ -1,6 +1,8 @@
 package io.lightine.tessera.mrz.camera
 
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import platform.CoreImage.CIImage
 import platform.Foundation.NSNumber
 import platform.Foundation.NSURL
@@ -25,7 +27,14 @@ internal class ImageIoCaptureMetadataReader : CaptureMetadataReader<NSURL> {
     override suspend fun read(
         image: NSURL,
         policy: CaptureMetadataPolicy,
-    ): CaptureMetadata = assembleCaptureMetadata(CIImage.imageWithContentsOfURL(image)?.properties, policy)
+    ): CaptureMetadata =
+        // The CIImage load reads and decodes the file; run it off the caller's (possibly main) thread so a
+        // consumer calling read() from a UI coroutine does not block. Dispatchers.IO is JVM-only, so Default is
+        // the Kotlin/Native equivalent (matching the camera path and the saved-image OCR recognizer; the
+        // Android reader makes the same off-caller-thread guarantee via Dispatchers.IO).
+        withContext(Dispatchers.Default) {
+            assembleCaptureMetadata(CIImage.imageWithContentsOfURL(image)?.properties, policy)
+        }
 }
 
 /**
@@ -47,7 +56,8 @@ internal fun assembleCaptureMetadata(
         } else {
             null // read-suppression: the GPS dictionary is not read unless explicitly requested
         }
-    // Raw tags for transparency, from the non-GPS dictionaries only (string/number values).
+    // Raw tags for transparency — a curated, non-GPS allowlist (the same descriptive set the Android reader
+    // collects), not an open-ended dump of every Exif/TIFF field.
     val rawTags = rawStringTags(exif, tiff)
     return CaptureMetadata(
         reportedCaptureTime = exif?.string(EXIF_DATETIME_ORIGINAL),
@@ -74,6 +84,25 @@ private const val GPS_LATITUDE_REF = "LatitudeRef"
 private const val GPS_LONGITUDE = "Longitude"
 private const val GPS_LONGITUDE_REF = "LongitudeRef"
 
+// Curated, non-GPS raw-tag allowlist — the descriptive EXIF/TIFF tags the Android reader collects (its
+// RAW_TAGS), so rawTags stays a small, predictable, cross-platform set rather than an open-ended dump of every
+// Exif/TIFF field (which would surface arbitrary identifying tags: lens, owner, body serial, exposure). GPS is
+// excluded here and read-suppressed above. Both platforms' native dimension keys are listed (iOS Exif
+// PixelX/YDimension, Android/TIFF ImageWidth/ImageLength) so each surfaces image dimensions.
+private val RAW_TAG_ALLOWLIST =
+    setOf(
+        "DateTimeOriginal",
+        "DateTime",
+        "Make",
+        "Model",
+        "Software",
+        "Orientation",
+        "PixelXDimension",
+        "PixelYDimension",
+        "ImageWidth",
+        "ImageLength",
+    )
+
 @Suppress("UNCHECKED_CAST")
 private fun Map<Any?, *>.dictionary(key: String): Map<Any?, *>? = this[key] as? Map<Any?, *>
 
@@ -97,7 +126,9 @@ private fun rawStringTags(vararg dictionaries: Map<Any?, *>?): Map<String, Strin
     buildMap {
         dictionaries.filterNotNull().forEach { dictionary ->
             dictionary.forEach { (key, value) ->
-                if (key is String && (value is String || value is NSNumber)) put(key, value.toString())
+                if (key is String && key in RAW_TAG_ALLOWLIST && (value is String || value is NSNumber)) {
+                    put(key, value.toString())
+                }
             }
         }
     }

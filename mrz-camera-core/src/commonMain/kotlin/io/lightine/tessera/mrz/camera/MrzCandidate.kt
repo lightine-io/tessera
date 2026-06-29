@@ -17,6 +17,14 @@ import io.lightine.tessera.mrz.parsing.ParseResult
  * (Reconstructions that do not parse *structurally* are not surfaced — they are not plausible readings at
  * all; reconstructions that parse, including those whose check digits fail, are all surfaced.)
  *
+ * **Bounded enumeration (provisional, `0.x`).** To keep the cost bounded, tolerant reading varies only the
+ * first several ambiguous positions *in reading order* and leaves any beyond that cap as-recognized in every
+ * candidate. For a real document the early positions often fall on the name line, so later positions —
+ * including a data line's check-digit-bearing fields — may be left unexplored. The surfaced set is therefore
+ * every parseable reconstruction of the *explored* positions, not literally every conceivable reading.
+ * Field-aware position selection (prioritising data-field positions) is a tracked future refinement; until
+ * then, treat absence of a candidate as "not explored," never as "ruled out."
+ *
  * **Contains document PII — do not log verbatim.** [mrzLines] and [parse] hold document data; this type's
  * generated `toString()` surfaces it. Redact before logging (see the `telemetry` module's `Redaction`).
  */

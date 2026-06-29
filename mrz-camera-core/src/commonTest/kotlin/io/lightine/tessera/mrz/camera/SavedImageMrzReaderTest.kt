@@ -30,6 +30,24 @@ class SavedImageMrzReaderTest {
     private fun recognizerReturning(vararg lines: String): MrzTextRecognizer<FakeImage> =
         MrzTextRecognizer { RecognizedText(lines.map { RecognizedLine(it, null) }) }
 
+    // A recognizer whose OCR step fails — the analyse-frame core turns this into a CaptureError.
+    private fun recognizerThrowing(): MrzTextRecognizer<FakeImage> = MrzTextRecognizer { throw RuntimeException("OCR boom") }
+
+    // Records whether the reader closed it: SavedImageMrzReader owns an AutoCloseable recognizer's lifetime
+    // and must release it on close() (mirroring CameraXMrzScanner).
+    private class ClosableRecognizer :
+        MrzTextRecognizer<FakeImage>,
+        AutoCloseable {
+        var closed = false
+            private set
+
+        override suspend fun recognize(frame: FakeImage): RecognizedText = RecognizedText(emptyList())
+
+        override fun close() {
+            closed = true
+        }
+    }
+
     private fun reader(
         recognizer: MrzTextRecognizer<FakeImage>,
         mode: ParsingMode = ParsingMode.STRICT,
@@ -213,6 +231,39 @@ class SavedImageMrzReaderTest {
 
             assertNull(result.captureMetadata, "a non-NONE policy with no reader supplied still reads no metadata")
         }
+
+    @Test
+    fun an_ocr_failure_surfaces_a_capture_error() =
+        runTest {
+            val result = reader(recognizerThrowing()).read(FakeImage())
+
+            val captureError = assertIs<MrzScanResult.CaptureError>(result.scan)
+            assertIs<CameraError.OcrFailed>(captureError.error)
+            assertTrue(result.candidates.isEmpty())
+        }
+
+    @Test
+    fun a_tolerant_read_of_a_capture_error_surfaces_no_candidates() =
+        runTest {
+            // The tolerant path must short-circuit on a capture failure (no recognized text to disambiguate).
+            val result = reader(recognizerThrowing(), tolerant = true).read(FakeImage())
+
+            assertIs<MrzScanResult.CaptureError>(result.scan)
+            assertTrue(result.candidates.isEmpty(), "a capture failure carries no text, so it yields no candidates")
+        }
+
+    @Test
+    fun close_releases_a_closeable_recognizer() {
+        val recognizer = ClosableRecognizer()
+        reader(recognizer).close()
+        assertTrue(recognizer.closed, "close() must release an AutoCloseable recognizer")
+    }
+
+    @Test
+    fun close_is_safe_when_the_recognizer_is_not_closeable() {
+        // recognizerReturning is a plain SAM lambda, not AutoCloseable — closing the reader is a no-op, not a throw.
+        reader(recognizerReturning(td3Line1, td3Line2)).close()
+    }
 
     // Inserts a stray space after the 5th character — benign OCR whitespace noise that STRICT rejects and
     // LENIENT forgives (mirrors the analyse-frame core's own test).

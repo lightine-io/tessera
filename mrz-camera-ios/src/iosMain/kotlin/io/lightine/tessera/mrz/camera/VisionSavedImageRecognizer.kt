@@ -3,6 +3,8 @@ package io.lightine.tessera.mrz.camera
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.autoreleasepool
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import platform.Foundation.NSURL
 import platform.Vision.VNImageRequestHandler
 
@@ -27,10 +29,17 @@ internal class VisionSavedImageRecognizer(
 ) : MrzTextRecognizer<NSURL>,
     AutoCloseable {
     override suspend fun recognize(frame: NSURL): RecognizedText =
-        // Drain Vision's per-frame autoreleased objects (handler, results, observations) on this
-        // run-loop-less analysis thread, exactly as the camera recognizer does.
-        autoreleasepool {
-            vision.recognize(VNImageRequestHandler(uRL = frame, options = emptyMap<Any?, Any?>()))
+        // Vision's file read + recognition is blocking and CPU-bound; run it off the caller's (possibly main)
+        // thread so a consumer calling read() from a UI coroutine does not freeze. The saved-image path has no
+        // owns-the-session layer to do this, unlike the camera path (which drives Vision on Dispatchers.Default
+        // — see AVCaptureMrzScanner); Dispatchers.IO is JVM-only, so Default is the Kotlin/Native equivalent.
+        // Mirrors the Android recognizer's off-caller-thread recognize().
+        withContext(Dispatchers.Default) {
+            // Drain Vision's per-frame autoreleased objects (handler, results, observations) on this
+            // run-loop-less analysis thread, exactly as the camera recognizer does.
+            autoreleasepool {
+                vision.recognize(VNImageRequestHandler(uRL = frame, options = emptyMap<Any?, Any?>()))
+            }
         }
 
     /** Releases the underlying Vision recognizer's resources. */

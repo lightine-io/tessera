@@ -11,7 +11,16 @@ package io.lightine.tessera.mrz.camera
  * @param F the saved-image input type — the same file reference the [MrzTextRecognizer] reads.
  */
 public fun interface CaptureMetadataReader<in F> {
-    /** Reads the metadata permitted by [policy] from [image]; individual fields are `null` when absent in the file. */
+    /**
+     * Reads the metadata permitted by [policy] from [image]; individual fields are `null` when absent in the
+     * file.
+     *
+     * **Implementations must be best-effort and non-throwing**: an unreadable or malformed image yields a
+     * [CaptureMetadata] with `null` fields, never a thrown error (a missing tag is not a read failure). Only
+     * coroutine cancellation ([kotlin.coroutines.cancellation.CancellationException]) propagates. The bundled
+     * platform readers honour this, and [SavedImageMrzReader] does **not** wrap this call — so a custom
+     * implementation that throws would propagate to the `read()` caller.
+     */
     public suspend fun read(
         image: F,
         policy: CaptureMetadataPolicy,

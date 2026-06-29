@@ -41,8 +41,11 @@ internal class TolerantMrzMatcher(
         if (ambiguous.isEmpty()) return emptyList() // nothing to disambiguate; the strict read already has the answer
 
         // Bound enumeration cost: vary at most MAX_VARIED_POSITIONS glyphs (<= 2^N reconstructions); any
-        // excess ambiguous positions stay as-recognized. Surfaced count stays small because structurally
-        // implausible reconstructions (a letter in a numeric field, etc.) drop out below.
+        // excess ambiguous positions stay as-recognized. NOTE: positions are taken in reading order (line then
+        // column), so on a real document the budget can be spent on the name line and leave the data line's
+        // check-digit-bearing glyphs unexplored — field-aware selection is a tracked refinement (see the
+        // MrzCandidate "bounded enumeration" note). Surfaced count stays small because structurally implausible
+        // reconstructions (a letter in a numeric field, etc.) drop out below.
         val varied = ambiguous.take(MAX_VARIED_POSITIONS)
         val distinct = LinkedHashMap<List<String>, MrzCandidate>()
         cartesian(varied.map { listOf(it.recognized) + CONFUSABLES.getValue(it.recognized) }) { choice ->

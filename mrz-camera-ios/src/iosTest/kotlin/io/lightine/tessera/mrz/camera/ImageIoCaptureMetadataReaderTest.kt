@@ -44,6 +44,34 @@ class ImageIoCaptureMetadataReaderTest {
     }
 
     @Test
+    fun raw_tags_are_a_curated_allowlist_excluding_arbitrary_identifying_fields() {
+        val props =
+            mapOf<Any?, Any?>(
+                "{Exif}" to
+                    mapOf<Any?, Any?>(
+                        "DateTimeOriginal" to "2026:05:04 12:00:00",
+                        "PixelXDimension" to 16,
+                        // Identifying fields Apple may include in the Exif dictionary — must NOT be surfaced.
+                        "LensModel" to "ACME 50mm f/1.8",
+                        "BodySerialNumber" to "SN-0001",
+                    ),
+                "{TIFF}" to mapOf<Any?, Any?>("Make" to "ACME", "CameraOwnerName" to "A. Person"),
+            )
+
+        val raw = assertNotNull(assembleCaptureMetadata(props, CaptureMetadataPolicy.EXCLUDING_LOCATION).rawTags)
+
+        // The curated descriptive tags are kept (the same non-GPS set Android collects)...
+        assertTrue("DateTimeOriginal" in raw)
+        assertTrue("Make" in raw)
+        assertTrue("PixelXDimension" in raw)
+        // ...but arbitrary identifying tags are not (smallest-PII-surface allowlist; rawTags is not an open dump).
+        assertTrue(
+            raw.keys.none { it == "LensModel" || it == "BodySerialNumber" || it == "CameraOwnerName" },
+            "rawTags must exclude non-allowlisted identifying EXIF/TIFF fields",
+        )
+    }
+
+    @Test
     fun including_location_reads_gps_with_signed_hemisphere_refs() {
         val metadata = assembleCaptureMetadata(propsWithGps, CaptureMetadataPolicy.INCLUDING_LOCATION)
 
