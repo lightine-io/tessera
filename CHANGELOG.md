@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-29
+
+Headless **saved-image (pre-captured image) MRZ reading** on Android and iOS, on top of the `0.2.x` live-camera reading. A saved image is read through the same analyse-frame core and parse/validate pipeline as a live capture (a saved-image MRZ validates identically — only the read-method provenance differs), gated behind an explicit opt-in because saved images carry more risk than a live capture ([ADR-023](https://lightine.youtrack.cloud/articles/TES-A-63)). Adds the opt-in `SavedImageMrzReader`, tolerant candidate disambiguation, and a capture-metadata (EXIF) surface with double-gated GPS read-suppression, plus the Android (ML Kit + `androidx.exifinterface`) and iOS (Apple Vision + ImageIO) platform readers. Device-verified on Android and iOS hardware. The release also folds in the documentation/process and AI-collaboration-infrastructure work accumulated since `0.2.1` (the entries below).
+
 ### Changed
 
 - **Pre-tag audit hardening of the 0.3.0 saved-image surface** (`mrz-camera-ios` behaviour + tests/docs; **no public API/ABI change** — `checkKotlinAbi` baselines unchanged). A multi-dimension pre-tag audit of the saved-image slices surfaced refinements, all applied before the 0.3.0 tag: (1) **`SavedImageMrzReader.read()` now dispatches off the caller's thread on iOS too** — `VisionSavedImageRecognizer` and `ImageIoCaptureMetadataReader` wrap their blocking Vision / `CIImage` work in `withContext(Dispatchers.Default)` (the Kotlin/Native equivalent of Android's JVM-only `Dispatchers.IO`), so calling `read()` from a UI coroutine no longer risks freezing the iOS UI for the file-decode + OCR; Android already dispatched off the caller, so the two platforms now match. (2) **iOS `rawTags` is now a curated, non-GPS allowlist** matching the Android reader's descriptive set, instead of surfacing every `Exif`/`TIFF` field — a smaller, predictable, cross-platform PII surface (GPS stays read-suppressed). (3) **Honesty docs**: `MrzCandidate` / `TolerantMrzMatcher` now disclose that tolerant disambiguation varies only the first few ambiguous positions *in reading order* (a real document's later data-line glyphs may be left unexplored — field-aware selection is a tracked refinement; treat an absent candidate as "not explored," never "ruled out"), and the public `CaptureMetadataReader` interface documents its best-effort, non-throwing contract. (4) **Test coverage**: added `SavedImageMrzReader` tests for the `CaptureError` path (including the tolerant short-circuit) and the `close()` recognizer-release contract, plus an iOS `rawTags` allowlist test. Verified: `:mrz-camera-core` + `:mrz-camera-ios` host/Simulator tests green, ABI baselines unchanged, and the iOS metadata reader re-confirmed on a physical iPhone 15 Pro after the threading change.
@@ -505,7 +509,8 @@ These are documented commitments that are explicitly *not* in this `[Unreleased]
 - iOS targets, Android targets (waiting on Xcode install / 0.2.0 platform I/O work)
 - Platform I/O modules (`mrz-camera-*`, `emrtd-nfc-*`, `mrz-camera-ui-*`)
 
-[Unreleased]: https://github.com/lightine-io/tessera/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/lightine-io/tessera/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/lightine-io/tessera/releases/tag/v0.3.0
 [0.2.1]: https://github.com/lightine-io/tessera/releases/tag/v0.2.1
 [0.2.0]: https://github.com/lightine-io/tessera/releases/tag/v0.2.0
 [0.1.1]: https://github.com/lightine-io/tessera/releases/tag/v0.1.1

@@ -9,7 +9,7 @@ A vendor-neutral SDK for reading, validating, and generating identity document d
 
 Tessera reads Machine Readable Zones (MRZ) from passports, national ID cards, residence permits, machine-readable visas, and similar travel documents conforming to ICAO Doc 9303. It returns extracted data verbatim, with structured validation results — leaving all trust decisions to the integrating application.
 
-> **Status:** In active `0.x` development. `v0.2.1` is the current release on Maven Central (`io.lightine.tessera`), adding headless live-camera MRZ reading on Android and iOS — see [Installation](#installation) and [`CHANGELOG.md`](CHANGELOG.md). The `1.0.0` milestone marks the public-stability and open-source release commitment per [ADR-011](https://lightine.youtrack.cloud/articles/TES-A-41); pre-`1.0.0` releases follow the same strict backward-compatibility commitments as post-`1.0.0` releases. See [`docs/versioning.md`](https://lightine.youtrack.cloud/articles/TES-A-8) for the policy.
+> **Status:** In active `0.x` development. `v0.3.0` is the current release on Maven Central (`io.lightine.tessera`), adding headless saved-image (pre-captured image) MRZ reading on Android and iOS, on top of the `0.2.x` live-camera reading — see [Installation](#installation) and [`CHANGELOG.md`](CHANGELOG.md). The `1.0.0` milestone marks the public-stability and open-source release commitment per [ADR-011](https://lightine.youtrack.cloud/articles/TES-A-41); pre-`1.0.0` releases follow the same strict backward-compatibility commitments as post-`1.0.0` releases. See [`docs/versioning.md`](https://lightine.youtrack.cloud/articles/TES-A-8) for the policy.
 
 ---
 
@@ -19,7 +19,7 @@ Tessera reads Machine Readable Zones (MRZ) from passports, national ID cards, re
 - **Validates** structurally, by check digit, and semantically — without making trust decisions
 - **Generates** valid MRZs from structured input, supporting round-trip use cases
 - **Exposes everything it extracts** — raw fields, computed values, validation results, and warnings — so the consumer always knows what was observed and what was inferred
-- **Reads MRZ from a live camera** — headless: Android (CameraX + ML Kit) and iOS (AVFoundation + Apple Vision) feed frames through the same parser, with the consumer owning all UI. You can also supply the MRZ string directly. Pre-captured images, manual entry, and NFC-chip reading are planned for later releases (pre-captured image `0.3.0`, manual entry `0.4.0`, NFC `0.6.0` — see the [roadmap](https://lightine.youtrack.cloud/articles/TES-A-62)).
+- **Reads MRZ from a live camera or a saved image** — headless: Android (CameraX + ML Kit) and iOS (AVFoundation + Apple Vision) read live frames or a pre-captured image file through the same parser, with the consumer owning all UI. You can also supply the MRZ string directly. Manual entry and NFC-chip reading are planned for later releases (manual entry `0.4.0`, NFC `0.6.0` — see the [roadmap](https://lightine.youtrack.cloud/articles/TES-A-62)).
 - **Runs anywhere the core technology stack supports** — initial mobile targets (Android, iOS) plus future support for backend, desktop, and web
 
 ---
@@ -74,7 +74,7 @@ The result type makes the three possible outcomes explicit. The consumer cannot 
 
 ## Installation
 
-Tessera is published to Maven Central under the `io.lightine.tessera` group. The current release is `0.2.1` (JVM + Android; iOS via Swift Package Manager — see [Platforms](#platforms)).
+Tessera is published to Maven Central under the `io.lightine.tessera` group. The current release is `0.3.0` (JVM + Android; iOS via Swift Package Manager — see [Platforms](#platforms)).
 
 ### Gradle (Kotlin DSL)
 
@@ -82,7 +82,7 @@ Use the BOM to keep every Tessera module on one version:
 
 ```kotlin
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:0.2.1"))
+    implementation(platform("io.lightine.tessera:tessera-bom:0.3.0"))
     implementation("io.lightine.tessera:tessera-mrz-core")  // MRZ parsing, validation, generation
 }
 ```
@@ -90,7 +90,7 @@ dependencies {
 Or pin the module version directly, without the BOM:
 
 ```kotlin
-implementation("io.lightine.tessera:tessera-mrz-core:0.2.1")
+implementation("io.lightine.tessera:tessera-mrz-core:0.3.0")
 ```
 
 `tessera-mrz-core` pulls in `tessera-types` transitively — most integrators need only this one module.
@@ -101,17 +101,17 @@ implementation("io.lightine.tessera:tessera-mrz-core:0.2.1")
 <dependency>
     <groupId>io.lightine.tessera</groupId>
     <artifactId>tessera-mrz-core</artifactId>
-    <version>0.2.1</version>
+    <version>0.3.0</version>
 </dependency>
 ```
 
 ### Swift Package Manager (iOS)
 
-In Xcode: **File → Add Package Dependencies…**, enter `https://github.com/lightine-io/tessera-swift`, and choose `0.2.1`. Or in a `Package.swift`:
+In Xcode: **File → Add Package Dependencies…**, enter `https://github.com/lightine-io/tessera-swift`, and choose `0.3.0`. Or in a `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/lightine-io/tessera-swift", from: "0.2.1"),
+    .package(url: "https://github.com/lightine-io/tessera-swift", from: "0.3.0"),
 ]
 ```
 
@@ -157,11 +157,11 @@ The project's documentation is structured for two audiences: integrators (who wa
 
 Tessera is built with Kotlin Multiplatform. Targets activate per-release as the corresponding reading methods land — see [`docs/scope.md`](https://lightine.youtrack.cloud/articles/TES-A-62) for the full roadmap.
 
-Active as of `0.2.1`:
+Active as of `0.3.0`:
 
 - **JVM** — the pure core logic (parsing, validation, generation, lookup tables, transliteration profiles, telemetry contract)
-- **Android** — core logic plus headless live-camera reading (CameraX + ML Kit). Minimum API level 23 (Android 6.0), per [ADR-018](https://lightine.youtrack.cloud/articles/TES-A-45)
-- **iOS** — core logic plus headless live-camera reading (AVFoundation + Apple Vision), distributed as an XCFramework via Swift Package Manager. Minimum deployment target iOS 18, per [ADR-018](https://lightine.youtrack.cloud/articles/TES-A-45)
+- **Android** — core logic plus headless live-camera and saved-image reading (CameraX + ML Kit). Minimum API level 23 (Android 6.0), per [ADR-018](https://lightine.youtrack.cloud/articles/TES-A-45)
+- **iOS** — core logic plus headless live-camera and saved-image reading (AVFoundation + Apple Vision), distributed as an XCFramework via Swift Package Manager. Minimum deployment target iOS 18, per [ADR-018](https://lightine.youtrack.cloud/articles/TES-A-45)
 
 The architecture supports further targets — Web (JS / Wasm), Desktop (JVM and native) — without changes to the core logic. They are not part of the initial releases but can be activated when there is a use case.
 
