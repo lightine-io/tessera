@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **Automated the cross-repo SPM (iOS) release publish** (CI/release tooling; no code or API change). On a `v*` tag the release workflow now updates `lightine-io/tessera-swift` itself — the `binaryTarget` url + checksum in `Package.swift` and the matching release tag — instead of a maintainer editing them by hand ([TES-14](https://lightine.youtrack.cloud/issue/TES-14)). It uses a least-privilege **GitHub App** installation token (`contents` + `pull_requests` on `tessera-swift` only) and stays entirely within that repo's rulesets: an API-authored (GitHub-signed) commit on a release branch, an auto-merged PR (the repo requires a PR but **zero** approvals → signed merge commit), and a lightweight tag on the merge (its signed anchor satisfies the tag's `required_signatures` rule). No signing key in CI; idempotent and re-run-safe; degrades to the manual step on failure. Proven end-to-end against a replica before first use.
+
 ## [0.3.0] - 2026-06-29
 
 Headless **saved-image (pre-captured image) MRZ reading** on Android and iOS, on top of the `0.2.x` live-camera reading. A saved image is read through the same analyse-frame core and parse/validate pipeline as a live capture (a saved-image MRZ validates identically — only the read-method provenance differs), gated behind an explicit opt-in because saved images carry more risk than a live capture ([ADR-023](https://lightine.youtrack.cloud/articles/TES-A-63)). Adds the opt-in `SavedImageMrzReader`, tolerant candidate disambiguation, and a capture-metadata (EXIF) surface with double-gated GPS read-suppression, plus the Android (ML Kit + `androidx.exifinterface`) and iOS (Apple Vision + ImageIO) platform readers. Device-verified on Android and iOS hardware. The release also folds in the documentation/process and AI-collaboration-infrastructure work accumulated since `0.2.1` (the entries below).

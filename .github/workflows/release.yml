@@ -13,9 +13,10 @@
 #   - JVM + Android → Maven Central, STAGED (automaticRelease=false, ADR-016): the workflow uploads a
 #     staged deployment; a maintainer clicks "release" in the Sonatype Central portal to go live.
 #   - iOS → SPM: the `Tessera` XCFramework is built, zipped, and attached to this repo's GitHub Release;
-#     iOS consumers get it via lightine-io/tessera-swift (ADR-019). For 0.2.0 the tessera-swift
-#     Package.swift + tag is updated BY HAND using the checksum this workflow prints; cross-repo
-#     automation of that step is deferred post-0.2.0 (the project's issue tracker).
+#     iOS consumers get it via lightine-io/tessera-swift (ADR-019). The tessera-swift Package.swift
+#     (binaryTarget url + checksum) and its matching release tag are then updated AUTOMATICALLY by the
+#     "Publish to tessera-swift (SPM)" steps below, using a least-privilege GitHub App installation
+#     token (TES-14) — fully within tessera-swift's signed-commit / PR-required / immutable-tag rulesets.
 #
 # Every action is pinned to a full commit SHA with a version comment (supply-chain hardening),
 # matching .github/workflows/check.yml.
@@ -150,6 +151,82 @@ jobs:
           else
             gh release create "$TAG" "$ZIP" --title "$TAG" --notes-file release-notes.md --verify-tag
           fi
+
+      # --- TES-14: automated cross-repo SPM publish into lightine-io/tessera-swift ---
+      # Updates the binaryTarget (url + checksum) in Package.swift and cuts the matching release tag,
+      # fully within tessera-swift's rulesets (signed commits, PR-required/0-approvals, immutable tags)
+      # via a least-privilege GitHub App token. API-authored commits are GitHub-signed, so no signing
+      # key is needed in CI. Idempotent / re-run-safe; never moves an existing tag. The flow was proven
+      # end-to-end against a replica before first use (TES-14). If this fails, the Maven + GitHub Release
+      # above still stand — fall back to a manual Package.swift bump, or just re-run.
+      - name: Mint tessera-swift App token
+        id: spm_token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.SPM_PUBLISH_APP_ID }}
+          private-key: ${{ secrets.SPM_PUBLISH_APP_PRIVATE_KEY }}
+          owner: lightine-io
+          repositories: tessera-swift
+
+      - name: Publish to tessera-swift (SPM)
+        env:
+          GH_TOKEN: ${{ steps.spm_token.outputs.token }}
+          TAG: ${{ github.ref_name }}
+          CHECKSUM: ${{ steps.checksum.outputs.checksum }}
+        run: |
+          set -euo pipefail
+          REPO="lightine-io/tessera-swift"
+          BRANCH="release/${TAG}"
+
+          # Idempotency: tags are immutable. If the tag already exists, this release is fully published.
+          if gh api "repos/${REPO}/git/ref/tags/${TAG}" >/dev/null 2>&1; then
+            echo "::notice::${REPO} ${TAG} already published; nothing to do."; exit 0
+          fi
+
+          # Partial-rerun guard: if a prior run already merged Package.swift but did not tag, tag only.
+          CUR=$(gh api "repos/${REPO}/contents/Package.swift" --jq '.content' | base64 -d)
+          if printf '%s' "${CUR}" | grep -q "releases/download/${TAG}/Tessera.xcframework.zip"; then
+            echo "::notice::Package.swift already at ${TAG} on main; tagging only."
+            MERGE=$(gh api "repos/${REPO}/git/ref/heads/main" --jq '.object.sha')
+            gh api -X POST "repos/${REPO}/git/refs" -f ref="refs/tags/${TAG}" -f sha="${MERGE}" >/dev/null
+            echo "::notice::Tagged ${REPO} ${TAG}."; exit 0
+          fi
+
+          # Render the new Package.swift: swap only the download URL's version and the checksum.
+          NEW=$(printf '%s' "${CUR}" \
+            | sed -E "s#(releases/download/)v[0-9][^/]*(/Tessera\.xcframework\.zip)#\1${TAG}\2#" \
+            | sed -E "s#(checksum: \")[a-f0-9]{64}(\")#\1${CHECKSUM}\2#")
+
+          # Branch off the current default-branch head (reset a stale branch if a prior run left one).
+          BASE=$(gh api "repos/${REPO}/git/ref/heads/main" --jq '.object.sha')
+          gh api -X POST "repos/${REPO}/git/refs" -f ref="refs/heads/${BRANCH}" -f sha="${BASE}" >/dev/null 2>&1 \
+            || gh api -X PATCH "repos/${REPO}/git/refs/heads/${BRANCH}" -f sha="${BASE}" -F force=true >/dev/null
+
+          # Signed commit via createCommitOnBranch (GitHub signs API-authored commits — no key in CI).
+          HEAD=$(gh api "repos/${REPO}/git/ref/heads/${BRANCH}" --jq '.object.sha')
+          NB64=$(printf '%s' "${NEW}" | base64 | tr -d '\n')
+          PAYLOAD=$(jq -n \
+            --arg repo "${REPO}" --arg branch "${BRANCH}" --arg head "${HEAD}" \
+            --arg msg "chore(release): Tessera ${TAG} XCFramework (url + checksum)" \
+            --arg contents "${NB64}" \
+            '{query:"mutation($i: CreateCommitOnBranchInput!){createCommitOnBranch(input:$i){commit{oid}}}",
+              variables:{i:{branch:{repositoryNameWithOwner:$repo,branchName:$branch},
+              expectedHeadOid:$head,message:{headline:$msg},
+              fileChanges:{additions:[{path:"Package.swift",contents:$contents}]}}}}')
+          RESP=$(curl -sf https://api.github.com/graphql -H "Authorization: bearer ${GH_TOKEN}" -d "${PAYLOAD}")
+          echo "${RESP}" | jq -e '.data.createCommitOnBranch.commit.oid' >/dev/null \
+            || { echo "::error::createCommitOnBranch failed: ${RESP}"; exit 1; }
+
+          # PR is required by the ruleset (0 approvals) → open and self-merge (signed merge commit).
+          PR=$(gh pr create --repo "${REPO}" --base main --head "${BRANCH}" \
+                 --title "chore(release): Tessera ${TAG} XCFramework" \
+                 --body "Automated by lightine-io/tessera release ${TAG}. Updates binaryTarget url + checksum.")
+          gh pr merge "${PR}" --repo "${REPO}" --merge --delete-branch
+
+          # Tag the merge commit (lightweight; verified via its signed anchor — satisfies the tag ruleset).
+          MERGE=$(gh api "repos/${REPO}/git/ref/heads/main" --jq '.object.sha')
+          gh api -X POST "repos/${REPO}/git/refs" -f ref="refs/tags/${TAG}" -f sha="${MERGE}" >/dev/null
+          echo "::notice::Published ${REPO} ${TAG} (Package.swift + tag)."
 
   # Dry-run — manual only. Validates the pipeline WITHOUT publishing: no environment, no secrets, no
   # release. Proves the build/package/checksum path and that the publish task graph resolves.
