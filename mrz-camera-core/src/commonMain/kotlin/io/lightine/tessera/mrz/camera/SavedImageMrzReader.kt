@@ -23,12 +23,20 @@ import kotlin.time.Instant
  * every distinct, parseable reconstruction on [SavedImageScanResult.candidates] — never picking one (see
  * [MrzCandidate]). Off by default.
  *
+ * **Capture metadata ([metadataReader] + [metadataPolicy]).** When a [metadataReader] is supplied and
+ * [metadataPolicy] is not [CaptureMetadataPolicy.NONE], each read also returns the image's EXIF on
+ * [SavedImageScanResult.captureMetadata]. [metadataPolicy] is the opt-in-within-opt-in gate for GPS PII —
+ * the policy is forwarded to the reader, which suppresses GPS at read time under
+ * [CaptureMetadataPolicy.EXCLUDING_LOCATION] (see [CaptureMetadata]). Off by default.
+ *
  * @param F the saved-image input type — the platform file reference recognized by [recognizer]
  *   (e.g. `android.net.Uri` on Android, `NSURL` on iOS); obtain the recognizer from its gated platform factory.
  * @param acknowledgement the required saved-image-reading acknowledgement (the opt-in gate; no default).
  * @param recognizer the OCR seam for saved images.
  * @param mode strict (default) or lenient candidate extraction, forwarded to the analyse-frame core.
  * @param tolerant when `true`, also surface candidate disambiguations on the result (default `false`).
+ * @param metadataReader the EXIF-reading seam; when `null` no capture metadata is read (default).
+ * @param metadataPolicy how much capture metadata to read; [CaptureMetadataPolicy.NONE] (default) reads none.
  * @param telemetry where per-read [CameraFrameEvent]s go; defaults to the application's registered sink
  *   ([TelemetrySinkRegistry.current][TelemetrySinkRegistry]). Pass an explicit sink to override.
  * @param referenceTimeProvider supplies the reference instant for date-window parsing; override in tests.
@@ -38,6 +46,8 @@ public class SavedImageMrzReader<F>(
     recognizer: MrzTextRecognizer<F>,
     private val mode: ParsingMode = ParsingMode.STRICT,
     private val tolerant: Boolean = false,
+    private val metadataReader: CaptureMetadataReader<F>? = null,
+    private val metadataPolicy: CaptureMetadataPolicy = CaptureMetadataPolicy.NONE,
     telemetry: TelemetrySink = TelemetrySinkRegistry.current,
     private val referenceTimeProvider: () -> Instant = { Clock.System.now() },
 ) {
@@ -55,15 +65,19 @@ public class SavedImageMrzReader<F>(
 
     /**
      * Reads [image] once and returns the result. [SavedImageScanResult.scan] is the primary read; if
-     * [tolerant] is on, [SavedImageScanResult.candidates] also carries the surfaced disambiguations.
-     * Never throws for OCR or parse problems — a failed OCR step becomes a
+     * [tolerant] is on, [SavedImageScanResult.candidates] also carries the surfaced disambiguations, and if a
+     * [metadataReader] is configured with a non-`NONE` [metadataPolicy], [SavedImageScanResult.captureMetadata]
+     * carries the image's EXIF. Never throws for OCR or parse problems — a failed OCR step becomes a
      * [`CaptureError`][MrzScanResult.CaptureError], an unparseable candidate a [`Decoded`][MrzScanResult.Decoded]
      * carrying the parser's failure, and an image with no MRZ a [`NoMrzFound`][MrzScanResult.NoMrzFound], all
      * on [SavedImageScanResult.scan]. Coroutine cancellation still propagates.
      */
     public suspend fun read(image: F): SavedImageScanResult {
         val scan = analyzer.analyse(image)
-        return SavedImageScanResult(scan = scan, candidates = if (tolerant) candidatesFor(scan) else emptyList())
+        val candidates = if (tolerant) candidatesFor(scan) else emptyList()
+        val captureMetadata =
+            if (metadataPolicy != CaptureMetadataPolicy.NONE) metadataReader?.read(image, metadataPolicy) else null
+        return SavedImageScanResult(scan = scan, candidates = candidates, captureMetadata = captureMetadata)
     }
 
     // Runs the tolerant matcher over the SAME recognized text the analyse step already produced (no second

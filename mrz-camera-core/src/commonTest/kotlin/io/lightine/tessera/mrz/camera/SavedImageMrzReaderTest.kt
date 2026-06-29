@@ -7,6 +7,8 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Instant
 
@@ -32,15 +34,45 @@ class SavedImageMrzReaderTest {
         recognizer: MrzTextRecognizer<FakeImage>,
         mode: ParsingMode = ParsingMode.STRICT,
         tolerant: Boolean = false,
+        metadataReader: CaptureMetadataReader<FakeImage>? = null,
+        metadataPolicy: CaptureMetadataPolicy = CaptureMetadataPolicy.NONE,
     ): SavedImageMrzReader<FakeImage> =
         SavedImageMrzReader(
             acknowledgement = SavedImageReadingAcknowledgement(),
             recognizer = recognizer,
             mode = mode,
             tolerant = tolerant,
+            metadataReader = metadataReader,
+            metadataPolicy = metadataPolicy,
             telemetry = NoOpTelemetrySink,
             referenceTimeProvider = { referenceTime },
         )
+
+    private val sampleMetadata =
+        CaptureMetadata(
+            reportedCaptureTime = "2026:05:04 12:00:00",
+            deviceMake = "ACME",
+            deviceModel = "Phone X",
+            software = null,
+            location = GeoLocation(latitude = 40.0, longitude = -3.0),
+            rawTags = mapOf("DateTimeOriginal" to "2026:05:04 12:00:00"),
+        )
+
+    // Records the policy it was asked for, so tests can assert the reader forwards it (the platform impl is
+    // what actually suppresses GPS under that policy — verified in the platform modules).
+    private class RecordingMetadataReader(
+        private val metadata: CaptureMetadata,
+    ) : CaptureMetadataReader<FakeImage> {
+        var calledWith: CaptureMetadataPolicy? = null
+
+        override suspend fun read(
+            image: FakeImage,
+            policy: CaptureMetadataPolicy,
+        ): CaptureMetadata {
+            calledWith = policy
+            return metadata
+        }
+    }
 
     @Test
     fun reads_a_saved_image_and_stamps_pre_captured_image_provenance() =
@@ -129,6 +161,57 @@ class SavedImageMrzReaderTest {
 
             assertIs<MrzScanResult.NoMrzFound>(result.scan)
             assertTrue(result.candidates.isEmpty(), "no shape-matched run means no candidates")
+        }
+
+    @Test
+    fun no_metadata_is_read_under_the_default_none_policy() =
+        runTest {
+            val metadataReader = RecordingMetadataReader(sampleMetadata)
+
+            val result = reader(recognizerReturning(td3Line1, td3Line2), metadataReader = metadataReader).read(FakeImage())
+
+            assertNull(result.captureMetadata, "the default NONE policy must read no metadata")
+            assertNull(metadataReader.calledWith, "the metadata reader must not be called under NONE (read-suppression)")
+        }
+
+    @Test
+    fun the_metadata_policy_is_forwarded_to_the_reader() =
+        runTest {
+            val metadataReader = RecordingMetadataReader(sampleMetadata)
+
+            reader(
+                recognizerReturning(td3Line1, td3Line2),
+                metadataReader = metadataReader,
+                metadataPolicy = CaptureMetadataPolicy.EXCLUDING_LOCATION,
+            ).read(FakeImage())
+
+            // The reader receives the policy so it can suppress GPS at read time (the platform impl honours it).
+            assertEquals(CaptureMetadataPolicy.EXCLUDING_LOCATION, metadataReader.calledWith)
+        }
+
+    @Test
+    fun capture_metadata_is_surfaced_when_requested_with_a_reader() =
+        runTest {
+            val result =
+                reader(
+                    recognizerReturning(td3Line1, td3Line2),
+                    metadataReader = RecordingMetadataReader(sampleMetadata),
+                    metadataPolicy = CaptureMetadataPolicy.INCLUDING_LOCATION,
+                ).read(FakeImage())
+
+            val metadata = assertNotNull(result.captureMetadata)
+            assertEquals("ACME", metadata.deviceMake)
+            assertNotNull(metadata.location, "INCLUDING_LOCATION should surface the GPS the reader returned")
+        }
+
+    @Test
+    fun requesting_metadata_without_a_reader_surfaces_none() =
+        runTest {
+            val result =
+                reader(recognizerReturning(td3Line1, td3Line2), metadataPolicy = CaptureMetadataPolicy.INCLUDING_LOCATION)
+                    .read(FakeImage())
+
+            assertNull(result.captureMetadata, "a non-NONE policy with no reader supplied still reads no metadata")
         }
 
     // Inserts a stray space after the 5th character — benign OCR whitespace noise that STRICT rejects and

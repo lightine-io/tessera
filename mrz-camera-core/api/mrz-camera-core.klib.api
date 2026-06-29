@@ -18,6 +18,18 @@ final enum class io.lightine.tessera.mrz.camera/CameraFrameOutcome : kotlin/Enum
     final fun values(): kotlin/Array<io.lightine.tessera.mrz.camera/CameraFrameOutcome> // io.lightine.tessera.mrz.camera/CameraFrameOutcome.values|values#static(){}[0]
 }
 
+final enum class io.lightine.tessera.mrz.camera/CaptureMetadataPolicy : kotlin/Enum<io.lightine.tessera.mrz.camera/CaptureMetadataPolicy> { // io.lightine.tessera.mrz.camera/CaptureMetadataPolicy|null[0]
+    enum entry EXCLUDING_LOCATION // io.lightine.tessera.mrz.camera/CaptureMetadataPolicy.EXCLUDING_LOCATION|null[0]
+    enum entry INCLUDING_LOCATION // io.lightine.tessera.mrz.camera/CaptureMetadataPolicy.INCLUDING_LOCATION|null[0]
+    enum entry NONE // io.lightine.tessera.mrz.camera/CaptureMetadataPolicy.NONE|null[0]
+
+    final val entries // io.lightine.tessera.mrz.camera/CaptureMetadataPolicy.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.mrz.camera/CaptureMetadataPolicy> // io.lightine.tessera.mrz.camera/CaptureMetadataPolicy.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.mrz.camera/CaptureMetadataPolicy // io.lightine.tessera.mrz.camera/CaptureMetadataPolicy.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.mrz.camera/CaptureMetadataPolicy> // io.lightine.tessera.mrz.camera/CaptureMetadataPolicy.values|values#static(){}[0]
+}
+
 final enum class io.lightine.tessera.mrz.camera/FrameProvenance : kotlin/Enum<io.lightine.tessera.mrz.camera/FrameProvenance> { // io.lightine.tessera.mrz.camera/FrameProvenance|null[0]
     enum entry LIVE_CAMERA // io.lightine.tessera.mrz.camera/FrameProvenance.LIVE_CAMERA|null[0]
     enum entry PRE_CAPTURED_IMAGE // io.lightine.tessera.mrz.camera/FrameProvenance.PRE_CAPTURED_IMAGE|null[0]
@@ -38,6 +50,10 @@ final enum class io.lightine.tessera.mrz.camera/ParsingMode : kotlin/Enum<io.lig
 
     final fun valueOf(kotlin/String): io.lightine.tessera.mrz.camera/ParsingMode // io.lightine.tessera.mrz.camera/ParsingMode.valueOf|valueOf#static(kotlin.String){}[0]
     final fun values(): kotlin/Array<io.lightine.tessera.mrz.camera/ParsingMode> // io.lightine.tessera.mrz.camera/ParsingMode.values|values#static(){}[0]
+}
+
+abstract fun interface <#A: in kotlin/Any?> io.lightine.tessera.mrz.camera/CaptureMetadataReader { // io.lightine.tessera.mrz.camera/CaptureMetadataReader|null[0]
+    abstract suspend fun read(#A, io.lightine.tessera.mrz.camera/CaptureMetadataPolicy): io.lightine.tessera.mrz.camera/CaptureMetadata // io.lightine.tessera.mrz.camera/CaptureMetadataReader.read|read(1:0;io.lightine.tessera.mrz.camera.CaptureMetadataPolicy){}[0]
 }
 
 abstract fun interface <#A: in kotlin/Any?> io.lightine.tessera.mrz.camera/MrzTextRecognizer { // io.lightine.tessera.mrz.camera/MrzTextRecognizer|null[0]
@@ -183,7 +199,7 @@ final class <#A: kotlin/Any?> io.lightine.tessera.mrz.camera/MrzFrameAnalyzer { 
 }
 
 final class <#A: kotlin/Any?> io.lightine.tessera.mrz.camera/SavedImageMrzReader { // io.lightine.tessera.mrz.camera/SavedImageMrzReader|null[0]
-    constructor <init>(io.lightine.tessera.mrz.camera/SavedImageReadingAcknowledgement, io.lightine.tessera.mrz.camera/MrzTextRecognizer<#A>, io.lightine.tessera.mrz.camera/ParsingMode = ..., kotlin/Boolean = ..., io.lightine.tessera.telemetry/TelemetrySink = ..., kotlin/Function0<kotlin.time/Instant> = ...) // io.lightine.tessera.mrz.camera/SavedImageMrzReader.<init>|<init>(io.lightine.tessera.mrz.camera.SavedImageReadingAcknowledgement;io.lightine.tessera.mrz.camera.MrzTextRecognizer<1:0>;io.lightine.tessera.mrz.camera.ParsingMode;kotlin.Boolean;io.lightine.tessera.telemetry.TelemetrySink;kotlin.Function0<kotlin.time.Instant>){}[0]
+    constructor <init>(io.lightine.tessera.mrz.camera/SavedImageReadingAcknowledgement, io.lightine.tessera.mrz.camera/MrzTextRecognizer<#A>, io.lightine.tessera.mrz.camera/ParsingMode = ..., kotlin/Boolean = ..., io.lightine.tessera.mrz.camera/CaptureMetadataReader<#A>? = ..., io.lightine.tessera.mrz.camera/CaptureMetadataPolicy = ..., io.lightine.tessera.telemetry/TelemetrySink = ..., kotlin/Function0<kotlin.time/Instant> = ...) // io.lightine.tessera.mrz.camera/SavedImageMrzReader.<init>|<init>(io.lightine.tessera.mrz.camera.SavedImageReadingAcknowledgement;io.lightine.tessera.mrz.camera.MrzTextRecognizer<1:0>;io.lightine.tessera.mrz.camera.ParsingMode;kotlin.Boolean;io.lightine.tessera.mrz.camera.CaptureMetadataReader<1:0>?;io.lightine.tessera.mrz.camera.CaptureMetadataPolicy;io.lightine.tessera.telemetry.TelemetrySink;kotlin.Function0<kotlin.time.Instant>){}[0]
 
     final suspend fun read(#A): io.lightine.tessera.mrz.camera/SavedImageScanResult // io.lightine.tessera.mrz.camera/SavedImageMrzReader.read|read(1:0){}[0]
 }
@@ -230,6 +246,34 @@ final class io.lightine.tessera.mrz.camera/CameraSessionGate { // io.lightine.te
     final fun stop() // io.lightine.tessera.mrz.camera/CameraSessionGate.stop|stop(){}[0]
 }
 
+final class io.lightine.tessera.mrz.camera/CaptureMetadata { // io.lightine.tessera.mrz.camera/CaptureMetadata|null[0]
+    constructor <init>(kotlin/String?, kotlin/String?, kotlin/String?, kotlin/String?, io.lightine.tessera.mrz.camera/GeoLocation?, kotlin.collections/Map<kotlin/String, kotlin/String>?) // io.lightine.tessera.mrz.camera/CaptureMetadata.<init>|<init>(kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;io.lightine.tessera.mrz.camera.GeoLocation?;kotlin.collections.Map<kotlin.String,kotlin.String>?){}[0]
+
+    final val deviceMake // io.lightine.tessera.mrz.camera/CaptureMetadata.deviceMake|{}deviceMake[0]
+        final fun <get-deviceMake>(): kotlin/String? // io.lightine.tessera.mrz.camera/CaptureMetadata.deviceMake.<get-deviceMake>|<get-deviceMake>(){}[0]
+    final val deviceModel // io.lightine.tessera.mrz.camera/CaptureMetadata.deviceModel|{}deviceModel[0]
+        final fun <get-deviceModel>(): kotlin/String? // io.lightine.tessera.mrz.camera/CaptureMetadata.deviceModel.<get-deviceModel>|<get-deviceModel>(){}[0]
+    final val location // io.lightine.tessera.mrz.camera/CaptureMetadata.location|{}location[0]
+        final fun <get-location>(): io.lightine.tessera.mrz.camera/GeoLocation? // io.lightine.tessera.mrz.camera/CaptureMetadata.location.<get-location>|<get-location>(){}[0]
+    final val rawTags // io.lightine.tessera.mrz.camera/CaptureMetadata.rawTags|{}rawTags[0]
+        final fun <get-rawTags>(): kotlin.collections/Map<kotlin/String, kotlin/String>? // io.lightine.tessera.mrz.camera/CaptureMetadata.rawTags.<get-rawTags>|<get-rawTags>(){}[0]
+    final val reportedCaptureTime // io.lightine.tessera.mrz.camera/CaptureMetadata.reportedCaptureTime|{}reportedCaptureTime[0]
+        final fun <get-reportedCaptureTime>(): kotlin/String? // io.lightine.tessera.mrz.camera/CaptureMetadata.reportedCaptureTime.<get-reportedCaptureTime>|<get-reportedCaptureTime>(){}[0]
+    final val software // io.lightine.tessera.mrz.camera/CaptureMetadata.software|{}software[0]
+        final fun <get-software>(): kotlin/String? // io.lightine.tessera.mrz.camera/CaptureMetadata.software.<get-software>|<get-software>(){}[0]
+
+    final fun component1(): kotlin/String? // io.lightine.tessera.mrz.camera/CaptureMetadata.component1|component1(){}[0]
+    final fun component2(): kotlin/String? // io.lightine.tessera.mrz.camera/CaptureMetadata.component2|component2(){}[0]
+    final fun component3(): kotlin/String? // io.lightine.tessera.mrz.camera/CaptureMetadata.component3|component3(){}[0]
+    final fun component4(): kotlin/String? // io.lightine.tessera.mrz.camera/CaptureMetadata.component4|component4(){}[0]
+    final fun component5(): io.lightine.tessera.mrz.camera/GeoLocation? // io.lightine.tessera.mrz.camera/CaptureMetadata.component5|component5(){}[0]
+    final fun component6(): kotlin.collections/Map<kotlin/String, kotlin/String>? // io.lightine.tessera.mrz.camera/CaptureMetadata.component6|component6(){}[0]
+    final fun copy(kotlin/String? = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin/String? = ..., io.lightine.tessera.mrz.camera/GeoLocation? = ..., kotlin.collections/Map<kotlin/String, kotlin/String>? = ...): io.lightine.tessera.mrz.camera/CaptureMetadata // io.lightine.tessera.mrz.camera/CaptureMetadata.copy|copy(kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;io.lightine.tessera.mrz.camera.GeoLocation?;kotlin.collections.Map<kotlin.String,kotlin.String>?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.mrz.camera/CaptureMetadata.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.mrz.camera/CaptureMetadata.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.mrz.camera/CaptureMetadata.toString|toString(){}[0]
+}
+
 final class io.lightine.tessera.mrz.camera/CharacterDisambiguation { // io.lightine.tessera.mrz.camera/CharacterDisambiguation|null[0]
     constructor <init>(kotlin/Int, kotlin/Int, kotlin/Char, kotlin/Char) // io.lightine.tessera.mrz.camera/CharacterDisambiguation.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Char;kotlin.Char){}[0]
 
@@ -250,6 +294,22 @@ final class io.lightine.tessera.mrz.camera/CharacterDisambiguation { // io.light
     final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.mrz.camera/CharacterDisambiguation.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // io.lightine.tessera.mrz.camera/CharacterDisambiguation.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // io.lightine.tessera.mrz.camera/CharacterDisambiguation.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.mrz.camera/GeoLocation { // io.lightine.tessera.mrz.camera/GeoLocation|null[0]
+    constructor <init>(kotlin/Double, kotlin/Double) // io.lightine.tessera.mrz.camera/GeoLocation.<init>|<init>(kotlin.Double;kotlin.Double){}[0]
+
+    final val latitude // io.lightine.tessera.mrz.camera/GeoLocation.latitude|{}latitude[0]
+        final fun <get-latitude>(): kotlin/Double // io.lightine.tessera.mrz.camera/GeoLocation.latitude.<get-latitude>|<get-latitude>(){}[0]
+    final val longitude // io.lightine.tessera.mrz.camera/GeoLocation.longitude|{}longitude[0]
+        final fun <get-longitude>(): kotlin/Double // io.lightine.tessera.mrz.camera/GeoLocation.longitude.<get-longitude>|<get-longitude>(){}[0]
+
+    final fun component1(): kotlin/Double // io.lightine.tessera.mrz.camera/GeoLocation.component1|component1(){}[0]
+    final fun component2(): kotlin/Double // io.lightine.tessera.mrz.camera/GeoLocation.component2|component2(){}[0]
+    final fun copy(kotlin/Double = ..., kotlin/Double = ...): io.lightine.tessera.mrz.camera/GeoLocation // io.lightine.tessera.mrz.camera/GeoLocation.copy|copy(kotlin.Double;kotlin.Double){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.mrz.camera/GeoLocation.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.mrz.camera/GeoLocation.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.mrz.camera/GeoLocation.toString|toString(){}[0]
 }
 
 final class io.lightine.tessera.mrz.camera/MrzCandidate { // io.lightine.tessera.mrz.camera/MrzCandidate|null[0]
@@ -305,16 +365,19 @@ final class io.lightine.tessera.mrz.camera/SavedImageReadingAcknowledgement { //
 }
 
 final class io.lightine.tessera.mrz.camera/SavedImageScanResult { // io.lightine.tessera.mrz.camera/SavedImageScanResult|null[0]
-    constructor <init>(io.lightine.tessera.mrz.camera/MrzScanResult, kotlin.collections/List<io.lightine.tessera.mrz.camera/MrzCandidate>) // io.lightine.tessera.mrz.camera/SavedImageScanResult.<init>|<init>(io.lightine.tessera.mrz.camera.MrzScanResult;kotlin.collections.List<io.lightine.tessera.mrz.camera.MrzCandidate>){}[0]
+    constructor <init>(io.lightine.tessera.mrz.camera/MrzScanResult, kotlin.collections/List<io.lightine.tessera.mrz.camera/MrzCandidate>, io.lightine.tessera.mrz.camera/CaptureMetadata?) // io.lightine.tessera.mrz.camera/SavedImageScanResult.<init>|<init>(io.lightine.tessera.mrz.camera.MrzScanResult;kotlin.collections.List<io.lightine.tessera.mrz.camera.MrzCandidate>;io.lightine.tessera.mrz.camera.CaptureMetadata?){}[0]
 
     final val candidates // io.lightine.tessera.mrz.camera/SavedImageScanResult.candidates|{}candidates[0]
         final fun <get-candidates>(): kotlin.collections/List<io.lightine.tessera.mrz.camera/MrzCandidate> // io.lightine.tessera.mrz.camera/SavedImageScanResult.candidates.<get-candidates>|<get-candidates>(){}[0]
+    final val captureMetadata // io.lightine.tessera.mrz.camera/SavedImageScanResult.captureMetadata|{}captureMetadata[0]
+        final fun <get-captureMetadata>(): io.lightine.tessera.mrz.camera/CaptureMetadata? // io.lightine.tessera.mrz.camera/SavedImageScanResult.captureMetadata.<get-captureMetadata>|<get-captureMetadata>(){}[0]
     final val scan // io.lightine.tessera.mrz.camera/SavedImageScanResult.scan|{}scan[0]
         final fun <get-scan>(): io.lightine.tessera.mrz.camera/MrzScanResult // io.lightine.tessera.mrz.camera/SavedImageScanResult.scan.<get-scan>|<get-scan>(){}[0]
 
     final fun component1(): io.lightine.tessera.mrz.camera/MrzScanResult // io.lightine.tessera.mrz.camera/SavedImageScanResult.component1|component1(){}[0]
     final fun component2(): kotlin.collections/List<io.lightine.tessera.mrz.camera/MrzCandidate> // io.lightine.tessera.mrz.camera/SavedImageScanResult.component2|component2(){}[0]
-    final fun copy(io.lightine.tessera.mrz.camera/MrzScanResult = ..., kotlin.collections/List<io.lightine.tessera.mrz.camera/MrzCandidate> = ...): io.lightine.tessera.mrz.camera/SavedImageScanResult // io.lightine.tessera.mrz.camera/SavedImageScanResult.copy|copy(io.lightine.tessera.mrz.camera.MrzScanResult;kotlin.collections.List<io.lightine.tessera.mrz.camera.MrzCandidate>){}[0]
+    final fun component3(): io.lightine.tessera.mrz.camera/CaptureMetadata? // io.lightine.tessera.mrz.camera/SavedImageScanResult.component3|component3(){}[0]
+    final fun copy(io.lightine.tessera.mrz.camera/MrzScanResult = ..., kotlin.collections/List<io.lightine.tessera.mrz.camera/MrzCandidate> = ..., io.lightine.tessera.mrz.camera/CaptureMetadata? = ...): io.lightine.tessera.mrz.camera/SavedImageScanResult // io.lightine.tessera.mrz.camera/SavedImageScanResult.copy|copy(io.lightine.tessera.mrz.camera.MrzScanResult;kotlin.collections.List<io.lightine.tessera.mrz.camera.MrzCandidate>;io.lightine.tessera.mrz.camera.CaptureMetadata?){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.mrz.camera/SavedImageScanResult.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // io.lightine.tessera.mrz.camera/SavedImageScanResult.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // io.lightine.tessera.mrz.camera/SavedImageScanResult.toString|toString(){}[0]
