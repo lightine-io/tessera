@@ -48,8 +48,9 @@ public class MlKitMrzTextRecognizer(
 
 // Bridges an ML Kit Task<T> to a suspend call without depending on the Play-Services coroutines
 // integration (which would pull a Play-Services artifact the bundled model otherwise avoids).
-// Cancelling the coroutine cancels the awaiting continuation.
-private suspend fun <T> Task<T>.await(): T =
+// Cancelling the coroutine cancels the awaiting continuation. `internal` so the saved-image recognizer
+// reuses the same bridge.
+internal suspend fun <T> Task<T>.await(): T =
     suspendCancellableCoroutine { continuation ->
         addOnSuccessListener { result -> continuation.resume(result) }
         addOnFailureListener { error -> continuation.resumeWithException(error) }

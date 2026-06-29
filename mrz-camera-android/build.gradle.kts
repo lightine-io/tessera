@@ -78,6 +78,8 @@ kotlin {
                 // scanner; coroutines-android supplies Dispatchers.Main (CameraX binds on the main thread).
                 implementation(libs.androidx.camera.lifecycle)
                 implementation(libs.kotlinx.coroutines.android)
+                // androidx.exifinterface reads a saved image's EXIF for the CaptureMetadataReader (0.3.0).
+                implementation(libs.androidx.exifinterface)
                 // The Camera2 backend CameraX selects at runtime on a device — needed to actually open a
                 // camera, but it has no compile surface here, so it stays off the compile classpath.
                 runtimeOnly(libs.androidx.camera.camera2)

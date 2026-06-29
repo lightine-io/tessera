@@ -15,6 +15,8 @@ dokka = "2.2.0"
 # Both are latest stable.
 camerax = "1.6.1"
 mlkit-text-recognition = "16.0.1"
+# androidx.exifinterface (mrz-camera-android, 0.3.0) — reads a saved image's EXIF for capture metadata. Latest stable.
+androidx-exifinterface = "1.4.2"
 
 [libraries]
 kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest" }
@@ -30,6 +32,7 @@ androidx-camera-core = { module = "androidx.camera:camera-core", version.ref = "
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
 mlkit-text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "mlkit-text-recognition" }
+androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "androidx-exifinterface" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

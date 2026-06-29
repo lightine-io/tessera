@@ -50,9 +50,13 @@ public class SavedImageMrzReader<F>(
     private val metadataPolicy: CaptureMetadataPolicy = CaptureMetadataPolicy.NONE,
     telemetry: TelemetrySink = TelemetrySinkRegistry.current,
     private val referenceTimeProvider: () -> Instant = { Clock.System.now() },
-) {
+) : AutoCloseable {
     // `acknowledgement` is the compile-time opt-in gate: requiring it (no default) forces the consumer to
     // name it at the call site. It carries no runtime state, so it is intentionally neither used nor retained.
+
+    // The reader owns the OCR recognizer's lifetime: an AutoCloseable recognizer (e.g. the bundled ML Kit
+    // one) is released on [close], mirroring CameraXMrzScanner; a non-closeable recognizer needs no cleanup.
+    private val ownedRecognizer = recognizer as? AutoCloseable
 
     private val analyzer =
         MrzFrameAnalyzer(
@@ -90,5 +94,10 @@ public class SavedImageMrzReader<F>(
                 is MrzScanResult.CaptureError -> return emptyList()
             }
         return TolerantMrzMatcher(mode, referenceTimeProvider).candidates(recognizedText)
+    }
+
+    /** Releases the OCR recognizer if it holds closeable resources (e.g. the bundled ML Kit recognizer). */
+    override fun close() {
+        ownedRecognizer?.close()
     }
 }

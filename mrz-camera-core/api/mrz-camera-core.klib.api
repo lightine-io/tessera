@@ -198,9 +198,10 @@ final class <#A: kotlin/Any?> io.lightine.tessera.mrz.camera/MrzFrameAnalyzer { 
     final suspend fun analyse(#A): io.lightine.tessera.mrz.camera/MrzScanResult // io.lightine.tessera.mrz.camera/MrzFrameAnalyzer.analyse|analyse(1:0){}[0]
 }
 
-final class <#A: kotlin/Any?> io.lightine.tessera.mrz.camera/SavedImageMrzReader { // io.lightine.tessera.mrz.camera/SavedImageMrzReader|null[0]
+final class <#A: kotlin/Any?> io.lightine.tessera.mrz.camera/SavedImageMrzReader : kotlin/AutoCloseable { // io.lightine.tessera.mrz.camera/SavedImageMrzReader|null[0]
     constructor <init>(io.lightine.tessera.mrz.camera/SavedImageReadingAcknowledgement, io.lightine.tessera.mrz.camera/MrzTextRecognizer<#A>, io.lightine.tessera.mrz.camera/ParsingMode = ..., kotlin/Boolean = ..., io.lightine.tessera.mrz.camera/CaptureMetadataReader<#A>? = ..., io.lightine.tessera.mrz.camera/CaptureMetadataPolicy = ..., io.lightine.tessera.telemetry/TelemetrySink = ..., kotlin/Function0<kotlin.time/Instant> = ...) // io.lightine.tessera.mrz.camera/SavedImageMrzReader.<init>|<init>(io.lightine.tessera.mrz.camera.SavedImageReadingAcknowledgement;io.lightine.tessera.mrz.camera.MrzTextRecognizer<1:0>;io.lightine.tessera.mrz.camera.ParsingMode;kotlin.Boolean;io.lightine.tessera.mrz.camera.CaptureMetadataReader<1:0>?;io.lightine.tessera.mrz.camera.CaptureMetadataPolicy;io.lightine.tessera.telemetry.TelemetrySink;kotlin.Function0<kotlin.time.Instant>){}[0]
 
+    final fun close() // io.lightine.tessera.mrz.camera/SavedImageMrzReader.close|close(){}[0]
     final suspend fun read(#A): io.lightine.tessera.mrz.camera/SavedImageScanResult // io.lightine.tessera.mrz.camera/SavedImageMrzReader.read|read(1:0){}[0]
 }
 

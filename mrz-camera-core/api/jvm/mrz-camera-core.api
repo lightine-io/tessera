@@ -279,9 +279,10 @@ public final class io/lightine/tessera/mrz/camera/RecognizedText {
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class io/lightine/tessera/mrz/camera/SavedImageMrzReader {
+public final class io/lightine/tessera/mrz/camera/SavedImageMrzReader : java/lang/AutoCloseable {
 	public fun <init> (Lio/lightine/tessera/mrz/camera/SavedImageReadingAcknowledgement;Lio/lightine/tessera/mrz/camera/MrzTextRecognizer;Lio/lightine/tessera/mrz/camera/ParsingMode;ZLio/lightine/tessera/mrz/camera/CaptureMetadataReader;Lio/lightine/tessera/mrz/camera/CaptureMetadataPolicy;Lio/lightine/tessera/telemetry/TelemetrySink;Lkotlin/jvm/functions/Function0;)V
 	public synthetic fun <init> (Lio/lightine/tessera/mrz/camera/SavedImageReadingAcknowledgement;Lio/lightine/tessera/mrz/camera/MrzTextRecognizer;Lio/lightine/tessera/mrz/camera/ParsingMode;ZLio/lightine/tessera/mrz/camera/CaptureMetadataReader;Lio/lightine/tessera/mrz/camera/CaptureMetadataPolicy;Lio/lightine/tessera/telemetry/TelemetrySink;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun close ()V
 	public final fun read (Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
