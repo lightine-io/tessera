@@ -24,4 +24,5 @@ final class io.lightine.tessera.mrz.camera/VisionMrzTextRecognizer : io.lightine
     final suspend fun recognize(kotlinx.cinterop/CPointer<cnames.structs/opaqueCMSampleBuffer>): io.lightine.tessera.mrz.camera/RecognizedText // io.lightine.tessera.mrz.camera/VisionMrzTextRecognizer.recognize|recognize(kotlinx.cinterop.CPointer<cnames.structs.opaqueCMSampleBuffer>){}[0]
 }
 
+final fun io.lightine.tessera.mrz.camera/imageIoCaptureMetadataReader(io.lightine.tessera.mrz.camera/SavedImageReadingAcknowledgement): io.lightine.tessera.mrz.camera/CaptureMetadataReader<platform.Foundation/NSURL> // io.lightine.tessera.mrz.camera/imageIoCaptureMetadataReader|imageIoCaptureMetadataReader(io.lightine.tessera.mrz.camera.SavedImageReadingAcknowledgement){}[0]
 final fun io.lightine.tessera.mrz.camera/visionSavedImageRecognizer(io.lightine.tessera.mrz.camera/SavedImageReadingAcknowledgement): io.lightine.tessera.mrz.camera/MrzTextRecognizer<platform.Foundation/NSURL> // io.lightine.tessera.mrz.camera/visionSavedImageRecognizer|visionSavedImageRecognizer(io.lightine.tessera.mrz.camera.SavedImageReadingAcknowledgement){}[0]
