@@ -183,7 +183,7 @@ final class <#A: kotlin/Any?> io.lightine.tessera.mrz.camera/MrzFrameAnalyzer { 
 }
 
 final class <#A: kotlin/Any?> io.lightine.tessera.mrz.camera/SavedImageMrzReader { // io.lightine.tessera.mrz.camera/SavedImageMrzReader|null[0]
-    constructor <init>(io.lightine.tessera.mrz.camera/SavedImageReadingAcknowledgement, io.lightine.tessera.mrz.camera/MrzTextRecognizer<#A>, io.lightine.tessera.mrz.camera/ParsingMode = ..., io.lightine.tessera.telemetry/TelemetrySink = ..., kotlin/Function0<kotlin.time/Instant> = ...) // io.lightine.tessera.mrz.camera/SavedImageMrzReader.<init>|<init>(io.lightine.tessera.mrz.camera.SavedImageReadingAcknowledgement;io.lightine.tessera.mrz.camera.MrzTextRecognizer<1:0>;io.lightine.tessera.mrz.camera.ParsingMode;io.lightine.tessera.telemetry.TelemetrySink;kotlin.Function0<kotlin.time.Instant>){}[0]
+    constructor <init>(io.lightine.tessera.mrz.camera/SavedImageReadingAcknowledgement, io.lightine.tessera.mrz.camera/MrzTextRecognizer<#A>, io.lightine.tessera.mrz.camera/ParsingMode = ..., kotlin/Boolean = ..., io.lightine.tessera.telemetry/TelemetrySink = ..., kotlin/Function0<kotlin.time/Instant> = ...) // io.lightine.tessera.mrz.camera/SavedImageMrzReader.<init>|<init>(io.lightine.tessera.mrz.camera.SavedImageReadingAcknowledgement;io.lightine.tessera.mrz.camera.MrzTextRecognizer<1:0>;io.lightine.tessera.mrz.camera.ParsingMode;kotlin.Boolean;io.lightine.tessera.telemetry.TelemetrySink;kotlin.Function0<kotlin.time.Instant>){}[0]
 
     final suspend fun read(#A): io.lightine.tessera.mrz.camera/SavedImageScanResult // io.lightine.tessera.mrz.camera/SavedImageMrzReader.read|read(1:0){}[0]
 }
@@ -230,6 +230,47 @@ final class io.lightine.tessera.mrz.camera/CameraSessionGate { // io.lightine.te
     final fun stop() // io.lightine.tessera.mrz.camera/CameraSessionGate.stop|stop(){}[0]
 }
 
+final class io.lightine.tessera.mrz.camera/CharacterDisambiguation { // io.lightine.tessera.mrz.camera/CharacterDisambiguation|null[0]
+    constructor <init>(kotlin/Int, kotlin/Int, kotlin/Char, kotlin/Char) // io.lightine.tessera.mrz.camera/CharacterDisambiguation.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Char;kotlin.Char){}[0]
+
+    final val columnIndex // io.lightine.tessera.mrz.camera/CharacterDisambiguation.columnIndex|{}columnIndex[0]
+        final fun <get-columnIndex>(): kotlin/Int // io.lightine.tessera.mrz.camera/CharacterDisambiguation.columnIndex.<get-columnIndex>|<get-columnIndex>(){}[0]
+    final val lineIndex // io.lightine.tessera.mrz.camera/CharacterDisambiguation.lineIndex|{}lineIndex[0]
+        final fun <get-lineIndex>(): kotlin/Int // io.lightine.tessera.mrz.camera/CharacterDisambiguation.lineIndex.<get-lineIndex>|<get-lineIndex>(){}[0]
+    final val recognized // io.lightine.tessera.mrz.camera/CharacterDisambiguation.recognized|{}recognized[0]
+        final fun <get-recognized>(): kotlin/Char // io.lightine.tessera.mrz.camera/CharacterDisambiguation.recognized.<get-recognized>|<get-recognized>(){}[0]
+    final val resolved // io.lightine.tessera.mrz.camera/CharacterDisambiguation.resolved|{}resolved[0]
+        final fun <get-resolved>(): kotlin/Char // io.lightine.tessera.mrz.camera/CharacterDisambiguation.resolved.<get-resolved>|<get-resolved>(){}[0]
+
+    final fun component1(): kotlin/Int // io.lightine.tessera.mrz.camera/CharacterDisambiguation.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // io.lightine.tessera.mrz.camera/CharacterDisambiguation.component2|component2(){}[0]
+    final fun component3(): kotlin/Char // io.lightine.tessera.mrz.camera/CharacterDisambiguation.component3|component3(){}[0]
+    final fun component4(): kotlin/Char // io.lightine.tessera.mrz.camera/CharacterDisambiguation.component4|component4(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/Int = ..., kotlin/Char = ..., kotlin/Char = ...): io.lightine.tessera.mrz.camera/CharacterDisambiguation // io.lightine.tessera.mrz.camera/CharacterDisambiguation.copy|copy(kotlin.Int;kotlin.Int;kotlin.Char;kotlin.Char){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.mrz.camera/CharacterDisambiguation.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.mrz.camera/CharacterDisambiguation.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.mrz.camera/CharacterDisambiguation.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.mrz.camera/MrzCandidate { // io.lightine.tessera.mrz.camera/MrzCandidate|null[0]
+    constructor <init>(kotlin.collections/List<kotlin/String>, io.lightine.tessera.mrz.parsing/ParseResult, kotlin.collections/List<io.lightine.tessera.mrz.camera/CharacterDisambiguation>) // io.lightine.tessera.mrz.camera/MrzCandidate.<init>|<init>(kotlin.collections.List<kotlin.String>;io.lightine.tessera.mrz.parsing.ParseResult;kotlin.collections.List<io.lightine.tessera.mrz.camera.CharacterDisambiguation>){}[0]
+
+    final val disambiguations // io.lightine.tessera.mrz.camera/MrzCandidate.disambiguations|{}disambiguations[0]
+        final fun <get-disambiguations>(): kotlin.collections/List<io.lightine.tessera.mrz.camera/CharacterDisambiguation> // io.lightine.tessera.mrz.camera/MrzCandidate.disambiguations.<get-disambiguations>|<get-disambiguations>(){}[0]
+    final val mrzLines // io.lightine.tessera.mrz.camera/MrzCandidate.mrzLines|{}mrzLines[0]
+        final fun <get-mrzLines>(): kotlin.collections/List<kotlin/String> // io.lightine.tessera.mrz.camera/MrzCandidate.mrzLines.<get-mrzLines>|<get-mrzLines>(){}[0]
+    final val parse // io.lightine.tessera.mrz.camera/MrzCandidate.parse|{}parse[0]
+        final fun <get-parse>(): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.camera/MrzCandidate.parse.<get-parse>|<get-parse>(){}[0]
+
+    final fun component1(): kotlin.collections/List<kotlin/String> // io.lightine.tessera.mrz.camera/MrzCandidate.component1|component1(){}[0]
+    final fun component2(): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.camera/MrzCandidate.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/List<io.lightine.tessera.mrz.camera/CharacterDisambiguation> // io.lightine.tessera.mrz.camera/MrzCandidate.component3|component3(){}[0]
+    final fun copy(kotlin.collections/List<kotlin/String> = ..., io.lightine.tessera.mrz.parsing/ParseResult = ..., kotlin.collections/List<io.lightine.tessera.mrz.camera/CharacterDisambiguation> = ...): io.lightine.tessera.mrz.camera/MrzCandidate // io.lightine.tessera.mrz.camera/MrzCandidate.copy|copy(kotlin.collections.List<kotlin.String>;io.lightine.tessera.mrz.parsing.ParseResult;kotlin.collections.List<io.lightine.tessera.mrz.camera.CharacterDisambiguation>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.mrz.camera/MrzCandidate.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.mrz.camera/MrzCandidate.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.mrz.camera/MrzCandidate.toString|toString(){}[0]
+}
+
 final class io.lightine.tessera.mrz.camera/RecognizedLine { // io.lightine.tessera.mrz.camera/RecognizedLine|null[0]
     constructor <init>(kotlin/String, kotlin/Float?) // io.lightine.tessera.mrz.camera/RecognizedLine.<init>|<init>(kotlin.String;kotlin.Float?){}[0]
 
@@ -264,13 +305,16 @@ final class io.lightine.tessera.mrz.camera/SavedImageReadingAcknowledgement { //
 }
 
 final class io.lightine.tessera.mrz.camera/SavedImageScanResult { // io.lightine.tessera.mrz.camera/SavedImageScanResult|null[0]
-    constructor <init>(io.lightine.tessera.mrz.camera/MrzScanResult) // io.lightine.tessera.mrz.camera/SavedImageScanResult.<init>|<init>(io.lightine.tessera.mrz.camera.MrzScanResult){}[0]
+    constructor <init>(io.lightine.tessera.mrz.camera/MrzScanResult, kotlin.collections/List<io.lightine.tessera.mrz.camera/MrzCandidate>) // io.lightine.tessera.mrz.camera/SavedImageScanResult.<init>|<init>(io.lightine.tessera.mrz.camera.MrzScanResult;kotlin.collections.List<io.lightine.tessera.mrz.camera.MrzCandidate>){}[0]
 
+    final val candidates // io.lightine.tessera.mrz.camera/SavedImageScanResult.candidates|{}candidates[0]
+        final fun <get-candidates>(): kotlin.collections/List<io.lightine.tessera.mrz.camera/MrzCandidate> // io.lightine.tessera.mrz.camera/SavedImageScanResult.candidates.<get-candidates>|<get-candidates>(){}[0]
     final val scan // io.lightine.tessera.mrz.camera/SavedImageScanResult.scan|{}scan[0]
         final fun <get-scan>(): io.lightine.tessera.mrz.camera/MrzScanResult // io.lightine.tessera.mrz.camera/SavedImageScanResult.scan.<get-scan>|<get-scan>(){}[0]
 
     final fun component1(): io.lightine.tessera.mrz.camera/MrzScanResult // io.lightine.tessera.mrz.camera/SavedImageScanResult.component1|component1(){}[0]
-    final fun copy(io.lightine.tessera.mrz.camera/MrzScanResult = ...): io.lightine.tessera.mrz.camera/SavedImageScanResult // io.lightine.tessera.mrz.camera/SavedImageScanResult.copy|copy(io.lightine.tessera.mrz.camera.MrzScanResult){}[0]
+    final fun component2(): kotlin.collections/List<io.lightine.tessera.mrz.camera/MrzCandidate> // io.lightine.tessera.mrz.camera/SavedImageScanResult.component2|component2(){}[0]
+    final fun copy(io.lightine.tessera.mrz.camera/MrzScanResult = ..., kotlin.collections/List<io.lightine.tessera.mrz.camera/MrzCandidate> = ...): io.lightine.tessera.mrz.camera/SavedImageScanResult // io.lightine.tessera.mrz.camera/SavedImageScanResult.copy|copy(io.lightine.tessera.mrz.camera.MrzScanResult;kotlin.collections.List<io.lightine.tessera.mrz.camera.MrzCandidate>){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.mrz.camera/SavedImageScanResult.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // io.lightine.tessera.mrz.camera/SavedImageScanResult.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // io.lightine.tessera.mrz.camera/SavedImageScanResult.toString|toString(){}[0]

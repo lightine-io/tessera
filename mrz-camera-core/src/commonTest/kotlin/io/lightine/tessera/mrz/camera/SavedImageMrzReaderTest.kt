@@ -7,6 +7,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 /**
@@ -30,11 +31,13 @@ class SavedImageMrzReaderTest {
     private fun reader(
         recognizer: MrzTextRecognizer<FakeImage>,
         mode: ParsingMode = ParsingMode.STRICT,
+        tolerant: Boolean = false,
     ): SavedImageMrzReader<FakeImage> =
         SavedImageMrzReader(
             acknowledgement = SavedImageReadingAcknowledgement(),
             recognizer = recognizer,
             mode = mode,
+            tolerant = tolerant,
             telemetry = NoOpTelemetrySink,
             referenceTimeProvider = { referenceTime },
         )
@@ -72,6 +75,60 @@ class SavedImageMrzReaderTest {
             val decoded = assertIs<MrzScanResult.Decoded>(lenient.scan)
             assertIs<ParseResult.Success>(decoded.parse)
             assertEquals(ReadMethod.PRE_CAPTURED_IMAGE, decoded.parse.metadata.readMethod)
+        }
+
+    @Test
+    fun non_tolerant_reads_surface_no_candidates() =
+        runTest {
+            val result = reader(recognizerReturning(td3Line1, td3Line2), tolerant = false).read(FakeImage())
+
+            assertIs<MrzScanResult.Decoded>(result.scan)
+            assertTrue(result.candidates.isEmpty(), "candidates must be empty unless tolerant reading is enabled")
+        }
+
+    @Test
+    fun tolerant_reading_surfaces_distinct_candidates_including_the_as_recognized_one() =
+        runTest {
+            val result = reader(recognizerReturning(td3Line1, td3Line2), tolerant = true).read(FakeImage())
+
+            // The strict read is unchanged and still the primary result.
+            assertIs<MrzScanResult.Decoded>(result.scan)
+
+            // Candidates surface alongside it. The as-recognized candidate (no disambiguations) is present and
+            // parses as the valid specimen; every candidate is stamped with saved-image provenance, and
+            // candidate MRZ lines are distinct (no duplicates).
+            assertTrue(result.candidates.isNotEmpty(), "tolerant reading should surface candidates for an MRZ with ambiguous glyphs")
+            val asRecognized = result.candidates.singleOrNull { it.disambiguations.isEmpty() }
+            assertIs<ParseResult.Success>(
+                asRecognized?.parse,
+                "the as-recognized reading should be surfaced and parse as the valid specimen",
+            )
+            assertTrue(result.candidates.any { it.disambiguations.isNotEmpty() }, "at least one disambiguated alternative should surface")
+            result.candidates.forEach { candidate ->
+                assertEquals(ReadMethod.PRE_CAPTURED_IMAGE, candidate.parse.metadata.readMethod)
+                // Every recorded disambiguation must actually differ (recognized != resolved) at a real position.
+                candidate.disambiguations.forEach { d ->
+                    assertTrue(d.recognized != d.resolved)
+                    assertEquals(d.resolved, candidate.mrzLines[d.lineIndex][d.columnIndex])
+                }
+            }
+            assertEquals(
+                result.candidates
+                    .map { it.mrzLines }
+                    .distinct()
+                    .size,
+                result.candidates.size,
+                "candidates must be distinct",
+            )
+        }
+
+    @Test
+    fun tolerant_reading_of_an_image_without_an_mrz_surfaces_no_candidates() =
+        runTest {
+            val result = reader(recognizerReturning("UTOPIA", "JUST SOME PRINTED TEXT"), tolerant = true).read(FakeImage())
+
+            assertIs<MrzScanResult.NoMrzFound>(result.scan)
+            assertTrue(result.candidates.isEmpty(), "no shape-matched run means no candidates")
         }
 
     // Inserts a stray space after the 5th character — benign OCR whitespace noise that STRICT rejects and

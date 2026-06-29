@@ -7,13 +7,21 @@ package io.lightine.tessera.mrz.camera
  * MRZ runs through the identical parse/validate pipeline and validates identically to a camera-sourced or
  * typed-in one — only the read-method provenance differs ([FrameProvenance.PRE_CAPTURED_IMAGE]). Reusing
  * the locked camera result keeps the contract stable; this wrapper is the saved-image-specific result type
- * that later carries the additional saved-image channels (tolerant-mode candidates and capture metadata).
+ * that also carries the additional saved-image channel(s) — currently the tolerant-mode [candidates].
  *
  * **Contains document PII — do not log verbatim.** [scan] holds the parsed document fields and the raw OCR
- * text, so this type's generated `toString()` surfaces personal data; branch on [scan] and log only non-PII
- * fields (see the warning on [MrzScanResult]). The SDK itself never logs these values.
+ * text, and [candidates] hold reconstructed MRZ lines, so this type's generated `toString()` surfaces
+ * personal data; branch and log only non-PII fields (see the warnings on [MrzScanResult] / [MrzCandidate]).
+ * The SDK itself never logs these values.
  */
 public data class SavedImageScanResult(
     /** The MRZ read outcome — `Decoded` / `NoMrzFound` / `CaptureError`, identical in shape to the camera path. */
     public val scan: MrzScanResult,
+    /**
+     * Candidate reconstructions from tolerant disambiguation, surfaced **alongside** [scan] and never
+     * replacing it. **Empty** unless the read was tolerant (`SavedImageMrzReader(tolerant = true)`) and the
+     * recognized MRZ had genuinely ambiguous glyphs to resolve. All distinct, parseable candidates are
+     * surfaced, unranked — the consumer chooses, using each [MrzCandidate.parse] verdict. See [MrzCandidate].
+     */
+    public val candidates: List<MrzCandidate>,
 )

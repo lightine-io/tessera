@@ -18,11 +18,17 @@ import kotlin.time.Instant
  * ([reading-risks](https://lightine.youtrack.cloud/articles/TES-A-11)). Passing it is the consumer's explicit
  * acknowledgement; it confers no SDK judgement about the image (Principle 1).
  *
+ * **Tolerant disambiguation ([tolerant]).** Orthogonal to [mode] (strict/lenient line detection): when on,
+ * each read additionally enumerates how the recognized MRZ's ambiguous glyphs could be resolved and surfaces
+ * every distinct, parseable reconstruction on [SavedImageScanResult.candidates] — never picking one (see
+ * [MrzCandidate]). Off by default.
+ *
  * @param F the saved-image input type — the platform file reference recognized by [recognizer]
  *   (e.g. `android.net.Uri` on Android, `NSURL` on iOS); obtain the recognizer from its gated platform factory.
  * @param acknowledgement the required saved-image-reading acknowledgement (the opt-in gate; no default).
  * @param recognizer the OCR seam for saved images.
  * @param mode strict (default) or lenient candidate extraction, forwarded to the analyse-frame core.
+ * @param tolerant when `true`, also surface candidate disambiguations on the result (default `false`).
  * @param telemetry where per-read [CameraFrameEvent]s go; defaults to the application's registered sink
  *   ([TelemetrySinkRegistry.current][TelemetrySinkRegistry]). Pass an explicit sink to override.
  * @param referenceTimeProvider supplies the reference instant for date-window parsing; override in tests.
@@ -30,9 +36,10 @@ import kotlin.time.Instant
 public class SavedImageMrzReader<F>(
     acknowledgement: SavedImageReadingAcknowledgement,
     recognizer: MrzTextRecognizer<F>,
-    mode: ParsingMode = ParsingMode.STRICT,
+    private val mode: ParsingMode = ParsingMode.STRICT,
+    private val tolerant: Boolean = false,
     telemetry: TelemetrySink = TelemetrySinkRegistry.current,
-    referenceTimeProvider: () -> Instant = { Clock.System.now() },
+    private val referenceTimeProvider: () -> Instant = { Clock.System.now() },
 ) {
     // `acknowledgement` is the compile-time opt-in gate: requiring it (no default) forces the consumer to
     // name it at the call site. It carries no runtime state, so it is intentionally neither used nor retained.
@@ -47,11 +54,27 @@ public class SavedImageMrzReader<F>(
         )
 
     /**
-     * Reads [image] once and returns the result. Never throws for OCR or parse problems — a failed OCR step
-     * becomes a [`CaptureError`][MrzScanResult.CaptureError], an unparseable candidate a
-     * [`Decoded`][MrzScanResult.Decoded] carrying the parser's failure, and an image with no MRZ a
-     * [`NoMrzFound`][MrzScanResult.NoMrzFound], all on [SavedImageScanResult.scan]. Coroutine cancellation
-     * still propagates.
+     * Reads [image] once and returns the result. [SavedImageScanResult.scan] is the primary read; if
+     * [tolerant] is on, [SavedImageScanResult.candidates] also carries the surfaced disambiguations.
+     * Never throws for OCR or parse problems — a failed OCR step becomes a
+     * [`CaptureError`][MrzScanResult.CaptureError], an unparseable candidate a [`Decoded`][MrzScanResult.Decoded]
+     * carrying the parser's failure, and an image with no MRZ a [`NoMrzFound`][MrzScanResult.NoMrzFound], all
+     * on [SavedImageScanResult.scan]. Coroutine cancellation still propagates.
      */
-    public suspend fun read(image: F): SavedImageScanResult = SavedImageScanResult(scan = analyzer.analyse(image))
+    public suspend fun read(image: F): SavedImageScanResult {
+        val scan = analyzer.analyse(image)
+        return SavedImageScanResult(scan = scan, candidates = if (tolerant) candidatesFor(scan) else emptyList())
+    }
+
+    // Runs the tolerant matcher over the SAME recognized text the analyse step already produced (no second
+    // OCR). A capture failure carries no text, so it yields no candidates.
+    private fun candidatesFor(scan: MrzScanResult): List<MrzCandidate> {
+        val recognizedText =
+            when (scan) {
+                is MrzScanResult.Decoded -> scan.recognizedText
+                is MrzScanResult.NoMrzFound -> scan.recognizedText
+                is MrzScanResult.CaptureError -> return emptyList()
+            }
+        return TolerantMrzMatcher(mode, referenceTimeProvider).candidates(recognizedText)
+    }
 }
