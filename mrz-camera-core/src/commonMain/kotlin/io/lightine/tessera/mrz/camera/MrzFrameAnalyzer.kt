@@ -59,6 +59,31 @@ public class MrzFrameAnalyzer<F>(
     private val telemetry: TelemetrySink = TelemetrySinkRegistry.current,
     private val referenceTimeProvider: () -> Instant = { Clock.System.now() },
 ) {
+    // The read-method provenance stamped on every result. Defaults to live camera (the 0.2.0 behaviour);
+    // a non-camera frame source (saved images, 0.3.0) selects PRE_CAPTURED_IMAGE via the secondary
+    // constructor below. Set once at construction.
+    private var provenance: FrameProvenance = FrameProvenance.LIVE_CAMERA
+
+    /**
+     * Constructs an analyzer whose frames come from a specific [provenance] — e.g.
+     * [FrameProvenance.PRE_CAPTURED_IMAGE] for saved-image reading — so each result's read method is
+     * stamped honestly (Principle 5 — report how the data reached the SDK). Identical to the primary
+     * constructor in every other respect; the primary defaults provenance to [FrameProvenance.LIVE_CAMERA].
+     * Added as a secondary constructor so the published primary constructor's binary signature is
+     * unchanged ([ADR-007](https://lightine.youtrack.cloud/articles/TES-A-37) — strict backward compatibility).
+     *
+     * @param provenance where this analyzer's frames come from; stamped on every result's read method.
+     */
+    public constructor(
+        recognizer: MrzTextRecognizer<F>,
+        provenance: FrameProvenance,
+        mode: ParsingMode = ParsingMode.STRICT,
+        telemetry: TelemetrySink = TelemetrySinkRegistry.current,
+        referenceTimeProvider: () -> Instant = { Clock.System.now() },
+    ) : this(recognizer, mode, telemetry, referenceTimeProvider) {
+        this.provenance = provenance
+    }
+
     /**
      * Analyses a single [frame]. Never throws for OCR or parse problems: a failed OCR step becomes
      * [`MrzScanResult.CaptureError`][MrzScanResult.CaptureError], an unparseable candidate becomes
@@ -93,7 +118,7 @@ public class MrzFrameAnalyzer<F>(
                 MrzScanResult.NoMrzFound(recognizedText = recognizedText, quality = quality)
             } else {
                 MrzScanResult.Decoded(
-                    parse = MrzParser.parse(candidate, referenceTimeProvider()).withLiveCameraProvenance(),
+                    parse = MrzParser.parse(candidate, referenceTimeProvider()).withProvenance(provenance.readMethod),
                     recognizedText = recognizedText,
                     quality = quality,
                 )
@@ -172,19 +197,16 @@ public class MrzFrameAnalyzer<F>(
     }
 }
 
-// Stamps live-camera provenance onto a parser result. The parser itself sees only a string, so it
-// reports `BACKEND_STRING_INPUT`; the analyse-frame core knows the string came from a live camera and
-// records that honestly (Principle 5 — transparency: report what we know). In 0.x every frame source
-// is a live camera (the Android/iOS owns-session scanners, or a consumer feeding camera frames to
-// [MrzFrameAnalyzer.analyse]); when a non-camera frame source lands (USB/desktop/web — see the
-// `MrzTextRecognizer<F>` seam in the class KDoc), make this provenance a constructor parameter instead.
-// Only the read-method changes; the parser's verdict (document, warnings, validation failures) is
-// surfaced unchanged (reader, not oracle).
-private fun ParseResult.withLiveCameraProvenance(): ParseResult {
-    val cameraMetadata = metadata.copy(readMethod = ReadMethod.LIVE_CAMERA)
+// Stamps the analyzer's frame [readMethod] onto a parser result. The parser itself sees only a string, so
+// it reports `BACKEND_STRING_INPUT`; the analyse-frame core knows where the frame came from — a live camera
+// or a pre-captured image (see [FrameProvenance], chosen via the analyzer's constructor) — and records that
+// honestly (Principle 5 — transparency: report what we know). Only the read-method changes; the parser's
+// verdict (document, warnings, validation failures) is surfaced unchanged (reader, not oracle).
+private fun ParseResult.withProvenance(readMethod: ReadMethod): ParseResult {
+    val stamped = metadata.copy(readMethod = readMethod)
     return when (this) {
-        is ParseResult.Success -> copy(metadata = cameraMetadata)
-        is ParseResult.PartialSuccess -> copy(metadata = cameraMetadata)
-        is ParseResult.Failure -> copy(metadata = cameraMetadata)
+        is ParseResult.Success -> copy(metadata = stamped)
+        is ParseResult.PartialSuccess -> copy(metadata = stamped)
+        is ParseResult.Failure -> copy(metadata = stamped)
     }
 }

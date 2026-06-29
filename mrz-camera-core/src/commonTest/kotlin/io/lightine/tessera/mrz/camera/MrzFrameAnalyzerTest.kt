@@ -193,6 +193,40 @@ class MrzFrameAnalyzerTest {
         }
 
     @Test
+    fun decoded_results_report_pre_captured_image_provenance_when_so_constructed() =
+        runTest {
+            // The same analyse-frame pipeline, told its frames are pre-captured images, stamps
+            // PRE_CAPTURED_IMAGE rather than LIVE_CAMERA (ADR-023). Only the read method changes; the
+            // verdict is the parser's, unchanged (reader, not oracle).
+            val analyzer =
+                MrzFrameAnalyzer(
+                    recognizer = recognizerReturning(textOf(td3Line1, td3Line2)),
+                    provenance = FrameProvenance.PRE_CAPTURED_IMAGE,
+                    referenceTimeProvider = { referenceTime },
+                )
+
+            val decoded = assertIs<MrzScanResult.Decoded>(analyzer.analyse(FakeFrame()))
+            assertIs<ParseResult.Success>(decoded.parse)
+            assertEquals(ReadMethod.PRE_CAPTURED_IMAGE, decoded.parse.metadata.readMethod)
+        }
+
+    @Test
+    fun explicit_live_camera_provenance_matches_the_primary_constructor_default() =
+        runTest {
+            // The secondary constructor with FrameProvenance.LIVE_CAMERA is equivalent to the primary
+            // constructor, which defaults to live camera.
+            val analyzer =
+                MrzFrameAnalyzer(
+                    recognizer = recognizerReturning(textOf(td3Line1, td3Line2)),
+                    provenance = FrameProvenance.LIVE_CAMERA,
+                    referenceTimeProvider = { referenceTime },
+                )
+
+            val decoded = assertIs<MrzScanResult.Decoded>(analyzer.analyse(FakeFrame()))
+            assertEquals(ReadMethod.LIVE_CAMERA, decoded.parse.metadata.readMethod)
+        }
+
+    @Test
     fun exposes_the_raw_recognized_text_on_the_result() =
         runTest {
             val recognized = textOf("UTOPIA", td3Line1, td3Line2)

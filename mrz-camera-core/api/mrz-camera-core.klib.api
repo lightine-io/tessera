@@ -18,6 +18,17 @@ final enum class io.lightine.tessera.mrz.camera/CameraFrameOutcome : kotlin/Enum
     final fun values(): kotlin/Array<io.lightine.tessera.mrz.camera/CameraFrameOutcome> // io.lightine.tessera.mrz.camera/CameraFrameOutcome.values|values#static(){}[0]
 }
 
+final enum class io.lightine.tessera.mrz.camera/FrameProvenance : kotlin/Enum<io.lightine.tessera.mrz.camera/FrameProvenance> { // io.lightine.tessera.mrz.camera/FrameProvenance|null[0]
+    enum entry LIVE_CAMERA // io.lightine.tessera.mrz.camera/FrameProvenance.LIVE_CAMERA|null[0]
+    enum entry PRE_CAPTURED_IMAGE // io.lightine.tessera.mrz.camera/FrameProvenance.PRE_CAPTURED_IMAGE|null[0]
+
+    final val entries // io.lightine.tessera.mrz.camera/FrameProvenance.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.mrz.camera/FrameProvenance> // io.lightine.tessera.mrz.camera/FrameProvenance.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.mrz.camera/FrameProvenance // io.lightine.tessera.mrz.camera/FrameProvenance.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.mrz.camera/FrameProvenance> // io.lightine.tessera.mrz.camera/FrameProvenance.values|values#static(){}[0]
+}
+
 final enum class io.lightine.tessera.mrz.camera/ParsingMode : kotlin/Enum<io.lightine.tessera.mrz.camera/ParsingMode> { // io.lightine.tessera.mrz.camera/ParsingMode|null[0]
     enum entry LENIENT // io.lightine.tessera.mrz.camera/ParsingMode.LENIENT|null[0]
     enum entry STRICT // io.lightine.tessera.mrz.camera/ParsingMode.STRICT|null[0]
@@ -165,6 +176,7 @@ sealed interface io.lightine.tessera.mrz.camera/MrzScanResult { // io.lightine.t
 }
 
 final class <#A: kotlin/Any?> io.lightine.tessera.mrz.camera/MrzFrameAnalyzer { // io.lightine.tessera.mrz.camera/MrzFrameAnalyzer|null[0]
+    constructor <init>(io.lightine.tessera.mrz.camera/MrzTextRecognizer<#A>, io.lightine.tessera.mrz.camera/FrameProvenance, io.lightine.tessera.mrz.camera/ParsingMode = ..., io.lightine.tessera.telemetry/TelemetrySink = ..., kotlin/Function0<kotlin.time/Instant> = ...) // io.lightine.tessera.mrz.camera/MrzFrameAnalyzer.<init>|<init>(io.lightine.tessera.mrz.camera.MrzTextRecognizer<1:0>;io.lightine.tessera.mrz.camera.FrameProvenance;io.lightine.tessera.mrz.camera.ParsingMode;io.lightine.tessera.telemetry.TelemetrySink;kotlin.Function0<kotlin.time.Instant>){}[0]
     constructor <init>(io.lightine.tessera.mrz.camera/MrzTextRecognizer<#A>, io.lightine.tessera.mrz.camera/ParsingMode = ..., io.lightine.tessera.telemetry/TelemetrySink = ..., kotlin/Function0<kotlin.time/Instant> = ...) // io.lightine.tessera.mrz.camera/MrzFrameAnalyzer.<init>|<init>(io.lightine.tessera.mrz.camera.MrzTextRecognizer<1:0>;io.lightine.tessera.mrz.camera.ParsingMode;io.lightine.tessera.telemetry.TelemetrySink;kotlin.Function0<kotlin.time.Instant>){}[0]
 
     final suspend fun analyse(#A): io.lightine.tessera.mrz.camera/MrzScanResult // io.lightine.tessera.mrz.camera/MrzFrameAnalyzer.analyse|analyse(1:0){}[0]
