@@ -393,6 +393,34 @@ public final class io/lightine/tessera/mrz/model/TD3 : io/lightine/tessera/mrz/m
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/lightine/tessera/mrz/parsing/ManualMrzReader {
+	public static final field INSTANCE Lio/lightine/tessera/mrz/parsing/ManualMrzReader;
+	public final fun read (Ljava/lang/String;Lkotlin/time/Instant;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public final fun read (Ljava/util/List;Lkotlin/time/Instant;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public static synthetic fun read$default (Lio/lightine/tessera/mrz/parsing/ManualMrzReader;Ljava/lang/String;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public static synthetic fun read$default (Lio/lightine/tessera/mrz/parsing/ManualMrzReader;Ljava/util/List;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public final fun readMRVA (Ljava/lang/String;Lkotlin/time/Instant;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public final fun readMRVA (Ljava/util/List;Lkotlin/time/Instant;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public static synthetic fun readMRVA$default (Lio/lightine/tessera/mrz/parsing/ManualMrzReader;Ljava/lang/String;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public static synthetic fun readMRVA$default (Lio/lightine/tessera/mrz/parsing/ManualMrzReader;Ljava/util/List;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public final fun readMRVB (Ljava/lang/String;Lkotlin/time/Instant;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public final fun readMRVB (Ljava/util/List;Lkotlin/time/Instant;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public static synthetic fun readMRVB$default (Lio/lightine/tessera/mrz/parsing/ManualMrzReader;Ljava/lang/String;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public static synthetic fun readMRVB$default (Lio/lightine/tessera/mrz/parsing/ManualMrzReader;Ljava/util/List;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public final fun readTD1 (Ljava/lang/String;Lkotlin/time/Instant;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public final fun readTD1 (Ljava/util/List;Lkotlin/time/Instant;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public static synthetic fun readTD1$default (Lio/lightine/tessera/mrz/parsing/ManualMrzReader;Ljava/lang/String;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public static synthetic fun readTD1$default (Lio/lightine/tessera/mrz/parsing/ManualMrzReader;Ljava/util/List;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public final fun readTD2 (Ljava/lang/String;Lkotlin/time/Instant;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public final fun readTD2 (Ljava/util/List;Lkotlin/time/Instant;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public static synthetic fun readTD2$default (Lio/lightine/tessera/mrz/parsing/ManualMrzReader;Ljava/lang/String;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public static synthetic fun readTD2$default (Lio/lightine/tessera/mrz/parsing/ManualMrzReader;Ljava/util/List;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public final fun readTD3 (Ljava/lang/String;Lkotlin/time/Instant;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public final fun readTD3 (Ljava/util/List;Lkotlin/time/Instant;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public static synthetic fun readTD3$default (Lio/lightine/tessera/mrz/parsing/ManualMrzReader;Ljava/lang/String;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public static synthetic fun readTD3$default (Lio/lightine/tessera/mrz/parsing/ManualMrzReader;Ljava/util/List;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/lightine/tessera/mrz/parsing/ParseResult;
+}
+
 public final class io/lightine/tessera/mrz/parsing/MrzAlphabetKt {
 	public static final fun isMrzAlphabetCharacter (C)Z
 }
@@ -682,16 +710,27 @@ public final class io/lightine/tessera/mrz/transliteration/TransliterationResult
 public final class io/lightine/tessera/mrz/validation/MrzValidator {
 	public static final field INSTANCE Lio/lightine/tessera/mrz/validation/MrzValidator;
 	public final fun validate (Lio/lightine/tessera/mrz/model/MrzDocument;Lkotlin/time/Instant;)Lio/lightine/tessera/mrz/validation/ValidationResult;
+	public final fun validate (Ljava/lang/String;Lio/lightine/tessera/types/vocabulary/MrzFormat;Lkotlin/time/Instant;)Lio/lightine/tessera/mrz/validation/ValidationResult;
+	public final fun validate (Ljava/lang/String;Lkotlin/time/Instant;)Lio/lightine/tessera/mrz/validation/ValidationResult;
+	public final fun validate (Ljava/util/List;Lio/lightine/tessera/types/vocabulary/MrzFormat;Lkotlin/time/Instant;)Lio/lightine/tessera/mrz/validation/ValidationResult;
+	public final fun validate (Ljava/util/List;Lkotlin/time/Instant;)Lio/lightine/tessera/mrz/validation/ValidationResult;
 	public static synthetic fun validate$default (Lio/lightine/tessera/mrz/validation/MrzValidator;Lio/lightine/tessera/mrz/model/MrzDocument;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/lightine/tessera/mrz/validation/ValidationResult;
+	public static synthetic fun validate$default (Lio/lightine/tessera/mrz/validation/MrzValidator;Ljava/lang/String;Lio/lightine/tessera/types/vocabulary/MrzFormat;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/lightine/tessera/mrz/validation/ValidationResult;
+	public static synthetic fun validate$default (Lio/lightine/tessera/mrz/validation/MrzValidator;Ljava/lang/String;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/lightine/tessera/mrz/validation/ValidationResult;
+	public static synthetic fun validate$default (Lio/lightine/tessera/mrz/validation/MrzValidator;Ljava/util/List;Lio/lightine/tessera/types/vocabulary/MrzFormat;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/lightine/tessera/mrz/validation/ValidationResult;
+	public static synthetic fun validate$default (Lio/lightine/tessera/mrz/validation/MrzValidator;Ljava/util/List;Lkotlin/time/Instant;ILjava/lang/Object;)Lio/lightine/tessera/mrz/validation/ValidationResult;
 }
 
 public final class io/lightine/tessera/mrz/validation/ValidationResult {
-	public fun <init> (Ljava/util/List;Ljava/util/List;)V
+	public fun <init> (Ljava/util/List;Ljava/util/List;Lio/lightine/tessera/types/errors/MrzParseError;)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/util/List;Lio/lightine/tessera/types/errors/MrzParseError;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/util/List;
 	public final fun component2 ()Ljava/util/List;
-	public final fun copy (Ljava/util/List;Ljava/util/List;)Lio/lightine/tessera/mrz/validation/ValidationResult;
-	public static synthetic fun copy$default (Lio/lightine/tessera/mrz/validation/ValidationResult;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lio/lightine/tessera/mrz/validation/ValidationResult;
+	public final fun component3 ()Lio/lightine/tessera/types/errors/MrzParseError;
+	public final fun copy (Ljava/util/List;Ljava/util/List;Lio/lightine/tessera/types/errors/MrzParseError;)Lio/lightine/tessera/mrz/validation/ValidationResult;
+	public static synthetic fun copy$default (Lio/lightine/tessera/mrz/validation/ValidationResult;Ljava/util/List;Ljava/util/List;Lio/lightine/tessera/types/errors/MrzParseError;ILjava/lang/Object;)Lio/lightine/tessera/mrz/validation/ValidationResult;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getStructuralFailure ()Lio/lightine/tessera/types/errors/MrzParseError;
 	public final fun getValidationFailures ()Ljava/util/List;
 	public final fun getWarnings ()Ljava/util/List;
 	public fun hashCode ()I

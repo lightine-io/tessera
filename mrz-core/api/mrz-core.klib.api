@@ -443,8 +443,10 @@ final class io.lightine.tessera.mrz.transliteration/TransliterationOutcome { // 
 }
 
 final class io.lightine.tessera.mrz.validation/ValidationResult { // io.lightine.tessera.mrz.validation/ValidationResult|null[0]
-    constructor <init>(kotlin.collections/List<io.lightine.tessera.types.errors/MrzValidationError>, kotlin.collections/List<io.lightine.tessera.types.errors/MrzWarning>) // io.lightine.tessera.mrz.validation/ValidationResult.<init>|<init>(kotlin.collections.List<io.lightine.tessera.types.errors.MrzValidationError>;kotlin.collections.List<io.lightine.tessera.types.errors.MrzWarning>){}[0]
+    constructor <init>(kotlin.collections/List<io.lightine.tessera.types.errors/MrzValidationError>, kotlin.collections/List<io.lightine.tessera.types.errors/MrzWarning>, io.lightine.tessera.types.errors/MrzParseError? = ...) // io.lightine.tessera.mrz.validation/ValidationResult.<init>|<init>(kotlin.collections.List<io.lightine.tessera.types.errors.MrzValidationError>;kotlin.collections.List<io.lightine.tessera.types.errors.MrzWarning>;io.lightine.tessera.types.errors.MrzParseError?){}[0]
 
+    final val structuralFailure // io.lightine.tessera.mrz.validation/ValidationResult.structuralFailure|{}structuralFailure[0]
+        final fun <get-structuralFailure>(): io.lightine.tessera.types.errors/MrzParseError? // io.lightine.tessera.mrz.validation/ValidationResult.structuralFailure.<get-structuralFailure>|<get-structuralFailure>(){}[0]
     final val validationFailures // io.lightine.tessera.mrz.validation/ValidationResult.validationFailures|{}validationFailures[0]
         final fun <get-validationFailures>(): kotlin.collections/List<io.lightine.tessera.types.errors/MrzValidationError> // io.lightine.tessera.mrz.validation/ValidationResult.validationFailures.<get-validationFailures>|<get-validationFailures>(){}[0]
     final val warnings // io.lightine.tessera.mrz.validation/ValidationResult.warnings|{}warnings[0]
@@ -452,7 +454,8 @@ final class io.lightine.tessera.mrz.validation/ValidationResult { // io.lightine
 
     final fun component1(): kotlin.collections/List<io.lightine.tessera.types.errors/MrzValidationError> // io.lightine.tessera.mrz.validation/ValidationResult.component1|component1(){}[0]
     final fun component2(): kotlin.collections/List<io.lightine.tessera.types.errors/MrzWarning> // io.lightine.tessera.mrz.validation/ValidationResult.component2|component2(){}[0]
-    final fun copy(kotlin.collections/List<io.lightine.tessera.types.errors/MrzValidationError> = ..., kotlin.collections/List<io.lightine.tessera.types.errors/MrzWarning> = ...): io.lightine.tessera.mrz.validation/ValidationResult // io.lightine.tessera.mrz.validation/ValidationResult.copy|copy(kotlin.collections.List<io.lightine.tessera.types.errors.MrzValidationError>;kotlin.collections.List<io.lightine.tessera.types.errors.MrzWarning>){}[0]
+    final fun component3(): io.lightine.tessera.types.errors/MrzParseError? // io.lightine.tessera.mrz.validation/ValidationResult.component3|component3(){}[0]
+    final fun copy(kotlin.collections/List<io.lightine.tessera.types.errors/MrzValidationError> = ..., kotlin.collections/List<io.lightine.tessera.types.errors/MrzWarning> = ..., io.lightine.tessera.types.errors/MrzParseError? = ...): io.lightine.tessera.mrz.validation/ValidationResult // io.lightine.tessera.mrz.validation/ValidationResult.copy|copy(kotlin.collections.List<io.lightine.tessera.types.errors.MrzValidationError>;kotlin.collections.List<io.lightine.tessera.types.errors.MrzWarning>;io.lightine.tessera.types.errors.MrzParseError?){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.mrz.validation/ValidationResult.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // io.lightine.tessera.mrz.validation/ValidationResult.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // io.lightine.tessera.mrz.validation/ValidationResult.toString|toString(){}[0]
@@ -809,6 +812,21 @@ final object io.lightine.tessera.mrz.generation/MrzGenerator { // io.lightine.te
     final fun generateTD3(kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlinx.datetime/LocalDate, io.lightine.tessera.types.vocabulary/Sex, kotlinx.datetime/LocalDate, kotlin/String, io.lightine.tessera.mrz.transliteration/TransliterationProfile? = ...): io.lightine.tessera.mrz.generation/GenerationResult // io.lightine.tessera.mrz.generation/MrzGenerator.generateTD3|generateTD3(kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlinx.datetime.LocalDate;io.lightine.tessera.types.vocabulary.Sex;kotlinx.datetime.LocalDate;kotlin.String;io.lightine.tessera.mrz.transliteration.TransliterationProfile?){}[0]
 }
 
+final object io.lightine.tessera.mrz.parsing/ManualMrzReader { // io.lightine.tessera.mrz.parsing/ManualMrzReader|null[0]
+    final fun read(kotlin.collections/List<kotlin/String>, kotlin.time/Instant = ...): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.parsing/ManualMrzReader.read|read(kotlin.collections.List<kotlin.String>;kotlin.time.Instant){}[0]
+    final fun read(kotlin/String, kotlin.time/Instant = ...): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.parsing/ManualMrzReader.read|read(kotlin.String;kotlin.time.Instant){}[0]
+    final fun readMRVA(kotlin.collections/List<kotlin/String>, kotlin.time/Instant = ...): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.parsing/ManualMrzReader.readMRVA|readMRVA(kotlin.collections.List<kotlin.String>;kotlin.time.Instant){}[0]
+    final fun readMRVA(kotlin/String, kotlin.time/Instant = ...): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.parsing/ManualMrzReader.readMRVA|readMRVA(kotlin.String;kotlin.time.Instant){}[0]
+    final fun readMRVB(kotlin.collections/List<kotlin/String>, kotlin.time/Instant = ...): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.parsing/ManualMrzReader.readMRVB|readMRVB(kotlin.collections.List<kotlin.String>;kotlin.time.Instant){}[0]
+    final fun readMRVB(kotlin/String, kotlin.time/Instant = ...): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.parsing/ManualMrzReader.readMRVB|readMRVB(kotlin.String;kotlin.time.Instant){}[0]
+    final fun readTD1(kotlin.collections/List<kotlin/String>, kotlin.time/Instant = ...): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.parsing/ManualMrzReader.readTD1|readTD1(kotlin.collections.List<kotlin.String>;kotlin.time.Instant){}[0]
+    final fun readTD1(kotlin/String, kotlin.time/Instant = ...): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.parsing/ManualMrzReader.readTD1|readTD1(kotlin.String;kotlin.time.Instant){}[0]
+    final fun readTD2(kotlin.collections/List<kotlin/String>, kotlin.time/Instant = ...): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.parsing/ManualMrzReader.readTD2|readTD2(kotlin.collections.List<kotlin.String>;kotlin.time.Instant){}[0]
+    final fun readTD2(kotlin/String, kotlin.time/Instant = ...): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.parsing/ManualMrzReader.readTD2|readTD2(kotlin.String;kotlin.time.Instant){}[0]
+    final fun readTD3(kotlin.collections/List<kotlin/String>, kotlin.time/Instant = ...): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.parsing/ManualMrzReader.readTD3|readTD3(kotlin.collections.List<kotlin.String>;kotlin.time.Instant){}[0]
+    final fun readTD3(kotlin/String, kotlin.time/Instant = ...): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.parsing/ManualMrzReader.readTD3|readTD3(kotlin.String;kotlin.time.Instant){}[0]
+}
+
 final object io.lightine.tessera.mrz.parsing/MrzParser { // io.lightine.tessera.mrz.parsing/MrzParser|null[0]
     final fun parse(kotlin.collections/List<kotlin/String>, kotlin.time/Instant = ...): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.parsing/MrzParser.parse|parse(kotlin.collections.List<kotlin.String>;kotlin.time.Instant){}[0]
     final fun parse(kotlin/String, kotlin.time/Instant = ...): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.parsing/MrzParser.parse|parse(kotlin.String;kotlin.time.Instant){}[0]
@@ -864,6 +882,10 @@ final object io.lightine.tessera.mrz.transliteration/TransliterationProfileRegis
 
 final object io.lightine.tessera.mrz.validation/MrzValidator { // io.lightine.tessera.mrz.validation/MrzValidator|null[0]
     final fun validate(io.lightine.tessera.mrz.model/MrzDocument, kotlin.time/Instant = ...): io.lightine.tessera.mrz.validation/ValidationResult // io.lightine.tessera.mrz.validation/MrzValidator.validate|validate(io.lightine.tessera.mrz.model.MrzDocument;kotlin.time.Instant){}[0]
+    final fun validate(kotlin.collections/List<kotlin/String>, io.lightine.tessera.types.vocabulary/MrzFormat, kotlin.time/Instant = ...): io.lightine.tessera.mrz.validation/ValidationResult // io.lightine.tessera.mrz.validation/MrzValidator.validate|validate(kotlin.collections.List<kotlin.String>;io.lightine.tessera.types.vocabulary.MrzFormat;kotlin.time.Instant){}[0]
+    final fun validate(kotlin.collections/List<kotlin/String>, kotlin.time/Instant = ...): io.lightine.tessera.mrz.validation/ValidationResult // io.lightine.tessera.mrz.validation/MrzValidator.validate|validate(kotlin.collections.List<kotlin.String>;kotlin.time.Instant){}[0]
+    final fun validate(kotlin/String, io.lightine.tessera.types.vocabulary/MrzFormat, kotlin.time/Instant = ...): io.lightine.tessera.mrz.validation/ValidationResult // io.lightine.tessera.mrz.validation/MrzValidator.validate|validate(kotlin.String;io.lightine.tessera.types.vocabulary.MrzFormat;kotlin.time.Instant){}[0]
+    final fun validate(kotlin/String, kotlin.time/Instant = ...): io.lightine.tessera.mrz.validation/ValidationResult // io.lightine.tessera.mrz.validation/MrzValidator.validate|validate(kotlin.String;kotlin.time.Instant){}[0]
 }
 
 final fun (io.lightine.tessera.mrz.formats/FieldSpec).io.lightine.tessera.mrz.formats/extractCharFrom(kotlin.collections/List<kotlin/String>): kotlin/Char // io.lightine.tessera.mrz.formats/extractCharFrom|extractCharFrom@io.lightine.tessera.mrz.formats.FieldSpec(kotlin.collections.List<kotlin.String>){}[0]

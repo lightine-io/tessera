@@ -14,6 +14,8 @@ import io.lightine.tessera.mrz.model.MrzDocument
 import io.lightine.tessera.mrz.model.TD1
 import io.lightine.tessera.mrz.model.TD2
 import io.lightine.tessera.mrz.model.TD3
+import io.lightine.tessera.mrz.parsing.MrzParser
+import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.mrz.recognition.CountryCode
 import io.lightine.tessera.mrz.recognition.DocumentType
 import io.lightine.tessera.types.errors.MrzBirthDateImplausiblyOld
@@ -30,6 +32,7 @@ import io.lightine.tessera.types.errors.MrzUnknownDocumentTypeCode
 import io.lightine.tessera.types.errors.MrzValidationError
 import io.lightine.tessera.types.errors.MrzWarning
 import io.lightine.tessera.types.vocabulary.MrzField
+import io.lightine.tessera.types.vocabulary.MrzFormat
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -78,6 +81,99 @@ public object MrzValidator {
             is MrvA -> validateMrvA(document, referenceTime)
             is MrvB -> validateMrvB(document, referenceTime)
             is TD1 -> validateTD1(document, referenceTime)
+        }
+
+    /**
+     * Validates a raw MRZ [input], auto-detecting the format, by running it through the full parse
+     * + validate pipeline ([MrzParser.parse]) and returning the validation verdict. The same
+     * per-format validators run as for [`validate(document)`][validate], so a check digit failure
+     * found here is the identical typed error the parser-internal path produces (single source of
+     * truth).
+     *
+     * If [input] cannot be parsed structurally (wrong line count/length, a character outside the
+     * MRZ alphabet, or an unrecognized shape), the returned result's
+     * [`structuralFailure`][ValidationResult.structuralFailure] is non-null and the per-field
+     * [`validationFailures`][ValidationResult.validationFailures] are empty — the deeper layers
+     * could not run. The validator never refuses to return a result.
+     */
+    public fun validate(
+        input: String,
+        referenceTime: Instant = Clock.System.now(),
+    ): ValidationResult = MrzParser.parse(input, referenceTime).toValidationResult()
+
+    /** Validates pre-split raw MRZ [input] lines, auto-detecting the format. See [validate]. */
+    public fun validate(
+        input: List<String>,
+        referenceTime: Instant = Clock.System.now(),
+    ): ValidationResult = MrzParser.parse(input, referenceTime).toValidationResult()
+
+    /**
+     * Validates a raw MRZ [input] against an explicit [format], skipping auto-detection. A
+     * mis-shaped input reports
+     * [`MrzInvalidLength`][io.lightine.tessera.types.errors.MrzInvalidLength] (against the format's
+     * dimensions) on [`structuralFailure`][ValidationResult.structuralFailure] rather than the
+     * auto-detect path's `MrzFormatNotDetected`. See [validate].
+     */
+    public fun validate(
+        input: String,
+        format: MrzFormat,
+        referenceTime: Instant = Clock.System.now(),
+    ): ValidationResult = parseAs(format, input, referenceTime).toValidationResult()
+
+    /** Validates pre-split raw MRZ [input] lines against an explicit [format]. See [validate]. */
+    public fun validate(
+        input: List<String>,
+        format: MrzFormat,
+        referenceTime: Instant = Clock.System.now(),
+    ): ValidationResult = parseAs(format, input, referenceTime).toValidationResult()
+
+    private fun parseAs(
+        format: MrzFormat,
+        input: String,
+        referenceTime: Instant,
+    ): ParseResult =
+        when (format) {
+            MrzFormat.TD1 -> MrzParser.parseTD1(input, referenceTime)
+            MrzFormat.TD2 -> MrzParser.parseTD2(input, referenceTime)
+            MrzFormat.TD3 -> MrzParser.parseTD3(input, referenceTime)
+            MrzFormat.MRV_A -> MrzParser.parseMRVA(input, referenceTime)
+            MrzFormat.MRV_B -> MrzParser.parseMRVB(input, referenceTime)
+        }
+
+    private fun parseAs(
+        format: MrzFormat,
+        input: List<String>,
+        referenceTime: Instant,
+    ): ParseResult =
+        when (format) {
+            MrzFormat.TD1 -> MrzParser.parseTD1(input, referenceTime)
+            MrzFormat.TD2 -> MrzParser.parseTD2(input, referenceTime)
+            MrzFormat.TD3 -> MrzParser.parseTD3(input, referenceTime)
+            MrzFormat.MRV_A -> MrzParser.parseMRVA(input, referenceTime)
+            MrzFormat.MRV_B -> MrzParser.parseMRVB(input, referenceTime)
+        }
+
+    // A parse already runs the validators; the standalone string overloads surface that verdict as
+    // a ValidationResult. Success/PartialSuccess carry the per-field failures + warnings; a hard
+    // Failure carries the structural MrzParseError on the separate structuralFailure channel
+    // (never folded into validationFailures — the two error roots stay unconflated).
+    private fun ParseResult.toValidationResult(): ValidationResult =
+        when (this) {
+            is ParseResult.Success -> {
+                ValidationResult(metadata.validationFailures, metadata.warnings)
+            }
+
+            is ParseResult.PartialSuccess -> {
+                ValidationResult(metadata.validationFailures, metadata.warnings)
+            }
+
+            is ParseResult.Failure -> {
+                ValidationResult(
+                    metadata.validationFailures,
+                    metadata.warnings,
+                    structuralFailure = error,
+                )
+            }
         }
 
     private fun validateTD3(
