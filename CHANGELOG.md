@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-30
+
 ### Added
 
 - **Manual entry — the typed-MRZ reading method** (`mrz-core`; `0.4.0`, per [ADR-024](https://lightine.youtrack.cloud/articles/TES-A-66)). `ManualMrzReader` reads an MRZ a human typed in: `read(input)` (auto-detect) plus `readTD3` / `readTD2` / `readTD1` / `readMRVA` / `readMRVB` (explicit format), each in `String` and `List<String>` forms with the same optional `referenceTime` as the parser. It runs the **same** parse + validate pipeline as `MrzParser` and surfaces the identical verdict — a typed-in MRZ validates exactly as a camera- or saved-image-read one does — differing only in provenance: every result reports `ReadMethod.MANUAL_ENTRY` ("a human typed it") instead of the `BACKEND_STRING_INPUT` the bare parser reports for an application-supplied string (Principle 5 — report how the data reached the SDK). The parser's published entry points are **untouched** — the reader stamps the read method onto the parser's own result — so the locked `0.1.0` surface is unchanged under [ADR-007](https://lightine.youtrack.cloud/articles/TES-A-37). Manual entry has no platform dependency, so unlike camera (`0.2.0`) and saved-image (`0.3.0`) reading it is available on **every target the core compiles for** (JVM/backend included), not just mobile. Host-tested.
@@ -519,7 +521,8 @@ These are documented commitments that are explicitly *not* in this `[Unreleased]
 - iOS targets, Android targets (waiting on Xcode install / 0.2.0 platform I/O work)
 - Platform I/O modules (`mrz-camera-*`, `emrtd-nfc-*`, `mrz-camera-ui-*`)
 
-[Unreleased]: https://github.com/lightine-io/tessera/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/lightine-io/tessera/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/lightine-io/tessera/releases/tag/v0.4.0
 [0.3.0]: https://github.com/lightine-io/tessera/releases/tag/v0.3.0
 [0.2.1]: https://github.com/lightine-io/tessera/releases/tag/v0.2.1
 [0.2.0]: https://github.com/lightine-io/tessera/releases/tag/v0.2.0
