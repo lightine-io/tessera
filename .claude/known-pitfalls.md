@@ -367,6 +367,27 @@ handoff that correctly retires the old state but forgets to install the new one.
 
 ---
 
+## YouTrack `update_article` Replaces the Entire Body
+
+**The pitfall:** `mcp__youtrack__update_article` with `append` unset **replaces the
+article's whole content** with whatever you pass. A "small edit" call that sends only the
+changed lines wipes the rest of the article.
+
+**Why it happens:** The tool name says *update*, which reads as *patch* — but the
+`content` parameter is a full replacement, not a diff. Each call looks locally correct;
+the loss is only visible if you re-read the article afterwards.
+
+**Real example (2026-07-01).** Adding one row to the ADR index (TES-A-17) with a 2-line
+`update_article` call replaced the entire index table. It was restorable only because a
+full `get_article` read from earlier in the same session was still in context.
+
+**What to do instead:** Read-modify-write, never blind-write. `get_article` first, edit
+the full body, send the complete content back; use `append: true` only when genuinely
+adding to the end. Treat every `update_article` without `append` as "I am replacing this
+article" — and re-read the article after structural edits to confirm nothing was lost.
+
+---
+
 ## Maintaining This Document
 
 This document grows when new pitfalls are observed during ongoing work. The bar for adding an entry: *has this mistake actually been made on this project, or is it close enough that it could be?* If yes, document it concretely with the specific pattern. If no, do not add speculative pitfalls — [Reading Risks](https://lightine.youtrack.cloud/articles/TES-A-11) and the principles already cover those.

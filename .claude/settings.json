@@ -25,6 +25,15 @@
             "statusMessage": "Scanning outward gh content for private terms..."
           }
         ]
+      },
+      {
+        "matcher": "mcp__youtrack__(create|update|add|change|link|log|manage)_.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/scripts/mark-substantive.sh"
+          }
+        ]
       }
     ],
     "Stop": [

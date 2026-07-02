@@ -11,10 +11,10 @@
 #
 # Note (since the 2026-06 doc migration): the deferred-work backlog now lives in
 # YouTrack Issues, so .plans/ is usually empty. This hook still (a) maintains the
-# session markers below, (b) injects the latest handoff's START HERE block — the real
-# orientation artifact now that .plans/ is usually empty, so the next session can't
-# start blind to prior state — and (c) catches any *local* .plans items; the YouTrack
-# board is the backlog of record (surfaced via .claude/rules/youtrack.md).
+# session markers below, (b) injects the latest handoff's action-bearing sections —
+# the real orientation artifact now that .plans/ is usually empty, so the next session
+# can't start blind to prior state — and (c) catches any *local* .plans items; the
+# YouTrack board is the backlog of record (surfaced via .claude/rules/youtrack.md).
 #
 # See CLAUDE.md "What to Do First" and .claude/session-handoff-template.md
 # ("Standing Obligations").
@@ -22,23 +22,42 @@ set -euo pipefail
 
 root="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 
-# Session marker for the Stop-hook handoff check (scripts/stop-handoff-check.sh):
-# mark when this session started and clear the once-per-session reminder flag.
+# Session markers for the Stop-hook handoff check (scripts/stop-handoff-check.sh):
+# mark when this session started and clear the per-session flags — the once-per-session
+# reminder, and the substantive marker touched by scripts/mark-substantive.sh on
+# YouTrack write-tool calls.
 mkdir -p "$root/.handoffs"
 touch "$root/.handoffs/.session-started"
-rm -f "$root/.handoffs/.handoff-reminded"
+rm -f "$root/.handoffs/.handoff-reminded" "$root/.handoffs/.substantive"
 
-# Surface the latest handoff's START HERE so no session starts blind to prior state.
-# This runs unconditionally (before the .plans early-exits below), because the handoff
-# — not the now-usually-empty .plans sweep — is the real orientation artifact. Reads
-# the file live each run, so it can never drift from what was actually written.
+# Surface the latest handoff's ACTION-BEARING sections so no session starts blind to
+# prior state. START HERE alone proved insufficient: sessions oriented from the banner
+# without opening the file, so "Next Session Should" and "Things to Watch For" — the two
+# sections that direct the next session's behavior — went unread. All three are injected
+# now; the remaining sections (What Is in Flight, Superseded, Lessons) stay in the file.
+# Runs unconditionally (before the .plans early-exits below), because the handoff — not
+# the now-usually-empty .plans sweep — is the real orientation artifact. Reads the file
+# live each run, so it can never drift from what was actually written.
 hd="$root/.handoffs"
 latest=$(ls -1 "$hd"/SESSION-HANDOFF-*.md 2>/dev/null | sort -r | head -1 || true)
 if [ -n "$latest" ]; then
-  echo "═══ LATEST SESSION HANDOFF — read before starting ═══"
+  echo "═══ LATEST SESSION HANDOFF — orientation ═══"
   echo "From: $(basename "$latest")"
+  echo "Injected: START HERE · Next Session Should · Things to Watch For. Full handoff (in-flight detail, superseded facts, lessons): ${latest#"$root"/}"
+
+  # Staleness guard: commits that postdate the handoff mean work happened after it was
+  # written (or a session ended without one) — the banner must not be read as current
+  # truth. mtime is trustworthy here: .handoffs/ is gitignored and never leaves this
+  # machine, so the clone/rsync mtime-clobber caveat does not apply.
+  h_epoch=$(stat -f %m "$latest" 2>/dev/null || echo 0)
+  # `|| true`: outside a git repo (hermetic tests) the pipeline must not kill the hook.
+  stale=$(git -C "$root" log --oneline --since="@${h_epoch}" 2>/dev/null | wc -l | tr -d ' ' || true)
+  if [ "${stale:-0}" -gt 0 ]; then
+    echo "⚠ STALE: ${stale} commit(s) postdate this handoff — trust git log/status over the banner."
+  fi
+
   echo ""
-  awk '/^## .*START HERE/{g=1;print;next} g&&/^## /{exit} g{print}' "$latest"
+  awk '/^## (.* )?START HERE/ || /^## Next Session Should/ || /^## Things to Watch For/{g=1;print;next} /^## /{g=0;next} g{print}' "$latest"
   echo "═════════════════════════════════════════════════════"
   echo ""
 fi
