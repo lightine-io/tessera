@@ -35,6 +35,10 @@ cat > "$newer" <<'EOF'
 - LATER-SECTION must not leak into the banner
 ## Next Session Should
 1. NEXT-ACTION do the thing
+```
+## FENCED-HEADING inside a code block must not end the section
+```
+2. SECOND-ACTION after the fence
 ## Things to Watch For
 - WATCH-ITEM the trap
 ## Open Questions Touched
@@ -48,6 +52,8 @@ assert_contains "$out" "newer.md"                      # picked newest by filena
 assert_contains "$out" "NEW-STATE main at deadbeef"    # START HERE present
 assert_contains "$out" "second bullet of the live state"
 assert_contains "$out" "NEXT-ACTION do the thing"      # Next Session Should present
+assert_contains "$out" "FENCED-HEADING"                # fenced '## ' line printed as content
+assert_contains "$out" "SECOND-ACTION after the fence" # section survives a fenced '## ' line
 assert_contains "$out" "WATCH-ITEM the trap"           # Things to Watch For present
 assert_contains "$out" "Full handoff"                  # pointer to the full file
 assert_absent   "$out" "LATER-SECTION"                 # non-injected sections stay out
@@ -74,6 +80,12 @@ sleep 1
 touch "$newer"                   # handoff mtime now after the commit
 out4="$(CLAUDE_PROJECT_DIR="$tmp" bash "$hook")"
 assert_absent "$out4" "STALE"
+
+echo "Test 5: commit in the SAME second as the handoff write -> no false STALE"
+commit_epoch="$(git -C "$tmp" log -1 --format=%ct)"
+touch -t "$(date -r "$commit_epoch" +%Y%m%d%H%M.%S)" "$newer"  # mtime == commit time
+out5="$(CLAUDE_PROJECT_DIR="$tmp" bash "$hook")"
+assert_absent "$out5" "STALE"
 
 if [ "$fail" -eq 0 ]; then
   echo "ALL PASS"

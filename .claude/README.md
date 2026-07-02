@@ -15,6 +15,6 @@ The entry point for AI assistants is the `CLAUDE.md` file at project root. That 
 - **`rules/`** — Path-scoped rules that auto-load when matching files are touched (folder organization, vendor-doc consultation, guide style, usage examples, mobile workflow, future-proofing duty, tech-stack index).
 - **`skills/`** — Explicitly-invoked workflows for recurring events (dependency-upgrade cadence, pre-release tech-stack review).
 - **`agents/`** — Specialized read-only review subagents (doc-consistency, security, QA-coverage), invoked via the `Agent` tool.
-- **`settings.json`** — Hooks: the pre-push private-content scan, the screenshot block, the dev-wrapper preference, and the SessionStart standing-obligations injection.
+- **`settings.json`** — Hooks: the pre-push private-content scan, the outward gh-content scan, the screenshot block, the dev-wrapper preference, the YouTrack-write substantive marker (PreToolUse), the SessionStart standing-obligations/handoff-banner injection, and the Stop-hook session-handoff reminder.
 
 Material in this folder is public — it is committed to the repository, which is already publicly visible. Nothing private should accumulate here. If private notes are needed during development, they live elsewhere (a personal workspace folder outside the repo) and never get committed.

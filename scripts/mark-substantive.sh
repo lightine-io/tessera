@@ -10,6 +10,11 @@
 # Touched on any mcp__youtrack__ write-tool call (matcher in .claude/settings.json);
 # cleared at SessionStart by scripts/standing-obligations.sh. Read-only YouTrack tools
 # (get_*/search_*/find_*) intentionally do NOT fire this — reading is not substance.
+#
+# NOTE: the settings.json matcher regex is a manually-maintained allowlist mirror of
+# the YouTrack MCP server's write-tool verbs (create|update|add|change|link|log|manage).
+# If the server ships a write tool with a new verb, the flag silently stops covering it
+# — re-check the matcher whenever the YouTrack MCP server is updated.
 set -euo pipefail
 
 root="${CLAUDE_PROJECT_DIR:-$(pwd)}"

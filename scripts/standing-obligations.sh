@@ -49,15 +49,27 @@ if [ -n "$latest" ]; then
   # written (or a session ended without one) — the banner must not be read as current
   # truth. mtime is trustworthy here: .handoffs/ is gitignored and never leaves this
   # machine, so the clone/rsync mtime-clobber caveat does not apply.
+  # +1: git --since is inclusive, and a commit in the same second as the handoff write
+  # is not "postdating" it — for a warning, a false positive is worse than a false
+  # negative. `|| true`: outside a git repo (hermetic tests) the pipeline must not
+  # kill the hook.
   h_epoch=$(stat -f %m "$latest" 2>/dev/null || echo 0)
-  # `|| true`: outside a git repo (hermetic tests) the pipeline must not kill the hook.
-  stale=$(git -C "$root" log --oneline --since="@${h_epoch}" 2>/dev/null | wc -l | tr -d ' ' || true)
+  stale=$(git -C "$root" log --oneline --since="@$((h_epoch + 1))" 2>/dev/null | wc -l | tr -d ' ' || true)
   if [ "${stale:-0}" -gt 0 ]; then
     echo "⚠ STALE: ${stale} commit(s) postdate this handoff — trust git log/status over the banner."
   fi
 
   echo ""
-  awk '/^## (.* )?START HERE/ || /^## Next Session Should/ || /^## Things to Watch For/{g=1;print;next} /^## /{g=0;next} g{print}' "$latest"
+  # Section extraction. Column-0 code fences toggle `fence` so a literal "## " line
+  # inside a fenced example neither ends nor starts a section (it would otherwise
+  # silently truncate the injected section). Renaming any of the three headings
+  # requires updating this pattern AND scripts/test/standing-obligations.test.sh.
+  awk '
+    /^```/ { if (g) print; fence = !fence; next }
+    !fence && (/^## (.* )?START HERE/ || /^## Next Session Should/ || /^## Things to Watch For/) { g=1; print; next }
+    !fence && /^## / { g=0; next }
+    g { print }
+  ' "$latest"
   echo "═════════════════════════════════════════════════════"
   echo ""
 fi
