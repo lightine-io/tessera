@@ -34,6 +34,19 @@ updates:
     labels:
       - dependencies
       - github-actions
+      # Actions bumps are CI-only, never consumer-facing — pre-satisfies the
+      # changelog gate (.github/workflows/changelog.yml). Gradle bumps above
+      # deliberately do NOT get this: they can affect the shipped SDK, so the
+      # changelog decision stays per-PR.
+      - no-changelog
+    # One grouped PR per cycle instead of one PR per action: under strict
+    # branch protection, N separate PRs cost N sequential CI cycles (each
+    # merge puts the rest BEHIND). Batching was done by hand for #188–#192
+    # (→ #194); this makes Dependabot do it at the source.
+    groups:
+      github-actions:
+        patterns:
+          - "*"
     commit-message:
       prefix: chore
       include: scope
