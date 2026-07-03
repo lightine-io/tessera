@@ -49,7 +49,20 @@ subprojects {
             // `signingInMemoryKey` / `signingInMemoryKeyId` / `signingInMemoryKeyPassword`
             // (set per-machine in `~/.gradle/gradle.properties`, never committed — see
             // `docs/publishing-setup.md`).
-            signAllPublications()
+            //
+            // `tessera.skipSigning` is the explicit escape hatch for the `publish-smoke` CI
+            // guard (check.yml): that job runs `publishToMavenLocal` on keyless PR runners to
+            // prove every declared target actually produces its artifacts (the v0.2.0
+            // empty-module incident class, PR #154 — the release dry-run SKIPs the
+            // generateMetadataFile* tasks where that class fails, so only a real local publish
+            // exercises them). With signing unconditional, a keyless publishToMavenLocal dies
+            // in signMavenPublication before reaching the tasks the guard exists to run.
+            // Signing stays REQUIRED on every path that does not explicitly pass the property:
+            // a real publish that somehow lost its key still fails loudly (here, or at Central
+            // Portal validation, which rejects unsigned deployments).
+            if (!providers.gradleProperty("tessera.skipSigning").isPresent) {
+                signAllPublications()
+            }
 
             pom {
                 url.set("https://github.com/lightine-io/tessera")

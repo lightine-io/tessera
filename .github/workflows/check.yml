@@ -126,6 +126,46 @@ jobs:
       - name: Compile Android targets, run Android host tests, verify ML Kit bundled model
         run: ./gradlew compileAndroidMain :mrz-camera-android:testAndroidHostTest :types:testAndroidHostTest :mrz-core:testAndroidHostTest :telemetry:testAndroidHostTest :mrz-camera-core:testAndroidHostTest :mrz-camera-android:verifyMlKitBundledModel
 
+  # Empty-module release guard (TES-43 pre-0.5.0 item; the v0.2.0 incident class, PR #154):
+  # a module that DECLARES a Kotlin/Native target but produces no klib fails its
+  # generateMetadataFileFor<Target>Publication task — and nothing pre-tag executes those tasks.
+  # The release dry-run marks every generateMetadataFile* task SKIPPED (verified 2026-07-03),
+  # so the failure only surfaced mid-release, after environment approval. This job runs a REAL
+  # local publish on every PR and push to main, executing the exact failure site with no
+  # secrets: publishToMavenLocal needs no Sonatype creds, and `-Ptessera.skipSigning` (the
+  # explicit escape hatch in the root build.gradle.kts) skips PGP signing, which keyless
+  # runners cannot do. macOS runner because K/N publication metadata needs the Apple toolchain.
+  # Rule of thumb this enforces: a module that declares a target must produce an artifact for
+  # it; empty placeholders (emrtd-core, logging) declare JVM+Android only — an empty jar/aar
+  # is valid, a missing klib is not.
+  publish-smoke:
+    name: publish · smoke (empty-module guard)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: konan-${{ runner.os }}-
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Publish all modules to the local Maven repo (unsigned)
+        run: ./gradlew publishToMavenLocal -Ptessera.skipSigning=true
+
   ios-compile:
     name: build & test · iOS
     # Apple targets can only be built on macOS (Kotlin/Native links against the Xcode toolchain);
