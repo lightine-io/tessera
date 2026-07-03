@@ -1,5 +1,7 @@
 # `.gitignore` Planning
 
+> **SUPERSEDED (2026-07-03).** Pre-implementation design notes, kept for the reasoning trail. The actual `.gitignore` has long existed, and current placement guidance lives in [`../rules/content-placement.md`](../rules/content-placement.md) (git vs KB vs local) with the hard bans in CLAUDE.md "Forbidden Actions". Do not act on the folder names below — several (`.recaps/`, `.reviews/`, `.discovery/`) have since graduated to the internal KB.
+
 This document describes what should and should not be committed to the public repository for this project. It is planning material for AI assistants (and humans) making decisions about what to add, what to exclude, and what to keep entirely outside version control.
 
 A proper `.gitignore` file will be generated when implementation begins. This document captures the reasoning so the `.gitignore` can be derived from it consistently.
