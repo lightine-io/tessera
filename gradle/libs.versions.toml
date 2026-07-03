@@ -1,12 +1,12 @@
 [versions]
 kotlin = "2.4.0"
 agp = "9.2.1"
-spotless = "8.6.0"
+spotless = "8.8.0"
 ktlint = "1.8.0"
-kotest = "6.1.11"
+kotest = "6.2.1"
 kotlinx-datetime = "0.8.0"
 kotlinx-coroutines = "1.11.0"
-maven-publish = "0.36.0"
+maven-publish = "0.37.0"
 dokka = "2.2.0"
 # Android camera I/O stack (mrz-camera-android, 0.2.0). camera-core supplies the ImageProxy
 # frame type; ML Kit text-recognition is the bundled-model variant — the recognition model

@@ -38,6 +38,14 @@ rm -f "$root/.handoffs/.handoff-reminded" "$root/.handoffs/.substantive"
 # Runs unconditionally (before the .plans early-exits below), because the handoff — not
 # the now-usually-empty .plans sweep — is the real orientation artifact. Reads the file
 # live each run, so it can never drift from what was actually written.
+# Once-per-session ssh-agent check: commit signing hangs ~2min when the agent is
+# empty (macOS clears it at login). Warn here — at session start, not per-commit —
+# so the first signed commit never hits the hang. Only the maintainer loads the key.
+if ! ssh-add -l >/dev/null 2>&1; then
+  echo "⚠ ssh-agent has no identities — the first signed commit will hang. Ask the maintainer to run: ssh-add --apple-load-keychain"
+  echo ""
+fi
+
 hd="$root/.handoffs"
 latest=$(ls -1 "$hd"/SESSION-HANDOFF-*.md 2>/dev/null | sort -r | head -1 || true)
 if [ -n "$latest" ]; then

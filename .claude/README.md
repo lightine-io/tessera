@@ -9,10 +9,10 @@ The entry point for AI assistants is the `CLAUDE.md` file at project root. That 
 
 - **`working-patterns.md`** — Concrete patterns for how work happens on this project: technical patterns and collaboration patterns. Read when starting substantive work.
 - **`known-pitfalls.md`** — Real failure modes that have surfaced during the project. Read before drafting significant changes.
-- **`gitignore-planning.md`** — What goes into the public repo and what does not. Read before committing anything new.
+- **`rules/content-placement.md`** — What goes into the public repo, the KB, or stays local. Read before committing anything new. (Its design-phase predecessor, `gitignore-planning.md`, is superseded and lives in `archive/`.)
 - **`session-handoff-template.md`** — Template for ending a Claude Code session with a clear handoff to the next session (AI-first: state snapshot up front, standing-obligations sweep, superseded-facts section).
 - **`git-workflow.md`** — Branch naming, PR flow, the private-content scan, `gh` CLI usage, commit style.
-- **`rules/`** — Path-scoped rules that auto-load when matching files are touched (folder organization, vendor-doc consultation, guide style, usage examples, mobile workflow, future-proofing duty, tech-stack index).
+- **`rules/`** — Rules that auto-load: most are path-scoped (loaded when files matching their `paths:` frontmatter are touched); a rule *without* a `paths:` filter (`youtrack.md`) loads into **every** session. See each file's own frontmatter `description:` for what it covers — this README deliberately does not duplicate the list.
 - **`skills/`** — Explicitly-invoked workflows for recurring events (dependency-upgrade cadence, pre-release tech-stack review).
 - **`agents/`** — Specialized read-only review subagents (doc-consistency, security, QA-coverage), invoked via the `Agent` tool.
 - **`settings.json`** — Hooks: the pre-push private-content scan, the outward gh-content scan, the screenshot block, the dev-wrapper preference, the YouTrack-write substantive marker (PreToolUse), the SessionStart standing-obligations/handoff-banner injection, and the Stop-hook session-handoff reminder.
