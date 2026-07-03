@@ -109,10 +109,14 @@ the Standing Obligations sweep below confirms it.]
 1. `grep -n '\- \[ \]' .plans/*.md` — local plan checkboxes (usually empty; the backlog
    of record is YouTrack).
 2. YouTrack sweep (when active): `search_issues` with query `project: TES #Unresolved`,
-   scan the hits for Trigger/un-park lines, and list every trigger that fired this
-   session (a tag pushed, a release shipped, a date crossed, an external reply). If
-   YouTrack is dormant, write "YouTrack sweep: SKIPPED (dormant)" — never silently omit
-   the beat.
+   scan the hits' descriptions for the normalized first-line `Trigger: <condition>`
+   (every issue with a knowable un-park condition carries one, per the 2026-07-03
+   triage — TES-43), and list every trigger that fired this session (a tag pushed, a
+   release shipped, a date crossed, an external reply). Priority encodes ordering:
+   Major = next-release path or dated; Normal = backlog; Minor = opportunistic;
+   Show-stopper/Critical are reserved for emergencies and expected to be zero at rest.
+   If YouTrack is dormant, write "YouTrack sweep: SKIPPED (dormant)" — never silently
+   omit the beat.
 3. CLAUDE.md cadence dates — note crossed / not crossed.
 If the sweep output contradicts "What Is in Flight", the sweep wins.]
 
