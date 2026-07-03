@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **Kotlin 2.3.21 → 2.4.0** (all modules; toolchain — consumer-facing floor). Dependabot bump plus the build-script migration it forced: Kotlin 2.4.0 removed the experimental ABI-validation DSL's `enabled` property, so the six ABI-tracked modules now enable it with the streamlined `abiValidation()` call (same validation, same `check` wiring). Artifacts are now produced by the 2.4.x compiler — consumers on older Kotlin may not be able to read the 2.4 stdlib/klib metadata, per Kotlin's forward-compatibility rules; pre-1.0, Tessera tracks current stable Kotlin (dependency cadence in [`docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20)). Verified with the full local `check` across JVM/Android/iOS targets.
+
 ## [0.4.0] - 2026-06-30
 
 ### Added

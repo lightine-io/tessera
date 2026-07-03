@@ -39,9 +39,7 @@ kotlin {
     // ABI baseline"). Kept enabled so a baseline appears the moment the tooling gains android-target
     // support (re-checked at each dependency cadence). Refresh: `./gradlew updateKotlinAbi`.
     @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
-    abiValidation {
-        enabled.set(true)
-    }
+    abiValidation()
 
     jvmToolchain(21)
 
