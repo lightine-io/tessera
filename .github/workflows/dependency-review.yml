@@ -46,6 +46,19 @@ jobs:
         with:
           # Gate on moderate-or-higher CVEs (low is mostly unfixable transitive noise).
           fail-on-severity: moderate
+          # Test-only allowlist. Both advisories are against org.bouncycastle:bcprov-jdk18on, which
+          # enters the graph ONLY as a transitive of Robolectric (mrz-camera-ui-android's androidHostTest
+          # harness): verified present only on androidHostTest{Compile,Runtime}Classpath and ABSENT from
+          # every shipped/runtime classpath (androidReleaseRuntimeClasspath etc.), so it is not in any
+          # published artifact and never on a consumer's classpath. The vulnerable GOST/LDAP code paths
+          # are not exercised by Robolectric and run only in CI/local test JVMs — build-time only. The
+          # Gradle dependency-submission reports it as runtime scope, so fail-on-scopes cannot distinguish
+          # it; these two GHSAs are allowlisted instead. REVISIT if BouncyCastle ever becomes a *shipped*
+          # (runtime) dependency — e.g. NFC/eMRTD crypto at 0.6.0 — then remove these so it is gated again.
+          # Tracked in the issue tracker (bcprov test-only triage).
+          #   GHSA-574f-3g2m-x479  bcprov GOST 28147 CTR keystream reuse (critical)
+          #   GHSA-c3fc-8qff-9hwx  bcprov LDAP injection (moderate)
+          allow-ghsas: GHSA-574f-3g2m-x479, GHSA-c3fc-8qff-9hwx
           # Wait for dependency-submission.yml to submit the PR's Gradle graph.
           retry-on-snapshot-warnings: true
           retry-on-snapshot-warnings-timeout: 600
