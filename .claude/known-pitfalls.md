@@ -388,6 +388,33 @@ article" — and re-read the article after structural edits to confirm nothing w
 
 ---
 
+## Schema-Forced Structured Output Can Destroy a Long Research Leg
+
+**The pitfall:** pairing a long, research-heavy subagent (30+ tool calls) with
+schema-forced structured output (a `StructuredOutput` tool the agent must call) risks the
+agent submitting **placeholder values** ("test", "t", "r") as its one and only structured
+call — silently discarding all the real work. The first structured call is final; there
+is no retraction.
+
+**Why it happens:** somewhere late in a long run the model emits a trial/placeholder
+invocation of the output tool — and the harness treats it as the deliverable. An explicit
+prompt instruction forbidding placeholder submissions did NOT prevent a recurrence.
+
+**Real example (2026-07-03/04).** During the pre-0.5.0 tech-stack review workflow, two
+Opus legs (Android UI stack; module topology) each did 120k+ tokens of genuine research
+— reading ADRs, vendor docs, build files — then returned literal `{"summary": "test"}`
+stubs. The Android leg did it twice, the second time despite a CRITICAL OUTPUT RULE
+paragraph added to its prompt. The completeness critic caught both.
+
+**What to do instead:** for long research legs, use a **plain agent whose final text is
+the deliverable** (a markdown section format works fine to parse) — final-text output has
+no early-submission failure mode. Keep schema-forced output for short, mechanical agents
+(a verdict, a classification) where the call comes quickly. If a leg does fail this way,
+its research survives in the workflow transcript directory — but re-running as a
+plain-text agent proved faster and more reliable than transcript mining.
+
+---
+
 ## Maintaining This Document
 
 This document grows when new pitfalls are observed during ongoing work. The bar for adding an entry: *has this mistake actually been made on this project, or is it close enough that it could be?* If yes, document it concretely with the specific pattern. If no, do not add speculative pitfalls — [Reading Risks](https://lightine.youtrack.cloud/articles/TES-A-11) and the principles already cover those.
