@@ -79,9 +79,13 @@ kotlin {
         androidMain {
             dependencies {
                 // The reading contract: MrzScannerResult surfaces mrz-camera-core's MrzScanResult in its
-                // public API, so the core is `api` (seen by consumers). The live-camera slice will add
-                // the mrz-camera-android scanner dependency when it wires the preview.
+                // public API, so the core is `api` (seen by consumers).
                 api(project(":mrz-camera-core"))
+                // The Android owns-the-session scanner drives the live camera behind the screen; the UI
+                // arms its opt-in preview seam and renders the SurfaceRequest it publishes. `implementation`
+                // — the scanner is an internal engine of the screen, not part of this module's public API
+                // (the frozen surface is MrzScannerScreen + config + result only).
+                implementation(project(":mrz-camera-android"))
                 // compose-runtime is `api` — the public entry point is a `@Composable`, so a consumer's
                 // own compilation needs the Compose runtime on its classpath. The rest of Compose is an
                 // internal implementation detail of the screens.
@@ -89,11 +93,14 @@ kotlin {
                 implementation(libs.androidx.compose.ui)
                 implementation(libs.androidx.compose.foundation)
                 implementation(libs.androidx.compose.material3)
+                // camera-compose supplies the CameraXViewfinder composable that draws the scanner's live
+                // preview SurfaceRequest — the live-preview slice (0.5.0). SurfaceRequest itself arrives
+                // transitively via mrz-camera-android's `api(camera-core)`.
+                implementation(libs.androidx.camera.compose)
                 // lifecycle-runtime-compose supplies collectAsStateWithLifecycle for hoisting scanner
-                // state; part of the module's Compose stack and the reason it compiles against API 37
-                // (see the compileSdk note above). camera-compose (the CameraXViewfinder) is the one
-                // stack dependency still deferred — it lands with the live-preview slice that adds the
-                // scanner's additive SurfaceRequest seam, so the scaffold pulls no unused camera dep.
+                // state (the SurfaceRequest and per-frame results) off the camera thread into Compose;
+                // part of the module's Compose stack and the reason it compiles against API 37 (see the
+                // compileSdk note above).
                 implementation(libs.androidx.lifecycle.runtime.compose)
             }
         }

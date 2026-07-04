@@ -47,13 +47,16 @@ androidx-camera-core = { module = "androidx.camera:camera-core", version.ref = "
 # surface), kept out of the compile classpath so the analyse-frame core stays backend-agnostic.
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
+# camera-compose supplies the CameraXViewfinder composable that renders the scanner's SurfaceRequest
+# (mrz-camera-ui-android live preview, 0.5.0). Same `camerax` version ref as the rest of the CameraX
+# stack so the viewfinder matches the session it draws.
+androidx-camera-compose = { module = "androidx.camera:camera-compose", version.ref = "camerax" }
 mlkit-text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "mlkit-text-recognition" }
 androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "androidx-exifinterface" }
 # Compose UI stack for mrz-camera-ui-android (0.5.0). compose-runtime is `api` in the module — the
 # public entry point is a `@Composable`, so a consumer's own compilation needs the runtime; ui /
-# foundation / material3 are internal implementation detail (`implementation`). camera-compose
-# (the CameraXViewfinder) is intentionally NOT added yet — it lands with the live-preview slice that
-# introduces the scanner's additive SurfaceRequest seam, so the scaffold pulls no unused dependency.
+# foundation / material3 are internal implementation detail (`implementation`). The live camera preview
+# uses androidx-camera-compose (above) fed by the scanner's SurfaceRequest seam.
 androidx-compose-runtime = { module = "androidx.compose.runtime:runtime", version.ref = "androidx-compose" }
 androidx-compose-ui = { module = "androidx.compose.ui:ui", version.ref = "androidx-compose" }
 androidx-compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "androidx-compose" }

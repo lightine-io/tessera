@@ -67,12 +67,15 @@ kotlin {
                 // mrz-camera-core, and the scanner's results expose core types — so the core is `api`,
                 // seen transitively (it re-exports types / mrz-core / telemetry / coroutines in turn).
                 api(project(":mrz-camera-core"))
-                // CameraX camera-core supplies the ImageProxy frame type the Android recognizer reads;
+                // CameraX camera-core supplies the ImageProxy frame type the Android recognizer reads and
+                // the SurfaceRequest type exposed on CameraXMrzScanner.surfaceRequest (the opt-in live-
+                // preview seam, 0.5.0) — a public return type, so camera-core is `api`, seen transitively
+                // by the viewfinder in mrz-camera-ui-android and any consumer that renders the preview.
+                api(libs.androidx.camera.core)
                 // ML Kit text-recognition is the bundled-model variant — the Latin recognition model
                 // ships in the app, so OCR needs no runtime model download or network. (It still pulls
                 // the Play Services ML Kit libraries and Google's datatransport stack transitively; the
                 // SDK initializes none of it — see docs/reading-risks.md for that dependency surface.)
-                implementation(libs.androidx.camera.core)
                 implementation(libs.mlkit.text.recognition)
                 // camera-lifecycle supplies ProcessCameraProvider + bindToLifecycle for the owns-session
                 // scanner; coroutines-android supplies Dispatchers.Main (CameraX binds on the main thread).

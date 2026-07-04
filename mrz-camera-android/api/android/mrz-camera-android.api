@@ -2,7 +2,9 @@ public final class io/lightine/tessera/mrz/camera/CameraXMrzScanner : io/lightin
 	public fun <init> (Landroid/content/Context;Landroidx/lifecycle/LifecycleOwner;Lio/lightine/tessera/mrz/camera/MrzTextRecognizer;Lio/lightine/tessera/mrz/camera/ParsingMode;Lio/lightine/tessera/telemetry/TelemetrySink;Landroidx/camera/core/CameraSelector;)V
 	public synthetic fun <init> (Landroid/content/Context;Landroidx/lifecycle/LifecycleOwner;Lio/lightine/tessera/mrz/camera/MrzTextRecognizer;Lio/lightine/tessera/mrz/camera/ParsingMode;Lio/lightine/tessera/telemetry/TelemetrySink;Landroidx/camera/core/CameraSelector;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun close ()V
+	public final fun enablePreview ()V
 	public fun getResults ()Lkotlinx/coroutines/flow/Flow;
+	public final fun getSurfaceRequest ()Lkotlinx/coroutines/flow/StateFlow;
 	public fun start ()V
 	public fun stop ()V
 }

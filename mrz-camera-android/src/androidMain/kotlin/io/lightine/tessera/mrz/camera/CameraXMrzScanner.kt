@@ -7,6 +7,9 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraState
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
+import androidx.camera.core.SurfaceRequest
+import androidx.camera.core.UseCase
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.Observer
@@ -24,7 +27,10 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
@@ -44,9 +50,14 @@ import kotlin.coroutines.resumeWithException
  * and closes the proxy once analysed (CameraX cannot deliver the next frame until the current one is
  * closed — memory hygiene).
  *
- * **Headless.** No preview surface is created; a consumer that wants one attaches its own. **The consumer
- * holds the `CAMERA` permission** before [start] — this scanner reports a [CameraError.PermissionDenied]
- * on [results], it never requests permission (`scope.md` "permission boundary").
+ * **Headless by default; live preview is opt-in.** No preview surface is created unless the consumer
+ * arms one via [enablePreview]. Left un-armed (the default), the scanner binds only [ImageAnalysis] and
+ * a pure-OCR consumer's camera session is unchanged — it draws nothing (ADR-020). Armed, the *same*
+ * session that feeds analysis also binds a CameraX [Preview], whose [SurfaceRequest] is published on
+ * [surfaceRequest] for a viewfinder (e.g. `CameraXViewfinder` in `mrz-camera-ui-android`) to render —
+ * never a second camera. **The consumer holds the `CAMERA` permission** before [start] — this scanner
+ * reports a [CameraError.PermissionDenied] on [results], it never requests permission (`scope.md`
+ * "permission boundary").
  *
  * **Verification status.** The contract this implements (the [MrzCameraScanner] interface and the
  * [scan][MrzFrameAnalyzer.scan] engine) is host-tested in `mrz-camera-core`, and the
@@ -104,6 +115,33 @@ public class CameraXMrzScanner(
         )
     override val results: Flow<MrzScanResult> = mutableResults.asSharedFlow()
 
+    // Opt-in live-preview seam (additive; the scanner is headless by default — ADR-020). Read at bind
+    // time in cameraFrames(): when armed, a CameraX Preview use case is bound in the SAME session as the
+    // analysis use case and its SurfaceRequest is published on [surfaceRequest] for a viewfinder to draw.
+    // @Volatile because enablePreview() may be called from any thread; the bind reads it on Dispatchers.Main.
+    @Volatile private var previewEnabled = false
+    private val mutableSurfaceRequest = MutableStateFlow<SurfaceRequest?>(null)
+
+    /**
+     * The live-preview surface request, or `null` when no preview is active. Emits a [SurfaceRequest] once
+     * the camera opens **after** [enablePreview] has armed the preview and [start] binds the session; back
+     * to `null` when the session ends. A `CameraXViewfinder` (in `mrz-camera-ui-android`) collects this and
+     * renders the preview — the UI only draws; this scanner keeps owning the session and lifecycle.
+     * Stays `null` for the headless default (preview not armed).
+     */
+    public val surfaceRequest: StateFlow<SurfaceRequest?> = mutableSurfaceRequest.asStateFlow()
+
+    /**
+     * Arms the live camera preview for subsequent [start]s: the next session binds a CameraX [Preview] use
+     * case alongside analysis and publishes its [SurfaceRequest] on [surfaceRequest]. Opt-in so the default
+     * remains headless (ADR-020) — a pure-OCR consumer never pays for a Preview use case. Idempotent; call
+     * before [start]. There is no disarm: preview stays on for this scanner's lifetime once armed (the
+     * default UI arms once at construction).
+     */
+    public fun enablePreview() {
+        previewEnabled = true
+    }
+
     // Tracks the in-flight session and auto-clears it on completion, so start() works again after the
     // stream ends on its own (a terminal CaptureError), not only after stop(). See CameraSessionGate.
     private val session = CameraSessionGate()
@@ -158,11 +196,26 @@ public class CameraXMrzScanner(
                 if (trySendBlocking(proxy).isFailure) proxy.close()
             }
 
+            // When preview is armed, bind a Preview use case in the SAME session (never a second camera):
+            // CameraX hands it a SurfaceRequest through the surface provider, which we publish for a
+            // viewfinder to fulfil. setSurfaceProvider with no executor delivers on the main thread; the
+            // MutableStateFlow is thread-safe regardless. Un-armed → null, and only ImageAnalysis binds.
+            val preview: Preview? =
+                if (previewEnabled) {
+                    Preview.Builder().build().apply {
+                        setSurfaceProvider { request -> mutableSurfaceRequest.value = request }
+                    }
+                } else {
+                    null
+                }
+            val useCases: List<UseCase> = listOfNotNull(preview, analysis)
+
             val camera =
                 try {
-                    provider.bindToLifecycle(lifecycleOwner, cameraSelector, analysis)
+                    provider.bindToLifecycle(lifecycleOwner, cameraSelector, *useCases.toTypedArray())
                 } catch (failure: Exception) {
                     analysis.clearAnalyzer()
+                    mutableSurfaceRequest.value = null
                     close(failure)
                     return@callbackFlow
                 }
@@ -212,12 +265,15 @@ public class CameraXMrzScanner(
             awaitClose {
                 camera.cameraInfo.cameraState.removeObserver(stateObserver)
                 analysis.clearAnalyzer()
-                // Unbind only THIS session's use case, not the whole provider — so a stop()-then-start()
-                // restart (whose old teardown may run after the new bind, since cancellation is
-                // cooperative) cannot unbind the new session, and any other use case the consumer bound
-                // to the same lifecycle is left alone. The full rapid-restart lifecycle is verified on a
-                // device in the live-device slice.
-                provider.unbind(analysis)
+                // Clear the published request first: the viewfinder stops drawing before we unbind, and a
+                // re-arm on the next start() begins from null rather than a stale, now-invalid request.
+                mutableSurfaceRequest.value = null
+                // Unbind only THIS session's use cases (analysis + the optional preview), not the whole
+                // provider — so a stop()-then-start() restart (whose old teardown may run after the new
+                // bind, since cancellation is cooperative) cannot unbind the new session, and any other
+                // use case the consumer bound to the same lifecycle is left alone. The full rapid-restart
+                // lifecycle is verified on a device in the live-device slice.
+                provider.unbind(*useCases.toTypedArray())
             }
             // RENDEZVOUS (zero-capacity): a send completes only when the collector actually receives the
             // frame, so a successfully-sent ImageProxy is, by that same instant, in scan()'s map{} where the
