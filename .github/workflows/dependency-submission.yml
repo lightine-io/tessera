@@ -66,3 +66,15 @@ jobs:
 
       - name: Generate and submit dependency graph
         uses: gradle/actions/dependency-submission@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          # Gate only what actually SHIPS. Exclude build-time/test-only configurations from the submitted
+          # graph so the dependency-review PR gate (and Dependabot alerting) never block on transitives that
+          # can never reach a consumer:
+          #   - `^classpath$` — the buildscript classpath: build tooling only (Dokka, and the ABI-dump
+          #     binary-compatibility-validator in the root build.gradle.kts). Anchored so it does NOT also
+          #     match shipped `*CompileClasspath` / `*RuntimeClasspath` configs.
+          #   - `.*[Tt]est(Compile|Runtime)Classpath` — the per-target test classpaths (e.g. Robolectric).
+          # Both classes tripped the gate on transitives with advisories (jackson via Dokka; bcprov via
+          # Robolectric) despite never being published — this scopes the gate to the runtime/compile
+          # classpaths of the published artifacts instead. Consumer-facing dependency CVEs are still gated.
+          dependency-graph-exclude-configurations: '.*[Tt]est(Compile|Runtime)Classpath|^classpath$'
