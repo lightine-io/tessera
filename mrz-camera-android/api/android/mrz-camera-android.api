@@ -1,0 +1,25 @@
+public final class io/lightine/tessera/mrz/camera/CameraXMrzScanner : io/lightine/tessera/mrz/camera/MrzCameraScanner, java/lang/AutoCloseable {
+	public fun <init> (Landroid/content/Context;Landroidx/lifecycle/LifecycleOwner;Lio/lightine/tessera/mrz/camera/MrzTextRecognizer;Lio/lightine/tessera/mrz/camera/ParsingMode;Lio/lightine/tessera/telemetry/TelemetrySink;Landroidx/camera/core/CameraSelector;)V
+	public synthetic fun <init> (Landroid/content/Context;Landroidx/lifecycle/LifecycleOwner;Lio/lightine/tessera/mrz/camera/MrzTextRecognizer;Lio/lightine/tessera/mrz/camera/ParsingMode;Lio/lightine/tessera/telemetry/TelemetrySink;Landroidx/camera/core/CameraSelector;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun close ()V
+	public fun getResults ()Lkotlinx/coroutines/flow/Flow;
+	public fun start ()V
+	public fun stop ()V
+}
+
+public final class io/lightine/tessera/mrz/camera/ExifCaptureMetadataReaderKt {
+	public static final fun exifCaptureMetadataReader (Lio/lightine/tessera/mrz/camera/SavedImageReadingAcknowledgement;Landroid/content/Context;)Lio/lightine/tessera/mrz/camera/CaptureMetadataReader;
+}
+
+public final class io/lightine/tessera/mrz/camera/MlKitMrzTextRecognizer : io/lightine/tessera/mrz/camera/MrzTextRecognizer, java/lang/AutoCloseable {
+	public fun <init> ()V
+	public fun <init> (Lcom/google/mlkit/vision/text/TextRecognizer;)V
+	public synthetic fun <init> (Lcom/google/mlkit/vision/text/TextRecognizer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun close ()V
+	public fun recognize (Landroidx/camera/core/ImageProxy;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public synthetic fun recognize (Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class io/lightine/tessera/mrz/camera/MlKitSavedImageRecognizerKt {
+	public static final fun mlKitSavedImageRecognizer (Lio/lightine/tessera/mrz/camera/SavedImageReadingAcknowledgement;Landroid/content/Context;)Lio/lightine/tessera/mrz/camera/MrzTextRecognizer;
+}
