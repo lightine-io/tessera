@@ -35,6 +35,15 @@ if [ -z "$cmd" ]; then
 fi
 [ -z "$cmd" ] && exit 0
 
+# Reading the manual is never a capture: a command asking for help output can
+# match the signatures below textually while capturing nothing (this happened —
+# the border blocked its own audit's `--help` call, 2026-07-04). Long-form
+# `--help` only: short `-h` is too common on unrelated commands (`df -h && …`)
+# to safely disarm the border.
+if printf '%s' "$cmd" | grep -Eq '(^|[[:space:]])--help([[:space:]]|$)'; then
+    exit 0
+fi
+
 # Screen-capture / -recording command signatures (case-insensitive):
 #   macOS:       screencapture ...
 #   Android:     adb ... screencap / adb ... screenrecord

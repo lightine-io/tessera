@@ -72,17 +72,23 @@ flat="$(printf '%s' "$cmd" | tr '\n\r\t' '   ')"
 # the cost is missing the rare `cd x; sdkmanager` form, acceptable for a nudge.
 token='(^|&&|[|])[[:space:]]*([[:alnum:]_./~-]*/)?'
 
-# Android SDK / AVD raw tools -> the Android CLI.
-if printf '%s' "$flat" | grep -Eq "${token}(sdkmanager|avdmanager)([^[:alnum:]_.-]|\$)"; then
-    raw="$(printf '%s' "$flat" | grep -oE "${token}(sdkmanager|avdmanager)" | grep -oE 'sdkmanager|avdmanager' | head -1)"
+# Android SDK / AVD / emulator / deploy raw tools -> the Android CLI.
+# `emulator` (the SDK's emulator binary) and `adb install` joined 2026-07-04
+# (audit): they were the remaining old-way paths around `android emulator start`
+# and `android run`. Other `adb` uses (logcat, pm grant, exec-out, input) stay
+# deliberately unguarded — they are the prescribed text-inspection path.
+if printf '%s' "$flat" | grep -Eq "${token}(sdkmanager|avdmanager|emulator)([^[:alnum:]_.-]|\$)|${token}adb[[:space:]][^|;&]*[[:space:]]install([^[:alnum:]_.-]|\$)|${token}adb[[:space:]]+install([^[:alnum:]_.-]|\$)"; then
+    raw="$(printf '%s' "$flat" | grep -oE "${token}(sdkmanager|avdmanager|emulator|adb)" | grep -oE 'sdkmanager|avdmanager|emulator|adb' | head -1)"
     {
         echo "prefer-dev-wrappers: BLOCKED — drive Android via the Android CLI, not raw ${raw}."
         echo ""
         echo "  Command: $cmd"
         echo ""
-        echo "  Use the prescribed wrapper for Android SDK / AVD management:"
+        echo "  Use the prescribed wrapper:"
         echo "    android sdk install|list|update|remove    (instead of sdkmanager)"
         echo "    android avd ...                           (instead of avdmanager)"
+        echo "    android emulator start|stop|list|...      (instead of raw emulator)"
+        echo "    android run ...                           (instead of adb install)"
         echo "  The full drive-dev tool map (Android CLI, Xcode MCP, ./gradlew) is in"
         echo "  .claude/rules/mobile-dev-workflow.md. If the CLI genuinely can't do"
         echo "  this, append '# raw-ok' to the command to override deliberately."

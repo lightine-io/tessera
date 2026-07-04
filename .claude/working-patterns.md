@@ -63,6 +63,18 @@ Every commitment, rule, or behavior is stated as target-agnostic where the under
 
 A new feature starts as an internal package within an existing module, with a clean public API surface. Promote to a standalone module only when independent reuse, evolution, testing, ownership, shipping, or optional inclusion clearly applies. The internal-package boundary makes future promotion mechanical. Do not create modules eagerly — modularity costs upfront thought.
 
+### Five slots per platform toolchain (the driver pattern)
+
+When a development platform joins the project (Android and iOS today; desktop/web later), its agent toolchain fills the same **five slots** — this is what makes "every session uses the right tool" structural instead of willpower (established at the 2026-07-04 toolchain audit, after a prior project showed chat-level instructions get ignored):
+
+1. **Always-on line** — the driver is named in CLAUDE.md's Required Discipline (loaded by every session, before any file is touched).
+2. **Path-scoped rule** — the operating method ([`mobile-dev-workflow.md`](rules/mobile-dev-workflow.md) today) auto-loads on that platform's code paths.
+3. **Redirect hook** — [`prefer-dev-wrappers.sh`](../scripts/prefer-dev-wrappers.sh) physically blocks the raw/old-way tools and names the driver command instead (`# raw-ok` escape for genuine gaps).
+4. **Tool present + verified** — the driver is installed/registered AND its availability is checked before relying on it (a registered MCP can silently fail to connect; absence is surfaced to the maintainer, never worked around).
+5. **KB method doc** — the full how-to lives in the KB (TES-A-19 / TES-A-21 pattern) for depth beyond the rule.
+
+A new platform's pre-release tech-stack review names the driver; these five slots then install it. Borders (like the screenshot block) stay separate and minimal: prescribe the path in the five slots, enforce only the genuinely session-destroying borders.
+
 ---
 
 ## Collaboration Patterns
