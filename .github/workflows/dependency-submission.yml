@@ -45,14 +45,24 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       # JDK 21 to match check.yml; the Gradle daemon still pins to JDK 17
-      # (gradle/gradle-daemon-jvm.properties, foojay-provisioned). The Android
-      # modules configure against the runner's preinstalled android-36 platform
-      # (compileSdk 36), so no SDK install step is needed here for resolution.
+      # (gradle/gradle-daemon-jvm.properties, foojay-provisioned).
       - name: Set up JDK 21
         uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
         with:
           distribution: temurin
           java-version: '21'
+
+      # Resolving the graph configures the Android modules, which read compileSdk 37 (android-37.0,
+      # Android 17 — see check.yml). android-37.0 is recent (GA 2026-06-16) and may not be preinstalled,
+      # so ensure it explicitly (with license acceptance) rather than relying on AGP auto-download, which
+      # could hang on an unaccepted-license prompt in CI. Same first-party-sdkmanager approach as check.yml.
+      - name: Ensure Android SDK platform 37
+        run: |
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -d "$ANDROID_SDK_ROOT/platforms/android-37.0" ]; then
+            yes 2>/dev/null | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+            "$SDKMANAGER" --install "platforms;android-37.0"
+          fi
 
       - name: Generate and submit dependency graph
         uses: gradle/actions/dependency-submission@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0

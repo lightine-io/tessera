@@ -46,13 +46,13 @@ kotlin {
     // not a declared publication shape — what this module publishes is decided at the release slice.
     jvm()
 
-    // Android target. compileSdk tracks the latest stable API (36); minSdk 23 per ADR-018. The
+    // Android target. compileSdk tracks the latest stable API (37, Android 17 — ADR-017); minSdk 23 per ADR-018. The
     // namespace is distinct from mrz-camera-android's (each module's AAR manifest needs its own),
     // while the Kotlin package stays io.lightine.tessera.mrz.camera across both — Android's namespace
     // and the Kotlin package are independent. Verified by the android-compile CI job.
     android {
         namespace = "io.lightine.tessera.mrz.camera.core"
-        compileSdk = 36
+        compileSdk = 37
         minSdk = 23
         // Run the common test suite against the Android target on the JVM host (androidHostTest) —
         // executed by the android-compile CI job, closing the "Android target is compile-only" gap.

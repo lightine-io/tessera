@@ -36,11 +36,11 @@ kotlin {
 
     jvm()
 
-    // Android target. compileSdk tracks the latest stable API (36); minSdk 23 per ADR-018.
+    // Android target. compileSdk tracks the latest stable API (37, Android 17 — ADR-017); minSdk 23 per ADR-018.
     // namespace scopes the generated AAR manifest package.
     android {
         namespace = "io.lightine.tessera.mrz"
-        compileSdk = 36
+        compileSdk = 37
         minSdk = 23
         // Run the common test suite against the Android target on the JVM host (androidHostTest) —
         // executed by the android-compile CI job, closing the "Android target is compile-only" gap.

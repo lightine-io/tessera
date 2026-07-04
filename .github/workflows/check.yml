@@ -93,19 +93,19 @@ jobs:
 
       # ubuntu-latest ships the Android SDK (ANDROID_SDK_ROOT set) with recent platforms preinstalled
       # — including the compileSdk used here, whose platform directory and sdkmanager package id are
-      # `android-36` (API 36, the latest *stable* — ADR-017; unlike the beta API-37 platform, which
-      # carries a `.0` revision suffix as `android-37.0`). So this is normally a no-op; the guarded
-      # install is only a fallback for a future runner image that drops android-36. Using the
-      # preinstalled sdkmanager keeps CI on first-party actions only (no third-party setup-android
-      # action on the supply chain). AGP resolves build-tools itself.
-      - name: Ensure Android SDK platform 36
+      # `android-37.0` (API 37, Android 17 — stable/GA 2026-06-16, ADR-017). The `.0` is Android's
+      # finalized minor-version scheme, not a preview marker (source.properties: CodeName empty,
+      # PreviewSdkInt=0). So this is normally a no-op; the guarded install is only a fallback for a
+      # runner image that lacks android-37.0. Using the preinstalled sdkmanager keeps CI on first-party
+      # actions only (no third-party setup-android action on the supply chain). AGP resolves build-tools.
+      - name: Ensure Android SDK platform 37
         run: |
           SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
           echo "--- platforms present ---"; ls -1 "$ANDROID_SDK_ROOT/platforms" 2>/dev/null || echo "(none)"
-          if [ ! -d "$ANDROID_SDK_ROOT/platforms/android-36" ]; then
+          if [ ! -d "$ANDROID_SDK_ROOT/platforms/android-37.0" ]; then
             # `yes` feeds the license prompts; its broken-pipe on the reader's exit is harmless, hence 2>/dev/null.
             yes 2>/dev/null | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
-            "$SDKMANAGER" --install "platforms;android-36"
+            "$SDKMANAGER" --install "platforms;android-37.0"
           fi
 
       - name: Set up Gradle
@@ -157,6 +157,18 @@ jobs:
           path: ~/.konan
           key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
           restore-keys: konan-${{ runner.os }}-
+
+      # publishToMavenLocal builds every module's Android target, which now compiles against
+      # android-37.0 (API 37 / Android 17 — see the android-compile job's note). Guarded install,
+      # same first-party-sdkmanager approach.
+      - name: Ensure Android SDK platform 37
+        run: |
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          echo "--- platforms present ---"; ls -1 "$ANDROID_SDK_ROOT/platforms" 2>/dev/null || echo "(none)"
+          if [ ! -d "$ANDROID_SDK_ROOT/platforms/android-37.0" ]; then
+            yes 2>/dev/null | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+            "$SDKMANAGER" --install "platforms;android-37.0"
+          fi
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0

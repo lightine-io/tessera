@@ -63,13 +63,13 @@ jobs:
           java-version: '21'
 
       # The Android camera AAR (tessera-mrz-camera-android) publishes here, so the macOS runner needs
-      # the compileSdk platform. macos-latest ships the Android SDK; ensure android-36 is present.
-      - name: Ensure Android SDK platform 36
+      # the compileSdk platform. macos-latest ships the Android SDK; ensure android-37.0 is present.
+      - name: Ensure Android SDK platform 37
         run: |
           SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
-          if [ ! -d "$ANDROID_SDK_ROOT/platforms/android-36" ]; then
+          if [ ! -d "$ANDROID_SDK_ROOT/platforms/android-37.0" ]; then
             yes 2>/dev/null | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
-            "$SDKMANAGER" --install "platforms;android-36"
+            "$SDKMANAGER" --install "platforms;android-37.0"
           fi
 
       - name: Cache Kotlin/Native toolchain
@@ -244,12 +244,12 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Ensure Android SDK platform 36
+      - name: Ensure Android SDK platform 37
         run: |
           SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
-          if [ ! -d "$ANDROID_SDK_ROOT/platforms/android-36" ]; then
+          if [ ! -d "$ANDROID_SDK_ROOT/platforms/android-37.0" ]; then
             yes 2>/dev/null | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
-            "$SDKMANAGER" --install "platforms;android-36"
+            "$SDKMANAGER" --install "platforms;android-37.0"
           fi
 
       - name: Cache Kotlin/Native toolchain
