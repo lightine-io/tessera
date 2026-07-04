@@ -67,14 +67,18 @@ jobs:
       - name: Generate and submit dependency graph
         uses: gradle/actions/dependency-submission@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
         with:
-          # Gate only what actually SHIPS. Exclude build-time/test-only configurations from the submitted
-          # graph so the dependency-review PR gate (and Dependabot alerting) never block on transitives that
-          # can never reach a consumer:
-          #   - `^classpath$` — the buildscript classpath: build tooling only (Dokka, and the ABI-dump
-          #     binary-compatibility-validator in the root build.gradle.kts). Anchored so it does NOT also
-          #     match shipped `*CompileClasspath` / `*RuntimeClasspath` configs.
-          #   - `.*[Tt]est(Compile|Runtime)Classpath` — the per-target test classpaths (e.g. Robolectric).
-          # Both classes tripped the gate on transitives with advisories (jackson via Dokka; bcprov via
-          # Robolectric) despite never being published — this scopes the gate to the runtime/compile
-          # classpaths of the published artifacts instead. Consumer-facing dependency CVEs are still gated.
-          dependency-graph-exclude-configurations: '.*[Tt]est(Compile|Runtime)Classpath|^classpath$'
+          # Gate only what actually SHIPS — keep build-time/test-only dependencies out of the submitted
+          # graph so the dependency-review PR gate (and Dependabot) never block on transitives that cannot
+          # reach a consumer:
+          #   - `.*[Tt]est(Compile|Runtime)Classpath` — per-target test classpaths (e.g. Robolectric, which
+          #     pulls bcprov). These are project configurations, so exclude-configurations reaches them.
+          #   - `:buildSrc` — the ABI-dump tooling (binary-compatibility-validator etc.) lives in buildSrc,
+          #     not on the root buildscript classpath, so it never enters the main build's graph; this
+          #     excludes buildSrc's own resolution too (belt-and-suspenders).
+          # The build-time *buildscript* classpath (e.g. Dokka's jackson) is kept out at the source — by
+          # NOT declaring a root `buildscript {}` block (the ABI tooling is in buildSrc instead); the
+          # buildscript classpath is not a project configuration, so it cannot be excluded here. Result:
+          # the gate covers the runtime/compile classpaths of the published artifacts only. Consumer-facing
+          # dependency CVEs are still gated.
+          dependency-graph-exclude-configurations: '.*[Tt]est(Compile|Runtime)Classpath'
+          dependency-graph-exclude-projects: ':buildSrc'

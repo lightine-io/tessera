@@ -7,21 +7,11 @@ import kotlinx.validation.api.filterOutNonPublic
 import kotlinx.validation.api.loadApiFromJvmClasses
 import java.util.jar.JarFile
 
-buildscript {
-    // Classpath for the android-only ABI guard (registerAndroidAbiTasks, below). The AGP-KMP android
-    // target is invisible to Kotlin's abiValidation (TES-35), so we dump its public ABI directly from
-    // the android target's compiled BYTECODE with JetBrains' binary-compatibility-validator — the same
-    // engine behind abiValidation. Build-time tooling only (never shipped). The plugin-marker artifact
-    // does not propagate its runtime deps onto a plain buildscript classpath, so asm-tree (the bytecode
-    // reader) and kotlin-metadata-jvm (the Kotlin-metadata reader) are declared explicitly.
-    repositories { mavenCentral() }
-    dependencies {
-        classpath("org.jetbrains.kotlinx:binary-compatibility-validator:0.18.1")
-        classpath("org.ow2.asm:asm-tree:9.7")
-        // Keep in sync with libs.versions.toml `kotlin` (reads the metadata the Kotlin compiler writes).
-        classpath("org.jetbrains.kotlin:kotlin-metadata-jvm:2.4.0")
-    }
-}
+// The android-only ABI guard (registerAndroidAbiTasks, below) uses binary-compatibility-validator +
+// asm-tree + kotlin-metadata-jvm. Those are declared in buildSrc/build.gradle.kts (buildSrc's runtime
+// classpath reaches this script), NOT on this project's buildscript classpath — so the build-time
+// classpath is never exposed to the submitted dependency graph (dependency-review gates only shipped
+// deps). See buildSrc/build.gradle.kts and .github/workflows/dependency-submission.yml.
 
 plugins {
     alias(libs.plugins.spotless)
