@@ -17,6 +17,22 @@ camerax = "1.6.1"
 mlkit-text-recognition = "16.0.1"
 # androidx.exifinterface (mrz-camera-android, 0.3.0) — reads a saved image's EXIF for capture metadata. Latest stable.
 androidx-exifinterface = "1.4.2"
+# Jetpack Compose UI stack for the default Android UI module (mrz-camera-ui-android, 0.5.0; ADR-002 /
+# ADR-026). Deliberately pinned per-artifact with NO Compose BOM (the module owns its versions
+# explicitly — one fewer transitive contract to reason about). `androidx-compose` is the shared version
+# of the Compose UI group (runtime + ui + foundation ship in lockstep); Material3 versions on its own
+# line, so it gets its own key. The Compose compiler is the `org.jetbrains.kotlin.plugin.compose` Gradle
+# plugin pinned to the Kotlin version (below), NOT `buildFeatures.compose` — the KMP-AGP library plugin
+# has no such flag. All latest stable, verified against Google's Maven at write time.
+androidx-compose = "1.11.4"
+androidx-compose-material3 = "1.4.0"
+# lifecycle-runtime-compose supplies collectAsStateWithLifecycle for the UI's state hoisting. Its latest
+# stable (2.11.0) declares minCompileSdk=37 (Android 17) — met by the repo-wide compileSdk 37. Latest stable.
+androidx-lifecycle = "2.11.0"
+# Robolectric runs the module's Compose UI tests on the JVM host (androidHostTest) — no device/emulator —
+# the Android counterpart of the other modules' pure-JVM host tests, but with an Android runtime so a
+# composable can actually be laid out and queried by semantics. Test-only. Latest stable.
+robolectric = "4.16.1"
 
 [libraries]
 kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest" }
@@ -33,10 +49,30 @@ androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", versi
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
 mlkit-text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "mlkit-text-recognition" }
 androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "androidx-exifinterface" }
+# Compose UI stack for mrz-camera-ui-android (0.5.0). compose-runtime is `api` in the module — the
+# public entry point is a `@Composable`, so a consumer's own compilation needs the runtime; ui /
+# foundation / material3 are internal implementation detail (`implementation`). camera-compose
+# (the CameraXViewfinder) is intentionally NOT added yet — it lands with the live-preview slice that
+# introduces the scanner's additive SurfaceRequest seam, so the scaffold pulls no unused dependency.
+androidx-compose-runtime = { module = "androidx.compose.runtime:runtime", version.ref = "androidx-compose" }
+androidx-compose-ui = { module = "androidx.compose.ui:ui", version.ref = "androidx-compose" }
+androidx-compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "androidx-compose" }
+androidx-compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "androidx-compose-material3" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
+# Host-side Compose UI test harness (androidHostTest): ui-test-junit4 provides the compose test rule +
+# semantics matchers; robolectric provides the Android runtime they run against on the JVM.
+androidx-compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "androidx-compose" }
+# ui-test-manifest ships the test-only AndroidManifest entry for the ComponentActivity the Compose test
+# rule launches — without it Robolectric cannot resolve the activity.
+androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "androidx-compose" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
+# The Compose compiler, versioned in lockstep with Kotlin (it is part of the Kotlin release). Applied by
+# mrz-camera-ui-android instead of an AGP `buildFeatures.compose` flag (the KMP-AGP library plugin has none).
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }

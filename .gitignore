@@ -90,6 +90,11 @@ logs/
 # real homes (rules / tasks / a future YouTrack) once acted on. Same leading-slash rationale as above.
 /.plans/
 
+# Default-UI design mockups live in .design/ (local HTML working copies of the 0.5.0 scanner screens).
+# The published source of truth is the Claude Design project "Tessera Default UI", not git; these are
+# local working material (content-placement: local, not the public repo). Same leading-slash rationale.
+/.design/
+
 # Local reference copies of external specifications live in .spec/ (e.g., ICAO Doc 9303 PDFs
 # downloaded for implementation verification). These are NEVER committed: ICAO's terms restrict
 # redistribution of their materials without written permission. The spec content is consulted

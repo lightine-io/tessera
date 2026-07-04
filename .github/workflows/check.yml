@@ -117,6 +117,8 @@ jobs:
       # + CameraX scanner). Most host tests run in the `check` job via each module's jvm target;
       # mrz-camera-android is Android-only (no jvm target), so its androidHostTest unit tests — the
       # CameraState recoverable/critical classification — run here, where the Android SDK is present.
+      # mrz-camera-ui-android is likewise Android-only (Jetpack Compose), so its androidHostTest suite —
+      # a config unit test plus a Robolectric-driven Compose render/callback smoke test — also runs here.
       # The four source-bearing common modules enable withHostTest{}, so their COMMON test suites also
       # execute against the Android target here (~600 tests on the JVM host with the Android variant) —
       # the Android target is no longer compile-only on CI.
@@ -124,7 +126,7 @@ jobs:
       # resolves androidRuntimeClasspath, so it needs the Android SDK this job provides.
       # Still no emulator / instrumented / live-camera tests (those run locally on a device).
       - name: Compile Android targets, run Android host tests, verify ML Kit bundled model
-        run: ./gradlew compileAndroidMain :mrz-camera-android:testAndroidHostTest :types:testAndroidHostTest :mrz-core:testAndroidHostTest :telemetry:testAndroidHostTest :mrz-camera-core:testAndroidHostTest :mrz-camera-android:verifyMlKitBundledModel
+        run: ./gradlew compileAndroidMain :mrz-camera-android:testAndroidHostTest :mrz-camera-ui-android:testAndroidHostTest :types:testAndroidHostTest :mrz-core:testAndroidHostTest :telemetry:testAndroidHostTest :mrz-camera-core:testAndroidHostTest :mrz-camera-android:verifyMlKitBundledModel
 
   # Empty-module release guard (TES-43 pre-0.5.0 item; the v0.2.0 incident class, PR #154):
   # a module that DECLARES a Kotlin/Native target but produces no klib fails its

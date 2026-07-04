@@ -25,6 +25,7 @@ dependencies {
         api("${project.group}:tessera-logging:${project.version}")
         api("${project.group}:tessera-mrz-camera-core:${project.version}")
         api("${project.group}:tessera-mrz-camera-android:${project.version}")
+        api("${project.group}:tessera-mrz-camera-ui-android:${project.version}")
     }
 }
 
