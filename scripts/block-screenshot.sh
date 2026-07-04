@@ -36,10 +36,17 @@ fi
 [ -z "$cmd" ] && exit 0
 
 # Screen-capture / -recording command signatures (case-insensitive):
-#   macOS:    screencapture ...
-#   Android:  adb ... screencap / adb ... screenrecord
-#   iOS sim:  xcrun simctl io ... screenshot / ... recordVideo
-if printf '%s' "$cmd" | grep -iEq 'screencapture|adb[^|;&]*screen(cap|record)|simctl[^|;&]*io[^|;&]*(screenshot|recordvideo)'; then
+#   macOS:       screencapture ...
+#   Android:     adb ... screencap / adb ... screenrecord
+#   Android CLI: android screen capture ... — the prescribed driver's OWN
+#                screenshot command ("Outputs the device screen to a PNG"),
+#                found in an audit 2026-07-04; without this line the tool the
+#                workflow prescribes would carry a side door around this border.
+#                (`android screen resolve` stays allowed: it only reads an
+#                already-captured file and outputs text coordinates — inert
+#                while capture is blocked. `android layout` is the text path.)
+#   iOS sim:     xcrun simctl io ... screenshot / ... recordVideo
+if printf '%s' "$cmd" | grep -iEq 'screencapture|adb[^|;&]*screen(cap|record)|(^|[^[:alnum:]_.-])android[[:space:]]+screen[[:space:]]+capture|simctl[^|;&]*io[^|;&]*(screenshot|recordvideo)'; then
     {
         echo "block-screenshot: BLOCKED — screen capture/recording is disabled for the assistant."
         echo ""
