@@ -40,9 +40,15 @@ Items in the project's issue tracker that this PR resolves, modifies, or adds.
 Confirm `CHANGELOG.md` `[Unreleased]` section is updated to reflect this PR's changes,
 grouped Added / Changed / Deprecated / Removed / Fixed / Security per Keep a Changelog.
 For non-trivial PRs this is required (per `docs/versioning.md` and CLAUDE.md).
+
+Trivial/infra PRs skip the changelog by applying the `no-changelog` LABEL (with a one-line
+justification below). The CI check `changelog · entry present` honors that label and NOTHING
+else — a "N/A" note in this body alone will NOT make it pass, the check will go red. So: touch
+CHANGELOG.md, or apply the label. One or the other, every PR.
 -->
 
-- [ ] CHANGELOG.md `[Unreleased]` updated, or N/A (explain why)
+- [ ] CHANGELOG.md `[Unreleased]` updated — **or** apply the `no-changelog` label (CI checks the label, not a body note) and justify in one line: <!-- why -->
+
 
 ## Verification
 
