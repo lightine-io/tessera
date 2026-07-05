@@ -5,7 +5,8 @@
   These `tessera_*` keys are a PUBLIC, OVERRIDABLE contract: a consumer app can translate or rebrand any
   label simply by defining a string with the SAME key in its own `res/values*/strings.xml`. Android's
   resource merge prefers the application's resource over a library's, so the consumer's value wins with no
-  API surface involved (documented in the Android implementation guide, TES-A-19).
+  API surface involved. The consumer-facing how-to lives in the default-UI feature article (tracked as
+  TES-53); until then this contract is documented here and in the MrzScannerScreen KDoc.
 
   Because they are a contract, the KEY SET freezes at the 0.5.0 tag (ADR-007). Keep it small and stable;
   add a key only for genuinely new user-facing copy, and never rename or remove an existing key without a
