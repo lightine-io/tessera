@@ -33,3 +33,13 @@ public final class io/lightine/tessera/mrz/camera/ui/MrzScannerResult$Confirmed 
 public final class io/lightine/tessera/mrz/camera/ui/MrzScannerScreenKt {
 	public static final fun MrzScannerScreen (Lio/lightine/tessera/mrz/camera/ui/MrzScannerConfig;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;I)V
 }
+
+public final class io/lightine/tessera/mrz/camera/ui/R {
+}
+
+public final class io/lightine/tessera/mrz/camera/ui/R$string {
+	public static field tessera_scanner_camera_hint I
+	public static field tessera_scanner_cancel I
+	public static field tessera_scanner_grant_permission I
+	public static field tessera_scanner_permission_rationale I
+}

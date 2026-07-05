@@ -53,6 +53,18 @@ class MrzScannerScreenTest {
     }
 
     @Test
+    fun permission_prompt_copy_resolves_from_string_resources() {
+        // The displayed rationale comes from the overridable tessera_scanner_permission_rationale resource;
+        // seeing its exact text proves the module's res/ + R class resolve on the host (TES-46). The
+        // "Grant camera access" / "Cancel" resources are exercised by the interaction tests below.
+        composeRule.setContent {
+            MrzScannerScreen(config = MrzScannerConfig(), onResult = {})
+        }
+
+        composeRule.onNodeWithText("Camera permission is needed to scan the document").assertIsDisplayed()
+    }
+
+    @Test
     fun grant_button_hands_request_to_host_without_the_sdk_requesting() {
         var requestCalls = 0
         composeRule.setContent {

@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -49,9 +50,12 @@ import io.lightine.tessera.mrz.camera.CameraXMrzScanner
  * **Slice status:** this slice renders the live camera preview — a [CameraXViewfinder] fed by the
  * scanner's opt-in `SurfaceRequest` seam — behind the module theme, with a camera-permission gate and a
  * working cancel path. The review (decode → confirm) and manual-entry screens land in the following
- * 0.5.0 slices, and the user-facing copy here moves to `tessera_*` string resources in the
- * resource-overlay slice. The signature (one config in, one result out) is the shape that freezes at the
- * 0.5.0 tag.
+ * 0.5.0 slices. The signature (one config in, one result out) is the shape that freezes at the 0.5.0 tag.
+ *
+ * **Localization / rebranding.** All user-facing copy is drawn from this module's overridable `tessera_*`
+ * string resources: a consumer app translates or rebrands any label by defining a string with the same key
+ * in its own resources (Android's resource merge prefers the app's value — no API involved). The key set
+ * is a frozen part of the public contract; see `res/values/strings.xml`.
  *
  * **Permission boundary.** The screen never requests the `CAMERA` permission itself; it *reads* whether
  * the permission is held and, when it is not, hands the request to the host through
@@ -148,16 +152,16 @@ private fun CameraPreview(onCancel: () -> Unit) {
                 modifier = Modifier.fillMaxSize().testTag(VIEWFINDER_TEST_TAG),
             )
         }
-        // Hardcoded copy for the live-preview slice; moves to tessera_* string resources in the
-        // resource-overlay slice (TES-46), as the scaffold's placeholder copy always intended to.
+        // User-facing copy comes from the module's overridable tessera_* string resources (TES-46): a
+        // consumer translates/rebrands by redefining the same key. See res/values/strings.xml.
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.Bottom),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(text = "Point the camera at the document's data page")
+            Text(text = stringResource(R.string.tessera_scanner_camera_hint))
             Button(onClick = onCancel) {
-                Text(text = "Cancel")
+                Text(text = stringResource(R.string.tessera_scanner_cancel))
             }
         }
     }
@@ -178,14 +182,14 @@ private fun PermissionPrompt(
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = "Camera permission is needed to scan the document")
+        Text(text = stringResource(R.string.tessera_scanner_permission_rationale))
         if (onRequestPermission != null) {
             Button(onClick = onRequestPermission) {
-                Text(text = "Grant camera access")
+                Text(text = stringResource(R.string.tessera_scanner_grant_permission))
             }
         }
         Button(onClick = onCancel) {
-            Text(text = "Cancel")
+            Text(text = stringResource(R.string.tessera_scanner_cancel))
         }
     }
 }

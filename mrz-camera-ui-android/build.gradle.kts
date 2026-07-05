@@ -65,11 +65,18 @@ kotlin {
         namespace = "io.lightine.tessera.mrz.camera.ui"
         compileSdk = 37
         minSdk = 23
+        // Process this module's res/ and generate its R class (the KMP-library plugin leaves resource
+        // handling off by default). This backs the tessera_* string-resource overlay contract (TES-46):
+        // MrzScannerScreen reads its user-facing copy via stringResource(R.string.tessera_scanner_*), and a
+        // consumer overrides any label by redefining the same key (Android resource merge prefers the app's
+        // value). The key set is public and freezes at the 0.5.0 tag — see res/values/strings.xml.
+        androidResources {
+            enable = true
+        }
         // androidHostTest carries the module's unit + Compose UI tests, run on the JVM host (no device).
         // isIncludeAndroidResources merges this module's res/ into the host-test classpath so a
-        // Robolectric-driven composable can resolve android resources — the tech-stack recap's host-side
-        // Compose testing shape. Left wired and ready: the scaffold has no res/ yet (placeholder copy is
-        // hardcoded); the tessera_* string-resource overlay contract lands with the first real screen.
+        // Robolectric-driven composable can resolve android resources (e.g. the tessera_* strings above) —
+        // the tech-stack recap's host-side Compose testing shape.
         withHostTest {
             isIncludeAndroidResources = true
         }

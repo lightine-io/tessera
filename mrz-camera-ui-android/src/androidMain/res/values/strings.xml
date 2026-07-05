@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  User-facing copy for the default MRZ scanner screen (MrzScannerScreen).
+
+  These `tessera_*` keys are a PUBLIC, OVERRIDABLE contract: a consumer app can translate or rebrand any
+  label simply by defining a string with the SAME key in its own `res/values*/strings.xml`. Android's
+  resource merge prefers the application's resource over a library's, so the consumer's value wins with no
+  API surface involved (documented in the Android implementation guide, TES-A-19).
+
+  Because they are a contract, the KEY SET freezes at the 0.5.0 tag (ADR-007). Keep it small and stable;
+  add a key only for genuinely new user-facing copy, and never rename or remove an existing key without a
+  deprecation. The `tessera_scanner_` prefix namespaces them to avoid colliding with a consumer's own keys.
+-->
+<resources>
+    <!-- Guidance shown over the live camera preview while scanning. -->
+    <string name="tessera_scanner_camera_hint">Point the camera at the document\'s data page</string>
+    <!-- Explains why the camera permission is needed, shown when it is not yet granted. -->
+    <string name="tessera_scanner_permission_rationale">Camera permission is needed to scan the document</string>
+    <!-- Action that hands the permission request to the host app (the SDK never requests it itself). -->
+    <string name="tessera_scanner_grant_permission">Grant camera access</string>
+    <!-- Dismisses the scanner; the flow reports Cancelled. -->
+    <string name="tessera_scanner_cancel">Cancel</string>
+</resources>
