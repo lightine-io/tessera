@@ -40,7 +40,7 @@ class MrzScannerScreenA11yTest {
     fun permission_prompt_controls_are_labeled_buttons() {
         composeRule.setContent {
             MrzScannerScreen(
-                config = MrzScannerConfig(onRequestPermission = {}),
+                config = MrzScannerConfig { onRequestPermission = {} },
                 onResult = {},
             )
         }

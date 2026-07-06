@@ -69,11 +69,11 @@ public fun MrzScannerScreen(
     config: MrzScannerConfig,
     onResult: (MrzScannerResult) -> Unit,
 ) {
-    TesseraScannerTheme(useDynamicColor = config.useDynamicColor) {
+    TesseraScannerTheme(theme = config.theme) {
         Surface(modifier = Modifier.fillMaxSize().testTag(SCANNER_ROOT_TEST_TAG)) {
             ScanningContent(
                 config = config,
-                onCancel = { onResult(MrzScannerResult.Cancelled) },
+                onCancel = { onResult(MrzScannerResult.Cancelled(DismissReason.USER_DISMISSED)) },
             )
         }
     }

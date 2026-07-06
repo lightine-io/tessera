@@ -1,10 +1,58 @@
+public final class io/lightine/tessera/mrz/camera/ui/DarkMode : java/lang/Enum {
+	public static final field AUTO Lio/lightine/tessera/mrz/camera/ui/DarkMode;
+	public static final field OFF Lio/lightine/tessera/mrz/camera/ui/DarkMode;
+	public static final field ON Lio/lightine/tessera/mrz/camera/ui/DarkMode;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/mrz/camera/ui/DarkMode;
+	public static fun values ()[Lio/lightine/tessera/mrz/camera/ui/DarkMode;
+}
+
+public final class io/lightine/tessera/mrz/camera/ui/DismissReason : java/lang/Enum {
+	public static final field CAMERA_UNAVAILABLE Lio/lightine/tessera/mrz/camera/ui/DismissReason;
+	public static final field PERMISSION_DENIED Lio/lightine/tessera/mrz/camera/ui/DismissReason;
+	public static final field TIMED_OUT Lio/lightine/tessera/mrz/camera/ui/DismissReason;
+	public static final field USER_DISMISSED Lio/lightine/tessera/mrz/camera/ui/DismissReason;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/mrz/camera/ui/DismissReason;
+	public static fun values ()[Lio/lightine/tessera/mrz/camera/ui/DismissReason;
+}
+
 public final class io/lightine/tessera/mrz/camera/ui/MrzScannerConfig {
 	public static final field $stable I
-	public fun <init> ()V
-	public fun <init> (ZLkotlin/jvm/functions/Function0;)V
-	public synthetic fun <init> (ZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getEnabledMethods ()Ljava/util/Set;
 	public final fun getOnRequestPermission ()Lkotlin/jvm/functions/Function0;
-	public final fun getUseDynamicColor ()Z
+	public final fun getReviewMode ()Lio/lightine/tessera/mrz/camera/ui/ReviewMode;
+	public final fun getScanTimeout-UwyO8pc ()J
+	public final fun getShowTorchButton ()Z
+	public final fun getStruggleTimeout-UwyO8pc ()J
+	public final fun getTheme ()Lio/lightine/tessera/mrz/camera/ui/MrzScannerTheme;
+	public final fun getTorchOnByDefault ()Z
+}
+
+public final class io/lightine/tessera/mrz/camera/ui/MrzScannerConfig$Builder {
+	public static final field $stable I
+	public fun <init> ()V
+	public final fun build ()Lio/lightine/tessera/mrz/camera/ui/MrzScannerConfig;
+	public final fun getEnabledMethods ()Ljava/util/Set;
+	public final fun getOnRequestPermission ()Lkotlin/jvm/functions/Function0;
+	public final fun getReviewMode ()Lio/lightine/tessera/mrz/camera/ui/ReviewMode;
+	public final fun getScanTimeout-UwyO8pc ()J
+	public final fun getShowTorchButton ()Z
+	public final fun getStruggleTimeout-UwyO8pc ()J
+	public final fun getTorchOnByDefault ()Z
+	public final fun setEnabledMethods (Ljava/util/Set;)V
+	public final fun setOnRequestPermission (Lkotlin/jvm/functions/Function0;)V
+	public final fun setReviewMode (Lio/lightine/tessera/mrz/camera/ui/ReviewMode;)V
+	public final fun setScanTimeout-LRDsOJo (J)V
+	public final fun setShowTorchButton (Z)V
+	public final fun setStruggleTimeout-LRDsOJo (J)V
+	public final fun setTorchOnByDefault (Z)V
+	public final fun theme (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class io/lightine/tessera/mrz/camera/ui/MrzScannerConfigKt {
+	public static final fun MrzScannerConfig (Lkotlin/jvm/functions/Function1;)Lio/lightine/tessera/mrz/camera/ui/MrzScannerConfig;
+	public static synthetic fun MrzScannerConfig$default (Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/lightine/tessera/mrz/camera/ui/MrzScannerConfig;
 }
 
 public abstract interface class io/lightine/tessera/mrz/camera/ui/MrzScannerResult {
@@ -12,8 +60,12 @@ public abstract interface class io/lightine/tessera/mrz/camera/ui/MrzScannerResu
 
 public final class io/lightine/tessera/mrz/camera/ui/MrzScannerResult$Cancelled : io/lightine/tessera/mrz/camera/ui/MrzScannerResult {
 	public static final field $stable I
-	public static final field INSTANCE Lio/lightine/tessera/mrz/camera/ui/MrzScannerResult$Cancelled;
+	public fun <init> (Lio/lightine/tessera/mrz/camera/ui/DismissReason;)V
+	public final fun component1 ()Lio/lightine/tessera/mrz/camera/ui/DismissReason;
+	public final fun copy (Lio/lightine/tessera/mrz/camera/ui/DismissReason;)Lio/lightine/tessera/mrz/camera/ui/MrzScannerResult$Cancelled;
+	public static synthetic fun copy$default (Lio/lightine/tessera/mrz/camera/ui/MrzScannerResult$Cancelled;Lio/lightine/tessera/mrz/camera/ui/DismissReason;ILjava/lang/Object;)Lio/lightine/tessera/mrz/camera/ui/MrzScannerResult$Cancelled;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Lio/lightine/tessera/mrz/camera/ui/DismissReason;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -34,6 +86,25 @@ public final class io/lightine/tessera/mrz/camera/ui/MrzScannerScreenKt {
 	public static final fun MrzScannerScreen (Lio/lightine/tessera/mrz/camera/ui/MrzScannerConfig;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;I)V
 }
 
+public final class io/lightine/tessera/mrz/camera/ui/MrzScannerTheme {
+	public static final field $stable I
+	public final fun getBrandColor ()Ljava/lang/Long;
+	public final fun getDarkMode ()Lio/lightine/tessera/mrz/camera/ui/DarkMode;
+	public final fun getUseDynamicColor ()Z
+}
+
+public final class io/lightine/tessera/mrz/camera/ui/MrzScannerTheme$Builder {
+	public static final field $stable I
+	public fun <init> ()V
+	public final fun build ()Lio/lightine/tessera/mrz/camera/ui/MrzScannerTheme;
+	public final fun getBrandColor ()Ljava/lang/Long;
+	public final fun getDarkMode ()Lio/lightine/tessera/mrz/camera/ui/DarkMode;
+	public final fun getUseDynamicColor ()Z
+	public final fun setBrandColor (Ljava/lang/Long;)V
+	public final fun setDarkMode (Lio/lightine/tessera/mrz/camera/ui/DarkMode;)V
+	public final fun setUseDynamicColor (Z)V
+}
+
 public final class io/lightine/tessera/mrz/camera/ui/R {
 }
 
@@ -42,4 +113,21 @@ public final class io/lightine/tessera/mrz/camera/ui/R$string {
 	public static field tessera_scanner_cancel I
 	public static field tessera_scanner_grant_permission I
 	public static field tessera_scanner_permission_rationale I
+}
+
+public final class io/lightine/tessera/mrz/camera/ui/ReviewMode : java/lang/Enum {
+	public static final field INSTANT_RETURN Lio/lightine/tessera/mrz/camera/ui/ReviewMode;
+	public static final field REVIEW Lio/lightine/tessera/mrz/camera/ui/ReviewMode;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/mrz/camera/ui/ReviewMode;
+	public static fun values ()[Lio/lightine/tessera/mrz/camera/ui/ReviewMode;
+}
+
+public final class io/lightine/tessera/mrz/camera/ui/ScanMethod : java/lang/Enum {
+	public static final field CAMERA Lio/lightine/tessera/mrz/camera/ui/ScanMethod;
+	public static final field MANUAL_ENTRY Lio/lightine/tessera/mrz/camera/ui/ScanMethod;
+	public static final field SAVED_IMAGE Lio/lightine/tessera/mrz/camera/ui/ScanMethod;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/mrz/camera/ui/ScanMethod;
+	public static fun values ()[Lio/lightine/tessera/mrz/camera/ui/ScanMethod;
 }

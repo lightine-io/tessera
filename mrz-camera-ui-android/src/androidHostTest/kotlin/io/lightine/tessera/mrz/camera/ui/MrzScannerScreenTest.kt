@@ -69,7 +69,7 @@ class MrzScannerScreenTest {
         var requestCalls = 0
         composeRule.setContent {
             MrzScannerScreen(
-                config = MrzScannerConfig(onRequestPermission = { requestCalls++ }),
+                config = MrzScannerConfig { onRequestPermission = { requestCalls++ } },
                 onResult = {},
             )
         }
@@ -92,7 +92,7 @@ class MrzScannerScreenTest {
 
         composeRule.onNodeWithText("Cancel").performClick()
 
-        assertEquals(MrzScannerResult.Cancelled, result)
+        assertEquals(MrzScannerResult.Cancelled(DismissReason.USER_DISMISSED), result)
         assertEquals(1, callbacks, "onResult must fire exactly once")
     }
 }
