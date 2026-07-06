@@ -16,7 +16,12 @@ public enum class ScanMethod {
     /** Live camera capture (the default primary method). */
     CAMERA,
 
-    /** Pick an existing photo and decode its MRZ. */
+    /**
+     * Pick an existing photo and decode its MRZ. **Opt-in — not enabled by default** (scope: saved-image
+     * reading is opt-in because a saved image carries more risk than a live capture, ADR-023 / KB TES-A-62).
+     * Adding it to [enabledMethods][MrzScannerConfig.enabledMethods] is the consumer's acknowledgement of
+     * that risk; there is no separate acknowledgement screen.
+     */
     SAVED_IMAGE,
 
     /** Type the MRZ (or its fields) by hand — the accessible fallback. */
@@ -104,7 +109,10 @@ public class MrzScannerTheme internal constructor(
  * }
  * ```
  *
- * @property enabledMethods which reading methods the UI offers (default: all). The switcher shows only these.
+ * @property enabledMethods which reading methods the UI offers. **Default: camera + manual entry.**
+ *   Saved-image is opt-in (off by default) per scope (KB TES-A-62) — adding [`SAVED_IMAGE`][ScanMethod.SAVED_IMAGE]
+ *   is the consumer's acknowledgement of the higher saved-image risk (ADR-023). The switcher shows only the
+ *   enabled methods.
  * @property reviewMode review (default) vs instant-return once an MRZ decodes.
  * @property showTorchButton show the torch toggle over the live preview (default true).
  * @property torchOnByDefault start with the torch on (default false).
@@ -129,7 +137,7 @@ public class MrzScannerConfig internal constructor(
     /** Mutable builder for [MrzScannerConfig]. Prefer the [MrzScannerConfig] DSL function over this directly. */
     public class Builder {
         /** @see MrzScannerConfig.enabledMethods */
-        public var enabledMethods: Set<ScanMethod> = ScanMethod.entries.toSet()
+        public var enabledMethods: Set<ScanMethod> = setOf(ScanMethod.CAMERA, ScanMethod.MANUAL_ENTRY)
 
         /** @see MrzScannerConfig.reviewMode */
         public var reviewMode: ReviewMode = ReviewMode.REVIEW

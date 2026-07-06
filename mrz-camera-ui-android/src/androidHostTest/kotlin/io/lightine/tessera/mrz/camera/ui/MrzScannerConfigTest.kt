@@ -19,7 +19,11 @@ class MrzScannerConfigTest {
     fun defaults_are_conservative() {
         val config = MrzScannerConfig()
 
-        assertEquals(ScanMethod.entries.toSet(), config.enabledMethods, "all methods offered by default")
+        assertEquals(
+            setOf(ScanMethod.CAMERA, ScanMethod.MANUAL_ENTRY),
+            config.enabledMethods,
+            "saved-image is opt-in (scope TES-A-62): off by default",
+        )
         assertEquals(ReviewMode.REVIEW, config.reviewMode, "review is the default; instant-return is opt-in")
         assertTrue(config.showTorchButton, "torch toggle shown by default")
         assertFalse(config.torchOnByDefault, "torch off by default")
