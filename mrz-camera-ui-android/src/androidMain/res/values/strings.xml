@@ -34,6 +34,13 @@
     <!-- Guidance shown over the live camera preview while scanning. -->
     <string name="tessera_scanner_camera_hint">Point the camera at the document\'s data page</string>
 
+    <!-- ============================ Camera-initializing state (mockup 01b) ============================ -->
+    <!-- Shown while the camera + on-device text reader warm up, before the first preview surface arrives, so
+         the screen is never a frozen blank. Auto-transitions to the live preview the moment the surface is
+         ready; the on-device line is an honesty note, not a verdict about anything. -->
+    <string name="tessera_scanner_initializing_title">Starting camera…</string>
+    <string name="tessera_scanner_initializing_body">Warming up the camera and text reader. This runs on your device.</string>
+
     <!-- ============================ Struggling hint (mockup 02) ============================ -->
     <!-- Shown over the live preview after a while with no successful read. Advisory only — it nudges the
          user to improve the capture; it is never an error and never a verdict about the document (Principle 1). -->

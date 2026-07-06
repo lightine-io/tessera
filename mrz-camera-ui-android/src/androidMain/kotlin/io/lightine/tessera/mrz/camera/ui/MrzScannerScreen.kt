@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -42,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -112,6 +114,9 @@ internal const val SCANNER_ROOT_TEST_TAG: String = "tessera-mrz-scanner-root"
 
 /** Semantics anchor for the live camera viewfinder. Not user-facing. */
 internal const val VIEWFINDER_TEST_TAG: String = "tessera-mrz-viewfinder"
+
+/** Semantics anchor for the camera-initializing loading state (mockup 01b). Not user-facing. */
+internal const val INITIALIZING_TEST_TAG: String = "tessera-mrz-initializing"
 
 /** Semantics anchor for the review screen (parsed fields + observations). Not user-facing. */
 internal const val REVIEW_TEST_TAG: String = "tessera-mrz-review"
@@ -415,8 +420,9 @@ private fun ScannerBody(
             )
         }
 
-        // The remaining ScannerUiState variants (Initializing, the permission-mode states, manual
-        // field-by-field entry) are the declared contract for the later 0.5.0 slices — not reachable here.
+        // The remaining ScannerUiState variants (the permission-mode states, manual field-by-field entry)
+        // are the declared contract for the later 0.5.0 slices — not reachable here. (The camera-initializing
+        // state is not a flow state at all — CameraPreview renders it from a null preview surface, see there.)
         else -> {}
     }
 }
@@ -715,12 +721,18 @@ private fun CameraPreview(
     val surfaceRequest by scanner.surfaceRequest.collectAsStateWithLifecycle()
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // While the scanner has not yet produced a preview surface, the camera + on-device OCR are still
+        // warming up (mockup 01b). Show the initializing loading state rather than a blank dark box — a null
+        // surface reads as frozen otherwise. It auto-swaps to the live viewfinder the moment the surface
+        // arrives. This is the real, device-driven trigger for "initializing"; there is no separate flow
+        // state for it (ScannerFlow never produces one — the surface's nullness IS the signal), so it lives
+        // here where it can be observed.
         surfaceRequest?.let { request ->
             CameraXViewfinder(
                 surfaceRequest = request,
                 modifier = Modifier.fillMaxSize().testTag(VIEWFINDER_TEST_TAG),
             )
-        }
+        } ?: InitializingContent()
 
         // The struggle hint (mockup 02) sits over the live preview, near the top, so the camera stays visible
         // underneath. Neutral advisory copy — never an error or a verdict (Principle 1).
@@ -776,6 +788,47 @@ internal fun StrugglingHint(
         TextButton(onClick = onManualEntry) {
             Text(text = stringResource(R.string.tessera_scanner_struggling_manual))
         }
+    }
+}
+
+/**
+ * The camera-initializing loading state (mockup 01b), shown by [CameraPreview] while the scanner has not yet
+ * produced a preview surface — the camera and on-device text reader are still warming up. A centred loading
+ * indicator over a title and an on-device honesty sub-line, so the moment before the first frame is a clear
+ * "starting up" state rather than a blank dark box that reads as frozen. It auto-swaps to the live viewfinder
+ * the instant the surface arrives (there is no button and no timeout — the surface's arrival is the trigger).
+ *
+ * **A11y (TES-47).** The state appears via an auto-transition (the screen mounts straight into it before the
+ * surface exists), so the "Starting camera…" title is a **polite** live region — a screen reader announces it
+ * on arrival without the user moving focus. The spinner is decorative (the title carries the meaning), so it
+ * is removed from the semantics tree; its own animation already honours the platform animation scale
+ * (reduce-motion), needing no extra gating — mirroring [SavedImageAnalyzingContent].
+ *
+ * `internal` (not `private`): the real null-surface trigger lives inside [CameraPreview], which drives real
+ * CameraX and cannot run under Robolectric, so this content is host-tested through this entry point directly,
+ * per the testing-layers rule (same pattern as [StrugglingHint]).
+ */
+@Composable
+internal fun InitializingContent() {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp).testTag(INITIALIZING_TEST_TAG),
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        // Decorative spinner — the title states what is happening; cleared so it is not an unlabeled node.
+        CircularProgressIndicator(modifier = Modifier.clearAndSetSemantics {})
+        Text(
+            text = stringResource(R.string.tessera_scanner_initializing_title),
+            style = MaterialTheme.typography.headlineSmall,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        )
+        Text(
+            text = stringResource(R.string.tessera_scanner_initializing_body),
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

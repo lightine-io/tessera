@@ -99,6 +99,23 @@ class AccessibilityTest {
     }
 
     @Test
+    fun initializing_status_is_a_polite_live_region() {
+        composeRule.setContent {
+            MrzScannerConfig().let { config ->
+                TesseraScannerTheme(config.theme) {
+                    InitializingContent()
+                }
+            }
+        }
+
+        // The initializing state shows the instant the preview mounts, before the first surface arrives (an
+        // auto-transition — mockup 01b), so its title is announced without the user moving focus — Polite.
+        composeRule
+            .onNode(hasText("Starting camera…") and isLiveRegion(LiveRegionMode.Polite))
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun analyzing_photo_status_is_a_polite_live_region() {
         composeRule.setContent {
             MrzScannerConfig().let { config ->

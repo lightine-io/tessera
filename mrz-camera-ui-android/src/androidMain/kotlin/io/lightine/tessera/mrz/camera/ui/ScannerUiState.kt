@@ -15,11 +15,13 @@ import io.lightine.tessera.mrz.camera.RecognizedText
  * image, field-by-field manual entry, the permission states), declared now so the flow's `when` and the
  * sibling screens have a stable shape to grow into rather than being reshuffled per slice. Nothing here is
  * public — the frozen surface stays `MrzScannerScreen` + config + result (ADR-007); this is internal wiring.
+ *
+ * The camera-initializing state (mockup 01b) is deliberately **not** a variant here: it is not a flow state
+ * the reducer can produce but a transient of the live preview — the window where the scanner has not yet
+ * yielded a preview surface. It is therefore rendered by `CameraPreview` (as `InitializingContent`) keyed on
+ * that null surface, not dispatched by [ScannerFlow], so it stays where its real device-driven trigger lives.
  */
 internal sealed interface ScannerUiState {
-    /** Camera is coming up; no preview yet (mockup 01b). */
-    data object Initializing : ScannerUiState
-
     /**
      * The live camera preview is running and looking for an MRZ (mockup 01). [struggling] flips true once
      * the configured struggle timeout elapses with no decode, to overlay the "still looking / type it
