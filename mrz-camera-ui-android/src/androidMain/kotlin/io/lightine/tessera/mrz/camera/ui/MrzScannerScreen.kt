@@ -7,9 +7,13 @@
 package io.lightine.tessera.mrz.camera.ui
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -103,9 +108,6 @@ internal const val SCANNER_ROOT_TEST_TAG: String = "tessera-mrz-scanner-root"
 
 /** Semantics anchor for the live camera viewfinder. Not user-facing. */
 internal const val VIEWFINDER_TEST_TAG: String = "tessera-mrz-viewfinder"
-
-/** Semantics anchor for the camera-permission prompt shown when the permission is not held. Not user-facing. */
-internal const val PERMISSION_PROMPT_TEST_TAG: String = "tessera-mrz-permission-prompt"
 
 /** Semantics anchor for the review screen (parsed fields + observations). Not user-facing. */
 internal const val REVIEW_TEST_TAG: String = "tessera-mrz-review"
@@ -446,11 +448,26 @@ internal fun reduceCameraResult(result: MrzScanResult): CameraFlowEffect =
 
 /**
  * The camera-permission gate and, once the permission is held, the live preview with a results collector.
- * Reads whether `CAMERA` is held and re-reads it whenever the host returns to the foreground, so a grant
- * made outside this screen takes effect without the consumer re-launching it. When held, the live preview
- * shows and every scanner result is surfaced through [onCameraResult] (the flow reduces it); otherwise the
- * permission prompt hands the request to the host. The SDK only *reads* the permission — it never requests
- * it.
+ * Reads whether `CAMERA` is held and re-reads it whenever the host returns to the foreground, so a grant made
+ * outside this screen (via the host's request OR via the OS settings) takes effect without the consumer
+ * re-launching it. When held, the live preview shows and every scanner result is surfaced through
+ * [onCameraResult] (the flow reduces it); otherwise the adaptive [PermissionContent] shows — Grant mode while
+ * a request can still succeed, Settings mode once the permission is permanently denied.
+ *
+ * **Permission boundary (scope).** The SDK only ever *reads* the permission status
+ * ([Context.checkSelfPermission] and [Activity.shouldShowRequestPermissionRationale], both read-only) and
+ * *navigates* (opening the OS app-settings screen by Intent). It NEVER calls `requestPermissions` /
+ * `ActivityResultContracts.RequestPermission` — the actual "ask" stays with the host through
+ * [config.onRequestPermission][MrzScannerConfig.onRequestPermission].
+ *
+ * The mode is [permissionScreenState] applied to three read-only signals recomputed on `ON_RESUME`:
+ *  * `granted` — [Context.hasCameraPermission];
+ *  * `hasAsked` — [rememberSaveable] so it survives recreation; set true in the Grant action, right before
+ *    the host request, because the platform's rationale signal alone cannot tell "never asked" apart from
+ *    "permanently denied";
+ *  * `showRationale` — [Activity.shouldShowRequestPermissionRationale], read only when an [Activity] is
+ *    reachable ([findActivity]); with no Activity permanent denial cannot be detected, so the mode is forced
+ *    to [PermissionScreenState.NEEDS_GRANT] rather than showing a dead "Open Settings".
  *
  * @param struggling whether the "still looking / type it instead" hint is overlaid on the preview.
  * @param onCameraResult every scanner result off the stream, for the flow's continuous reducer.
@@ -468,31 +485,105 @@ private fun CameraCapture(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    var hasCameraPermission by remember { mutableStateOf(context.hasCameraPermission()) }
+    // The Activity backing the screen, unwrapped from the Compose LocalContext's ContextWrapper chain. Needed
+    // for the read-only shouldShowRequestPermissionRationale; null when none is reachable (then permanent
+    // denial cannot be detected and the mode degrades to NEEDS_GRANT).
+    val activity = remember(context) { context.findActivity() }
 
-    DisposableEffect(lifecycleOwner) {
+    var granted by remember { mutableStateOf(context.hasCameraPermission()) }
+    // Whether the host has been handed a request in this flow. rememberSaveable so it survives recreation
+    // (rotation / process death) — otherwise a permanently-denied screen would wrongly revert to Grant mode.
+    var hasAsked by rememberSaveable { mutableStateOf(false) }
+    // shouldShowRequestPermissionRationale is a read-only status query (NOT a request). False when an Activity
+    // is unreachable — without one, permanent denial is undetectable, so the mode stays NEEDS_GRANT.
+    var showRationale by remember { mutableStateOf(activity.shouldShowCameraRationale()) }
+
+    // Recompute granted + rationale whenever the host returns to the foreground, so returning from the host's
+    // permission request OR from the OS settings screen updates the mode without a re-launch.
+    DisposableEffect(lifecycleOwner, activity) {
         val observer =
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
-                    hasCameraPermission = context.hasCameraPermission()
+                    granted = context.hasCameraPermission()
+                    showRationale = activity.shouldShowCameraRationale()
                 }
             }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    if (hasCameraPermission) {
-        CameraPreview(
-            struggleTimeout = config.struggleTimeout,
-            struggling = struggling,
-            onCameraResult = onCameraResult,
-            onStruggling = onStruggling,
-            onManualEntry = onManualEntry,
-            onCancel = onCancel,
-        )
-    } else {
-        PermissionPrompt(onRequestPermission = config.onRequestPermission, onCancel = onCancel)
+    when (permissionScreenState(granted = granted, hasAsked = hasAsked, showRationale = showRationale)) {
+        PermissionScreenState.GRANTED -> {
+            CameraPreview(
+                struggleTimeout = config.struggleTimeout,
+                struggling = struggling,
+                onCameraResult = onCameraResult,
+                onStruggling = onStruggling,
+                onManualEntry = onManualEntry,
+                onCancel = onCancel,
+            )
+        }
+
+        PermissionScreenState.NEEDS_GRANT -> {
+            PermissionContent(
+                state = PermissionScreenState.NEEDS_GRANT,
+                // Grant hands the request to the host (the SDK never requests it). Mark that we've asked
+                // first, so a subsequent permanent denial is detected on the next ON_RESUME.
+                onGrant = {
+                    hasAsked = true
+                    config.onRequestPermission?.invoke()
+                },
+                onOpenSettings = { context.openAppSettings() },
+                onManualEntry = onManualEntry,
+                hasRequestHandler = config.onRequestPermission != null,
+            )
+        }
+
+        PermissionScreenState.PERMANENTLY_DENIED -> {
+            PermissionContent(
+                state = PermissionScreenState.PERMANENTLY_DENIED,
+                onGrant = {
+                    hasAsked = true
+                    config.onRequestPermission?.invoke()
+                },
+                // Open Settings is the UI's own navigation (not a permission request) — always available here.
+                onOpenSettings = { context.openAppSettings() },
+                onManualEntry = onManualEntry,
+                hasRequestHandler = config.onRequestPermission != null,
+            )
+        }
     }
+}
+
+/** Read-only rationale query, guarded for a null [Activity]: no Activity → `false` (permanent denial is then undetectable). */
+private fun Activity?.shouldShowCameraRationale(): Boolean = this?.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) == true
+
+/**
+ * Unwraps the [ContextWrapper] chain of a Compose [LocalContext] to the backing [Activity], or `null` if none
+ * is reachable. The Compose context is usually a `ContextThemeWrapper` around the host `Activity`; walking the
+ * `baseContext` chain finds it without assuming the immediate context is the Activity.
+ */
+private fun Context.findActivity(): Activity? {
+    var current: Context? = this
+    while (current is ContextWrapper) {
+        if (current is Activity) return current
+        current = current.baseContext
+    }
+    return null
+}
+
+/**
+ * Opens this app's OS settings page (`ACTION_APPLICATION_DETAILS_SETTINGS`) so the user can turn Camera on
+ * after a permanent denial. This is *navigation*, not a permission request — it stays within the permission
+ * boundary (the UI owns it). The `FLAG_ACTIVITY_NEW_TASK` lets it start from a non-Activity context safely.
+ */
+private fun Context.openAppSettings() {
+    val intent =
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", packageName, null)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+    startActivity(intent)
 }
 
 /**
@@ -611,33 +702,6 @@ internal fun StrugglingHint(
         )
         TextButton(onClick = onManualEntry) {
             Text(text = stringResource(R.string.tessera_scanner_struggling_manual))
-        }
-    }
-}
-
-/**
- * Shown when the `CAMERA` permission is not held. Offers to hand the request to the host (only when the
- * consumer supplied [MrzScannerConfig.onRequestPermission]) and a cancel path. The SDK never requests the
- * permission itself.
- */
-@Composable
-private fun PermissionPrompt(
-    onRequestPermission: (() -> Unit)?,
-    onCancel: () -> Unit,
-) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).testTag(PERMISSION_PROMPT_TEST_TAG),
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(text = stringResource(R.string.tessera_scanner_permission_rationale))
-        if (onRequestPermission != null) {
-            Button(onClick = onRequestPermission) {
-                Text(text = stringResource(R.string.tessera_scanner_grant_permission))
-            }
-        }
-        Button(onClick = onCancel) {
-            Text(text = stringResource(R.string.tessera_scanner_cancel))
         }
     }
 }

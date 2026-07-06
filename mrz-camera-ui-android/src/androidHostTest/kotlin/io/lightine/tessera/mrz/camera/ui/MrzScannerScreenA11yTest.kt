@@ -18,8 +18,8 @@ import org.robolectric.annotation.Config
 /**
  * Accessibility gate for the default scanner screen ([TES-A-70]). It asserts the screen's accessibility
  * **semantics** — every interactive control carries a non-empty label and the `Button` role, and the
- * informational copy is exposed as readable text — over the permission-prompt branch (the host-testable
- * one; the granted → live-preview branch drives real CameraX, see [MrzScannerScreenTest]).
+ * informational copy is exposed as readable text — over the adaptive permission screen's Grant-mode branch
+ * (the host-testable one; the granted → live-preview branch drives real CameraX, see [MrzScannerScreenTest]).
  *
  * **Why semantics assertions and not `enableAccessibilityChecks()`** (the Accessibility Test Framework):
  * ATF is a **no-op under Robolectric** — verified 2026-07-05 that it does not flag even a clearly
@@ -37,7 +37,7 @@ class MrzScannerScreenA11yTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun permission_prompt_controls_are_labeled_buttons() {
+    fun permission_grant_controls_are_labeled_buttons() {
         composeRule.setContent {
             MrzScannerScreen(
                 config = MrzScannerConfig { onRequestPermission = {} },
@@ -47,14 +47,16 @@ class MrzScannerScreenA11yTest {
 
         // Each interactive control is announced as a Button and carries a non-empty label, so a screen
         // reader user can find and identify it. An unlabeled control, or one missing the Button role,
-        // fails here.
-        listOf("Grant camera access", "Cancel").forEach { label ->
+        // fails here. (The Grant-mode primary + the shared manual-entry escape.)
+        listOf("Grant access", "Enter details manually").forEach { label ->
             composeRule
                 .onNode(hasText(label) and hasClickAction())
                 .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
         }
 
-        // The permission rationale is exposed as readable text (not a decorative, unlabeled element).
-        composeRule.onNodeWithText("Camera permission is needed to scan the document").assertIsDisplayed()
+        // The permission rationale body is exposed as readable text (not a decorative, unlabeled element).
+        composeRule
+            .onNodeWithText("The scanner reads the machine-readable zone on-device; it does not store or upload your document.")
+            .assertIsDisplayed()
     }
 }

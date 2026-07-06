@@ -159,6 +159,12 @@ public final class io/lightine/tessera/mrz/camera/ui/R$string {
 	public static field tessera_scanner_obs_tone_info I
 	public static field tessera_scanner_obs_tone_match I
 	public static field tessera_scanner_obs_tone_mismatch I
+	public static field tessera_scanner_permission_denied_body I
+	public static field tessera_scanner_permission_denied_title I
+	public static field tessera_scanner_permission_grant_action I
+	public static field tessera_scanner_permission_grant_body I
+	public static field tessera_scanner_permission_grant_title I
+	public static field tessera_scanner_permission_open_settings I
 	public static field tessera_scanner_permission_rationale I
 	public static field tessera_scanner_quality_confidence_unknown I
 	public static field tessera_scanner_quality_format I

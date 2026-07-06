@@ -36,14 +36,44 @@
     <!-- Camera unavailable (terminal, mockup 05b): the camera cannot be started at all; no retry. -->
     <string name="tessera_scanner_camera_unavailable_title">Camera unavailable</string>
     <string name="tessera_scanner_camera_unavailable_body">This device\'s camera can\'t be started. You can still enter the document details by hand.</string>
-    <!-- Shared action on both camera-status screens: switch to typing the details by hand. -->
+    <!-- Shared action on both camera-status screens AND both permission screens (04 / 04b): switch to
+         typing the details by hand. -->
     <string name="tessera_scanner_camera_manual">Enter details manually</string>
+    <!-- Dismisses the scanner; the flow reports Cancelled. -->
+    <string name="tessera_scanner_cancel">Cancel</string>
+
+    <!-- ============================ Adaptive camera-permission screen (mockups 04 / 04b) ============================ -->
+    <!-- ONE adaptive screen whose primary action tracks the permission status. While a request can still
+         succeed it is "Grant mode" (04): the host is handed the request (the SDK never requests a permission
+         itself, scope permission boundary). Once permanently denied it is "Settings mode" (04b): the only way
+         to grant is the OS app-settings screen, which the UI opens by Intent (navigation, not a permission
+         request). Both share the secondary "Enter details manually" escape above and the on-device privacy
+         line — the SDK reads the MRZ locally and never uploads or stores the document. -->
+
+    <!-- Grant mode (04) — a request can still succeed. -->
+    <!-- Title shown while the camera permission is not yet held but can still be requested. -->
+    <string name="tessera_scanner_permission_grant_title">Camera permission needed</string>
+    <!-- Body: why the permission is needed, stated with the on-device privacy fact. -->
+    <string name="tessera_scanner_permission_grant_body">The scanner reads the machine-readable zone on-device; it does not store or upload your document.</string>
+    <!-- Primary action: hand the permission request to the host app (the SDK never requests it itself). -->
+    <string name="tessera_scanner_permission_grant_action">Grant access</string>
+
+    <!-- Settings mode (04b) — the permission is permanently denied; only the OS settings can grant it. -->
+    <!-- Title shown once the camera permission is permanently denied ("don't ask again"). -->
+    <string name="tessera_scanner_permission_denied_title">Camera access is off</string>
+    <!-- Body: how to re-enable via Settings, with the same on-device privacy fact. -->
+    <string name="tessera_scanner_permission_denied_body">Turn on Camera for this app in Settings to scan. The scanner reads the machine-readable zone on-device; it does not store or upload your document.</string>
+    <!-- Primary action: open this app's OS settings page so the user can turn Camera on (navigation, not a
+         permission request). -->
+    <string name="tessera_scanner_permission_open_settings">Open Settings</string>
+
+    <!-- Retained for backward compatibility (the tessera_* key set is a frozen public contract, ADR-007): the
+         earlier single-prompt permission copy. No longer shown by the adaptive screen above, kept so a
+         consumer that already overrode these keys is not broken. -->
     <!-- Explains why the camera permission is needed, shown when it is not yet granted. -->
     <string name="tessera_scanner_permission_rationale">Camera permission is needed to scan the document</string>
     <!-- Action that hands the permission request to the host app (the SDK never requests it itself). -->
     <string name="tessera_scanner_grant_permission">Grant camera access</string>
-    <!-- Dismisses the scanner; the flow reports Cancelled. -->
-    <string name="tessera_scanner_cancel">Cancel</string>
 
     <!-- ============================ Review screen (mockups 03 / 03b / 03c) ============================ -->
 
