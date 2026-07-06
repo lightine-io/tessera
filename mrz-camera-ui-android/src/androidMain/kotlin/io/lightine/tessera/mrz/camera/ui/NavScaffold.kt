@@ -14,6 +14,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -173,10 +174,15 @@ internal fun MethodSwitcher(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         methods.forEach { method ->
+            // A FilterChip is ~32dp tall — below the 48dp minimum touch target. minimumInteractiveComponentSize
+            // expands the touchable area to 48dp without enlarging the chip's visuals, so a screen-reader /
+            // motor-impaired user gets a full-size hit target. `selected` already carries the non-colour cue
+            // (the chip's selected state is announced), so the active method never depends on colour alone.
             FilterChip(
                 selected = method == active,
                 onClick = { onSelectMethod(method) },
                 label = { Text(text = methodLabel(method)) },
+                modifier = Modifier.minimumInteractiveComponentSize(),
             )
         }
     }

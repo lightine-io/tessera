@@ -41,6 +41,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -766,6 +769,9 @@ internal fun StrugglingHint(
             text = stringResource(R.string.tessera_scanner_struggling_hint),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
+            // The hint overlays the preview via the struggle-timeout auto-transition (mockup 02), so it is a
+            // polite live region — announced when it appears without the user having to move focus to it.
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         )
         TextButton(onClick = onManualEntry) {
             Text(text = stringResource(R.string.tessera_scanner_struggling_manual))

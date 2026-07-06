@@ -24,6 +24,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
@@ -125,11 +129,22 @@ internal fun CameraUnavailableContent(onManualEntry: () -> Unit) {
  * The label carries the meaning; the pulse is purely decorative (it conveys nothing a screen reader or a
  * reduced-motion user would miss — the recoverable status is stated in the text). The dot is the literal
  * bullet "●" whose alpha animates, so no drawing API or icon dependency is introduced.
+ *
+ * **A11y (TES-47).**
+ *  * *Motion is never the sole signal.* The pulse is gated on [animationsEnabled] — with the user's
+ *    reduce-motion / "Remove animations" setting on, the dot renders static (full alpha) and only the text
+ *    conveys the status. Meaning survives with motion off.
+ *  * *The dot is not announced.* The bare bullet "●" is decorative, so it is removed from the semantics tree
+ *    ([clearAndSetSemantics] with an empty block) — a screen reader would otherwise read a meaningless glyph.
+ *  * *The status is announced on arrival.* The camera-in-use screen appears via an auto-transition (the flow
+ *    reducer flips to it when another app grabs the camera), so the "Reconnecting…" label is a **polite**
+ *    [liveRegion]: a screen reader speaks it when it appears without the user having to move focus to it.
  */
 @Composable
 private fun ReconnectingIndicator() {
+    val animate = animationsEnabled()
     val transition = rememberInfiniteTransition(label = "reconnecting")
-    val alpha by transition.animateFloat(
+    val animatedAlpha by transition.animateFloat(
         initialValue = 0.25f,
         targetValue = 1f,
         animationSpec =
@@ -139,6 +154,8 @@ private fun ReconnectingIndicator() {
             ),
         label = "reconnecting-dot-alpha",
     )
+    // Reduce-motion: keep the dot static (full alpha) so the pulse never runs; the text still carries meaning.
+    val alpha = if (animate) animatedAlpha else 1f
     Row(
         horizontalArrangement = Arrangement.spacedBy(7.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -147,12 +164,16 @@ private fun ReconnectingIndicator() {
             text = "●",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.tertiary,
-            modifier = Modifier.alpha(alpha),
+            // Decorative — cleared from the semantics tree so a screen reader does not read the bare glyph.
+            modifier = Modifier.alpha(alpha).clearAndSetSemantics {},
         )
         Text(
             text = stringResource(R.string.tessera_scanner_camera_reconnecting),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.tertiary,
+            // Polite live region: the camera-in-use screen arrives via an auto-transition, so the recoverable
+            // status is announced on appearance without the user needing to find it.
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         )
     }
 }

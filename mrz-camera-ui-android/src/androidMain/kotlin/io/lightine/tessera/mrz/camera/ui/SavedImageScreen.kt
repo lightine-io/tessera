@@ -23,6 +23,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.lightine.tessera.mrz.camera.MrzCandidate
 import io.lightine.tessera.mrz.camera.MrzScanResult
@@ -156,6 +160,11 @@ internal fun AwaitingSavedImagePickContent(onChoosePhoto: () -> Unit) {
  * The "analyzing photo" screen (mockup 07c) — shown while the picked photo is being read on-device. A loading
  * indicator over a title and neutral sub-text ("Reading the machine-readable zone" / "On-device — the photo
  * is not uploaded"), stating the privacy fact plainly rather than implying anything about the image.
+ *
+ * **A11y (TES-47).** The screen appears via an auto-transition (entered the moment a photo is picked), so the
+ * "Analyzing photo…" title is a **polite** live region — a screen reader announces it on arrival without the
+ * user moving focus. The spinner is decorative (the title carries the meaning), so it is removed from the
+ * semantics tree; its own animation already honours the platform animation scale (reduce-motion).
  */
 @Composable
 internal fun SavedImageAnalyzingContent() {
@@ -167,8 +176,10 @@ internal fun SavedImageAnalyzingContent() {
         Text(
             text = stringResource(R.string.tessera_scanner_saved_image_analyzing_title),
             style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         )
-        CircularProgressIndicator()
+        // Decorative spinner — the title states what is happening; cleared so it is not an unlabeled node.
+        CircularProgressIndicator(modifier = Modifier.clearAndSetSemantics {})
         Text(
             text = stringResource(R.string.tessera_scanner_saved_image_analyzing_reading),
             style = MaterialTheme.typography.bodyMedium,

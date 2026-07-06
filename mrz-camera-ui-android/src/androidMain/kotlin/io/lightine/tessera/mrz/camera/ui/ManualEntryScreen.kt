@@ -18,6 +18,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -239,13 +240,16 @@ internal fun ManualRawContent(
                 minLines = 3,
             )
 
-            // Format-hint chips: Auto (default) / Passport / ID card. Parser hints only.
+            // Format-hint chips: Auto (default) / Passport / ID card. Parser hints only. A FilterChip is
+            // ~32dp tall (below the 48dp touch-target minimum); minimumInteractiveComponentSize expands the
+            // hit target to 48dp without enlarging the chip. `selected` carries the non-colour cue.
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ManualFormatHint.entries.forEach { option ->
                     FilterChip(
                         selected = hint == option,
                         onClick = { hint = option },
                         label = { Text(text = manualHintLabel(option)) },
+                        modifier = Modifier.minimumInteractiveComponentSize(),
                     )
                 }
             }
