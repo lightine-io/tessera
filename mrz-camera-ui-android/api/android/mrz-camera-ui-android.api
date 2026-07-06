@@ -111,8 +111,57 @@ public final class io/lightine/tessera/mrz/camera/ui/R {
 public final class io/lightine/tessera/mrz/camera/ui/R$string {
 	public static field tessera_scanner_camera_hint I
 	public static field tessera_scanner_cancel I
+	public static field tessera_scanner_category_identity_card I
+	public static field tessera_scanner_category_other I
+	public static field tessera_scanner_category_passport I
+	public static field tessera_scanner_category_residence_permit I
+	public static field tessera_scanner_category_visa I
+	public static field tessera_scanner_check_label_composite I
+	public static field tessera_scanner_check_label_date_of_birth I
+	public static field tessera_scanner_check_label_date_of_expiry I
+	public static field tessera_scanner_check_label_document_number I
+	public static field tessera_scanner_check_label_optional_data I
+	public static field tessera_scanner_document_format I
+	public static field tessera_scanner_field_date_of_birth I
+	public static field tessera_scanner_field_document I
+	public static field tessera_scanner_field_document_type I
+	public static field tessera_scanner_field_expiry I
+	public static field tessera_scanner_field_issuing_state I
+	public static field tessera_scanner_field_name I
+	public static field tessera_scanner_field_nationality I
+	public static field tessera_scanner_field_number I
+	public static field tessera_scanner_field_optional I
+	public static field tessera_scanner_field_sex I
 	public static field tessera_scanner_grant_permission I
+	public static field tessera_scanner_name_format I
+	public static field tessera_scanner_obs_check_match I
+	public static field tessera_scanner_obs_check_mismatch I
+	public static field tessera_scanner_obs_expiry_well_formed I
+	public static field tessera_scanner_obs_read_by I
+	public static field tessera_scanner_obs_some_mismatch I
+	public static field tessera_scanner_obs_tone_info I
+	public static field tessera_scanner_obs_tone_match I
+	public static field tessera_scanner_obs_tone_mismatch I
 	public static field tessera_scanner_permission_rationale I
+	public static field tessera_scanner_quality_confidence_unknown I
+	public static field tessera_scanner_quality_format I
+	public static field tessera_scanner_quality_region_found I
+	public static field tessera_scanner_quality_region_not_found I
+	public static field tessera_scanner_read_failed_body I
+	public static field tessera_scanner_read_failed_captured_header I
+	public static field tessera_scanner_read_failed_manual I
+	public static field tessera_scanner_read_failed_title I
+	public static field tessera_scanner_read_failed_try_again I
+	public static field tessera_scanner_read_method_live_camera I
+	public static field tessera_scanner_read_method_manual I
+	public static field tessera_scanner_read_method_photo I
+	public static field tessera_scanner_review_all_fields_title I
+	public static field tessera_scanner_review_observations_header I
+	public static field tessera_scanner_review_raw_mrz_header I
+	public static field tessera_scanner_review_rescan I
+	public static field tessera_scanner_review_show_all I
+	public static field tessera_scanner_review_title I
+	public static field tessera_scanner_review_use I
 }
 
 public final class io/lightine/tessera/mrz/camera/ui/ReviewMode : java/lang/Enum {

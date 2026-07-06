@@ -11,6 +11,9 @@
   Because they are a contract, the KEY SET freezes at the 0.5.0 tag (ADR-007). Keep it small and stable;
   add a key only for genuinely new user-facing copy, and never rename or remove an existing key without a
   deprecation. The `tessera_scanner_` prefix namespaces them to avoid colliding with a consumer's own keys.
+
+  Positional format args (%1$s etc.) are used so a translation can reorder them; the `formatted="false"`
+  attribute is deliberately omitted since every templated string uses positional (not implicit) args.
 -->
 <resources>
     <!-- Guidance shown over the live camera preview while scanning. -->
@@ -21,4 +24,108 @@
     <string name="tessera_scanner_grant_permission">Grant camera access</string>
     <!-- Dismisses the scanner; the flow reports Cancelled. -->
     <string name="tessera_scanner_cancel">Cancel</string>
+
+    <!-- ============================ Review screen (mockups 03 / 03b / 03c) ============================ -->
+
+    <!-- Review screen title, shown when an MRZ decoded and is up for the user to accept or rescan. Not a
+         "valid" verdict — the SDK reports what it read, the user decides (Principle 1). -->
+    <string name="tessera_scanner_review_title">MRZ read</string>
+    <!-- Header over the review screen's summary rows (document, name, number, expiry). -->
+    <string name="tessera_scanner_review_observations_header">Observations</string>
+    <!-- Disclosure that opens the full parsed field set and the raw MRZ lines (mockup 03c). -->
+    <string name="tessera_scanner_review_show_all">Show all fields &amp; raw MRZ ▾</string>
+    <!-- Primary action: accept this reading as-is. Stays enabled even on a check-digit mismatch — the SDK
+         reports the mismatch and lets the consumer decide; it never blocks or auto-corrects (Principle 1). -->
+    <string name="tessera_scanner_review_use">Use this result</string>
+    <!-- Secondary action: discard this reading and go back to scanning. -->
+    <string name="tessera_scanner_review_rescan">Rescan</string>
+
+    <!-- Expanded all-fields view title (mockup 03c). -->
+    <string name="tessera_scanner_review_all_fields_title">All fields</string>
+    <!-- Header over the raw MRZ lines in the expanded view. -->
+    <string name="tessera_scanner_review_raw_mrz_header">Raw MRZ</string>
+
+    <!-- Field labels for the summary rows and the expanded all-fields view. -->
+    <string name="tessera_scanner_field_document">Document</string>
+    <string name="tessera_scanner_field_document_type">Document type</string>
+    <string name="tessera_scanner_field_name">Name</string>
+    <string name="tessera_scanner_field_number">Number</string>
+    <string name="tessera_scanner_field_expiry">Expiry</string>
+    <string name="tessera_scanner_field_issuing_state">Issuing state</string>
+    <string name="tessera_scanner_field_nationality">Nationality</string>
+    <string name="tessera_scanner_field_date_of_birth">Date of birth</string>
+    <string name="tessera_scanner_field_sex">Sex</string>
+    <string name="tessera_scanner_field_optional">Personal / optional no.</string>
+
+    <!-- Name row value: "%1$s" is the primary identifier (surname), "%2$s" the secondary (given names). -->
+    <string name="tessera_scanner_name_format">%1$s, %2$s</string>
+    <!-- Document row value: "%1$s" is the raw type code, "%2$s" the recognized category (e.g. "P — passport"). -->
+    <string name="tessera_scanner_document_format">%1$s — %2$s</string>
+
+    <!-- Human-readable document categories (the recognized category is shown alongside the raw type code). -->
+    <string name="tessera_scanner_category_passport">passport</string>
+    <string name="tessera_scanner_category_identity_card">identity card</string>
+    <string name="tessera_scanner_category_residence_permit">residence permit</string>
+    <string name="tessera_scanner_category_visa">visa</string>
+    <string name="tessera_scanner_category_other">other</string>
+
+    <!-- ================================ Observations (per check digit / date / provenance) ================================ -->
+    <!-- These are stated observations, never a "valid" verdict. -->
+
+    <!-- A check digit recorded on the document matches the value the SDK computes. "%1$s" is the field
+         label (e.g. "Document number"). Rendered with a ✓ mark. -->
+    <string name="tessera_scanner_obs_check_match">%1$s check digit matches</string>
+    <!-- A recorded check digit does NOT match the computed value. "%1$s" is the field label, "%2$s" the
+         digit recorded on the document, "%3$s" the digit the SDK computes. Rendered with a ‼ mark. Neither
+         value is "wrong" — the SDK states both and the consumer decides (Principle 1). -->
+    <string name="tessera_scanner_obs_check_mismatch">%1$s check digit: recorded %2$s, computed %3$s</string>
+    <!-- The expiry components form a real calendar date. "%1$s" is that date. Rendered with a ✓ mark. -->
+    <string name="tessera_scanner_obs_expiry_well_formed">Expiry %1$s is a well-formed date</string>
+    <!-- Neutral advisory shown when one or more checks did not match — it points at the document, it does
+         not pass judgement. Rendered with a ⓘ mark. -->
+    <string name="tessera_scanner_obs_some_mismatch">Some checks did not match — verify against the document.</string>
+    <!-- Provenance line: how the SDK read this document. "%1$s" is the read-method label below. Rendered
+         with a ⓘ mark. -->
+    <string name="tessera_scanner_obs_read_by">Read by %1$s</string>
+
+    <!-- Read-method labels used in the provenance observation. -->
+    <string name="tessera_scanner_read_method_live_camera">live camera</string>
+    <string name="tessera_scanner_read_method_photo">photo</string>
+    <string name="tessera_scanner_read_method_manual">manual entry</string>
+
+    <!-- Field labels for the check-digit observations (which check digit the observation is about). -->
+    <string name="tessera_scanner_check_label_document_number">Document number</string>
+    <string name="tessera_scanner_check_label_date_of_birth">Date of birth</string>
+    <string name="tessera_scanner_check_label_date_of_expiry">Expiry</string>
+    <string name="tessera_scanner_check_label_optional_data">Personal / optional no.</string>
+    <string name="tessera_scanner_check_label_composite">Composite</string>
+
+    <!-- Scan-quality line in the expanded view. "%1$s" is the region status, "%2$s" the OCR confidence,
+         "%3$s" the recognized line count. Rendered with a ⓘ mark. Informational only, never a gate. -->
+    <string name="tessera_scanner_quality_format">Scan quality: region %1$s · OCR confidence %2$s · lines: %3$s</string>
+    <!-- Region status values for the quality line. -->
+    <string name="tessera_scanner_quality_region_found">found</string>
+    <string name="tessera_scanner_quality_region_not_found">not found</string>
+    <!-- Placeholder for an OCR confidence the engine did not report. -->
+    <string name="tessera_scanner_quality_confidence_unknown">n/a</string>
+
+    <!-- Accessibility content-description prefixes so an observation's tone (match / mismatch / info) is
+         conveyed to a screen reader, not carried by colour alone. Prepended to the observation text. -->
+    <string name="tessera_scanner_obs_tone_match">Match:</string>
+    <string name="tessera_scanner_obs_tone_mismatch">Attention:</string>
+    <string name="tessera_scanner_obs_tone_info">Note:</string>
+
+    <!-- ============================ Read-failed screen (mockup 08) ============================ -->
+
+    <!-- Title shown when OCR text did not parse as any known MRZ format. Never "invalid" — the SDK could
+         not read it, which is a different, honest statement. -->
+    <string name="tessera_scanner_read_failed_title">Couldn\'t read this MRZ</string>
+    <!-- Explains the likely cause without judging the document. -->
+    <string name="tessera_scanner_read_failed_body">The text didn\'t match a known MRZ format — it may be blurred or partial.</string>
+    <!-- Header over the verbatim captured OCR text (garbles preserved, Principle 5). -->
+    <string name="tessera_scanner_read_failed_captured_header">Captured text</string>
+    <!-- Primary action: go back to scanning and try to read again. -->
+    <string name="tessera_scanner_read_failed_try_again">Try again</string>
+    <!-- Secondary action: switch to typing the details by hand (manual entry, TES-63). -->
+    <string name="tessera_scanner_read_failed_manual">Enter details manually</string>
 </resources>
