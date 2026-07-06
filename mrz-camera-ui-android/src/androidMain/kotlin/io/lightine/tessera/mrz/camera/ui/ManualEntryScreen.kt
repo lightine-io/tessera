@@ -6,7 +6,7 @@ package io.lightine.tessera.mrz.camera.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -208,7 +208,12 @@ internal fun ManualRawContent(
     var hint by remember { mutableStateOf(ManualFormatHint.AUTO) }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).testTag(MANUAL_RAW_TEST_TAG),
+        modifier =
+            Modifier
+                .fillMaxHeight()
+                .contentMaxWidth()
+                .padding(24.dp)
+                .testTag(MANUAL_RAW_TEST_TAG),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(

@@ -21,6 +21,7 @@ import androidx.camera.compose.CameraXViewfinder
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
@@ -735,20 +736,23 @@ private fun CameraPreview(
         } ?: InitializingContent()
 
         // The struggle hint (mockup 02) sits over the live preview, near the top, so the camera stays visible
-        // underneath. Neutral advisory copy — never an error or a verdict (Principle 1).
+        // underneath. Neutral advisory copy — never an error or a verdict (Principle 1). The viewfinder stays
+        // full-bleed, but this overlaid control is width-capped + centred (contentMaxWidth, TES-78) so on a
+        // wide screen it stays reachable near the middle rather than stretching edge-to-edge.
         if (struggling) {
             StrugglingHint(
                 onManualEntry = onManualEntry,
-                modifier = Modifier.align(Alignment.TopCenter),
+                modifier = Modifier.align(Alignment.TopCenter).contentMaxWidth(),
             )
         }
 
         // User-facing copy comes from the module's overridable tessera_* string resources (TES-46): a
         // consumer translates/rebrands by redefining the same key. See res/values/strings.xml. The cancel
         // control moved to the shared top bar (TES-71) — no inline Cancel button here anymore, so the
-        // preview shows only the guidance hint.
+        // preview shows only the guidance hint. The viewfinder underneath stays full-bleed; this overlaid
+        // hint column is width-capped + centred (contentMaxWidth, TES-78) so it does not span a wide screen.
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier.fillMaxHeight().contentMaxWidth().padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.Bottom),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -811,7 +815,12 @@ internal fun StrugglingHint(
 @Composable
 internal fun InitializingContent() {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).testTag(INITIALIZING_TEST_TAG),
+        modifier =
+            Modifier
+                .fillMaxHeight()
+                .contentMaxWidth()
+                .padding(24.dp)
+                .testTag(INITIALIZING_TEST_TAG),
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

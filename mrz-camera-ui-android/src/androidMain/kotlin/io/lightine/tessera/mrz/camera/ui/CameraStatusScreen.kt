@@ -11,7 +11,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -61,7 +61,12 @@ internal const val CAMERA_UNAVAILABLE_TEST_TAG: String = "tessera-mrz-camera-una
 @Composable
 internal fun CameraInUseContent(onManualEntry: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).testTag(CAMERA_IN_USE_TEST_TAG),
+        modifier =
+            Modifier
+                .fillMaxHeight()
+                .contentMaxWidth()
+                .padding(24.dp)
+                .testTag(CAMERA_IN_USE_TEST_TAG),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // Heading + body + the reconnecting indicator sit centred in the available space; the single action
@@ -98,7 +103,12 @@ internal fun CameraInUseContent(onManualEntry: () -> Unit) {
 @Composable
 internal fun CameraUnavailableContent(onManualEntry: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).testTag(CAMERA_UNAVAILABLE_TEST_TAG),
+        modifier =
+            Modifier
+                .fillMaxHeight()
+                .contentMaxWidth()
+                .padding(24.dp)
+                .testTag(CAMERA_UNAVAILABLE_TEST_TAG),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Column(

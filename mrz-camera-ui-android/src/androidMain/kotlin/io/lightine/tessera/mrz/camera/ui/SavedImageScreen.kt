@@ -5,7 +5,7 @@ package io.lightine.tessera.mrz.camera.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -132,7 +132,12 @@ internal fun candidateDecoded(candidate: MrzCandidate): MrzScanResult.Decoded =
 @Composable
 internal fun AwaitingSavedImagePickContent(onChoosePhoto: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).testTag(AWAITING_SAVED_IMAGE_PICK_TEST_TAG),
+        modifier =
+            Modifier
+                .fillMaxHeight()
+                .contentMaxWidth()
+                .padding(24.dp)
+                .testTag(AWAITING_SAVED_IMAGE_PICK_TEST_TAG),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Column(
@@ -169,7 +174,12 @@ internal fun AwaitingSavedImagePickContent(onChoosePhoto: () -> Unit) {
 @Composable
 internal fun SavedImageAnalyzingContent() {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).testTag(SAVED_IMAGE_ANALYZING_TEST_TAG),
+        modifier =
+            Modifier
+                .fillMaxHeight()
+                .contentMaxWidth()
+                .padding(24.dp)
+                .testTag(SAVED_IMAGE_ANALYZING_TEST_TAG),
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -212,7 +222,12 @@ internal fun SavedImageCandidatesContent(
     onChooseDifferent: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).testTag(SAVED_IMAGE_CANDIDATES_TEST_TAG),
+        modifier =
+            Modifier
+                .fillMaxHeight()
+                .contentMaxWidth()
+                .padding(24.dp)
+                .testTag(SAVED_IMAGE_CANDIDATES_TEST_TAG),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
@@ -298,7 +313,12 @@ internal fun SavedImageEmptyContent(
     onManualEntry: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).testTag(SAVED_IMAGE_EMPTY_TEST_TAG),
+        modifier =
+            Modifier
+                .fillMaxHeight()
+                .contentMaxWidth()
+                .padding(24.dp)
+                .testTag(SAVED_IMAGE_EMPTY_TEST_TAG),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(

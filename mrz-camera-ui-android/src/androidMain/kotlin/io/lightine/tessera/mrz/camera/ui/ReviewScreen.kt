@@ -7,7 +7,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -305,7 +305,12 @@ internal fun ReviewContent(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).testTag(REVIEW_TEST_TAG),
+        modifier =
+            Modifier
+                .fillMaxHeight()
+                .contentMaxWidth()
+                .padding(24.dp)
+                .testTag(REVIEW_TEST_TAG),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
@@ -365,7 +370,12 @@ private fun ReviewExpandedContent(
 ) {
     val document = reviewDocument(decoded)
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).testTag(REVIEW_EXPANDED_TEST_TAG),
+        modifier =
+            Modifier
+                .fillMaxHeight()
+                .contentMaxWidth()
+                .padding(24.dp)
+                .testTag(REVIEW_EXPANDED_TEST_TAG),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
@@ -420,7 +430,12 @@ internal fun ReadFailedContent(
     onManualEntry: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).testTag(READ_FAILED_TEST_TAG),
+        modifier =
+            Modifier
+                .fillMaxHeight()
+                .contentMaxWidth()
+                .padding(24.dp)
+                .testTag(READ_FAILED_TEST_TAG),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(

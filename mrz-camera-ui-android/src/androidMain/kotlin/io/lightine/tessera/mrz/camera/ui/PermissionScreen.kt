@@ -5,7 +5,7 @@ package io.lightine.tessera.mrz.camera.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -164,7 +164,12 @@ private fun PermissionScaffold(
     onManualEntry: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).testTag(testTag),
+        modifier =
+            Modifier
+                .fillMaxHeight()
+                .contentMaxWidth()
+                .padding(24.dp)
+                .testTag(testTag),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Title + body sit centred in the available space; the actions stay pinned below.

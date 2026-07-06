@@ -6,7 +6,6 @@ package io.lightine.tessera.mrz.camera.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -168,7 +167,9 @@ internal fun MethodSwitcher(
     Row(
         modifier =
             Modifier
-                .fillMaxWidth()
+                // Width-capped + centred (contentMaxWidth, TES-78) so on a wide screen the switcher chips align
+                // with the capped content beneath rather than stretching edge-to-edge. A no-op on a phone.
+                .contentMaxWidth()
                 .padding(horizontal = 24.dp, vertical = 8.dp)
                 .testTag(SWITCHER_TEST_TAG),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
