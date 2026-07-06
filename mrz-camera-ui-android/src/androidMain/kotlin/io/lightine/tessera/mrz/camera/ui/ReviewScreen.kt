@@ -454,9 +454,12 @@ internal fun MonoLine(text: String) {
  * the row merges its descendants into one semantics node whose [stateDescription] names the tone in words
  * (Match / Attention / Note) for a screen reader — merging (rather than clearing) keeps the observation's
  * visible text findable in the semantics tree.
+ *
+ * `internal` (not `private`): the manual-entry screen ([ManualRawContent]) reuses this same row to render its
+ * live observations, so the non-colour-a11y approach stays in one place rather than being duplicated.
  */
 @Composable
-private fun ReviewObservationRow(observation: Observation) {
+internal fun ReviewObservationRow(observation: Observation) {
     val color =
         when (observation.tone) {
             ObservationTone.MATCHES -> MaterialTheme.colorScheme.primary

@@ -128,4 +128,33 @@
     <string name="tessera_scanner_read_failed_try_again">Try again</string>
     <!-- Secondary action: switch to typing the details by hand (manual entry, TES-63). -->
     <string name="tessera_scanner_read_failed_manual">Enter details manually</string>
+
+    <!-- ============================ Manual raw-MRZ entry screen (mockup 06) ============================ -->
+
+    <!-- Title of the manual raw-MRZ entry screen — the user types the MRZ lines exactly as printed. -->
+    <string name="tessera_scanner_manual_title">Type the MRZ</string>
+    <!-- Label / placeholder for the multi-line monospace MRZ text field. -->
+    <string name="tessera_scanner_manual_field_label">MRZ lines</string>
+
+    <!-- Format-hint chips. These pick which parser runs; they are hints ONLY and never rewrite what the
+         user typed (reader, not oracle — Principle 1). -->
+    <string name="tessera_scanner_manual_hint_auto">Auto</string>
+    <string name="tessera_scanner_manual_hint_passport">Passport</string>
+    <string name="tessera_scanner_manual_hint_id_card">ID card</string>
+
+    <!-- Live length observations (all ⓘ INFO tone, never a verdict). Auto mode states only the character
+         count ("%1$s" is the line number, "%2$s" its character count); when a format chip fixes an expected
+         length, a line that differs states the neutral delta ("%1$s" line number, "%2$s" the difference).
+         Never "invalid", never an auto-correction. -->
+    <string name="tessera_scanner_manual_obs_char_count">Line %1$s: %2$s chars</string>
+    <string name="tessera_scanner_manual_obs_short">Line %1$s is %2$s characters short</string>
+    <string name="tessera_scanner_manual_obs_over">Line %1$s is %2$s characters over</string>
+    <!-- The standing note that the format chips are hints, not fixes — always shown so the honesty is
+         never implicit. -->
+    <string name="tessera_scanner_manual_obs_hint_note">Format chips are parser hints, not fixes — nothing is auto-corrected</string>
+
+    <!-- Privacy line: the read happens on-device; nothing typed is uploaded or stored. -->
+    <string name="tessera_scanner_manual_privacy">Read on this device. The SDK never uploads or stores what you type.</string>
+    <!-- Primary action: parse the text the user typed (with the selected format hint). -->
+    <string name="tessera_scanner_manual_read">Read what I typed</string>
 </resources>

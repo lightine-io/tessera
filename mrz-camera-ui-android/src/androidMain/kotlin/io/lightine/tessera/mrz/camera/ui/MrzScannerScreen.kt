@@ -146,14 +146,35 @@ private fun ScannerFlow(
             ReadFailedContent(
                 capturedText = state.capturedText,
                 onTryAgain = { uiState = ScannerUiState.Scanning() },
-                // Manual entry lands in TES-63; until then the fallback dismisses the flow. Wiring it to
-                // ManualRaw is a one-line change once that screen exists.
-                onManualEntry = onCancel,
+                // The read-failed / error escape into manual entry (TES-63). The switcher entry from the
+                // camera is a later slice; for now this is how the user reaches manual entry.
+                onManualEntry = { uiState = ScannerUiState.ManualRaw() },
+            )
+        }
+
+        is ScannerUiState.ManualRaw -> {
+            ManualRawContent(
+                state = state,
+                onTextChange = { uiState = state.copy(text = it) },
+                // Assemble a Decoded from the typed text (pure, host-tested), then route it exactly as a
+                // camera decode: a parse Failure shows the read-failed screen, a Success / PartialSuccess
+                // goes to review (or straight back under INSTANT_RETURN). The manual-entry read method flows
+                // through, so the review screen shows "Read by manual entry" with no extra wiring.
+                onRead = { hint ->
+                    val decoded = assembleManualDecoded(state.text, hint)
+                    when (val route = routeDecode(decoded, config.reviewMode)) {
+                        is DecodeRoute.ShowReadFailed -> uiState = ScannerUiState.ReadFailed(route.capturedText)
+                        is DecodeRoute.ReturnConfirmed -> onResult(MrzScannerResult.Confirmed(route.decoded))
+                        is DecodeRoute.ShowReview -> uiState = ScannerUiState.Review(route.decoded)
+                    }
+                },
+                onBack = onCancel,
             )
         }
 
         // The remaining ScannerUiState variants (Initializing, permission/camera errors, saved image,
-        // manual entry) are the declared contract for the later 0.5.0 slices — not reachable in this one.
+        // manual field-by-field entry) are the declared contract for the later 0.5.0 slices — not reachable
+        // in this one.
         else -> {}
     }
 }

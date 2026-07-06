@@ -133,6 +133,17 @@ public final class io/lightine/tessera/mrz/camera/ui/R$string {
 	public static field tessera_scanner_field_optional I
 	public static field tessera_scanner_field_sex I
 	public static field tessera_scanner_grant_permission I
+	public static field tessera_scanner_manual_field_label I
+	public static field tessera_scanner_manual_hint_auto I
+	public static field tessera_scanner_manual_hint_id_card I
+	public static field tessera_scanner_manual_hint_passport I
+	public static field tessera_scanner_manual_obs_char_count I
+	public static field tessera_scanner_manual_obs_hint_note I
+	public static field tessera_scanner_manual_obs_over I
+	public static field tessera_scanner_manual_obs_short I
+	public static field tessera_scanner_manual_privacy I
+	public static field tessera_scanner_manual_read I
+	public static field tessera_scanner_manual_title I
 	public static field tessera_scanner_name_format I
 	public static field tessera_scanner_obs_check_match I
 	public static field tessera_scanner_obs_check_mismatch I
