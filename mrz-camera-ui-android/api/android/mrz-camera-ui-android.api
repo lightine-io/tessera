@@ -127,6 +127,7 @@ public final class io/lightine/tessera/mrz/camera/ui/R$string {
 	public static field tessera_scanner_check_label_date_of_expiry I
 	public static field tessera_scanner_check_label_document_number I
 	public static field tessera_scanner_check_label_optional_data I
+	public static field tessera_scanner_close I
 	public static field tessera_scanner_document_format I
 	public static field tessera_scanner_field_date_of_birth I
 	public static field tessera_scanner_field_document I
@@ -150,6 +151,9 @@ public final class io/lightine/tessera/mrz/camera/ui/R$string {
 	public static field tessera_scanner_manual_privacy I
 	public static field tessera_scanner_manual_read I
 	public static field tessera_scanner_manual_title I
+	public static field tessera_scanner_method_camera I
+	public static field tessera_scanner_method_keyboard I
+	public static field tessera_scanner_method_photo I
 	public static field tessera_scanner_name_format I
 	public static field tessera_scanner_obs_check_match I
 	public static field tessera_scanner_obs_check_mismatch I
@@ -183,6 +187,7 @@ public final class io/lightine/tessera/mrz/camera/ui/R$string {
 	public static field tessera_scanner_review_raw_mrz_header I
 	public static field tessera_scanner_review_rescan I
 	public static field tessera_scanner_review_show_all I
+	public static field tessera_scanner_review_show_less I
 	public static field tessera_scanner_review_title I
 	public static field tessera_scanner_review_use I
 	public static field tessera_scanner_saved_image_analyzing_on_device I
@@ -196,9 +201,13 @@ public final class io/lightine/tessera/mrz/camera/ui/R$string {
 	public static field tessera_scanner_saved_image_empty_privacy I
 	public static field tessera_scanner_saved_image_empty_title I
 	public static field tessera_scanner_saved_image_manual I
+	public static field tessera_scanner_saved_image_prompt_action I
+	public static field tessera_scanner_saved_image_prompt_body I
+	public static field tessera_scanner_saved_image_prompt_title I
 	public static field tessera_scanner_saved_image_use_this I
 	public static field tessera_scanner_struggling_hint I
 	public static field tessera_scanner_struggling_manual I
+	public static field tessera_scanner_title I
 }
 
 public final class io/lightine/tessera/mrz/camera/ui/ReviewMode : java/lang/Enum {

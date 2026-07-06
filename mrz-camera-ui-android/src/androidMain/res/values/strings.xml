@@ -16,6 +16,21 @@
   attribute is deliberately omitted since every templated string uses positional (not implicit) args.
 -->
 <resources>
+    <!-- ============================ Shared navigation scaffold (TES-71) ============================ -->
+    <!-- Title shown in the top app bar on every screen — stable across the whole flow so the chrome never
+         shifts as the user moves between capture, review, and outcome screens. -->
+    <string name="tessera_scanner_title">Scan document</string>
+    <!-- Accessibility label for the top-bar ✕ close control (the global cancel present on every screen).
+         Spoken to a screen-reader user; the glyph itself carries no label. -->
+    <string name="tessera_scanner_close">Close</string>
+
+    <!-- Method switcher (TES-71): the segmented Camera / Photo / Type row on the capture & entry screens.
+         Shows only the methods the consumer enabled (enabledMethods), in the order camera, photo, type;
+         hidden entirely when fewer than two methods are enabled (nothing to switch between). -->
+    <string name="tessera_scanner_method_camera">Camera</string>
+    <string name="tessera_scanner_method_photo">Photo</string>
+    <string name="tessera_scanner_method_keyboard">Type</string>
+
     <!-- Guidance shown over the live camera preview while scanning. -->
     <string name="tessera_scanner_camera_hint">Point the camera at the document\'s data page</string>
 
@@ -84,6 +99,9 @@
     <string name="tessera_scanner_review_observations_header">Observations</string>
     <!-- Disclosure that opens the full parsed field set and the raw MRZ lines (mockup 03c). -->
     <string name="tessera_scanner_review_show_all">Show all fields &amp; raw MRZ ▾</string>
+    <!-- Collapse affordance on the expanded all-fields view — mirrors the summary's "Show all fields" and
+         returns to the review summary (TES-71: the expanded view previously had no way back). -->
+    <string name="tessera_scanner_review_show_less">Show less ▴</string>
     <!-- Primary action: accept this reading as-is. Stays enabled even on a check-digit mismatch — the SDK
          reports the mismatch and lets the consumer decide; it never blocks or auto-corrects (Principle 1). -->
     <string name="tessera_scanner_review_use">Use this result</string>
@@ -209,6 +227,12 @@
     <string name="tessera_scanner_manual_read">Read what I typed</string>
 
     <!-- ============================ Saved-image (photo) screens (mockups 07c / 07 / 07b) ============================ -->
+
+    <!-- Await-pick prompt (TES-71): shown when the saved-image method is the entry point and the picker was
+         dismissed with no photo, so the user can re-open it. Neutral — it states the next step, no verdict. -->
+    <string name="tessera_scanner_saved_image_prompt_title">Choose a photo</string>
+    <string name="tessera_scanner_saved_image_prompt_body">Pick a photo of the document\'s data page and it will be read on-device.</string>
+    <string name="tessera_scanner_saved_image_prompt_action">Choose photo</string>
 
     <!-- Analyzing screen (mockup 07c): shown while the picked photo is read on-device. -->
     <string name="tessera_scanner_saved_image_analyzing_title">Analyzing photo…</string>

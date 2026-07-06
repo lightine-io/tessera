@@ -117,6 +117,42 @@ internal fun candidateDecoded(candidate: MrzCandidate): MrzScanResult.Decoded =
 // ---------------------------------------------------------------------------------------------------------
 
 /**
+ * The await-saved-image-pick prompt (TES-71). Shown when the saved-image method is the entry point (only
+ * [`SAVED_IMAGE`][ScanMethod.SAVED_IMAGE] is enabled, or the user tapped the Photo tab) and the picker was
+ * dismissed with no photo — so the screen is never left blank. Neutral copy ("Choose a photo" + on-device
+ * privacy) and a single [onChoosePhoto] action that re-opens the picker. Not a mockup state of its own; the
+ * flow launches the picker on entering this state, and this content only shows if that pick was cancelled.
+ *
+ * @param onChoosePhoto re-launch the system photo picker.
+ */
+@Composable
+internal fun AwaitingSavedImagePickContent(onChoosePhoto: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp).testTag(AWAITING_SAVED_IMAGE_PICK_TEST_TAG),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Column(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = stringResource(R.string.tessera_scanner_saved_image_prompt_title),
+                style = MaterialTheme.typography.headlineSmall,
+            )
+            Text(
+                text = stringResource(R.string.tessera_scanner_saved_image_prompt_body),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+
+        Button(onClick = onChoosePhoto, modifier = Modifier.fillMaxWidth()) {
+            Text(text = stringResource(R.string.tessera_scanner_saved_image_prompt_action))
+        }
+    }
+}
+
+/**
  * The "analyzing photo" screen (mockup 07c) — shown while the picked photo is being read on-device. A loading
  * indicator over a title and neutral sub-text ("Reading the machine-readable zone" / "On-device — the photo
  * is not uploaded"), stating the privacy fact plainly rather than implying anything about the image.

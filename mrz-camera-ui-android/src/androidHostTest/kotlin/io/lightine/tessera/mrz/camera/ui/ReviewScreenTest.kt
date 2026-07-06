@@ -1,5 +1,9 @@
 package io.lightine.tessera.mrz.camera.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasText
@@ -178,6 +182,33 @@ class ReviewScreenTest {
         // scroll to each before asserting it is displayed.
         composeRule.onNodeWithText(specimenLine1).performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText(specimenLine2).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun expanded_view_show_less_collapses_back_to_the_summary() {
+        // TES-71: the expanded all-fields view previously had no way back. It now has a "Show less ▴" control
+        // that calls onToggleExpanded (the flow flips Review.expanded back to false → the summary). Here the
+        // expanded flag is hoisted so the toggle drives a real recomposition, exactly as the flow wires it.
+        composeRule.setContent {
+            var expanded by remember { mutableStateOf(true) }
+            MrzScannerConfig().let { config ->
+                TesseraScannerTheme(config.theme) {
+                    ReviewContent(
+                        decoded = decoded(specimenLine1, specimenLine2),
+                        expanded = expanded,
+                        onToggleExpanded = { expanded = !expanded },
+                        onUse = {},
+                        onRescan = {},
+                    )
+                }
+            }
+        }
+
+        // Starts expanded (the all-fields view). Tap "Show less ▴" (in the scrollable body) → back to summary.
+        composeRule.onNodeWithTag(REVIEW_EXPANDED_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithText("Show less ▴").performScrollTo().performClick()
+        composeRule.onNodeWithTag(REVIEW_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(REVIEW_EXPANDED_TEST_TAG).assertDoesNotExist()
     }
 
     @Test

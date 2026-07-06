@@ -298,7 +298,7 @@ internal fun ReviewContent(
     onRescan: () -> Unit,
 ) {
     if (expanded) {
-        ReviewExpandedContent(decoded = decoded, onUse = onUse)
+        ReviewExpandedContent(decoded = decoded, onUse = onUse, onCollapse = onToggleExpanded)
         return
     }
 
@@ -347,13 +347,16 @@ internal fun ReviewContent(
 
 /**
  * The expanded all-fields + raw-MRZ view (mockup 03c). Scrollable: the full parsed field set, every raw
- * MRZ line (monospace, horizontally scrollable, never wrapped or truncated), and a scan-quality line. The
- * only action here is [onUse]; there is no rescan on the expanded view (mockup 03c).
+ * MRZ line (monospace, horizontally scrollable, never wrapped or truncated), and a scan-quality line. A
+ * "Show less ▴" collapse control ([onCollapse], mirroring the summary's "Show all fields ▾") returns to the
+ * review summary — closing the earlier gap where the expanded view had no way back (TES-71). The primary
+ * action here is [onUse]; there is no rescan on the expanded view (mockup 03c).
  */
 @Composable
 private fun ReviewExpandedContent(
     decoded: MrzScanResult.Decoded,
     onUse: () -> Unit,
+    onCollapse: () -> Unit,
 ) {
     val document = reviewDocument(decoded)
     Column(
@@ -386,6 +389,12 @@ private fun ReviewExpandedContent(
                     tone = ObservationTone.INFO,
                 ),
             )
+
+            // The collapse affordance back to the summary — mirrors the summary's "Show all fields ▾"
+            // disclosure so the expanded view is not a one-way street (TES-71).
+            TextButton(onClick = onCollapse) {
+                Text(text = stringResource(R.string.tessera_scanner_review_show_less))
+            }
         }
 
         Button(onClick = onUse, modifier = Modifier.fillMaxWidth()) {

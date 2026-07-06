@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -70,14 +69,16 @@ import kotlin.time.Duration
  * [`Cancelled`][MrzScannerResult.Cancelled]. It adds no trust judgement of its own: a reading confirmed
  * here is the SDK's verbatim verdict (Principle 1).
  *
- * **Slice status:** the live-camera path is wired end to end — a decoded MRZ routes to a review screen
- * (parsed fields + honest observations) the user accepts or rescans, a parse failure routes to a "couldn't
- * read" screen, [`INSTANT_RETURN`][ReviewMode.INSTANT_RETURN] returns a decode with no review step, a long
- * spell with no read overlays a neutral "still looking / type it instead" hint, and the two camera-status
- * conditions (another app holds the camera — recoverable; the camera can't start — terminal) each show a
- * notice with a manual-entry escape. Manual raw-MRZ entry is wired; the saved-image screens land in a
- * following 0.5.0 slice (their states are declared in [ScannerUiState] but not yet reachable). The signature
- * (one config in, one result out) is the shape that freezes at the 0.5.0 tag.
+ * **Slice status:** all three reading methods are wired end to end and tied together by a shared navigation
+ * scaffold (a top bar whose ✕ cancels from every screen, plus a Camera / Photo / Type method switcher on the
+ * capture & entry screens — TES-71). The live-camera path routes a decoded MRZ to a review screen (parsed
+ * fields + honest observations) the user accepts or rescans, a parse failure to a "couldn't read" screen,
+ * [`INSTANT_RETURN`][ReviewMode.INSTANT_RETURN] returns a decode with no review step, a long spell with no
+ * read overlays a neutral "still looking / type it instead" hint, and the two camera-status conditions
+ * (another app holds the camera — recoverable; the camera can't start — terminal) each show a notice with a
+ * manual-entry escape. Manual raw-MRZ entry and saved-image (photo) reading are wired. The flow's start
+ * screen derives from [`enabledMethods`][MrzScannerConfig.enabledMethods]. The signature (one config in, one
+ * result out) is the shape that freezes at the 0.5.0 tag.
  *
  * **Localization / rebranding.** All user-facing copy is drawn from this module's overridable `tessera_*`
  * string resources: a consumer app translates or rebrands any label by defining a string with the same key
@@ -131,10 +132,15 @@ internal const val SAVED_IMAGE_CANDIDATES_TEST_TAG: String = "tessera-mrz-saved-
 internal const val SAVED_IMAGE_EMPTY_TEST_TAG: String = "tessera-mrz-saved-image-empty"
 
 /**
- * Holds the current [ScannerUiState] and dispatches the matching screen. The screen is a one-shot flow: the
- * camera capture decodes an MRZ, which routes here to the review or read-failed screen (or straight back to
- * the host under [`INSTANT_RETURN`][ReviewMode.INSTANT_RETURN]); a cancel anywhere reports
- * [`Cancelled(USER_DISMISSED)`][DismissReason.USER_DISMISSED]. The state starts at [ScannerUiState.Scanning].
+ * Holds the current [ScannerUiState] and, via [ScannerScaffold] + [ScannerBody], dispatches the matching
+ * screen under the shared chrome (the top-bar ✕ cancel + the method switcher, TES-71). The screen is a
+ * one-shot flow: a reading method decodes an MRZ, which routes to the review or read-failed screen (or
+ * straight back to the host under [`INSTANT_RETURN`][ReviewMode.INSTANT_RETURN]); a cancel anywhere (the top
+ * bar's ✕, or a screen's own back) reports [`Cancelled(USER_DISMISSED)`][DismissReason.USER_DISMISSED]. The
+ * start screen is [initialState] over [`enabledMethods`][MrzScannerConfig.enabledMethods], and the switcher
+ * flips between the enabled methods (camera → [`Scanning`][ScannerUiState.Scanning], photo → the photo picker
+ * via [`AwaitingSavedImagePick`][ScannerUiState.AwaitingSavedImagePick], type →
+ * [`ManualRaw`][ScannerUiState.ManualRaw]).
  *
  * The scanner's per-frame result stream drives the state continuously through the pure [reduceCameraResult]
  * reducer (applied in `onCameraResult` below): a decode routes on (guarded by a one-shot latch so a running
@@ -142,15 +148,18 @@ internal const val SAVED_IMAGE_EMPTY_TEST_TAG: String = "tessera-mrz-saved-image
  * [`Scanning`][ScannerUiState.Scanning] when a clean frame proves the camera reconnected (it is recoverable
  * — no retry), and a [`CameraUnavailable`][ScannerUiState.CameraUnavailable] notice is terminal. After the
  * configured [`struggleTimeout`][MrzScannerConfig.struggleTimeout] with no decode, the preview overlays a
- * neutral "still looking / type it instead" hint (mockup 02). The saved-image / permission states in
- * [ScannerUiState] are declared for the later slices but not yet reachable here.
+ * neutral "still looking / type it instead" hint (mockup 02). The permission-mode states in [ScannerUiState]
+ * are handled inside [CameraCapture], not dispatched here.
  */
 @Composable
 private fun ScannerFlow(
     config: MrzScannerConfig,
     onResult: (MrzScannerResult) -> Unit,
 ) {
-    var uiState: ScannerUiState by remember { mutableStateOf(ScannerUiState.Scanning()) }
+    // The flow starts on the method [initialState] derives from the consumer's enabledMethods (camera first,
+    // else manual entry, else saved image; empty → camera defensively) rather than always camera, so a
+    // consumer who disabled camera lands on a working entry point (TES-71).
+    var uiState: ScannerUiState by remember { mutableStateOf(initialState(config.enabledMethods)) }
 
     // A one-shot latch: once a decode has routed on (to review / read-failed / straight back), later decoded
     // frames from the still-running stream must not re-fire. Kept as flow state (not inside the collector) so
@@ -235,8 +244,8 @@ private fun ScannerFlow(
 
     // The system photo picker, restricted to images. Registered here (a launcher must be created in
     // composition, not inside a callback); a null Uri means the user dismissed the picker with no selection,
-    // so nothing changes. enterSavedImage() launches it — wired now but only reached via the later method
-    // switcher (TES-71), like ManualFields.
+    // so nothing changes (the AwaitingSavedImagePick prompt then offers a re-pick). enterSavedImage() launches
+    // it — reached from the method switcher's Photo tab and the SAVED_IMAGE-only initial state (TES-71).
     val savedImagePicker =
         rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
             if (uri != null) readPickedImage(uri)
@@ -245,15 +254,85 @@ private fun ScannerFlow(
         savedImagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
     }
 
-    when (val state = uiState) {
+    // The method switcher's Photo tab and the SAVED_IMAGE-only initial state both land on
+    // AwaitingSavedImagePick; entering it launches the picker. Keyed on the state object so a re-entry (e.g.
+    // switch away and back to Photo) re-launches — AwaitingSavedImagePick is a data object, so its identity is
+    // stable across recompositions and the effect fires once per transition into it, not on every recompose.
+    LaunchedEffect(uiState) {
+        if (uiState == ScannerUiState.AwaitingSavedImagePick) enterSavedImage()
+    }
+
+    // Switching reading method from the switcher: camera → Scanning, photo → the await-pick launcher state,
+    // type → ManualRaw. Re-arm the decode latch so a fresh method's first decode routes on (a previous decode
+    // may have set it). Pure target selection; the picker for Photo is launched by the LaunchedEffect above.
+    val onSelectMethod = { method: ScanMethod ->
+        decodeRouted = false
+        uiState =
+            when (method) {
+                ScanMethod.CAMERA -> ScannerUiState.Scanning()
+                ScanMethod.SAVED_IMAGE -> ScannerUiState.AwaitingSavedImagePick
+                ScanMethod.MANUAL_ENTRY -> ScannerUiState.ManualRaw()
+            }
+    }
+
+    ScannerScaffold(
+        enabledMethods = config.enabledMethods,
+        currentState = uiState,
+        onClose = onCancel,
+        onSelectMethod = onSelectMethod,
+    ) {
+        ScannerBody(
+            state = uiState,
+            config = config,
+            onResult = onResult,
+            onCameraResult = onCameraResult,
+            onManualEntry = onManualEntry,
+            onCancel = onCancel,
+            enterSavedImage = enterSavedImage,
+            setState = { uiState = it },
+            armDecodeLatch = { decodeRouted = false },
+        )
+    }
+}
+
+/**
+ * The per-state screen dispatch — the exhaustive `when` over [ScannerUiState], rendered inside the
+ * [ScannerScaffold] body (so the shared top bar + method switcher sit above it, TES-71). Split out of
+ * [ScannerFlow] purely so the flow function stays readable; it holds no state of its own, receiving the
+ * flow's callbacks. [setState] mutates the flow's `uiState`; [armDecodeLatch] clears the one-shot decode
+ * latch (used where a screen re-enters scanning and the next decode must route again).
+ */
+@Composable
+private fun ScannerBody(
+    state: ScannerUiState,
+    config: MrzScannerConfig,
+    onResult: (MrzScannerResult) -> Unit,
+    onCameraResult: (MrzScanResult) -> Unit,
+    onManualEntry: () -> Unit,
+    onCancel: () -> Unit,
+    enterSavedImage: () -> Unit,
+    setState: (ScannerUiState) -> Unit,
+    armDecodeLatch: () -> Unit,
+) {
+    // Route a decode straight to the matching state via routeDecode — shared by manual entry and candidate
+    // pick, both of which produce a Decoded that follows the identical decode routing (read-failed / review /
+    // straight back under INSTANT_RETURN). Kept local so the two call sites do not each re-derive it.
+    val routeThroughDecode = { decoded: MrzScanResult.Decoded ->
+        when (val route = routeDecode(decoded, config.reviewMode)) {
+            is DecodeRoute.ShowReadFailed -> setState(ScannerUiState.ReadFailed(route.capturedText))
+            is DecodeRoute.ReturnConfirmed -> onResult(MrzScannerResult.Confirmed(route.decoded))
+            is DecodeRoute.ShowReview -> setState(ScannerUiState.Review(route.decoded))
+        }
+    }
+
+    when (state) {
         is ScannerUiState.Scanning -> {
             CameraCapture(
                 config = config,
                 struggling = state.struggling,
                 onCameraResult = onCameraResult,
-                onStruggling = { uiState = ScannerUiState.Scanning(struggling = true) },
+                onStruggling = { setState(ScannerUiState.Scanning(struggling = true)) },
                 onManualEntry = onManualEntry,
-                onCancel = onCancel,
             )
         }
 
@@ -269,13 +348,13 @@ private fun ScannerFlow(
             ReviewContent(
                 decoded = state.decoded,
                 expanded = state.expanded,
-                onToggleExpanded = { uiState = state.copy(expanded = !state.expanded) },
+                onToggleExpanded = { setState(state.copy(expanded = !state.expanded)) },
                 onUse = { onResult(MrzScannerResult.Confirmed(state.decoded)) },
                 // Rescanning arms the flow for a fresh decode: clear the one-shot latch so the next decoded
                 // frame routes on rather than being swallowed as a repeat.
                 onRescan = {
-                    decodeRouted = false
-                    uiState = ScannerUiState.Scanning()
+                    armDecodeLatch()
+                    setState(ScannerUiState.Scanning())
                 },
             )
         }
@@ -284,11 +363,10 @@ private fun ScannerFlow(
             ReadFailedContent(
                 capturedText = state.capturedText,
                 onTryAgain = {
-                    decodeRouted = false
-                    uiState = ScannerUiState.Scanning()
+                    armDecodeLatch()
+                    setState(ScannerUiState.Scanning())
                 },
-                // The read-failed / error escape into manual entry (TES-63). The switcher entry from the
-                // camera is a later slice; for now this is how the user reaches manual entry.
+                // The read-failed / error escape into manual entry (also reachable from the method switcher).
                 onManualEntry = onManualEntry,
             )
         }
@@ -296,21 +374,21 @@ private fun ScannerFlow(
         is ScannerUiState.ManualRaw -> {
             ManualRawContent(
                 state = state,
-                onTextChange = { uiState = state.copy(text = it) },
+                onTextChange = { setState(state.copy(text = it)) },
                 // Assemble a Decoded from the typed text (pure, host-tested), then route it exactly as a
                 // camera decode: a parse Failure shows the read-failed screen, a Success / PartialSuccess
                 // goes to review (or straight back under INSTANT_RETURN). The manual-entry read method flows
                 // through, so the review screen shows "Read by manual entry" with no extra wiring.
-                onRead = { hint ->
-                    val decoded = assembleManualDecoded(state.text, hint)
-                    when (val route = routeDecode(decoded, config.reviewMode)) {
-                        is DecodeRoute.ShowReadFailed -> uiState = ScannerUiState.ReadFailed(route.capturedText)
-                        is DecodeRoute.ReturnConfirmed -> onResult(MrzScannerResult.Confirmed(route.decoded))
-                        is DecodeRoute.ShowReview -> uiState = ScannerUiState.Review(route.decoded)
-                    }
-                },
+                onRead = { hint -> routeThroughDecode(assembleManualDecoded(state.text, hint)) },
                 onBack = onCancel,
             )
+        }
+
+        ScannerUiState.AwaitingSavedImagePick -> {
+            // Entering this state launches the picker (a LaunchedEffect in ScannerFlow). This content only
+            // shows if that pick was dismissed with no photo — a neutral re-pick prompt so the screen is never
+            // blank (TES-71).
+            AwaitingSavedImagePickContent(onChoosePhoto = enterSavedImage)
         }
 
         ScannerUiState.SavedImageAnalyzing -> {
@@ -322,13 +400,7 @@ private fun ScannerFlow(
                 candidates = state.candidates,
                 // The user chose a candidate: wrap it into a Decoded (pure, host-tested) and route it exactly
                 // as any decode — its own parse verdict carried through, no SDK judgement (the user decided).
-                onPick = { candidate ->
-                    when (val route = routeDecode(candidateDecoded(candidate), config.reviewMode)) {
-                        is DecodeRoute.ShowReadFailed -> uiState = ScannerUiState.ReadFailed(route.capturedText)
-                        is DecodeRoute.ReturnConfirmed -> onResult(MrzScannerResult.Confirmed(route.decoded))
-                        is DecodeRoute.ShowReview -> uiState = ScannerUiState.Review(route.decoded)
-                    }
-                },
+                onPick = { candidate -> routeThroughDecode(candidateDecoded(candidate)) },
                 onChooseDifferent = enterSavedImage,
             )
         }
@@ -340,9 +412,8 @@ private fun ScannerFlow(
             )
         }
 
-        // The remaining ScannerUiState variants (Initializing, the permission states, manual field-by-field
-        // entry) are the declared contract for the later 0.5.0 slices — not reachable here. enterSavedImage()
-        // is wired above but only reached via the later method switcher (TES-71), like ManualFields.
+        // The remaining ScannerUiState variants (Initializing, the permission-mode states, manual
+        // field-by-field entry) are the declared contract for the later 0.5.0 slices — not reachable here.
         else -> {}
     }
 }
@@ -481,7 +552,6 @@ private fun CameraCapture(
     onCameraResult: (MrzScanResult) -> Unit,
     onStruggling: () -> Unit,
     onManualEntry: () -> Unit,
-    onCancel: () -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -520,7 +590,6 @@ private fun CameraCapture(
                 onCameraResult = onCameraResult,
                 onStruggling = onStruggling,
                 onManualEntry = onManualEntry,
-                onCancel = onCancel,
             )
         }
 
@@ -612,7 +681,6 @@ private fun CameraPreview(
     onCameraResult: (MrzScanResult) -> Unit,
     onStruggling: () -> Unit,
     onManualEntry: () -> Unit,
-    onCancel: () -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -661,16 +729,15 @@ private fun CameraPreview(
         }
 
         // User-facing copy comes from the module's overridable tessera_* string resources (TES-46): a
-        // consumer translates/rebrands by redefining the same key. See res/values/strings.xml.
+        // consumer translates/rebrands by redefining the same key. See res/values/strings.xml. The cancel
+        // control moved to the shared top bar (TES-71) — no inline Cancel button here anymore, so the
+        // preview shows only the guidance hint.
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.Bottom),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(text = stringResource(R.string.tessera_scanner_camera_hint))
-            Button(onClick = onCancel) {
-                Text(text = stringResource(R.string.tessera_scanner_cancel))
-            }
         }
     }
 }

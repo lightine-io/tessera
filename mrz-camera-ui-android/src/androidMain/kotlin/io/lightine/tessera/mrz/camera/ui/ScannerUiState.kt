@@ -61,6 +61,16 @@ internal sealed interface ScannerUiState {
         val capturedText: RecognizedText,
     ) : ScannerUiState
 
+    /**
+     * The saved-image method is the entry point (only [`SAVED_IMAGE`][ScanMethod.SAVED_IMAGE] is enabled) and
+     * the flow is waiting for the photo picker to be launched. A momentary state: the flow triggers
+     * `enterSavedImage()` on entering it and the picker takes over — either a pick routes on
+     * ([SavedImageAnalyzing] → candidates / single decode / empty) or a dismissed picker leaves this showing a
+     * neutral "choose a photo" prompt with a re-pick action, so the screen is never blank. Reached only via
+     * [initialState] (SAVED_IMAGE-only) or the method switcher's Photo tab — not a mockup state of its own.
+     */
+    data object AwaitingSavedImagePick : ScannerUiState
+
     /** A picked photo is being analysed for an MRZ (mockup 07c). */
     data object SavedImageAnalyzing : ScannerUiState
 
