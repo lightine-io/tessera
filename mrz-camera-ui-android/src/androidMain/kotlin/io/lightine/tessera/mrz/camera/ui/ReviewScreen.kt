@@ -19,13 +19,18 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.lightine.tessera.mrz.camera.MrzScanResult
@@ -148,7 +153,39 @@ internal fun reviewAllFieldRows(document: MrzDocument): List<FieldRow> {
 }
 
 /**
- * The observation set for a reading (mockups 03 / 03b), derived from the parse verdict and metadata.
+ * The observation set for a decoded reading (mockups 03 / 03b) — the check-digit / expiry / advisory
+ * observations for its [`parse`][MrzScanResult.Decoded.parse] verdict (via [parseObservations]) plus a
+ * **provenance** INFO line naming the read method (live camera / photo / manual). A parse failure carries no
+ * document, so it yields no observations.
+ *
+ * The parse-derived part is factored out into [parseObservations] so a saved-image candidate — which carries
+ * a bare [ParseResult] with no [MrzScanResult] and no provenance to render — reuses the *same* honest
+ * verdict logic to show its own per-candidate observations, rather than the two screens each deriving it.
+ */
+@Composable
+internal fun reviewObservations(decoded: MrzScanResult.Decoded): List<Observation> {
+    val parse = decoded.parse
+    val observations = parseObservations(parse).toMutableList()
+    if (parse is ParseResult.Failure) return observations
+
+    // Provenance is decode-specific (a candidate has none) — appended here, after the shared parse verdict,
+    // and slotted before the advisory so the "some checks did not match" note stays the last line.
+    val provenance =
+        Observation(
+            symbol = SYMBOL_INFO,
+            text = stringResource(R.string.tessera_scanner_obs_read_by, readMethodLabel(parse.metadata.readMethod)),
+            tone = ObservationTone.INFO,
+        )
+    val advisoryIndex = observations.indexOfFirst { it.tone == ObservationTone.INFO }
+    if (advisoryIndex >= 0) observations.add(advisoryIndex, provenance) else observations += provenance
+    return observations
+}
+
+/**
+ * The observation set for a single parse verdict — the honest per-check reporting shared by the review
+ * screen (a decoded reading) and each saved-image candidate. Derived purely from the [ParseResult] and its
+ * metadata; carries **no** provenance line (the caller adds one where it has a read method — see
+ * [reviewObservations]).
  *
  * Logic, in order:
  * 1. **Check digits** — one observation per check digit that is present on the format (document number,
@@ -158,14 +195,13 @@ internal fun reviewAllFieldRows(document: MrzDocument): List<FieldRow> {
  *    recorded and computed digits — neither is "the right one"; the consumer decides (Principle 1).
  * 2. **Expiry well-formed** — a MATCH observation only when the expiry components form a real calendar date
  *    (`componentsFormCalendarDate == true`).
- * 3. **Provenance** — an INFO observation naming the read method (live camera / photo / manual).
- * 4. **Advisory** — a single neutral INFO observation "some checks did not match — verify against the
+ * 3. **Advisory** — a single neutral INFO observation "some checks did not match — verify against the
  *    document" appended when any check-digit mismatch was reported.
+ *
+ * A [`ParseResult.Failure`][ParseResult.Failure] carries no parsed document, so it yields an empty list.
  */
 @Composable
-internal fun reviewObservations(decoded: MrzScanResult.Decoded): List<Observation> {
-    val parse = decoded.parse
-    if (parse is ParseResult.Failure) return emptyList()
+internal fun parseObservations(parse: ParseResult): List<Observation> {
     val document =
         when (parse) {
             is ParseResult.Success -> parse.document
@@ -230,15 +266,7 @@ internal fun reviewObservations(decoded: MrzScanResult.Decoded): List<Observatio
             )
     }
 
-    // 3. Provenance.
-    observations +=
-        Observation(
-            symbol = SYMBOL_INFO,
-            text = stringResource(R.string.tessera_scanner_obs_read_by, readMethodLabel(parse.metadata.readMethod)),
-            tone = ObservationTone.INFO,
-        )
-
-    // 4. Neutral advisory when anything did not match.
+    // 3. Neutral advisory when anything did not match.
     if (mismatches.isNotEmpty()) {
         observations +=
             Observation(
@@ -445,6 +473,64 @@ internal fun MonoLine(text: String) {
             Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState()),
+    )
+}
+
+/**
+ * One MRZ line with the columns in [highlightColumns] emphasised — the differing glyphs a saved-image
+ * candidate resolved (mockup 07). Same monospace, single-line, horizontally-scrollable, never-truncated
+ * shape as [MonoLine], but each highlighted column is drawn bold on a subtle background via an
+ * [AnnotatedString] [SpanStyle].
+ *
+ * **Non-colour a11y.** The emphasis is never colour-only: the bold weight is itself a non-colour signal, and
+ * a merged [contentDescription] appends a spoken note — "…, differs here" — naming *which* characters differ
+ * so a screen-reader user learns the same thing a sighted user reads from the emphasis. Columns outside the
+ * text (defensive against a stale index) are ignored.
+ */
+@Composable
+internal fun MonoLineHighlighted(
+    text: String,
+    highlightColumns: Set<Int>,
+) {
+    val highlightColor = MaterialTheme.colorScheme.tertiary
+    val highlightBackground = MaterialTheme.colorScheme.tertiaryContainer
+    val differsHere = stringResource(R.string.tessera_scanner_saved_image_differs_here)
+
+    val annotated =
+        remember(text, highlightColumns, highlightColor, highlightBackground) {
+            buildAnnotatedString {
+                append(text)
+                highlightColumns.filter { it in text.indices }.forEach { column ->
+                    addStyle(
+                        SpanStyle(
+                            fontWeight = FontWeight.Bold,
+                            color = highlightColor,
+                            background = highlightBackground,
+                        ),
+                        start = column,
+                        end = column + 1,
+                    )
+                }
+            }
+        }
+
+    // Merge the visible text with the spoken "differs here" note so the emphasis survives for a screen reader
+    // (non-colour a11y). Merging (not clearing) keeps the line's own text findable in the semantics tree.
+    Text(
+        text = annotated,
+        style = MaterialTheme.typography.bodyMedium,
+        fontFamily = FontFamily.Monospace,
+        maxLines = 1,
+        overflow = TextOverflow.Clip,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .semantics(mergeDescendants = true) {
+                    if (highlightColumns.any { it in text.indices }) {
+                        contentDescription = "$text, $differsHere"
+                    }
+                },
     )
 }
 

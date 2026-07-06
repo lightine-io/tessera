@@ -177,4 +177,41 @@
     <string name="tessera_scanner_manual_privacy">Read on this device. The SDK never uploads or stores what you type.</string>
     <!-- Primary action: parse the text the user typed (with the selected format hint). -->
     <string name="tessera_scanner_manual_read">Read what I typed</string>
+
+    <!-- ============================ Saved-image (photo) screens (mockups 07c / 07 / 07b) ============================ -->
+
+    <!-- Analyzing screen (mockup 07c): shown while the picked photo is read on-device. -->
+    <string name="tessera_scanner_saved_image_analyzing_title">Analyzing photo…</string>
+    <!-- What the analysis is doing, stated plainly. -->
+    <string name="tessera_scanner_saved_image_analyzing_reading">Reading the machine-readable zone</string>
+    <!-- Privacy fact under the analyzing indicator: the read is entirely on-device. -->
+    <string name="tessera_scanner_saved_image_analyzing_on_device">On-device — the photo is not uploaded.</string>
+
+    <!-- Candidates screen (mockup 07): tolerant reading resolved an ambiguous glyph more than one way, so
+         EVERY parseable reading is shown for the user to choose among — nothing is chosen for them
+         (Principle 1 / ADR-023). -->
+    <string name="tessera_scanner_saved_image_candidates_title">From photo</string>
+    <!-- Intro over the candidate list. "%1$d" is the number of readings found. The bold-differing-character
+         note refers to the emphasised glyph on each candidate. "Nothing is chosen for you" is the honest
+         reader-not-oracle statement — the SDK surfaces every reading and never picks one. -->
+    <string name="tessera_scanner_saved_image_candidates_intro">Found %1$d possible readings. An ambiguous character differs (bold below) — pick the one matching your document. Nothing is chosen for you.</string>
+    <!-- Per-candidate action: accept THIS reading. Enabled for every candidate regardless of its check-digit
+         verdict — the user decides which reading is theirs (reader, not oracle, Principle 1). -->
+    <string name="tessera_scanner_saved_image_use_this">Use this ›</string>
+    <!-- Spoken note appended to a highlighted MRZ line so the differing glyph is conveyed to a screen reader,
+         not carried by the bold/colour emphasis alone (non-colour a11y). -->
+    <string name="tessera_scanner_saved_image_differs_here">differs here</string>
+
+    <!-- Empty screen (mockup 07b): no MRZ could be located in the picked photo. Never "invalid" — the zone
+         couldn't be found, which is a different, honest statement. -->
+    <string name="tessera_scanner_saved_image_empty_title">No MRZ found in this photo</string>
+    <string name="tessera_scanner_saved_image_empty_body">The machine-readable zone couldn\'t be located in this image. Use a printed document\'s data page — screens and low-contrast copies often don\'t read.</string>
+    <!-- Privacy note on the empty screen: the photo never leaves the device. -->
+    <string name="tessera_scanner_saved_image_empty_privacy">The photo stays on your device. This SDK doesn\'t upload or store it.</string>
+
+    <!-- Shared saved-image actions. -->
+    <!-- Pick a different photo (re-launch the picker). -->
+    <string name="tessera_scanner_saved_image_choose_different">Choose different photo</string>
+    <!-- Escape from the empty screen into manual entry. -->
+    <string name="tessera_scanner_saved_image_manual">Enter details manually</string>
 </resources>

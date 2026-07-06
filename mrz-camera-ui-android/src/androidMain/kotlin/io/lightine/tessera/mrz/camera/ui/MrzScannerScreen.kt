@@ -9,6 +9,10 @@ package io.lightine.tessera.mrz.camera.ui
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.compose.CameraXViewfinder
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,8 +46,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.lightine.tessera.mrz.camera.CameraError
 import io.lightine.tessera.mrz.camera.CameraXMrzScanner
 import io.lightine.tessera.mrz.camera.MrzScanResult
+import io.lightine.tessera.mrz.camera.SavedImageMrzReader
+import io.lightine.tessera.mrz.camera.SavedImageReadingAcknowledgement
+import io.lightine.tessera.mrz.camera.mlKitSavedImageRecognizer
 import io.lightine.tessera.mrz.parsing.ParseResult
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.time.Duration
 
 /**
@@ -109,6 +118,15 @@ internal const val READ_FAILED_TEST_TAG: String = "tessera-mrz-read-failed"
 
 /** Semantics anchor for the struggling hint overlaid on the live preview (mockup 02). Not user-facing. */
 internal const val STRUGGLING_TEST_TAG: String = "tessera-mrz-struggling"
+
+/** Semantics anchor for the "analyzing photo" screen (mockup 07c). Not user-facing. */
+internal const val SAVED_IMAGE_ANALYZING_TEST_TAG: String = "tessera-mrz-saved-image-analyzing"
+
+/** Semantics anchor for the saved-image candidates screen (mockup 07). Not user-facing. */
+internal const val SAVED_IMAGE_CANDIDATES_TEST_TAG: String = "tessera-mrz-saved-image-candidates"
+
+/** Semantics anchor for the "no MRZ found in this photo" screen (mockup 07b). Not user-facing. */
+internal const val SAVED_IMAGE_EMPTY_TEST_TAG: String = "tessera-mrz-saved-image-empty"
 
 /**
  * Holds the current [ScannerUiState] and dispatches the matching screen. The screen is a one-shot flow: the
@@ -183,6 +201,48 @@ private fun ScannerFlow(
 
     val onManualEntry = { uiState = ScannerUiState.ManualRaw() }
 
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // Route a picked saved image through the tolerant SavedImageMrzReader, entirely on-device, then apply the
+    // pure mapSavedImageResult: candidates → the candidates screen (never picking one); a single decode →
+    // routeDecode (identical to a camera decode); nothing readable → the empty screen. The reader is built,
+    // used, and closed per pick (it owns the ML Kit recognizer's lifetime). Saved-image reading is opt-in and
+    // off by default — reaching this flow at all means the consumer enabled ScanMethod.SAVED_IMAGE, which IS
+    // the acknowledgement (ADR-023), so the SavedImageReadingAcknowledgement is constructed here internally
+    // with no separate user screen. Arm the decode latch afresh so a candidate/single-decode route fires.
+    val readPickedImage = { uri: Uri ->
+        uiState = ScannerUiState.SavedImageAnalyzing
+        scope.launch {
+            val acknowledgement = SavedImageReadingAcknowledgement()
+            val result =
+                SavedImageMrzReader(
+                    acknowledgement = acknowledgement,
+                    recognizer = mlKitSavedImageRecognizer(acknowledgement, context),
+                    tolerant = true,
+                ).use { reader -> reader.read(uri) }
+            decodeRouted = false
+            when (val outcome = mapSavedImageResult(result)) {
+                is SavedImageOutcome.Candidates -> uiState = ScannerUiState.SavedImageCandidates(outcome.candidates)
+                is SavedImageOutcome.SingleDecode -> routeDecoded(outcome.decoded)
+                SavedImageOutcome.Empty -> uiState = ScannerUiState.SavedImageEmpty
+            }
+        }
+        Unit
+    }
+
+    // The system photo picker, restricted to images. Registered here (a launcher must be created in
+    // composition, not inside a callback); a null Uri means the user dismissed the picker with no selection,
+    // so nothing changes. enterSavedImage() launches it — wired now but only reached via the later method
+    // switcher (TES-71), like ManualFields.
+    val savedImagePicker =
+        rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
+            if (uri != null) readPickedImage(uri)
+        }
+    val enterSavedImage = {
+        savedImagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    }
+
     when (val state = uiState) {
         is ScannerUiState.Scanning -> {
             CameraCapture(
@@ -251,8 +311,36 @@ private fun ScannerFlow(
             )
         }
 
-        // The remaining ScannerUiState variants (Initializing, the permission states, saved image, manual
-        // field-by-field entry) are the declared contract for the later 0.5.0 slices — not reachable here.
+        ScannerUiState.SavedImageAnalyzing -> {
+            SavedImageAnalyzingContent()
+        }
+
+        is ScannerUiState.SavedImageCandidates -> {
+            SavedImageCandidatesContent(
+                candidates = state.candidates,
+                // The user chose a candidate: wrap it into a Decoded (pure, host-tested) and route it exactly
+                // as any decode — its own parse verdict carried through, no SDK judgement (the user decided).
+                onPick = { candidate ->
+                    when (val route = routeDecode(candidateDecoded(candidate), config.reviewMode)) {
+                        is DecodeRoute.ShowReadFailed -> uiState = ScannerUiState.ReadFailed(route.capturedText)
+                        is DecodeRoute.ReturnConfirmed -> onResult(MrzScannerResult.Confirmed(route.decoded))
+                        is DecodeRoute.ShowReview -> uiState = ScannerUiState.Review(route.decoded)
+                    }
+                },
+                onChooseDifferent = enterSavedImage,
+            )
+        }
+
+        ScannerUiState.SavedImageEmpty -> {
+            SavedImageEmptyContent(
+                onChooseDifferent = enterSavedImage,
+                onManualEntry = onManualEntry,
+            )
+        }
+
+        // The remaining ScannerUiState variants (Initializing, the permission states, manual field-by-field
+        // entry) are the declared contract for the later 0.5.0 slices — not reachable here. enterSavedImage()
+        // is wired above but only reached via the later method switcher (TES-71), like ManualFields.
         else -> {}
     }
 }

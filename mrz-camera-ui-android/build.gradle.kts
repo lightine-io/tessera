@@ -109,6 +109,10 @@ kotlin {
                 // part of the module's Compose stack and the reason it compiles against API 37 (see the
                 // compileSdk note above).
                 implementation(libs.androidx.lifecycle.runtime.compose)
+                // activity-compose supplies rememberLauncherForActivityResult + the PickVisualMedia contract
+                // that launches the system photo picker for the saved-image (mockup 07) slice.
+                // `implementation` — an internal engine of the screen, not part of the frozen public surface.
+                implementation(libs.androidx.activity.compose)
             }
         }
         // getByName (not the typed accessor): the androidHostTest source set is registered by

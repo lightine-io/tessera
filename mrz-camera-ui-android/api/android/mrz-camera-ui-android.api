@@ -179,6 +179,18 @@ public final class io/lightine/tessera/mrz/camera/ui/R$string {
 	public static field tessera_scanner_review_show_all I
 	public static field tessera_scanner_review_title I
 	public static field tessera_scanner_review_use I
+	public static field tessera_scanner_saved_image_analyzing_on_device I
+	public static field tessera_scanner_saved_image_analyzing_reading I
+	public static field tessera_scanner_saved_image_analyzing_title I
+	public static field tessera_scanner_saved_image_candidates_intro I
+	public static field tessera_scanner_saved_image_candidates_title I
+	public static field tessera_scanner_saved_image_choose_different I
+	public static field tessera_scanner_saved_image_differs_here I
+	public static field tessera_scanner_saved_image_empty_body I
+	public static field tessera_scanner_saved_image_empty_privacy I
+	public static field tessera_scanner_saved_image_empty_title I
+	public static field tessera_scanner_saved_image_manual I
+	public static field tessera_scanner_saved_image_use_this I
 	public static field tessera_scanner_struggling_hint I
 	public static field tessera_scanner_struggling_manual I
 }
