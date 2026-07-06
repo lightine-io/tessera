@@ -110,6 +110,12 @@ public final class io/lightine/tessera/mrz/camera/ui/R {
 
 public final class io/lightine/tessera/mrz/camera/ui/R$string {
 	public static field tessera_scanner_camera_hint I
+	public static field tessera_scanner_camera_in_use_body I
+	public static field tessera_scanner_camera_in_use_title I
+	public static field tessera_scanner_camera_manual I
+	public static field tessera_scanner_camera_reconnecting I
+	public static field tessera_scanner_camera_unavailable_body I
+	public static field tessera_scanner_camera_unavailable_title I
 	public static field tessera_scanner_cancel I
 	public static field tessera_scanner_category_identity_card I
 	public static field tessera_scanner_category_other I
@@ -173,6 +179,8 @@ public final class io/lightine/tessera/mrz/camera/ui/R$string {
 	public static field tessera_scanner_review_show_all I
 	public static field tessera_scanner_review_title I
 	public static field tessera_scanner_review_use I
+	public static field tessera_scanner_struggling_hint I
+	public static field tessera_scanner_struggling_manual I
 }
 
 public final class io/lightine/tessera/mrz/camera/ui/ReviewMode : java/lang/Enum {

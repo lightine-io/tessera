@@ -10,11 +10,11 @@ import io.lightine.tessera.mrz.camera.RecognizedText
  * is one exhaustive `when` over this contract rather than a tangle of booleans. Each variant maps to a
  * numbered mockup state (in `.design/default-ui/`).
  *
- * Only [Scanning], [Review], and [ReadFailed] are **wired in this slice** (TES-62 — the live-camera review
- * path); the rest are the settled contract the later 0.5.0 slices fill in (saved image, manual entry, the
- * error/permission states), declared now so the flow's `when` and the sibling screens have a stable shape
- * to grow into rather than being reshuffled per slice. Nothing here is public — the frozen surface stays
- * `MrzScannerScreen` + config + result (ADR-007); this is internal wiring.
+ * [Scanning] (including its `struggling` overlay), [Review], [ReadFailed], [ManualRaw], [CameraInUse], and
+ * [CameraUnavailable] are **wired**; the rest are the settled contract the later 0.5.0 slices fill in (saved
+ * image, field-by-field manual entry, the permission states), declared now so the flow's `when` and the
+ * sibling screens have a stable shape to grow into rather than being reshuffled per slice. Nothing here is
+ * public — the frozen surface stays `MrzScannerScreen` + config + result (ADR-007); this is internal wiring.
  */
 internal sealed interface ScannerUiState {
     /** Camera is coming up; no preview yet (mockup 01b). */
@@ -22,8 +22,8 @@ internal sealed interface ScannerUiState {
 
     /**
      * The live camera preview is running and looking for an MRZ (mockup 01). [struggling] flips true once
-     * the configured struggle timeout elapses with no decode, to surface the "still looking / type it
-     * instead" hint (mockup 04b).
+     * the configured struggle timeout elapses with no decode, to overlay the "still looking / type it
+     * instead" hint on the preview (mockup 02).
      */
     data class Scanning(
         val struggling: Boolean = false,

@@ -18,6 +18,26 @@
 <resources>
     <!-- Guidance shown over the live camera preview while scanning. -->
     <string name="tessera_scanner_camera_hint">Point the camera at the document\'s data page</string>
+
+    <!-- ============================ Struggling hint (mockup 02) ============================ -->
+    <!-- Shown over the live preview after a while with no successful read. Advisory only — it nudges the
+         user to improve the capture; it is never an error and never a verdict about the document (Principle 1). -->
+    <string name="tessera_scanner_struggling_hint">Still looking — try more light or move closer</string>
+    <!-- The "type it instead" affordance on the struggling hint — the escape into manual entry. -->
+    <string name="tessera_scanner_struggling_manual">Type it instead</string>
+
+    <!-- ============================ Camera-status screens (mockups 05 / 05b) ============================ -->
+    <!-- Camera in use (recoverable, mockup 05): another app holds the camera; the session stays bound and the
+         platform framework reconnects on its own, so there is no retry — only the manual-entry escape. -->
+    <string name="tessera_scanner_camera_in_use_title">Camera is in use</string>
+    <string name="tessera_scanner_camera_in_use_body">Another app is using the camera — it will reconnect automatically.</string>
+    <!-- The recoverable status, stated in words beside the pulsing indicator (the meaning is in the text). -->
+    <string name="tessera_scanner_camera_reconnecting">Reconnecting…</string>
+    <!-- Camera unavailable (terminal, mockup 05b): the camera cannot be started at all; no retry. -->
+    <string name="tessera_scanner_camera_unavailable_title">Camera unavailable</string>
+    <string name="tessera_scanner_camera_unavailable_body">This device\'s camera can\'t be started. You can still enter the document details by hand.</string>
+    <!-- Shared action on both camera-status screens: switch to typing the details by hand. -->
+    <string name="tessera_scanner_camera_manual">Enter details manually</string>
     <!-- Explains why the camera permission is needed, shown when it is not yet granted. -->
     <string name="tessera_scanner_permission_rationale">Camera permission is needed to scan the document</string>
     <!-- Action that hands the permission request to the host app (the SDK never requests it itself). -->

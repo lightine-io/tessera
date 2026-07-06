@@ -1,0 +1,158 @@
+// @Composable functions are PascalCase by Compose convention — see the note in MrzScannerScreen.kt.
+@file:Suppress("ktlint:standard:function-naming")
+
+package io.lightine.tessera.mrz.camera.ui
+
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+
+// The camera-status screens (mockups 05 / 05b) — the two ways the live camera cannot deliver a preview:
+//
+//  * CameraInUse (05, recoverable): another app holds the camera. The scanner stays bound and the platform
+//    framework auto-resumes the stream when the other holder releases it, so this screen offers NO retry —
+//    it self-resumes. The only action is the manual-entry escape (the user need not wait). See
+//    ScannerFlow's reducer wiring: a subsequent non-error result flips the flow back to Scanning.
+//  * CameraUnavailable (05b, terminal): the camera cannot be started at all. No auto-recovery, no retry —
+//    the only forward path is manual entry.
+//
+// Both are honest statements of a capture condition, never a verdict about a document (Principle 1). The
+// meaning lives in the text, not in colour or motion: the "Reconnecting…" indicator's pulse is decorative
+// (an a11y-neutral affordance), and the heading + body carry the state on their own.
+
+/** Semantics anchor for the camera-in-use (recoverable) screen (mockup 05). Not user-facing. */
+internal const val CAMERA_IN_USE_TEST_TAG: String = "tessera-mrz-camera-in-use"
+
+/** Semantics anchor for the camera-unavailable (terminal) screen (mockup 05b). Not user-facing. */
+internal const val CAMERA_UNAVAILABLE_TEST_TAG: String = "tessera-mrz-camera-unavailable"
+
+/**
+ * The camera-in-use screen (mockup 05). Shown when another app holds the camera. This is **recoverable**:
+ * the scanner keeps its session bound underneath and the platform camera framework auto-resumes the stream
+ * once the other holder releases it, so the flow returns to scanning on its own (see [ScannerFlow]). There
+ * is therefore **no retry action** — only [onManualEntry], the escape into manual entry for a user who would
+ * rather not wait. The "Reconnecting…" indicator states the recoverable status in words; its pulse is
+ * decorative and never the sole carrier of meaning (non-colour / non-motion a11y).
+ */
+@Composable
+internal fun CameraInUseContent(onManualEntry: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp).testTag(CAMERA_IN_USE_TEST_TAG),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        // Heading + body + the reconnecting indicator sit centred in the available space; the single action
+        // stays pinned below.
+        Column(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = stringResource(R.string.tessera_scanner_camera_in_use_title),
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = stringResource(R.string.tessera_scanner_camera_in_use_body),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+            ReconnectingIndicator()
+        }
+
+        Button(onClick = onManualEntry, modifier = Modifier.fillMaxWidth()) {
+            Text(text = stringResource(R.string.tessera_scanner_camera_manual))
+        }
+    }
+}
+
+/**
+ * The camera-unavailable screen (mockup 05b). Shown when the camera cannot be started for a non-recoverable
+ * reason. This is **terminal**: there is no auto-recovery and no retry — the only forward path is
+ * [onManualEntry], typing the details by hand.
+ */
+@Composable
+internal fun CameraUnavailableContent(onManualEntry: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp).testTag(CAMERA_UNAVAILABLE_TEST_TAG),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Column(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = stringResource(R.string.tessera_scanner_camera_unavailable_title),
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = stringResource(R.string.tessera_scanner_camera_unavailable_body),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+        }
+
+        Button(onClick = onManualEntry, modifier = Modifier.fillMaxWidth()) {
+            Text(text = stringResource(R.string.tessera_scanner_camera_manual))
+        }
+    }
+}
+
+/**
+ * The "Reconnecting…" indicator on the camera-in-use screen: a pulsing dot beside the reconnecting label.
+ * The label carries the meaning; the pulse is purely decorative (it conveys nothing a screen reader or a
+ * reduced-motion user would miss — the recoverable status is stated in the text). The dot is the literal
+ * bullet "●" whose alpha animates, so no drawing API or icon dependency is introduced.
+ */
+@Composable
+private fun ReconnectingIndicator() {
+    val transition = rememberInfiniteTransition(label = "reconnecting")
+    val alpha by transition.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 1f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = 1200),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "reconnecting-dot-alpha",
+    )
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "●",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.tertiary,
+            modifier = Modifier.alpha(alpha),
+        )
+        Text(
+            text = stringResource(R.string.tessera_scanner_camera_reconnecting),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.tertiary,
+        )
+    }
+}
