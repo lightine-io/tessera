@@ -19,11 +19,15 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import kotlin.concurrent.Volatile
 import platform.AVFoundation.AVAuthorizationStatusAuthorized
 import platform.AVFoundation.AVCaptureConnection
 import platform.AVFoundation.AVCaptureDevice
@@ -144,6 +148,33 @@ public class AVCaptureMrzScanner(
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
         )
     override val results: Flow<MrzScanResult> = mutableResults.asSharedFlow()
+
+    // Opt-in live-preview seam (additive; the scanner is headless by default — ADR-020), the iOS mirror of
+    // the Android scanner's [surfaceRequest]. Read at bind time in cameraFrames(): when armed, the running
+    // AVCaptureSession is published on [previewSession] so a SwiftUI viewfinder can attach its own
+    // AVCaptureVideoPreviewLayer. The scanner keeps owning the session and its lifecycle; the UI only draws.
+    // @Volatile because enablePreview() may be called from any thread; the bind reads it on Dispatchers.Default.
+    @Volatile private var previewEnabled = false
+    private val mutablePreviewSession = MutableStateFlow<AVCaptureSession?>(null)
+
+    /**
+     * The running [AVCaptureSession] to preview, or `null` when no preview is active. Emits the session once
+     * the camera opens **after** [enablePreview] has armed the preview and [start] runs the session; back to
+     * `null` when the session ends. A SwiftUI viewfinder (in `TesseraUI`) collects this and attaches an
+     * `AVCaptureVideoPreviewLayer` — the UI only draws; this scanner keeps owning the session and lifecycle.
+     * Stays `null` for the headless default (preview not armed).
+     */
+    public val previewSession: StateFlow<AVCaptureSession?> = mutablePreviewSession.asStateFlow()
+
+    /**
+     * Arms the live camera preview for subsequent [start]s: the next running session is published on
+     * [previewSession] for a viewfinder to render. Opt-in so the default remains headless (ADR-020) — a
+     * pure-OCR consumer never exposes its session. Idempotent; call before [start]. There is no disarm:
+     * preview stays armed for this scanner's lifetime once set (the default UI arms once at construction).
+     */
+    public fun enablePreview() {
+        previewEnabled = true
+    }
 
     // Tracks the in-flight session and auto-clears it on completion, so start() works again after the
     // stream ends on its own (a terminal CaptureError), not only after stop(). See CameraSessionGate.
@@ -300,8 +331,11 @@ public class AVCaptureMrzScanner(
 
             try {
                 session.startRunning()
+                // Publish the running session for an armed SwiftUI viewfinder to draw (headless default: null).
+                if (previewEnabled) mutablePreviewSession.value = session
                 emitAll(frames.receiveAsFlow())
             } finally {
+                mutablePreviewSession.value = null
                 center.removeObserver(interruptionObserver)
                 center.removeObserver(runtimeErrorObserver)
                 output.setSampleBufferDelegate(null, null)
