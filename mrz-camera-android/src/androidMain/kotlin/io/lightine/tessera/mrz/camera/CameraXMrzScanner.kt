@@ -3,6 +3,7 @@ package io.lightine.tessera.mrz.camera
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraState
 import androidx.camera.core.ImageAnalysis
@@ -142,6 +143,26 @@ public class CameraXMrzScanner(
         previewEnabled = true
     }
 
+    // Torch control for the default UI's torch button. The desired state is held here and applied to the bound
+    // CameraX [Camera] when the session binds and on every toggle. @Volatile because [setTorchEnabled] may be
+    // called from the UI thread while [boundCamera] is assigned on the bind thread. `enableTorch` is a CameraX
+    // async control that does not rebind the session, so toggling never interrupts capture.
+    @Volatile private var torchEnabled = false
+
+    @Volatile private var boundCamera: Camera? = null
+
+    /**
+     * Turns the active camera's torch on or off. Safe to call before [start] (applied when the camera binds)
+     * or while running; a no-op on a camera with no flash unit. The torch turns off when the session unbinds.
+     */
+    public fun setTorchEnabled(enabled: Boolean) {
+        torchEnabled = enabled
+        boundCamera?.let { if (it.cameraInfo.hasFlashUnit()) it.cameraControl.enableTorch(enabled) }
+    }
+
+    /** Whether the active camera has a flash unit (torch). `false` until the camera has bound at least once. */
+    public fun hasTorch(): Boolean = boundCamera?.cameraInfo?.hasFlashUnit() == true
+
     // Tracks the in-flight session and auto-clears it on completion, so start() works again after the
     // stream ends on its own (a terminal CaptureError), not only after stop(). See CameraSessionGate.
     private val session = CameraSessionGate()
@@ -219,6 +240,9 @@ public class CameraXMrzScanner(
                     close(failure)
                     return@callbackFlow
                 }
+            // Hold the camera for torch control and apply the desired torch state (honours torchOnByDefault).
+            boundCamera = camera
+            if (camera.cameraInfo.hasFlashUnit()) camera.cameraControl.enableTorch(torchEnabled)
 
             // CameraX surfaces a failed camera open (permission denied, camera in use, hardware fault)
             // asynchronously through camera STATE, not as a bind-time exception. How we surface it follows
@@ -263,6 +287,7 @@ public class CameraXMrzScanner(
             camera.cameraInfo.cameraState.observe(lifecycleOwner, stateObserver)
 
             awaitClose {
+                boundCamera = null
                 camera.cameraInfo.cameraState.removeObserver(stateObserver)
                 analysis.clearAnalyzer()
                 // Clear the published request first: the viewfinder stops drawing before we unbind, and a

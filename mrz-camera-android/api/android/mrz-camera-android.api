@@ -5,6 +5,8 @@ public final class io/lightine/tessera/mrz/camera/CameraXMrzScanner : io/lightin
 	public final fun enablePreview ()V
 	public fun getResults ()Lkotlinx/coroutines/flow/Flow;
 	public final fun getSurfaceRequest ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun hasTorch ()Z
+	public final fun setTorchEnabled (Z)V
 	public fun start ()V
 	public fun stop ()V
 }
