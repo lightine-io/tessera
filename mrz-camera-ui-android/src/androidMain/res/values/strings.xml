@@ -31,8 +31,13 @@
     <string name="tessera_scanner_method_photo">Photo</string>
     <string name="tessera_scanner_method_keyboard">Type</string>
 
-    <!-- Guidance shown over the live camera preview while scanning. -->
-    <string name="tessera_scanner_camera_hint">Point the camera at the document\'s data page</string>
+    <!-- Guidance shown over the live camera preview: the MRZ framing guide's hint (mockup 01), telling the
+         user to line up the document's bottom lines (the MRZ band) inside the dashed frame. Advisory only —
+         it never gates capture, and the reader still isolates the MRZ from wherever it appears. Same key as
+         the iOS String Catalog (tessera_scanner_camera_guide) so the contract reads identically across
+         platforms. (Supersedes the earlier generic tessera_scanner_camera_hint — the preview now shows the
+         framing guide, matching iOS and the mockup, so that key is gone before the 0.5.0 freeze.) -->
+    <string name="tessera_scanner_camera_guide">Fit the bottom lines of the document in the frame</string>
 
     <!-- Accessibility label for the torch (flashlight) toggle over the live preview (mockup 01, top-end).
          Shown only when the device has a flash unit and the consumer left showTorchButton on. The glyph

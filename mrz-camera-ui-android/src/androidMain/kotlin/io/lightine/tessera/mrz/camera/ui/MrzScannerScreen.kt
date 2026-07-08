@@ -22,8 +22,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
@@ -45,7 +48,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -55,6 +62,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -126,6 +134,9 @@ internal const val VIEWFINDER_TEST_TAG: String = "tessera-mrz-viewfinder"
 
 /** Semantics anchor for the torch (flashlight) toggle over the live preview. Matches the iOS identifier. Not user-facing. */
 internal const val TORCH_TEST_TAG: String = "tessera-mrz-torch"
+
+/** Semantics anchor for the MRZ framing-guide hint under the dashed frame. Matches the iOS identifier. Not user-facing. */
+internal const val GUIDE_HINT_TEST_TAG: String = "tessera-mrz-guide-hint"
 
 /** Semantics anchor for the camera-initializing loading state (mockup 01b). Not user-facing. */
 internal const val INITIALIZING_TEST_TAG: String = "tessera-mrz-initializing"
@@ -784,6 +795,13 @@ private fun CameraPreview(
                     modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
                 )
             }
+
+            // The MRZ framing guide (mockup 01, TES-87): a dashed frame sitting low in the view — where the
+            // MRZ band lands on a document held upright — with its hint below. On-device OCR reads all text
+            // in frame and the reader isolates the MRZ downstream; guiding the user to frame just the band
+            // gives a cleaner, faster read. Advisory only — it never gates capture. Shown over a live preview
+            // only, mirroring the iOS MrzGuideOverlay (tessera-swift 6c2aecf).
+            MrzGuideOverlay(modifier = Modifier.align(Alignment.BottomCenter))
         } else {
             InitializingContent()
         }
@@ -797,19 +815,6 @@ private fun CameraPreview(
                 onManualEntry = onManualEntry,
                 modifier = Modifier.align(Alignment.TopCenter).contentMaxWidth(),
             )
-        }
-
-        // User-facing copy comes from the module's overridable tessera_* string resources (TES-46): a
-        // consumer translates/rebrands by redefining the same key. See res/values/strings.xml. The cancel
-        // control moved to the shared top bar (TES-71) — no inline Cancel button here anymore, so the
-        // preview shows only the guidance hint. The viewfinder underneath stays full-bleed; this overlaid
-        // hint column is width-capped + centred (contentMaxWidth, TES-78) so it does not span a wide screen.
-        Column(
-            modifier = Modifier.fillMaxHeight().contentMaxWidth().padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.Bottom),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(text = stringResource(R.string.tessera_scanner_camera_hint))
         }
     }
 }
@@ -897,6 +902,61 @@ internal fun TorchButton(
             text = "🔦",
             color = if (torchOn) MaterialTheme.colorScheme.onPrimary else Color.White,
             modifier = Modifier.clearAndSetSemantics {},
+        )
+    }
+}
+
+/**
+ * The MRZ framing guide overlaid on the live preview (mockup 01, TES-87) — the Android mirror of the iOS
+ * `MrzGuideOverlay` (tessera-swift `6c2aecf`). A dashed rounded frame sits low in the view, where the
+ * machine-readable zone lands on a document held upright, with a hint below it. Purely advisory: it never
+ * gates capture, and the reader still isolates the MRZ from wherever it appears in frame — it only nudges
+ * the user to frame the band for a cleaner, faster read (Principle 1 is untouched — this makes no trust
+ * judgement).
+ *
+ * **A11y (TES-47/TES-58).** The dashed frame is decorative ([clearAndSetSemantics] — a screen reader is not
+ * told about a drawn rectangle); the hint carries the meaning as a spoken label (tagged [GUIDE_HINT_TEST_TAG],
+ * matching the iOS identifier). Copy is the overridable `tessera_scanner_camera_guide` string.
+ *
+ * `internal` (not `private`): the live-preview host it overlays needs a real camera and cannot run under
+ * Robolectric, so the guide's frame and hint are host-tested through this entry point directly — the same
+ * testing-layers pattern as [StrugglingHint] / [TorchButton].
+ */
+@Composable
+internal fun MrzGuideOverlay(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        // The dashed guide frame — decorative (the hint below carries the meaning). Drawn rather than built
+        // from a bordered shape because Compose has no dashed-border modifier; a dashed stroke on a rounded
+        // rect matches the iOS RoundedRectangle.strokeBorder(dash: [8, 6]) exactly.
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(96.dp)
+                    .clearAndSetSemantics {}
+                    .drawBehind {
+                        drawRoundRect(
+                            color = Color.White.copy(alpha = 0.9f),
+                            cornerRadius = CornerRadius(10.dp.toPx(), 10.dp.toPx()),
+                            style =
+                                Stroke(
+                                    width = 2.dp.toPx(),
+                                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(8.dp.toPx(), 6.dp.toPx()), 0f),
+                                ),
+                        )
+                    },
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = stringResource(R.string.tessera_scanner_camera_guide),
+            color = Color.White,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.testTag(GUIDE_HINT_TEST_TAG).padding(bottom = 48.dp),
         )
     }
 }
