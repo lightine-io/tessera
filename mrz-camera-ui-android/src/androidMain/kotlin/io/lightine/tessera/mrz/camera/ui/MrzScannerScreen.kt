@@ -364,6 +364,10 @@ private fun ScannerBody(
                 onCameraResult = onCameraResult,
                 onStruggling = { setState(ScannerUiState.Scanning(struggling = true)) },
                 onManualEntry = onManualEntry,
+                // The whole-scan deadline (TES-85): once the configured scanTimeout elapses with no confirmed
+                // reading, the flow ends as Cancelled(TIMED_OUT). The default (INFINITE) never fires. The
+                // timer itself lives in CameraPreview, per scanning session, so a rescan restarts it.
+                onTimeout = { onResult(MrzScannerResult.Cancelled(DismissReason.TIMED_OUT)) },
             )
         }
 
@@ -575,6 +579,8 @@ internal fun reduceCameraResult(result: MrzScanResult): CameraFlowEffect =
  * @param struggling whether the "still looking / type it instead" hint is overlaid on the preview.
  * @param onCameraResult every scanner result off the stream, for the flow's continuous reducer.
  * @param onStruggling fired once the struggle timeout elapses with no decode (flips the flow to struggling).
+ * @param onTimeout fired once the whole-scan [`scanTimeout`][MrzScannerConfig.scanTimeout] elapses with no
+ *   confirmed reading (the flow ends as `Cancelled(TIMED_OUT)`).
  * @param onManualEntry the "type it instead" escape into manual entry.
  */
 @Composable
@@ -583,6 +589,7 @@ private fun CameraCapture(
     struggling: Boolean,
     onCameraResult: (MrzScanResult) -> Unit,
     onStruggling: () -> Unit,
+    onTimeout: () -> Unit,
     onManualEntry: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -618,11 +625,13 @@ private fun CameraCapture(
         PermissionScreenState.GRANTED -> {
             CameraPreview(
                 struggleTimeout = config.struggleTimeout,
+                scanTimeout = config.scanTimeout,
                 struggling = struggling,
                 showTorchButton = config.showTorchButton,
                 torchOnByDefault = config.torchOnByDefault,
                 onCameraResult = onCameraResult,
                 onStruggling = onStruggling,
+                onTimeout = onTimeout,
                 onManualEntry = onManualEntry,
             )
         }
@@ -708,6 +717,12 @@ private fun Context.openAppSettings() {
  * a later decode still routes normally, and the flow drops the hint on any progress. The config default is
  * 10s (finite); a non-finite value ([Duration.INFINITE]) means "never struggle", so the effect does not arm.
  *
+ * The scan timeout (TES-85) is a second [LaunchedEffect] on the same key: after [scanTimeout] with no
+ * confirmed reading it fires [onTimeout] (the flow ends as `Cancelled(TIMED_OUT)`). It is the whole-scan
+ * *deadline* — distinct from the struggle hint, which only nudges — and, like the struggle timer, runs once
+ * per scanning session (a rescan re-mounts this preview and restarts it). The default ([Duration.INFINITE])
+ * never arms, so the scanner runs indefinitely unless the consumer sets a finite [scanTimeout].
+ *
  * **Torch (TES-84).** When [showTorchButton] is set and the bound camera has a flash unit, a torch toggle
  * ([TorchButton]) overlays the live preview (mockup 01, top-end). The scanner owns the flash — the seam
  * ([CameraXMrzScanner.setTorchEnabled] / [CameraXMrzScanner.hasTorch]) drives it via CameraX's async
@@ -718,11 +733,13 @@ private fun Context.openAppSettings() {
 @Composable
 private fun CameraPreview(
     struggleTimeout: Duration,
+    scanTimeout: Duration,
     struggling: Boolean,
     showTorchButton: Boolean,
     torchOnByDefault: Boolean,
     onCameraResult: (MrzScanResult) -> Unit,
     onStruggling: () -> Unit,
+    onTimeout: () -> Unit,
     onManualEntry: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -760,6 +777,17 @@ private fun CameraPreview(
         if (struggleTimeout.isFinite()) {
             delay(struggleTimeout)
             onStruggling()
+        }
+    }
+
+    // Scan timeout (TES-85): the whole-scan deadline. After scanTimeout with no confirmed reading, give up and
+    // end the flow as Cancelled(TIMED_OUT). Keyed on the scanner so it runs once per scanning session (a
+    // rescan re-mounts this preview and restarts it), mirroring the struggle timer above — but where struggle
+    // only nudges, this ends the flow. INFINITE (the default) never arms.
+    LaunchedEffect(scanner) {
+        if (scanTimeout.isFinite()) {
+            delay(scanTimeout)
+            onTimeout()
         }
     }
 
