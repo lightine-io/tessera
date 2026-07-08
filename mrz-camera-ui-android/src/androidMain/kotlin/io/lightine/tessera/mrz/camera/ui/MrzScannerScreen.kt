@@ -18,17 +18,21 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.compose.CameraXViewfinder
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -40,11 +44,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -115,6 +123,9 @@ internal const val SCANNER_ROOT_TEST_TAG: String = "tessera-mrz-scanner-root"
 
 /** Semantics anchor for the live camera viewfinder. Not user-facing. */
 internal const val VIEWFINDER_TEST_TAG: String = "tessera-mrz-viewfinder"
+
+/** Semantics anchor for the torch (flashlight) toggle over the live preview. Matches the iOS identifier. Not user-facing. */
+internal const val TORCH_TEST_TAG: String = "tessera-mrz-torch"
 
 /** Semantics anchor for the camera-initializing loading state (mockup 01b). Not user-facing. */
 internal const val INITIALIZING_TEST_TAG: String = "tessera-mrz-initializing"
@@ -597,6 +608,8 @@ private fun CameraCapture(
             CameraPreview(
                 struggleTimeout = config.struggleTimeout,
                 struggling = struggling,
+                showTorchButton = config.showTorchButton,
+                torchOnByDefault = config.torchOnByDefault,
                 onCameraResult = onCameraResult,
                 onStruggling = onStruggling,
                 onManualEntry = onManualEntry,
@@ -683,11 +696,20 @@ private fun Context.openAppSettings() {
  * is keyed on the scanner so it starts once per preview session, and the camera keeps running underneath —
  * a later decode still routes normally, and the flow drops the hint on any progress. The config default is
  * 10s (finite); a non-finite value ([Duration.INFINITE]) means "never struggle", so the effect does not arm.
+ *
+ * **Torch (TES-84).** When [showTorchButton] is set and the bound camera has a flash unit, a torch toggle
+ * ([TorchButton]) overlays the live preview (mockup 01, top-end). The scanner owns the flash — the seam
+ * ([CameraXMrzScanner.setTorchEnabled] / [CameraXMrzScanner.hasTorch]) drives it via CameraX's async
+ * `enableTorch` (no rebind, so toggling never interrupts capture). [torchOnByDefault] is seeded before
+ * [CameraXMrzScanner.start] so it takes effect the instant the camera binds; the torch clears when the
+ * session unbinds (this preview leaving), mirroring the iOS torch behaviour.
  */
 @Composable
 private fun CameraPreview(
     struggleTimeout: Duration,
     struggling: Boolean,
+    showTorchButton: Boolean,
+    torchOnByDefault: Boolean,
     onCameraResult: (MrzScanResult) -> Unit,
     onStruggling: () -> Unit,
     onManualEntry: () -> Unit,
@@ -701,7 +723,18 @@ private fun CameraPreview(
                 lifecycleOwner = lifecycleOwner,
             ).apply { enablePreview() }
         }
+
+    // Torch on/off, hoisted so the button reflects it and it survives recreation (rotation / process death).
+    // Seeded from the consumer's torchOnByDefault; a fresh scanner (e.g. this preview re-mounting after a
+    // rescan) re-applies the current desired state on bind via the DisposableEffect below, so the button and
+    // the flash never drift apart.
+    var torchOn by rememberSaveable { mutableStateOf(torchOnByDefault) }
+
     DisposableEffect(scanner) {
+        // Seed the desired torch state before start() so CameraX honours it the moment the camera binds (the
+        // scanner holds it and applies it on bind — no rebind, so capture is never interrupted). A no-op on a
+        // device with no flash unit.
+        scanner.setTorchEnabled(torchOn)
         scanner.start()
         onDispose { scanner.close() }
     }
@@ -728,12 +761,32 @@ private fun CameraPreview(
         // arrives. This is the real, device-driven trigger for "initializing"; there is no separate flow
         // state for it (ScannerFlow never produces one — the surface's nullness IS the signal), so it lives
         // here where it can be observed.
-        surfaceRequest?.let { request ->
+        val request = surfaceRequest
+        if (request != null) {
             CameraXViewfinder(
                 surfaceRequest = request,
                 modifier = Modifier.fillMaxSize().testTag(VIEWFINDER_TEST_TAG),
             )
-        } ?: InitializingContent()
+
+            // Torch toggle (mockup 01, top-end) — over a live preview only, and only when the consumer left
+            // it enabled AND the device actually has a flash unit. hasTorch() is reliable at this point:
+            // CameraX delivers the preview surface only *after* the camera has bound, so a non-null request
+            // means the bound camera (and its flash-unit info) exists. TopEnd is layout-direction-aware, so
+            // the control mirrors to the correct side under RTL.
+            val hasTorch = remember(request) { scanner.hasTorch() }
+            if (showTorchButton && hasTorch) {
+                TorchButton(
+                    torchOn = torchOn,
+                    onToggle = {
+                        torchOn = !torchOn
+                        scanner.setTorchEnabled(torchOn)
+                    },
+                    modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
+                )
+            }
+        } else {
+            InitializingContent()
+        }
 
         // The struggle hint (mockup 02) sits over the live preview, near the top, so the camera stays visible
         // underneath. Neutral advisory copy — never an error or a verdict (Principle 1). The viewfinder stays
@@ -792,6 +845,59 @@ internal fun StrugglingHint(
         TextButton(onClick = onManualEntry) {
             Text(text = stringResource(R.string.tessera_scanner_struggling_manual))
         }
+    }
+}
+
+/**
+ * The torch (flashlight) toggle overlaid on the live preview (mockup 01, top-end) — [TES-84]. A compact
+ * circular control the user taps to turn the device flash on or off while scanning in low light. It carries
+ * no trust meaning; it only helps the camera see (Principle 1 is untouched). Styled for legibility over the
+ * live camera: a translucent-black pill when off, the theme accent when on. Deliberately a text glyph (🔦)
+ * rather than a Material icon vector — this module does not depend on `material-icons` (the same reason the
+ * top-bar ✕ is a glyph, see [ScannerScaffold]).
+ *
+ * **A11y (TES-47/TES-58).** A [`Switch`][Role.Switch]-role [`toggleable`][toggleable], so a screen reader
+ * announces the on/off state itself ("on"/"off") — the state is never carried by colour alone. The control's
+ * name comes from the overridable `tessera_scanner_torch` label; the glyph is decorative
+ * ([clearAndSetSemantics]) so it is not spoken as "flashlight". [minimumInteractiveComponentSize] guarantees
+ * the ≥48dp touch target while the visible pill stays compact.
+ *
+ * `internal` (not `private`): the real torch wiring lives in [CameraPreview], which drives real CameraX and
+ * cannot run under Robolectric, so the button's rendering, label, toggle semantics, and click are host-tested
+ * through this entry point directly — the same testing-layers pattern as [StrugglingHint].
+ *
+ * @param torchOn whether the torch is currently on (drives the icon tint and the toggle state).
+ * @param onToggle fired when the user taps the control (the caller flips [torchOn] and drives the flash).
+ */
+@Composable
+internal fun TorchButton(
+    torchOn: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val label = stringResource(R.string.tessera_scanner_torch)
+    Box(
+        modifier =
+            modifier
+                .testTag(TORCH_TEST_TAG)
+                .minimumInteractiveComponentSize()
+                .clip(CircleShape)
+                .background(
+                    if (torchOn) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.45f),
+                ).toggleable(
+                    value = torchOn,
+                    role = Role.Switch,
+                    onValueChange = { onToggle() },
+                ).semantics { contentDescription = label }
+                .padding(10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            // Decorative glyph — the label + switch role carry the meaning for a screen reader.
+            text = "🔦",
+            color = if (torchOn) MaterialTheme.colorScheme.onPrimary else Color.White,
+            modifier = Modifier.clearAndSetSemantics {},
+        )
     }
 }
 

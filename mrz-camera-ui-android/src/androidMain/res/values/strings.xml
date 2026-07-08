@@ -34,6 +34,13 @@
     <!-- Guidance shown over the live camera preview while scanning. -->
     <string name="tessera_scanner_camera_hint">Point the camera at the document\'s data page</string>
 
+    <!-- Accessibility label for the torch (flashlight) toggle over the live preview (mockup 01, top-end).
+         Shown only when the device has a flash unit and the consumer left showTorchButton on. The glyph
+         itself carries no label; the on/off state is conveyed to a screen reader by the toggle's switch
+         role (spoken "on"/"off"), not by colour — so this label is just the control's name. Same key as the
+         iOS String Catalog (tessera_scanner_torch) so the contract reads identically across platforms. -->
+    <string name="tessera_scanner_torch">Torch</string>
+
     <!-- ============================ Camera-initializing state (mockup 01b) ============================ -->
     <!-- Shown while the camera + on-device text reader warm up, before the first preview surface arrives, so
          the screen is never a frozen blank. Auto-transitions to the live preview the moment the surface is
