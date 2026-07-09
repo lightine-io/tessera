@@ -33,10 +33,13 @@ import kotlin.time.Instant
  * Android binds `F = androidx.camera.core.ImageProxy`; a future USB/desktop/web source binds its own.
  *
  * **Reader, not oracle.** The analyzer never judges or corrects the reading. Quality signals are
- * exposed, never gated; the raw OCR text travels on the result; case is folded to upper (the MRZ
- * alphabet is uppercase-only, so this recovers the intended glyph rather than choosing between two
- * distinct characters) and benign whitespace is forgiven only in [ParsingMode.LENIENT]; nothing else
- * about the text is altered.
+ * exposed, never gated; the raw OCR text travels on the result. Two glyph *recoveries* are applied to the
+ * parse candidate — case is folded to upper (the MRZ alphabet is uppercase-only) and out-of-alphabet
+ * chevron glyphs the OCR engine emits for the filler `<` (e.g. `«`) are mapped to `<` — both recover the
+ * single glyph the source can only have been, not a choice between two valid characters. Benign whitespace
+ * is forgiven only in [ParsingMode.LENIENT]; nothing else about the text is altered, and the **raw** OCR
+ * text (original glyphs and case) is preserved on every result, so a consumer always sees exactly what was
+ * read (Principle 5).
  *
  * **Frame ownership.** The analyzer reads [frame][analyse] but never closes or retains it. The caller
  * that produced the frame (the owns-the-camera-session layer, or a test) owns its lifecycle and
@@ -146,11 +149,19 @@ public class MrzFrameAnalyzer<F>(
         return null
     }
 
-    private fun normalizeLine(raw: String): String =
-        when (mode) {
-            ParsingMode.STRICT -> raw.trim().uppercase()
-            ParsingMode.LENIENT -> raw.filterNot(Char::isWhitespace).uppercase()
-        }
+    // Case is folded to upper (the MRZ alphabet is uppercase-only), and out-of-alphabet chevron glyphs an OCR
+    // engine emits for the filler `<` (e.g. ML Kit reads the chevron as `«`) are recovered to `<`. Both are
+    // glyph *recovery* — the source can only have been the one intended character, not a choice between two
+    // valid ones — so they hold in both modes; whitespace is forgiven only in LENIENT. The raw OCR text is
+    // preserved on the result (Principle 5); only the parse candidate is normalized.
+    private fun normalizeLine(raw: String): String {
+        val cased =
+            when (mode) {
+                ParsingMode.STRICT -> raw.trim().uppercase()
+                ParsingMode.LENIENT -> raw.filterNot(Char::isWhitespace).uppercase()
+            }
+        return MRZ_CHEVRON_GLYPHS.fold(cased) { line, chevron -> line.replace(chevron, '<') }
+    }
 
     private fun aggregateConfidence(text: RecognizedText): Float? {
         val confidences = text.lines.mapNotNull { it.confidence }
@@ -188,6 +199,14 @@ public class MrzFrameAnalyzer<F>(
     )
 
     private companion object {
+        // Out-of-alphabet chevron / guillemet glyphs an OCR engine emits for the MRZ filler `<` (device-
+        // observed: ML Kit reads the chevron as `«`). None are part of the MRZ alphabet (A–Z, 0–9, `<`), so
+        // mapping them to `<` recovers the only glyph they can be — like folding case to upper, not choosing
+        // between two valid characters (reader-not-oracle holds: no data is inferred, the raw OCR text is
+        // preserved on every result). Deliberately narrow — only unambiguous chevron look-alikes, never an
+        // in-alphabet character.
+        private val MRZ_CHEVRON_GLYPHS: Set<Char> = setOf('«', '»', '‹', '›', '＜', '＞', '〈', '〉', '⟨', '⟩')
+
         // The distinct ICAO line shapes, sourced from mrz-core's format specs rather than restated as
         // magic numbers: TD1 3×30, TD2/MRV-B 2×36, TD3/MRV-A 2×44.
         private val MRZ_SHAPES: Set<MrzLineShape> =
