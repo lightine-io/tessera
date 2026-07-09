@@ -219,7 +219,14 @@ private fun ScannerFlow(
     val onCameraResult = { result: MrzScanResult ->
         when (val effect = reduceCameraResult(result)) {
             is CameraFlowEffect.GoDecoded -> {
-                if (!decodeRouted) {
+                // Live camera is continuous: a parse Failure is a transient bad frame (blurred/garbled OCR —
+                // e.g. a chevron misread), not a verdict. Keep scanning and wait for a clean frame rather than
+                // committing the flow to a read-failed screen on one bad read (TES-86). Only a parseable read
+                // (Success / PartialSuccess — a check-digit mismatch still routes to review, Principle 1)
+                // routes on; the struggle hint + manual-entry escape cover persistent trouble. Manual entry
+                // and saved-image are one-shot, so they still surface a failure via read-failed (their own path
+                // in ScannerBody). The latch only trips on a routed read, so a later clean frame still decodes.
+                if (!decodeRouted && effect.decoded.parse !is ParseResult.Failure) {
                     decodeRouted = true
                     routeDecoded(effect.decoded)
                 }
