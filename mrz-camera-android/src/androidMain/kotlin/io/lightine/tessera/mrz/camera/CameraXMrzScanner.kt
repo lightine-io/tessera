@@ -3,6 +3,7 @@ package io.lightine.tessera.mrz.camera
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.util.Size
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraState
@@ -11,6 +12,8 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.core.SurfaceRequest
 import androidx.camera.core.UseCase
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.Observer
@@ -208,7 +211,23 @@ public class CameraXMrzScanner(
             val analysis =
                 ImageAnalysis
                     .Builder()
-                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    // Analyse above CameraX's ~640x480 default: the MRZ's small fixed-pitch glyphs need enough
+                    // pixels for the OCR engine to read them reliably — at the default a 30-char line is
+                    // ~16 px/char and ML Kit confused the filler `<` with `«`, failing the parse (TES-86).
+                    // 1280x960 keeps the 4:3 aspect (so the analysis FOV — and the MRZ band crop — still line
+                    // up with the preview) while quadrupling the pixels (~32 px/char); fall back to the closest
+                    // the device supports. `setResolutionSelector` is the current API (`setTargetResolution` is
+                    // deprecated in camera-core 1.6.x).
+                    .setResolutionSelector(
+                        ResolutionSelector
+                            .Builder()
+                            .setResolutionStrategy(
+                                ResolutionStrategy(
+                                    Size(1280, 960),
+                                    ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER,
+                                ),
+                            ).build(),
+                    ).setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
             analysis.setAnalyzer(analysisExecutor) { proxy ->
                 // Hand the frame to the collector; if it is not ready, drop and close this frame here (a
