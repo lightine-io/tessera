@@ -65,4 +65,57 @@ class DocumentTypeTest {
         assertEquals("", empty.rawCode)
         assertFalse(empty.isRecognized)
     }
+
+    // ----------------------------------------------------------------------------------------------------
+    // TES-99: broadCategory — category widened with the ICAO reserved-leading-character fallback so a
+    // spec-conformant code the exact-match table does not enumerate (e.g. a TD1/TD2 qualified code like
+    // "IA") still resolves to a category instead of null.
+    // ----------------------------------------------------------------------------------------------------
+
+    @Test
+    fun broad_category_matches_category_for_a_recognized_passport_code() {
+        assertEquals(DocumentCategory.PASSPORT, DocumentType("P").broadCategory)
+    }
+
+    @Test
+    fun broad_category_falls_back_to_first_letter_for_an_unqualified_identity_card_code() {
+        assertEquals(DocumentCategory.IDENTITY_CARD, DocumentType("I").broadCategory)
+    }
+
+    @Test
+    fun broad_category_falls_back_to_first_letter_for_a_qualified_identity_card_code() {
+        // "IA" is not an exact match in DocumentTypeCodeTable (the second character is issuer-specific),
+        // but 'I' is an ICAO-reserved leading character for TD1/TD2 identity-family documents.
+        assertEquals(DocumentCategory.IDENTITY_CARD, DocumentType("IA").broadCategory)
+    }
+
+    @Test
+    fun broad_category_falls_back_to_first_letter_for_a_and_c_prefixed_codes() {
+        assertEquals(DocumentCategory.IDENTITY_CARD, DocumentType("AX").broadCategory)
+        assertEquals(DocumentCategory.IDENTITY_CARD, DocumentType("CX").broadCategory)
+    }
+
+    @Test
+    fun broad_category_resolves_visa_for_an_unqualified_and_a_qualified_code() {
+        assertEquals(DocumentCategory.VISA, DocumentType("V").broadCategory)
+        assertEquals(DocumentCategory.VISA, DocumentType("VX").broadCategory)
+    }
+
+    @Test
+    fun broad_category_is_null_for_an_unreserved_leading_character() {
+        assertNull(DocumentType("XY").broadCategory)
+    }
+
+    @Test
+    fun broad_category_is_null_for_an_empty_or_blank_raw_code() {
+        assertNull(DocumentType("").broadCategory)
+        assertNull(DocumentType(" ").broadCategory)
+    }
+
+    @Test
+    fun broad_category_is_case_insensitive_on_the_first_character() {
+        assertEquals(DocumentCategory.PASSPORT, DocumentType("p").broadCategory)
+        assertEquals(DocumentCategory.IDENTITY_CARD, DocumentType("ia").broadCategory)
+        assertEquals(DocumentCategory.VISA, DocumentType("v").broadCategory)
+    }
 }

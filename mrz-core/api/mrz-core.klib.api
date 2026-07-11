@@ -483,6 +483,8 @@ final value class io.lightine.tessera.mrz.recognition/CountryCode { // io.lighti
 final value class io.lightine.tessera.mrz.recognition/DocumentType { // io.lightine.tessera.mrz.recognition/DocumentType|null[0]
     constructor <init>(kotlin/String) // io.lightine.tessera.mrz.recognition/DocumentType.<init>|<init>(kotlin.String){}[0]
 
+    final val broadCategory // io.lightine.tessera.mrz.recognition/DocumentType.broadCategory|{}broadCategory[0]
+        final fun <get-broadCategory>(): io.lightine.tessera.types.vocabulary/DocumentCategory? // io.lightine.tessera.mrz.recognition/DocumentType.broadCategory.<get-broadCategory>|<get-broadCategory>(){}[0]
     final val category // io.lightine.tessera.mrz.recognition/DocumentType.category|{}category[0]
         final fun <get-category>(): io.lightine.tessera.types.vocabulary/DocumentCategory? // io.lightine.tessera.mrz.recognition/DocumentType.category.<get-category>|<get-category>(){}[0]
     final val entry // io.lightine.tessera.mrz.recognition/DocumentType.entry|{}entry[0]
