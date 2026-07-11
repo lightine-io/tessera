@@ -56,7 +56,7 @@ class MrzScannerScreenA11yTest {
 
         // The permission rationale body is exposed as readable text (not a decorative, unlabeled element).
         composeRule
-            .onNodeWithText("The scanner reads the machine-readable zone on-device; it does not store or upload your document.")
+            .onNodeWithText("The scanner reads your document on this device - nothing is uploaded or stored.")
             .assertIsDisplayed()
     }
 }

@@ -35,7 +35,7 @@ class MrzGuideOverlayTest {
         }
 
         // Advisory framing hint — it guides, it never gates capture (Principle 1 untouched).
-        composeRule.onNodeWithText("Fit the bottom lines of the document in the frame").assertIsDisplayed()
+        composeRule.onNodeWithText("Line up the bottom of your document with the box.").assertIsDisplayed()
         composeRule.onNodeWithTag(GUIDE_HINT_TEST_TAG).assertIsDisplayed()
     }
 }

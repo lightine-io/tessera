@@ -19,7 +19,9 @@ public final class io/lightine/tessera/mrz/camera/ui/DismissReason : java/lang/E
 
 public final class io/lightine/tessera/mrz/camera/ui/MrzScannerConfig {
 	public static final field $stable I
+	public final fun getConsensusReads ()I
 	public final fun getEnabledMethods ()Ljava/util/Set;
+	public final fun getHapticFeedback ()Z
 	public final fun getOnRequestPermission ()Lkotlin/jvm/functions/Function0;
 	public final fun getReviewMode ()Lio/lightine/tessera/mrz/camera/ui/ReviewMode;
 	public final fun getScanTimeout-UwyO8pc ()J
@@ -33,14 +35,18 @@ public final class io/lightine/tessera/mrz/camera/ui/MrzScannerConfig$Builder {
 	public static final field $stable I
 	public fun <init> ()V
 	public final fun build ()Lio/lightine/tessera/mrz/camera/ui/MrzScannerConfig;
+	public final fun getConsensusReads ()I
 	public final fun getEnabledMethods ()Ljava/util/Set;
+	public final fun getHapticFeedback ()Z
 	public final fun getOnRequestPermission ()Lkotlin/jvm/functions/Function0;
 	public final fun getReviewMode ()Lio/lightine/tessera/mrz/camera/ui/ReviewMode;
 	public final fun getScanTimeout-UwyO8pc ()J
 	public final fun getShowTorchButton ()Z
 	public final fun getStruggleTimeout-UwyO8pc ()J
 	public final fun getTorchOnByDefault ()Z
+	public final fun setConsensusReads (I)V
 	public final fun setEnabledMethods (Ljava/util/Set;)V
+	public final fun setHapticFeedback (Z)V
 	public final fun setOnRequestPermission (Lkotlin/jvm/functions/Function0;)V
 	public final fun setReviewMode (Lio/lightine/tessera/mrz/camera/ui/ReviewMode;)V
 	public final fun setScanTimeout-LRDsOJo (J)V
@@ -108,15 +114,18 @@ public final class io/lightine/tessera/mrz/camera/ui/MrzScannerTheme$Builder {
 public final class io/lightine/tessera/mrz/camera/ui/R {
 }
 
+public final class io/lightine/tessera/mrz/camera/ui/R$plurals {
+	public static field tessera_scanner_manual_obs_char_count I
+}
+
 public final class io/lightine/tessera/mrz/camera/ui/R$string {
-	public static field tessera_scanner_camera_hint I
+	public static field tessera_scanner_camera_guide I
 	public static field tessera_scanner_camera_in_use_body I
 	public static field tessera_scanner_camera_in_use_title I
 	public static field tessera_scanner_camera_manual I
 	public static field tessera_scanner_camera_reconnecting I
 	public static field tessera_scanner_camera_unavailable_body I
 	public static field tessera_scanner_camera_unavailable_title I
-	public static field tessera_scanner_cancel I
 	public static field tessera_scanner_category_identity_card I
 	public static field tessera_scanner_category_other I
 	public static field tessera_scanner_category_passport I
@@ -128,7 +137,16 @@ public final class io/lightine/tessera/mrz/camera/ui/R$string {
 	public static field tessera_scanner_check_label_document_number I
 	public static field tessera_scanner_check_label_optional_data I
 	public static field tessera_scanner_close I
+	public static field tessera_scanner_date_unresolved_format I
 	public static field tessera_scanner_document_format I
+	public static field tessera_scanner_explainer_action I
+	public static field tessera_scanner_explainer_dismiss I
+	public static field tessera_scanner_explainer_doc_label I
+	public static field tessera_scanner_explainer_intro I
+	public static field tessera_scanner_explainer_title I
+	public static field tessera_scanner_explainer_where_body I
+	public static field tessera_scanner_explainer_where_title I
+	public static field tessera_scanner_explainer_zone_caption I
 	public static field tessera_scanner_field_date_of_birth I
 	public static field tessera_scanner_field_document I
 	public static field tessera_scanner_field_document_type I
@@ -138,19 +156,14 @@ public final class io/lightine/tessera/mrz/camera/ui/R$string {
 	public static field tessera_scanner_field_nationality I
 	public static field tessera_scanner_field_number I
 	public static field tessera_scanner_field_optional I
+	public static field tessera_scanner_field_optional_data I
 	public static field tessera_scanner_field_sex I
+	public static field tessera_scanner_gathering_hint I
 	public static field tessera_scanner_grant_permission I
 	public static field tessera_scanner_initializing_body I
 	public static field tessera_scanner_initializing_title I
 	public static field tessera_scanner_manual_field_label I
-	public static field tessera_scanner_manual_hint_auto I
-	public static field tessera_scanner_manual_hint_id_card I
-	public static field tessera_scanner_manual_hint_passport I
-	public static field tessera_scanner_manual_obs_char_count I
-	public static field tessera_scanner_manual_obs_hint_note I
-	public static field tessera_scanner_manual_obs_over I
-	public static field tessera_scanner_manual_obs_short I
-	public static field tessera_scanner_manual_privacy I
+	public static field tessera_scanner_manual_parse_failed I
 	public static field tessera_scanner_manual_read I
 	public static field tessera_scanner_manual_title I
 	public static field tessera_scanner_method_camera I
@@ -172,10 +185,11 @@ public final class io/lightine/tessera/mrz/camera/ui/R$string {
 	public static field tessera_scanner_permission_grant_title I
 	public static field tessera_scanner_permission_open_settings I
 	public static field tessera_scanner_permission_rationale I
-	public static field tessera_scanner_quality_confidence_unknown I
-	public static field tessera_scanner_quality_format I
-	public static field tessera_scanner_quality_region_found I
-	public static field tessera_scanner_quality_region_not_found I
+	public static field tessera_scanner_powered_by I
+	public static field tessera_scanner_privacy_action I
+	public static field tessera_scanner_privacy_dialog_body I
+	public static field tessera_scanner_privacy_dialog_dismiss I
+	public static field tessera_scanner_privacy_dialog_title I
 	public static field tessera_scanner_read_failed_body I
 	public static field tessera_scanner_read_failed_captured_header I
 	public static field tessera_scanner_read_failed_manual I
@@ -185,31 +199,30 @@ public final class io/lightine/tessera/mrz/camera/ui/R$string {
 	public static field tessera_scanner_read_method_manual I
 	public static field tessera_scanner_read_method_photo I
 	public static field tessera_scanner_review_all_fields_title I
+	public static field tessera_scanner_review_edit_entry I
 	public static field tessera_scanner_review_observations_header I
 	public static field tessera_scanner_review_raw_mrz_header I
 	public static field tessera_scanner_review_rescan I
 	public static field tessera_scanner_review_show_all I
 	public static field tessera_scanner_review_show_less I
 	public static field tessera_scanner_review_title I
+	public static field tessera_scanner_review_try_another_photo I
 	public static field tessera_scanner_review_use I
-	public static field tessera_scanner_saved_image_analyzing_on_device I
 	public static field tessera_scanner_saved_image_analyzing_reading I
 	public static field tessera_scanner_saved_image_analyzing_title I
-	public static field tessera_scanner_saved_image_candidates_intro I
-	public static field tessera_scanner_saved_image_candidates_title I
 	public static field tessera_scanner_saved_image_choose_different I
-	public static field tessera_scanner_saved_image_differs_here I
 	public static field tessera_scanner_saved_image_empty_body I
-	public static field tessera_scanner_saved_image_empty_privacy I
 	public static field tessera_scanner_saved_image_empty_title I
 	public static field tessera_scanner_saved_image_manual I
 	public static field tessera_scanner_saved_image_prompt_action I
 	public static field tessera_scanner_saved_image_prompt_body I
 	public static field tessera_scanner_saved_image_prompt_title I
-	public static field tessera_scanner_saved_image_use_this I
 	public static field tessera_scanner_struggling_hint I
 	public static field tessera_scanner_struggling_manual I
 	public static field tessera_scanner_title I
+	public static field tessera_scanner_torch I
+	public static field tessera_scanner_torch_state_off I
+	public static field tessera_scanner_torch_state_on I
 }
 
 public final class io/lightine/tessera/mrz/camera/ui/ReviewMode : java/lang/Enum {

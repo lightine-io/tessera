@@ -45,7 +45,7 @@ class InitializingScreenTest {
         composeRule.onNodeWithText("Starting camera…").assertIsDisplayed()
         // The on-device honesty sub-line — the read runs on the device, stated plainly (never a verdict).
         composeRule
-            .onNodeWithText("Warming up the camera and text reader. This runs on your device.")
+            .onNodeWithText("Getting the camera ready. This all runs on your device.")
             .assertIsDisplayed()
     }
 

@@ -29,6 +29,8 @@ class MrzScannerConfigTest {
         assertFalse(config.torchOnByDefault, "torch off by default")
         assertEquals(10.seconds, config.struggleTimeout)
         assertEquals(Duration.INFINITE, config.scanTimeout, "no scan timeout by default (kiosk-friendly)")
+        assertEquals(2, config.consensusReads, "2 agreeing frames by default (transient-misread guard)")
+        assertTrue(config.hapticFeedback, "confirming haptic on by default (honours the system haptic setting)")
         assertFalse(config.theme.useDynamicColor, "dynamic color OFF by default (module-own fixed scheme)")
         assertNull(config.theme.brandColor, "no brand accent by default")
         assertEquals(DarkMode.AUTO, config.theme.darkMode, "dark mode follows the system by default")
@@ -46,6 +48,8 @@ class MrzScannerConfigTest {
                 torchOnByDefault = true
                 struggleTimeout = 5.seconds
                 scanTimeout = 30.seconds
+                consensusReads = 5
+                hapticFeedback = false
                 theme {
                     brandColor = 0xFF00695CL
                     darkMode = DarkMode.ON
@@ -60,6 +64,8 @@ class MrzScannerConfigTest {
         assertTrue(config.torchOnByDefault)
         assertEquals(5.seconds, config.struggleTimeout)
         assertEquals(30.seconds, config.scanTimeout)
+        assertEquals(5, config.consensusReads)
+        assertFalse(config.hapticFeedback)
         assertEquals(0xFF00695CL, config.theme.brandColor)
         assertEquals(DarkMode.ON, config.theme.darkMode)
         assertTrue(config.theme.useDynamicColor)

@@ -5,6 +5,7 @@
 
 package io.lightine.tessera.mrz.camera.ui
 
+import io.lightine.tessera.mrz.camera.MrzDecodeConsensus
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -60,7 +61,12 @@ public enum class DarkMode {
  *
  * @property brandColor an optional accent, as a packed ARGB `Long` (e.g. `0xFF00695CL`). When set it tints
  *   the theme's primary/accent color; `null` (the default) keeps the module's baseline accent. A `Long`
- *   rather than a Compose `Color` keeps the frozen 0.5.0 surface free of a UI-type commitment.
+ *   rather than a Compose `Color` keeps the frozen 0.5.0 surface free of a UI-type commitment. Only the
+ *   accent is tinted — the rest of the palette (surfaces, containers) stays the module's own, so the tint
+ *   itself must read clearly as a small accent against those fixed surfaces; the UI derives a contrasting
+ *   text/label color for use ON the tint itself (light or dark, by the tint's own luminance), but a brand
+ *   color close to the theme's own surface/background tone can still be hard to see as an accent — pick one
+ *   with enough separation from both a light and a dark surface if the UI may run in either mode.
  * @property darkMode auto (default) / on / off.
  * @property useDynamicColor opt into Material You dynamic color (Android 12+, wallpaper-sourced). Off by
  *   default so the look does not depend on the device. Has no effect below Android 12.
@@ -120,6 +126,16 @@ public class MrzScannerTheme internal constructor(
  *   appears (default 10s).
  * @property scanTimeout total time before the scanner gives up and reports
  *   [`Cancelled(TIMED_OUT)`][DismissReason.TIMED_OUT]; [Duration.INFINITE] (the default) never times out.
+ * @property consensusReads how many live-camera frames must decode the **same** document before it is
+ *   accepted, shedding transient single-frame OCR misreads the MRZ's checksums cannot catch (e.g. a filler
+ *   `<` misread as a letter in the name field). Default 2 ([MrzDecodeConsensus.DEFAULT_THRESHOLD]); `1`
+ *   accepts the first decode (no consensus). Higher values add latency to every successful read for
+ *   diminishing benefit — see [MrzDecodeConsensus]. Live camera only; saved-image and manual entry are
+ *   one-shot and unaffected.
+ * @property hapticFeedback fire a short confirming haptic the moment a live-camera read is accepted (the
+ *   hands-free "it scanned" cue). Default true. Always honours the device's system haptic setting; set false
+ *   to opt the default UI out entirely. Only the camera path buzzes — manual/saved-image already give the
+ *   tap/selection its own feedback.
  * @property theme the bounded theming seam; see [MrzScannerTheme].
  * @property onRequestPermission invoked when the UI needs the camera permission it does not hold — the host
  *   requests it (the SDK never requests a permission itself). `null` (default) means the host owns it entirely.
@@ -131,6 +147,8 @@ public class MrzScannerConfig internal constructor(
     public val torchOnByDefault: Boolean,
     public val struggleTimeout: Duration,
     public val scanTimeout: Duration,
+    public val consensusReads: Int,
+    public val hapticFeedback: Boolean,
     public val theme: MrzScannerTheme,
     public val onRequestPermission: (() -> Unit)?,
 ) {
@@ -154,6 +172,12 @@ public class MrzScannerConfig internal constructor(
         /** @see MrzScannerConfig.scanTimeout */
         public var scanTimeout: Duration = Duration.INFINITE
 
+        /** @see MrzScannerConfig.consensusReads */
+        public var consensusReads: Int = MrzDecodeConsensus.DEFAULT_THRESHOLD
+
+        /** @see MrzScannerConfig.hapticFeedback */
+        public var hapticFeedback: Boolean = true
+
         /** @see MrzScannerConfig.onRequestPermission */
         public var onRequestPermission: (() -> Unit)? = null
 
@@ -173,6 +197,8 @@ public class MrzScannerConfig internal constructor(
                 torchOnByDefault = torchOnByDefault,
                 struggleTimeout = struggleTimeout,
                 scanTimeout = scanTimeout,
+                consensusReads = consensusReads,
+                hapticFeedback = hapticFeedback,
                 theme = themeBuilder.build(),
                 onRequestPermission = onRequestPermission,
             )

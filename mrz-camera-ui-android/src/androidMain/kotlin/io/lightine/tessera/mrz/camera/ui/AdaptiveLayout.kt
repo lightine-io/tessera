@@ -39,8 +39,8 @@ internal val ContentMaxWidth: Dp = 480.dp
  * adaptive-layout foundation for the single-pane scanner screens (TES-78).
  *
  * Applied to the **content** screens (review / expanded, read-failed, manual entry, the permission faces, the
- * saved-image candidates / empty / analyzing / await-pick prompts, the camera-status notices, and the
- * camera-initializing state) so their column stays a readable width on a tablet or unfolded foldable instead
+ * saved-image empty / analyzing / await-pick prompts, the camera-status notices, and the camera-initializing
+ * state) so their column stays a readable width on a tablet or unfolded foldable instead
  * of stretching its rows and full-width buttons edge-to-edge. The live camera viewfinder is deliberately NOT
  * capped — it stays full-bleed for immersive scanning; only its overlaid controls use this so they remain
  * reachable and not stretched.

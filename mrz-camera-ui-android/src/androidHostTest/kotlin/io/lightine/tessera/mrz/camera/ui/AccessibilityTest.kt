@@ -28,8 +28,8 @@ import kotlin.time.Instant
  * Cross-screen accessibility gate for the default scanner UI (TES-47). The sibling
  * [MrzScannerScreenA11yTest] covers the permission Grant screen; this suite consolidates the a11y
  * additions that span the *other* now-built screens: live-region announcements on the auto-transition /
- * decode-landing status text, the interactive controls on the review / saved-image-candidates / method
- * switcher carrying the `Button` role and a non-empty label, and the top-bar ✕ carrying its "Close" label.
+ * decode-landing status text, the interactive controls on the review / saved-image-empty / method switcher
+ * carrying the `Button` role and a non-empty label, and the top-bar ✕ carrying its "Close" label.
  *
  * **Why semantics assertions, not `enableAccessibilityChecks()`** — the Accessibility Test Framework is a
  * verified no-op under Robolectric (it needs a rendered, measured view hierarchy Robolectric does not
@@ -73,9 +73,9 @@ class AccessibilityTest {
             }
         }
 
-        // "MRZ read" is announced on arrival (the review screen is the decode-landing) — Assertive.
+        // "Check the details" is announced on arrival (the review screen is the decode-landing) — Assertive.
         composeRule
-            .onNode(hasText("MRZ read") and isLiveRegion(LiveRegionMode.Assertive))
+            .onNode(hasText("Check the details") and isLiveRegion(LiveRegionMode.Assertive))
             .assertIsDisplayed()
     }
 
@@ -143,7 +143,39 @@ class AccessibilityTest {
 
         // The camera-in-use screen arrives via the flow reducer (another app grabbed the camera) — Polite.
         composeRule
-            .onNode(hasText("Reconnecting…") and isLiveRegion(LiveRegionMode.Polite))
+            .onNode(hasText("Waiting to reconnect…") and isLiveRegion(LiveRegionMode.Polite))
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun camera_unavailable_landing_title_is_an_assertive_live_region() {
+        composeRule.setContent {
+            MrzScannerConfig().let { config ->
+                TesseraScannerTheme(config.theme) {
+                    CameraUnavailableContent(onManualEntry = {})
+                }
+            }
+        }
+
+        // Terminal, reached purely by auto-transition — Assertive, mirroring ReadFailed / Review.
+        composeRule
+            .onNode(hasText("Camera unavailable") and isLiveRegion(LiveRegionMode.Assertive))
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun saved_image_empty_landing_title_is_an_assertive_live_region() {
+        composeRule.setContent {
+            MrzScannerConfig().let { config ->
+                TesseraScannerTheme(config.theme) {
+                    SavedImageEmptyContent(onChooseDifferent = {}, onManualEntry = {})
+                }
+            }
+        }
+
+        // Terminal, reached purely by auto-transition (a picked photo yielded no MRZ) — Assertive.
+        composeRule
+            .onNode(hasText("No MRZ found in this photo") and isLiveRegion(LiveRegionMode.Assertive))
             .assertIsDisplayed()
     }
 
@@ -159,7 +191,24 @@ class AccessibilityTest {
 
         // The struggle hint overlays the preview via the struggle-timeout auto-transition (mockup 02) — Polite.
         composeRule
-            .onNode(hasText("Still looking — try more light or move closer") and isLiveRegion(LiveRegionMode.Polite))
+            .onNode(hasText("Can't read it yet. Try more light or move the document farther away.") and isLiveRegion(LiveRegionMode.Polite))
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun gathering_hint_is_a_polite_live_region() {
+        composeRule.setContent {
+            MrzScannerConfig().let { config ->
+                TesseraScannerTheme(config.theme) {
+                    GatheringHint()
+                }
+            }
+        }
+
+        // The gathering cue overlays the preview when a read starts confirming across frames (an auto-transition,
+        // not a focus move) — Polite, so it is announced on appearance.
+        composeRule
+            .onNode(hasText("Hold steady…") and isLiveRegion(LiveRegionMode.Polite))
             .assertIsDisplayed()
     }
 
@@ -186,23 +235,17 @@ class AccessibilityTest {
     }
 
     @Test
-    fun saved_image_candidate_controls_are_labeled_buttons() {
-        val candidate =
-            io.lightine.tessera.mrz.camera.MrzCandidate(
-                mrzLines = listOf(specimenLine1, specimenLine2),
-                parse = MrzParser.parse(listOf(specimenLine1, specimenLine2), referenceTime = referenceTime),
-                disambiguations = emptyList(),
-            )
+    fun saved_image_empty_controls_are_labeled_buttons() {
         composeRule.setContent {
             MrzScannerConfig().let { config ->
                 TesseraScannerTheme(config.theme) {
-                    SavedImageCandidatesContent(candidates = listOf(candidate), onPick = {}, onChooseDifferent = {})
+                    SavedImageEmptyContent(onChooseDifferent = {}, onManualEntry = {})
                 }
             }
         }
 
-        // The per-candidate "Use this ›" action and the shared "Choose different photo" action are Buttons.
-        listOf("Use this", "Choose different photo").forEach { label ->
+        // The "Choose different photo" and "Enter details manually" actions are Buttons.
+        listOf("Choose different photo", "Enter details manually").forEach { label ->
             composeRule
                 .onNode(hasText(label, substring = true) and hasClickAction())
                 .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
@@ -216,7 +259,7 @@ class AccessibilityTest {
                 TesseraScannerTheme(config.theme) {
                     ScannerScaffold(
                         enabledMethods = config.enabledMethods,
-                        currentState = ScannerUiState.Review(decoded()),
+                        currentState = ScannerUiState.Review(decoded(), source = ScanMethod.CAMERA),
                         onClose = {},
                         onSelectMethod = {},
                     ) { Text("body") }

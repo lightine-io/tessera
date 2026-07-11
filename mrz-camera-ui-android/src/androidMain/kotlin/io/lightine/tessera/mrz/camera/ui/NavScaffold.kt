@@ -3,23 +3,32 @@
 
 package io.lightine.tessera.mrz.camera.ui
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 // The shared navigation scaffold (TES-71) that ties every reading method together: a Material 3 Scaffold with
@@ -76,7 +85,7 @@ internal fun switcherMethods(enabledMethods: Set<ScanMethod>): List<ScanMethod> 
  * [`Scanning`][ScannerUiState.Scanning], [`ManualRaw`][ScannerUiState.ManualRaw], and the saved-image entry
  * points ([`AwaitingSavedImagePick`][ScannerUiState.AwaitingSavedImagePick] /
  * [`SavedImageEmpty`][ScannerUiState.SavedImageEmpty]). It is deliberately NOT shown on outcome / gate screens
- * (review, expanded, read-failed, the camera-error notices, analyzing, candidates, and the permission faces),
+ * (review, expanded, read-failed, the camera-error notices, analyzing, and the permission faces),
  * where switching method mid-outcome would be a confusing detour. Pure so the rule is host-testable.
  */
 internal fun showsMethodSwitcher(state: ScannerUiState): Boolean =
@@ -128,8 +137,15 @@ internal fun ScannerScaffold(
                         )
                     }
                 },
+                // The privacy / transparency notice (TES-88), reachable on every screen from the shared chrome
+                // rather than repeated as a banner per screen — one coherent, opt-in explanation of what the
+                // scanner does with the document.
+                actions = { PrivacyNoticeAction() },
             )
         },
+        // "Powered by Tessera" attribution, shown once on every screen from the shared chrome (a theme-coloured
+        // footer that adapts to light / dark / dynamic colour). Overridable — a consumer can blank the string.
+        bottomBar = { PoweredByFooter() },
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
             if (showsMethodSwitcher(currentState)) {
@@ -142,6 +158,33 @@ internal fun ScannerScaffold(
             content()
         }
     }
+}
+
+/**
+ * The "Powered by Tessera" attribution footer, shown once on every screen via the scaffold's bottom bar. A
+ * quiet, theme-coloured line (so it adapts to light / dark / dynamic colour and never competes with the
+ * content). Overridable like every `tessera_*` key — a consumer can set an empty string to remove it: this
+ * renders nothing at all when the resolved string [isBlank], so the Scaffold's bottomBar measures to zero
+ * height and the opt-out actually reclaims the space (rather than leaving a blank, padded band).
+ */
+@Composable
+private fun PoweredByFooter() {
+    val text = stringResource(R.string.tessera_scanner_powered_by)
+    if (text.isBlank()) return
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                // Sit above the system navigation bar (gesture pill / buttons), then a comfortable gap so the
+                // attribution never crowds the nav bar. The Scaffold does not inset an arbitrary bottomBar, so
+                // the footer consumes the navigation-bar inset itself.
+                .navigationBarsPadding()
+                .padding(top = 8.dp, bottom = 16.dp),
+    )
 }
 
 /**
@@ -164,27 +207,57 @@ internal fun MethodSwitcher(
     if (methods.size < 2) return
 
     val active = activeMethod(currentState)
-    Row(
+    Box(
         modifier =
             Modifier
-                // Width-capped + centred (contentMaxWidth, TES-78) so on a wide screen the switcher chips align
-                // with the capped content beneath rather than stretching edge-to-edge. A no-op on a phone.
-                .contentMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 8.dp)
+                // Width-capped (TES-78) so on a wide screen the switcher aligns with the capped content
+                // beneath rather than stretching edge-to-edge — a plain fillMaxWidth + widthIn here, not the
+                // shared contentMaxWidth() helper, because that helper's wrapContentWidth measures its content
+                // with unbounded constraints. Handing that unbounded width down to the scrollable row below
+                // would defeat both its fillMaxWidth (a fixed, finite viewport) and its scrolling (there would
+                // be no overflow to scroll through). A no-op width cap on a phone.
+                .fillMaxWidth()
+                .widthIn(max = ContentMaxWidth)
                 .testTag(SWITCHER_TEST_TAG),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        methods.forEach { method ->
-            // A FilterChip is ~32dp tall — below the 48dp minimum touch target. minimumInteractiveComponentSize
-            // expands the touchable area to 48dp without enlarging the chip's visuals, so a screen-reader /
-            // motor-impaired user gets a full-size hit target. `selected` already carries the non-colour cue
-            // (the chip's selected state is announced), so the active method never depends on colour alone.
-            FilterChip(
-                selected = method == active,
-                onClick = { onSelectMethod(method) },
-                label = { Text(text = methodLabel(method)) },
-                modifier = Modifier.minimumInteractiveComponentSize(),
-            )
+        // TES-95 follow-up: at a large system font scale the segment labels can outgrow the available width.
+        // The old fix (maxLines = 1 + softWrap = false) avoided vertical wrapping but clipped the trailing
+        // letter of "Manual" instead — trading one clipping hazard for another. Scrolling replaces both: the
+        // row now scrolls horizontally when it overflows rather than wrapping or clipping. fillMaxWidth() here
+        // gives the scrollable viewport a fixed, finite width (the space granted by the Box above), so the
+        // scroll range reflects the real available width rather than being unbounded; Arrangement.spacedBy's
+        // centred variant then centres the chips within that viewport whenever they fit, and has no visible
+        // effect once they overflow (there is no leftover space left to centre within), so the same row is
+        // genuinely centred at normal font scales and start-anchored + scrollable only once it must be.
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        ) {
+            methods.forEach { method ->
+                // A FilterChip is ~32dp tall — below the 48dp minimum touch target. minimumInteractiveComponentSize
+                // expands the touchable area to 48dp without enlarging the chip's visuals, so a screen-reader /
+                // motor-impaired user gets a full-size hit target. `selected` already carries the non-colour cue
+                // (the chip's selected state is announced), so the active method never depends on colour alone.
+                FilterChip(
+                    selected = method == active,
+                    onClick = { onSelectMethod(method) },
+                    // TES-95: maxLines = 1 keeps every label on one line — the row's horizontal scroll (above)
+                    // now guarantees there is always enough width for that single line, so this is a
+                    // guarantee, not a hazard: nothing here can ever clip or truncate a label.
+                    label = {
+                        Text(
+                            text = methodLabel(method),
+                            maxLines = 1,
+                        )
+                    },
+                    modifier = Modifier.minimumInteractiveComponentSize(),
+                )
+            }
         }
     }
 }

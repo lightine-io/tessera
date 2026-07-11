@@ -46,7 +46,7 @@ class TorchButtonTest {
             .onNodeWithTag(TORCH_TEST_TAG)
             .assertIsDisplayed()
             // The control's name comes from the overridable label — not from the decorative glyph.
-            .assertContentDescriptionEquals("Torch")
+            .assertContentDescriptionEquals("Flashlight")
             // On/off is a switch state a screen reader announces, never carried by colour alone.
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState.Off))
     }
@@ -62,6 +62,32 @@ class TorchButtonTest {
         composeRule
             .onNodeWithTag(TORCH_TEST_TAG)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState.On))
+    }
+
+    @Test
+    fun torch_button_off_state_description_is_off() {
+        // TES-84: an explicit stateDescription ("On" / "Off") is set on top of the Switch role's own toggled
+        // state, so a screen reader announces the state in these exact words.
+        composeRule.setContent {
+            TesseraScannerTheme(MrzScannerConfig().theme) {
+                TorchButton(torchOn = false, onToggle = {})
+            }
+        }
+        composeRule
+            .onNodeWithTag(TORCH_TEST_TAG)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Off"))
+    }
+
+    @Test
+    fun torch_button_on_state_description_is_on() {
+        composeRule.setContent {
+            TesseraScannerTheme(MrzScannerConfig().theme) {
+                TorchButton(torchOn = true, onToggle = {})
+            }
+        }
+        composeRule
+            .onNodeWithTag(TORCH_TEST_TAG)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "On"))
     }
 
     @Test

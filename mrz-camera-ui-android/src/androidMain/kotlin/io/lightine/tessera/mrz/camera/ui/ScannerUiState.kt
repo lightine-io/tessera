@@ -1,6 +1,5 @@
 package io.lightine.tessera.mrz.camera.ui
 
-import io.lightine.tessera.mrz.camera.MrzCandidate
 import io.lightine.tessera.mrz.camera.MrzScanResult
 import io.lightine.tessera.mrz.camera.RecognizedText
 
@@ -10,11 +9,13 @@ import io.lightine.tessera.mrz.camera.RecognizedText
  * is one exhaustive `when` over this contract rather than a tangle of booleans. Each variant maps to a
  * numbered mockup state (in `.design/default-ui/`).
  *
- * [Scanning] (including its `struggling` overlay), [Review], [ReadFailed], [ManualRaw], [CameraInUse], and
- * [CameraUnavailable] are **wired**; the rest are the settled contract the later 0.5.0 slices fill in (saved
- * image, field-by-field manual entry, the permission states), declared now so the flow's `when` and the
- * sibling screens have a stable shape to grow into rather than being reshuffled per slice. Nothing here is
- * public — the frozen surface stays `MrzScannerScreen` + config + result (ADR-007); this is internal wiring.
+ * Every variant is **wired**: [Scanning] (with its `struggling` / `gathering` overlays), [Review],
+ * [ReadFailed], [ManualRaw], [CameraInUse], [CameraUnavailable], and the saved-image states. Manual entry is
+ * raw-MRZ-line entry ([ManualRaw], mockup 06); field-by-field entry (mockup 06b) was dropped for 0.5.0 as a
+ * separate future feature (TES-79) rather than shipped as a half-declared state. The camera-permission screens
+ * (mockups 04 / 04b) are NOT flow states here: they are rendered by `CameraCapture` from the live permission
+ * status, so there are no permission variants in this contract. Nothing here is public — the frozen surface
+ * stays `MrzScannerScreen` + config + result (ADR-007); this is internal wiring.
  *
  * The camera-initializing state (mockup 01b) is deliberately **not** a variant here: it is not a flow state
  * the reducer can produce but a transient of the live preview — the window where the scanner has not yet
@@ -25,17 +26,16 @@ internal sealed interface ScannerUiState {
     /**
      * The live camera preview is running and looking for an MRZ (mockup 01). [struggling] flips true once
      * the configured struggle timeout elapses with no decode, to overlay the "still looking / type it
-     * instead" hint on the preview (mockup 02).
+     * instead" hint on the preview (mockup 02). [gathering] flips true while the frame-agreement gate
+     * ([`MrzDecodeConsensus`][io.lightine.tessera.mrz.camera.MrzDecodeConsensus]) is confirming a read across
+     * frames — it overlays a "hold steady" progress cue so the consensus wait reads as active feedback, not
+     * lag. The two are mutually exclusive in effect: an incoming decode (gathering) means we are *not* stuck,
+     * so gathering takes render precedence over struggling.
      */
     data class Scanning(
         val struggling: Boolean = false,
+        val gathering: Boolean = false,
     ) : ScannerUiState
-
-    /** The `CAMERA` permission is not held and can still be requested (mockup 04). */
-    data object PermissionNeeded : ScannerUiState
-
-    /** The `CAMERA` permission was denied with "don't ask again" — only the host settings can grant it now (mockup 04b). */
-    data object PermissionPermanentlyDenied : ScannerUiState
 
     /** Another app holds the camera, so this session cannot open it (mockup 05). */
     data object CameraInUse : ScannerUiState
@@ -51,6 +51,12 @@ internal sealed interface ScannerUiState {
      */
     data class Review(
         val decoded: MrzScanResult.Decoded,
+        /**
+         * Which reading method produced this review, so Rescan returns to THAT method (camera → live preview,
+         * photo → the picker, manual → the entry screen) instead of always jumping to the camera — which would
+         * discard a typed MRZ / picked photo and could force the camera even when the consumer disabled it.
+         */
+        val source: ScanMethod,
         val expanded: Boolean = false,
     ) : ScannerUiState
 
@@ -67,8 +73,8 @@ internal sealed interface ScannerUiState {
      * The saved-image method is the entry point (only [`SAVED_IMAGE`][ScanMethod.SAVED_IMAGE] is enabled) and
      * the flow is waiting for the photo picker to be launched. A momentary state: the flow triggers
      * `enterSavedImage()` on entering it and the picker takes over — either a pick routes on
-     * ([SavedImageAnalyzing] → candidates / single decode / empty) or a dismissed picker leaves this showing a
-     * neutral "choose a photo" prompt with a re-pick action, so the screen is never blank. Reached only via
+     * ([SavedImageAnalyzing] → single decode / empty) or a dismissed picker leaves this showing a neutral
+     * "choose a photo" prompt with a re-pick action, so the screen is never blank. Reached only via
      * [initialState] (SAVED_IMAGE-only) or the method switcher's Photo tab — not a mockup state of its own.
      */
     data object AwaitingSavedImagePick : ScannerUiState
@@ -76,31 +82,17 @@ internal sealed interface ScannerUiState {
     /** A picked photo is being analysed for an MRZ (mockup 07c). */
     data object SavedImageAnalyzing : ScannerUiState
 
-    /**
-     * Tolerant saved-image reading surfaced one or more candidate reconstructions for the user to choose
-     * among (mockup 07). [candidates] is the SDK's candidate set, exposed all together — the UI never picks
-     * one (Principle 1 / ADR-023).
-     */
-    data class SavedImageCandidates(
-        val candidates: List<MrzCandidate>,
-    ) : ScannerUiState
-
     /** The picked photo contained no readable MRZ (mockup 07b). */
     data object SavedImageEmpty : ScannerUiState
 
-    /** Manual entry of the MRZ lines as raw text (mockup 06). [text] is the in-progress input. */
+    /**
+     * Manual entry of the MRZ lines as raw text (mockup 06). [text] is the in-progress input. [parseFailed] is
+     * set when a "Read this" attempt did not parse as any MRZ format — the screen then shows an inline note and
+     * keeps the typed text (rather than navigating to the camera-flavoured read-failed screen); it clears on the
+     * next edit.
+     */
     data class ManualRaw(
         val text: String = "",
-    ) : ScannerUiState
-
-    /**
-     * Manual entry as individual fields rather than raw MRZ lines (mockup 06b). The strings are the
-     * in-progress field inputs, verbatim; the SDK parses them, it does not correct them.
-     */
-    data class ManualFields(
-        val documentNumber: String = "",
-        val dateOfBirth: String = "",
-        val dateOfExpiry: String = "",
-        val nationality: String = "",
+        val parseFailed: Boolean = false,
     ) : ScannerUiState
 }

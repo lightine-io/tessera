@@ -33,16 +33,18 @@ import androidx.compose.ui.unit.dp
 
 // The camera-status screens (mockups 05 / 05b) — the two ways the live camera cannot deliver a preview:
 //
-//  * CameraInUse (05, recoverable): another app holds the camera. The scanner stays bound and the platform
-//    framework auto-resumes the stream when the other holder releases it, so this screen offers NO retry —
-//    it self-resumes. The only action is the manual-entry escape (the user need not wait). See
-//    ScannerFlow's reducer wiring: a subsequent non-error result flips the flow back to Scanning.
+//  * CameraInUse (05, recoverable): another app holds the camera. This notice REPLACES the live preview, so
+//    the scanner is torn down while it shows — CameraX does not auto-retry after that error, so there is no
+//    "wait and it reconnects itself" path. Recovery happens only when the app returns to the foreground: the
+//    flow's ON_RESUME observer re-mounts a fresh preview and tries again (see ScannerFlow). This screen
+//    offers NO retry button (returning to the app IS the retry) — only the manual-entry escape, for a user
+//    who would rather not wait.
 //  * CameraUnavailable (05b, terminal): the camera cannot be started at all. No auto-recovery, no retry —
 //    the only forward path is manual entry.
 //
 // Both are honest statements of a capture condition, never a verdict about a document (Principle 1). The
-// meaning lives in the text, not in colour or motion: the "Reconnecting…" indicator's pulse is decorative
-// (an a11y-neutral affordance), and the heading + body carry the state on their own.
+// meaning lives in the text, not in colour or motion: the pulse beside the status label is decorative (an
+// a11y-neutral affordance), and the heading + body carry the state on their own.
 
 /** Semantics anchor for the camera-in-use (recoverable) screen (mockup 05). Not user-facing. */
 internal const val CAMERA_IN_USE_TEST_TAG: String = "tessera-mrz-camera-in-use"
@@ -51,15 +53,23 @@ internal const val CAMERA_IN_USE_TEST_TAG: String = "tessera-mrz-camera-in-use"
 internal const val CAMERA_UNAVAILABLE_TEST_TAG: String = "tessera-mrz-camera-unavailable"
 
 /**
- * The camera-in-use screen (mockup 05). Shown when another app holds the camera. This is **recoverable**:
- * the scanner keeps its session bound underneath and the platform camera framework auto-resumes the stream
- * once the other holder releases it, so the flow returns to scanning on its own (see [ScannerFlow]). There
- * is therefore **no retry action** — only [onManualEntry], the escape into manual entry for a user who would
- * rather not wait. The "Reconnecting…" indicator states the recoverable status in words; its pulse is
- * decorative and never the sole carrier of meaning (non-colour / non-motion a11y).
+ * The camera-in-use screen (mockup 05). Shown when another app holds the camera. This is **recoverable**, but
+ * not automatically: the notice replaces the live preview, so the scanner is torn down while it shows, and
+ * CameraX does not retry the camera open on its own after this error. Recovery happens the next time the app
+ * returns to the foreground — the flow's `ON_RESUME` observer re-mounts a fresh preview and tries again (see
+ * [ScannerFlow]). There is therefore **no retry button** here (coming back to the screen already is the
+ * retry) — only [onManualEntry] (when [showManualEntry]), the escape into manual entry for a user who would
+ * rather not wait. The status indicator states this in words; its pulse is decorative and never the sole
+ * carrier of meaning (non-colour / non-motion a11y).
+ *
+ * @param showManualEntry whether the manual-entry action is offered — `false` when the consumer's
+ *   `enabledMethods` excludes `MANUAL_ENTRY`. Defaults to `true`.
  */
 @Composable
-internal fun CameraInUseContent(onManualEntry: () -> Unit) {
+internal fun CameraInUseContent(
+    onManualEntry: () -> Unit,
+    showManualEntry: Boolean = true,
+) {
     Column(
         modifier =
             Modifier
@@ -89,8 +99,10 @@ internal fun CameraInUseContent(onManualEntry: () -> Unit) {
             ReconnectingIndicator()
         }
 
-        Button(onClick = onManualEntry, modifier = Modifier.fillMaxWidth()) {
-            Text(text = stringResource(R.string.tessera_scanner_camera_manual))
+        if (showManualEntry) {
+            Button(onClick = onManualEntry, modifier = Modifier.fillMaxWidth()) {
+                Text(text = stringResource(R.string.tessera_scanner_camera_manual))
+            }
         }
     }
 }
@@ -98,10 +110,16 @@ internal fun CameraInUseContent(onManualEntry: () -> Unit) {
 /**
  * The camera-unavailable screen (mockup 05b). Shown when the camera cannot be started for a non-recoverable
  * reason. This is **terminal**: there is no auto-recovery and no retry — the only forward path is
- * [onManualEntry], typing the details by hand.
+ * [onManualEntry] (when [showManualEntry]), typing the details by hand.
+ *
+ * @param showManualEntry whether the manual-entry action is offered — `false` when the consumer's
+ *   `enabledMethods` excludes `MANUAL_ENTRY`. Defaults to `true`.
  */
 @Composable
-internal fun CameraUnavailableContent(onManualEntry: () -> Unit) {
+internal fun CameraUnavailableContent(
+    onManualEntry: () -> Unit,
+    showManualEntry: Boolean = true,
+) {
     Column(
         modifier =
             Modifier
@@ -120,6 +138,9 @@ internal fun CameraUnavailableContent(onManualEntry: () -> Unit) {
                 text = stringResource(R.string.tessera_scanner_camera_unavailable_title),
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center,
+                // Terminal, auto-transition landing (no focus move brought the user here) — assertive so a
+                // screen reader announces the outcome on arrival, matching ReadFailed / SavedImageEmpty.
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
             )
             Text(
                 text = stringResource(R.string.tessera_scanner_camera_unavailable_body),
@@ -128,17 +149,19 @@ internal fun CameraUnavailableContent(onManualEntry: () -> Unit) {
             )
         }
 
-        Button(onClick = onManualEntry, modifier = Modifier.fillMaxWidth()) {
-            Text(text = stringResource(R.string.tessera_scanner_camera_manual))
+        if (showManualEntry) {
+            Button(onClick = onManualEntry, modifier = Modifier.fillMaxWidth()) {
+                Text(text = stringResource(R.string.tessera_scanner_camera_manual))
+            }
         }
     }
 }
 
 /**
- * The "Reconnecting…" indicator on the camera-in-use screen: a pulsing dot beside the reconnecting label.
- * The label carries the meaning; the pulse is purely decorative (it conveys nothing a screen reader or a
- * reduced-motion user would miss — the recoverable status is stated in the text). The dot is the literal
- * bullet "●" whose alpha animates, so no drawing API or icon dependency is introduced.
+ * The status indicator on the camera-in-use screen: a pulsing dot beside a short status label
+ * (`tessera_scanner_camera_reconnecting`). The label carries the meaning; the pulse is purely decorative (it
+ * conveys nothing a screen reader or a reduced-motion user would miss — the status is stated in the text). The
+ * dot is the literal bullet "●" whose alpha animates, so no drawing API or icon dependency is introduced.
  *
  * **A11y (TES-47).**
  *  * *Motion is never the sole signal.* The pulse is gated on [animationsEnabled] — with the user's
@@ -147,8 +170,8 @@ internal fun CameraUnavailableContent(onManualEntry: () -> Unit) {
  *  * *The dot is not announced.* The bare bullet "●" is decorative, so it is removed from the semantics tree
  *    ([clearAndSetSemantics] with an empty block) — a screen reader would otherwise read a meaningless glyph.
  *  * *The status is announced on arrival.* The camera-in-use screen appears via an auto-transition (the flow
- *    reducer flips to it when another app grabs the camera), so the "Reconnecting…" label is a **polite**
- *    [liveRegion]: a screen reader speaks it when it appears without the user having to move focus to it.
+ *    reducer flips to it when another app grabs the camera), so the status label is a **polite** [liveRegion]:
+ *    a screen reader speaks it when it appears without the user having to move focus to it.
  */
 @Composable
 private fun ReconnectingIndicator() {

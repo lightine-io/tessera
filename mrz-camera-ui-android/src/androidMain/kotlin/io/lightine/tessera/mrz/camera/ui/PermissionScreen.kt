@@ -102,12 +102,17 @@ internal fun permissionScreenState(
  *    privacy body, a primary "Open Settings" that fires [onOpenSettings] (the UI owns this navigation; it is
  *    always available in this mode).
  *
- * Both faces share the secondary "Enter details manually" ([onManualEntry]). [PermissionScreenState.GRANTED]
- * is never passed here (the gate shows the preview instead); guarded defensively as a no-op.
+ * Both faces share the secondary "Enter details manually" ([onManualEntry], when [showManualEntry]).
+ * [PermissionScreenState.GRANTED] is never passed here (the gate shows the preview instead); guarded
+ * defensively as a no-op.
  *
  * `internal` (not `private`) so the two faces and their actions are host-tested through this entry point
  * directly (the same composable the gate dispatches), per the testing-layers rule. The screen only reads and
  * navigates — it never requests a permission (scope permission boundary).
+ *
+ * @param showManualEntry whether the manual-entry escape is offered — `false` when the consumer's
+ *   `enabledMethods` excludes `MANUAL_ENTRY`, so a camera-only config never dangles an escape into a screen
+ *   the user cannot reach any other way. Defaults to `true`.
  */
 @Composable
 internal fun PermissionContent(
@@ -116,6 +121,7 @@ internal fun PermissionContent(
     onOpenSettings: () -> Unit,
     onManualEntry: () -> Unit,
     hasRequestHandler: Boolean,
+    showManualEntry: Boolean = true,
 ) {
     when (state) {
         PermissionScreenState.NEEDS_GRANT -> {
@@ -128,6 +134,7 @@ internal fun PermissionContent(
                 primaryLabel = if (hasRequestHandler) stringResource(R.string.tessera_scanner_permission_grant_action) else null,
                 onPrimary = onGrant,
                 onManualEntry = onManualEntry,
+                showManualEntry = showManualEntry,
             )
         }
 
@@ -140,6 +147,7 @@ internal fun PermissionContent(
                 primaryLabel = stringResource(R.string.tessera_scanner_permission_open_settings),
                 onPrimary = onOpenSettings,
                 onManualEntry = onManualEntry,
+                showManualEntry = showManualEntry,
             )
         }
 
@@ -162,6 +170,7 @@ private fun PermissionScaffold(
     primaryLabel: String?,
     onPrimary: () -> Unit,
     onManualEntry: () -> Unit,
+    showManualEntry: Boolean,
 ) {
     Column(
         modifier =
@@ -195,8 +204,10 @@ private fun PermissionScaffold(
                 Text(text = primaryLabel)
             }
         }
-        OutlinedButton(onClick = onManualEntry, modifier = Modifier.fillMaxWidth()) {
-            Text(text = stringResource(R.string.tessera_scanner_camera_manual))
+        if (showManualEntry) {
+            OutlinedButton(onClick = onManualEntry, modifier = Modifier.fillMaxWidth()) {
+                Text(text = stringResource(R.string.tessera_scanner_camera_manual))
+            }
         }
     }
 }

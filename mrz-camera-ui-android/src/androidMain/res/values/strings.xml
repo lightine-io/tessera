@@ -29,7 +29,32 @@
          hidden entirely when fewer than two methods are enabled (nothing to switch between). -->
     <string name="tessera_scanner_method_camera">Camera</string>
     <string name="tessera_scanner_method_photo">Photo</string>
-    <string name="tessera_scanner_method_keyboard">Type</string>
+    <string name="tessera_scanner_method_keyboard">Manual</string>
+
+    <!-- Privacy notice (TES-88): a compact "Privacy" affordance in the top bar, present on every screen, that
+         opens a dialog explaining in plain words what the scanner does with the document. One coherent,
+         always-reachable transparency notice — the scanner reads on-device, keeps nothing, and hands the
+         result back to the host app, which then decides what happens. Deliberately an opt-in tap (not a
+         banner on every screen) so it informs without nagging. The ⓘ glyph is decorative; the word carries
+         the label and the a11y name. -->
+    <string name="tessera_scanner_privacy_action">Privacy</string>
+    <string name="tessera_scanner_privacy_dialog_title">Your document stays on your device</string>
+    <string name="tessera_scanner_privacy_dialog_body">Tessera reads your document right here on your device. Nothing is uploaded or saved anywhere. What it reads is handed back to the app you are using, and that app decides what happens next.</string>
+    <string name="tessera_scanner_privacy_dialog_dismiss">Got it</string>
+
+    <!-- MRZ explainer (TES-89): a "What's the MRZ?" link on the camera screen that opens an illustrated
+         dialog showing what the machine-readable zone is and where it sits on a document. Plain language for a
+         first-time user who has never heard the term "MRZ" (which they meet elsewhere in the flow — "Enter the
+         MRZ by hand", "Couldn't read this MRZ"). The specimen shown in the illustration is the ICAO Doc 9303
+         published example, hard-coded in the drawing (not translatable copy). -->
+    <string name="tessera_scanner_explainer_action">What\'s the MRZ?</string>
+    <string name="tessera_scanner_explainer_title">What\'s the MRZ?</string>
+    <string name="tessera_scanner_explainer_intro">MRZ is short for machine-readable zone. It\'s the block of text a scanner can read.</string>
+    <string name="tessera_scanner_explainer_doc_label">PASSPORT</string>
+    <string name="tessera_scanner_explainer_zone_caption">Letters, numbers and &lt; fillers, in 2 or 3 lines.</string>
+    <string name="tessera_scanner_explainer_where_title">Where to find it</string>
+    <string name="tessera_scanner_explainer_where_body">Along the bottom of the document - the last 2 or 3 lines. It\'s also on ID cards, visas and residence permits.</string>
+    <string name="tessera_scanner_explainer_dismiss">Got it</string>
 
     <!-- Guidance shown over the live camera preview: the MRZ framing guide's hint (mockup 01), telling the
          user to line up the document's bottom lines (the MRZ band) inside the dashed frame. Advisory only —
@@ -37,44 +62,60 @@
          the iOS String Catalog (tessera_scanner_camera_guide) so the contract reads identically across
          platforms. (Supersedes the earlier generic tessera_scanner_camera_hint — the preview now shows the
          framing guide, matching iOS and the mockup, so that key is gone before the 0.5.0 freeze.) -->
-    <string name="tessera_scanner_camera_guide">Fit the bottom lines of the document in the frame</string>
+    <string name="tessera_scanner_camera_guide">Line up the bottom of your document with the box.</string>
 
     <!-- Accessibility label for the torch (flashlight) toggle over the live preview (mockup 01, top-end).
          Shown only when the device has a flash unit and the consumer left showTorchButton on. The glyph
          itself carries no label; the on/off state is conveyed to a screen reader by the toggle's switch
          role (spoken "on"/"off"), not by colour — so this label is just the control's name. Same key as the
          iOS String Catalog (tessera_scanner_torch) so the contract reads identically across platforms. -->
-    <string name="tessera_scanner_torch">Torch</string>
+    <string name="tessera_scanner_torch">Flashlight</string>
+    <!-- The torch toggle's spoken on/off state (TES-84) — set explicitly as the control's stateDescription so
+         a screen reader announces it in these words, on top of (not instead of) the Switch role's own
+         announced state. -->
+    <string name="tessera_scanner_torch_state_on">On</string>
+    <string name="tessera_scanner_torch_state_off">Off</string>
+
+    <!-- Subtle "Powered by Tessera" watermark pinned at the bottom of the live camera preview, alongside the
+         always-visible "What's the MRZ?" link. Overridable like every other key — a consumer can blank it (set
+         an empty string) to remove the attribution. -->
+    <string name="tessera_scanner_powered_by">Powered by Tessera</string>
 
     <!-- ============================ Camera-initializing state (mockup 01b) ============================ -->
     <!-- Shown while the camera + on-device text reader warm up, before the first preview surface arrives, so
          the screen is never a frozen blank. Auto-transitions to the live preview the moment the surface is
          ready; the on-device line is an honesty note, not a verdict about anything. -->
     <string name="tessera_scanner_initializing_title">Starting camera…</string>
-    <string name="tessera_scanner_initializing_body">Warming up the camera and text reader. This runs on your device.</string>
+    <string name="tessera_scanner_initializing_body">Getting the camera ready. This all runs on your device.</string>
 
     <!-- ============================ Struggling hint (mockup 02) ============================ -->
     <!-- Shown over the live preview after a while with no successful read. Advisory only — it nudges the
          user to improve the capture; it is never an error and never a verdict about the document (Principle 1). -->
-    <string name="tessera_scanner_struggling_hint">Still looking — try more light or move closer</string>
+    <string name="tessera_scanner_struggling_hint">Can\'t read it yet. Try more light or move the document farther away.</string>
     <!-- The "type it instead" affordance on the struggling hint — the escape into manual entry. -->
-    <string name="tessera_scanner_struggling_manual">Type it instead</string>
+    <string name="tessera_scanner_struggling_manual">Enter details manually</string>
+
+    <!-- ============================ Gathering (confirming a read) ============================ -->
+    <!-- Shown over the live preview while the reader confirms an MRZ across several frames (the frame-agreement
+         gate that sheds transient OCR misreads). Feedback that a read is in progress — asks the user to keep the
+         document still so the frames agree; never an error or a verdict (Principle 1). -->
+    <string name="tessera_scanner_gathering_hint">Hold steady…</string>
 
     <!-- ============================ Camera-status screens (mockups 05 / 05b) ============================ -->
-    <!-- Camera in use (recoverable, mockup 05): another app holds the camera; the session stays bound and the
-         platform framework reconnects on its own, so there is no retry — only the manual-entry escape. -->
+    <!-- Camera in use (recoverable, mockup 05): another app holds the camera. The scanner is torn down while
+         this notice shows (it does not reconnect on its own); returning to this screen is what reconnects it,
+         so there is no retry button — only the manual-entry escape. -->
     <string name="tessera_scanner_camera_in_use_title">Camera is in use</string>
-    <string name="tessera_scanner_camera_in_use_body">Another app is using the camera — it will reconnect automatically.</string>
-    <!-- The recoverable status, stated in words beside the pulsing indicator (the meaning is in the text). -->
-    <string name="tessera_scanner_camera_reconnecting">Reconnecting…</string>
+    <string name="tessera_scanner_camera_in_use_body">Another app is using the camera. Come back to this screen to reconnect.</string>
+    <!-- The status, stated in words beside the pulsing indicator (the meaning is in the text). Not "Reconnecting…"
+         — nothing is actively happening while this shows; it is waiting for the user to return. -->
+    <string name="tessera_scanner_camera_reconnecting">Waiting to reconnect…</string>
     <!-- Camera unavailable (terminal, mockup 05b): the camera cannot be started at all; no retry. -->
     <string name="tessera_scanner_camera_unavailable_title">Camera unavailable</string>
     <string name="tessera_scanner_camera_unavailable_body">This device\'s camera can\'t be started. You can still enter the document details by hand.</string>
     <!-- Shared action on both camera-status screens AND both permission screens (04 / 04b): switch to
          typing the details by hand. -->
     <string name="tessera_scanner_camera_manual">Enter details manually</string>
-    <!-- Dismisses the scanner; the flow reports Cancelled. -->
-    <string name="tessera_scanner_cancel">Cancel</string>
 
     <!-- ============================ Adaptive camera-permission screen (mockups 04 / 04b) ============================ -->
     <!-- ONE adaptive screen whose primary action tracks the permission status. While a request can still
@@ -88,7 +129,7 @@
     <!-- Title shown while the camera permission is not yet held but can still be requested. -->
     <string name="tessera_scanner_permission_grant_title">Camera permission needed</string>
     <!-- Body: why the permission is needed, stated with the on-device privacy fact. -->
-    <string name="tessera_scanner_permission_grant_body">The scanner reads the machine-readable zone on-device; it does not store or upload your document.</string>
+    <string name="tessera_scanner_permission_grant_body">The scanner reads your document on this device - nothing is uploaded or stored.</string>
     <!-- Primary action: hand the permission request to the host app (the SDK never requests it itself). -->
     <string name="tessera_scanner_permission_grant_action">Grant access</string>
 
@@ -96,7 +137,7 @@
     <!-- Title shown once the camera permission is permanently denied ("don't ask again"). -->
     <string name="tessera_scanner_permission_denied_title">Camera access is off</string>
     <!-- Body: how to re-enable via Settings, with the same on-device privacy fact. -->
-    <string name="tessera_scanner_permission_denied_body">Turn on Camera for this app in Settings to scan. The scanner reads the machine-readable zone on-device; it does not store or upload your document.</string>
+    <string name="tessera_scanner_permission_denied_body">Turn on Camera for this app in Settings to scan. Everything is read on your device - nothing is uploaded or stored.</string>
     <!-- Primary action: open this app's OS settings page so the user can turn Camera on (navigation, not a
          permission request). -->
     <string name="tessera_scanner_permission_open_settings">Open Settings</string>
@@ -113,24 +154,30 @@
 
     <!-- Review screen title, shown when an MRZ decoded and is up for the user to accept or rescan. Not a
          "valid" verdict — the SDK reports what it read, the user decides (Principle 1). -->
-    <string name="tessera_scanner_review_title">MRZ read</string>
-    <!-- Header over the review screen's summary rows (document, name, number, expiry). -->
-    <string name="tessera_scanner_review_observations_header">Observations</string>
+    <string name="tessera_scanner_review_title">Check the details</string>
+    <!-- Header over the review screen's observations list (check digits, dates, provenance, and any advisory). -->
+    <string name="tessera_scanner_review_observations_header">What we found</string>
     <!-- Disclosure that opens the full parsed field set and the raw MRZ lines (mockup 03c). -->
-    <string name="tessera_scanner_review_show_all">Show all fields &amp; raw MRZ ▾</string>
+    <string name="tessera_scanner_review_show_all">Show all fields and MRZ text ▾</string>
     <!-- Collapse affordance on the expanded all-fields view — mirrors the summary's "Show all fields" and
          returns to the review summary (TES-71: the expanded view previously had no way back). -->
     <string name="tessera_scanner_review_show_less">Show less ▴</string>
     <!-- Primary action: accept this reading as-is. Stays enabled even on a check-digit mismatch — the SDK
          reports the mismatch and lets the consumer decide; it never blocks or auto-corrects (Principle 1). -->
     <string name="tessera_scanner_review_use">Use this result</string>
-    <!-- Secondary action: discard this reading and go back to scanning. -->
+    <!-- Secondary action: discard this reading and go back to the reading method that produced it. Provenance-
+         aware (TES-96) — "Rescan" reads oddly for a reading that did not come from the live camera, so the
+         label tracks how the reading was produced; camera provenance gets this one. -->
     <string name="tessera_scanner_review_rescan">Rescan</string>
+    <!-- Same secondary action, for a reading produced by picking a saved photo. -->
+    <string name="tessera_scanner_review_try_another_photo">Try another photo</string>
+    <!-- Same secondary action, for a reading produced by typing the MRZ by hand. -->
+    <string name="tessera_scanner_review_edit_entry">Edit entry</string>
 
     <!-- Expanded all-fields view title (mockup 03c). -->
     <string name="tessera_scanner_review_all_fields_title">All fields</string>
     <!-- Header over the raw MRZ lines in the expanded view. -->
-    <string name="tessera_scanner_review_raw_mrz_header">Raw MRZ</string>
+    <string name="tessera_scanner_review_raw_mrz_header">MRZ text</string>
 
     <!-- Field labels for the summary rows and the expanded all-fields view. -->
     <string name="tessera_scanner_field_document">Document</string>
@@ -142,16 +189,29 @@
     <string name="tessera_scanner_field_nationality">Nationality</string>
     <string name="tessera_scanner_field_date_of_birth">Date of birth</string>
     <string name="tessera_scanner_field_sex">Sex</string>
-    <string name="tessera_scanner_field_optional">Personal / optional no.</string>
+    <!-- TD3 (passport) specifically carries a "personal number" field — a real ICAO concept for that format. -->
+    <string name="tessera_scanner_field_optional">Personal number (optional)</string>
+    <!-- Every other format (TD1, TD2, MRV-A, MRV-B) carries generic MRZ optional data with no such meaning;
+         labelling it "Personal number" there would assert a meaning ICAO 9303 does not give the field
+         (Principle 1). Used for the field row AND the matching check-digit observation label. -->
+    <string name="tessera_scanner_field_optional_data">Optional data</string>
+
+    <!-- A date field (date of birth / expiry) when the SDK could not resolve a century for it (TES-94) — e.g.
+         an expiry whose printed two-digit year falls outside the plausibility window relative to today (any
+         sufficiently old document, real or a decades-old ICAO test specimen, eventually lands here). "%1$s" is
+         the raw components as printed ("94-06-23"). Labeled explicitly rather than shown as bare digits that
+         could pass for a confident date (Principle 4 — honest about what we know); the SDK never guesses a
+         century in this UI (that stays mrz-core's job). -->
+    <string name="tessera_scanner_date_unresolved_format">%1$s (year not resolved)</string>
 
     <!-- Name row value: "%1$s" is the primary identifier (surname), "%2$s" the secondary (given names). -->
     <string name="tessera_scanner_name_format">%1$s, %2$s</string>
     <!-- Document row value: "%1$s" is the raw type code, "%2$s" the recognized category (e.g. "P — passport"). -->
-    <string name="tessera_scanner_document_format">%1$s — %2$s</string>
+    <string name="tessera_scanner_document_format">%1$s - %2$s</string>
 
     <!-- Human-readable document categories (the recognized category is shown alongside the raw type code). -->
     <string name="tessera_scanner_category_passport">passport</string>
-    <string name="tessera_scanner_category_identity_card">identity card</string>
+    <string name="tessera_scanner_category_identity_card">ID card</string>
     <string name="tessera_scanner_category_residence_permit">residence permit</string>
     <string name="tessera_scanner_category_visa">visa</string>
     <string name="tessera_scanner_category_other">other</string>
@@ -161,16 +221,18 @@
 
     <!-- A check digit recorded on the document matches the value the SDK computes. "%1$s" is the field
          label (e.g. "Document number"). Rendered with a ✓ mark. -->
-    <string name="tessera_scanner_obs_check_match">%1$s check digit matches</string>
+    <string name="tessera_scanner_obs_check_match">%1$s - check number agrees</string>
     <!-- A recorded check digit does NOT match the computed value. "%1$s" is the field label, "%2$s" the
          digit recorded on the document, "%3$s" the digit the SDK computes. Rendered with a ‼ mark. Neither
          value is "wrong" — the SDK states both and the consumer decides (Principle 1). -->
-    <string name="tessera_scanner_obs_check_mismatch">%1$s check digit: recorded %2$s, computed %3$s</string>
-    <!-- The expiry components form a real calendar date. "%1$s" is that date. Rendered with a ✓ mark. -->
-    <string name="tessera_scanner_obs_expiry_well_formed">Expiry %1$s is a well-formed date</string>
+    <string name="tessera_scanner_obs_check_mismatch">%1$s - check number doesn\'t agree (document shows %2$s, we get %3$s)</string>
+    <!-- The expiry components form a real calendar date. "%1$s" is that date (rendered via
+         tessera_scanner_date_unresolved_format below when the SDK could not resolve a century for it). Rendered
+         with a ✓ mark. -->
+    <string name="tessera_scanner_obs_expiry_well_formed">Expiry %1$s is a real date</string>
     <!-- Neutral advisory shown when one or more checks did not match — it points at the document, it does
          not pass judgement. Rendered with a ⓘ mark. -->
-    <string name="tessera_scanner_obs_some_mismatch">Some checks did not match — verify against the document.</string>
+    <string name="tessera_scanner_obs_some_mismatch">Some checks didn\'t agree. Please compare with your document.</string>
     <!-- Provenance line: how the SDK read this document. "%1$s" is the read-method label below. Rendered
          with a ⓘ mark. -->
     <string name="tessera_scanner_obs_read_by">Read by %1$s</string>
@@ -184,17 +246,10 @@
     <string name="tessera_scanner_check_label_document_number">Document number</string>
     <string name="tessera_scanner_check_label_date_of_birth">Date of birth</string>
     <string name="tessera_scanner_check_label_date_of_expiry">Expiry</string>
-    <string name="tessera_scanner_check_label_optional_data">Personal / optional no.</string>
-    <string name="tessera_scanner_check_label_composite">Composite</string>
-
-    <!-- Scan-quality line in the expanded view. "%1$s" is the region status, "%2$s" the OCR confidence,
-         "%3$s" the recognized line count. Rendered with a ⓘ mark. Informational only, never a gate. -->
-    <string name="tessera_scanner_quality_format">Scan quality: region %1$s · OCR confidence %2$s · lines: %3$s</string>
-    <!-- Region status values for the quality line. -->
-    <string name="tessera_scanner_quality_region_found">found</string>
-    <string name="tessera_scanner_quality_region_not_found">not found</string>
-    <!-- Placeholder for an OCR confidence the engine did not report. -->
-    <string name="tessera_scanner_quality_confidence_unknown">n/a</string>
+    <!-- TD3 reuses tessera_scanner_field_optional ("Personal number (optional)") for this observation's label
+         instead; this value is for every other format's generic optional data (see tessera_scanner_field_optional_data). -->
+    <string name="tessera_scanner_check_label_optional_data">Optional data</string>
+    <string name="tessera_scanner_check_label_composite">Everything together</string>
 
     <!-- Accessibility content-description prefixes so an observation's tone (match / mismatch / info) is
          conveyed to a screen reader, not carried by colour alone. Prepended to the observation text. -->
@@ -208,7 +263,7 @@
          not read it, which is a different, honest statement. -->
     <string name="tessera_scanner_read_failed_title">Couldn\'t read this MRZ</string>
     <!-- Explains the likely cause without judging the document. -->
-    <string name="tessera_scanner_read_failed_body">The text didn\'t match a known MRZ format — it may be blurred or partial.</string>
+    <string name="tessera_scanner_read_failed_body">We couldn\'t read the MRZ. It might be blurry, cut off, or not fully in view.</string>
     <!-- Header over the verbatim captured OCR text (garbles preserved, Principle 5). -->
     <string name="tessera_scanner_read_failed_captured_header">Captured text</string>
     <!-- Primary action: go back to scanning and try to read again. -->
@@ -219,68 +274,44 @@
     <!-- ============================ Manual raw-MRZ entry screen (mockup 06) ============================ -->
 
     <!-- Title of the manual raw-MRZ entry screen — the user types the MRZ lines exactly as printed. -->
-    <string name="tessera_scanner_manual_title">Type the MRZ</string>
+    <string name="tessera_scanner_manual_title">Enter the MRZ manually</string>
     <!-- Label / placeholder for the multi-line monospace MRZ text field. -->
     <string name="tessera_scanner_manual_field_label">MRZ lines</string>
 
-    <!-- Format-hint chips. These pick which parser runs; they are hints ONLY and never rewrite what the
-         user typed (reader, not oracle — Principle 1). -->
-    <string name="tessera_scanner_manual_hint_auto">Auto</string>
-    <string name="tessera_scanner_manual_hint_passport">Passport</string>
-    <string name="tessera_scanner_manual_hint_id_card">ID card</string>
+    <!-- Live length observations (ⓘ INFO tone, never a verdict): the plain character count per typed line
+         ("%1$s" is the line number, "%2$s" its character count). TES-100 removed the format-hint chips that
+         used to fix an expected length and state a neutral delta against it — every line now only ever gets
+         its count. Quantity string (not a plain <string>) so a one-off count reads grammatically ("1
+         character", not "1 characters"); "character"/"characters" is always spelled out in full, never
+         abbreviated to "chars". -->
+    <plurals name="tessera_scanner_manual_obs_char_count">
+        <item quantity="one">Line %1$s: %2$s character</item>
+        <item quantity="other">Line %1$s: %2$s characters</item>
+    </plurals>
 
-    <!-- Live length observations (all ⓘ INFO tone, never a verdict). Auto mode states only the character
-         count ("%1$s" is the line number, "%2$s" its character count); when a format chip fixes an expected
-         length, a line that differs states the neutral delta ("%1$s" line number, "%2$s" the difference).
-         Never "invalid", never an auto-correction. -->
-    <string name="tessera_scanner_manual_obs_char_count">Line %1$s: %2$s chars</string>
-    <string name="tessera_scanner_manual_obs_short">Line %1$s is %2$s characters short</string>
-    <string name="tessera_scanner_manual_obs_over">Line %1$s is %2$s characters over</string>
-    <!-- The standing note that the format chips are hints, not fixes — always shown so the honesty is
-         never implicit. -->
-    <string name="tessera_scanner_manual_obs_hint_note">Format chips are parser hints, not fixes — nothing is auto-corrected</string>
-
-    <!-- Privacy line: the read happens on-device; nothing typed is uploaded or stored. -->
-    <string name="tessera_scanner_manual_privacy">Read on this device. The SDK never uploads or stores what you type.</string>
-    <!-- Primary action: parse the text the user typed (with the selected format hint). -->
-    <string name="tessera_scanner_manual_read">Read what I typed</string>
+    <!-- Primary action: parse the text the user typed (format auto-detected). -->
+    <string name="tessera_scanner_manual_read">Read this</string>
+    <!-- Inline note shown on THIS screen when a "Read this" attempt did not parse as any MRZ format — the typed
+         text is kept so the user can fix it. Never "invalid" — the SDK could not read it (Principle 1). -->
+    <string name="tessera_scanner_manual_parse_failed">That didn\'t match a known MRZ format - check the lines and lengths above.</string>
 
     <!-- ============================ Saved-image (photo) screens (mockups 07c / 07 / 07b) ============================ -->
 
     <!-- Await-pick prompt (TES-71): shown when the saved-image method is the entry point and the picker was
          dismissed with no photo, so the user can re-open it. Neutral — it states the next step, no verdict. -->
-    <string name="tessera_scanner_saved_image_prompt_title">Choose a photo</string>
-    <string name="tessera_scanner_saved_image_prompt_body">Pick a photo of the document\'s data page and it will be read on-device.</string>
+    <string name="tessera_scanner_saved_image_prompt_title">Choose a photo of your document</string>
+    <string name="tessera_scanner_saved_image_prompt_body">Pick a photo of the side with the 2 or 3 lines of MRZ text at the bottom.</string>
     <string name="tessera_scanner_saved_image_prompt_action">Choose photo</string>
 
     <!-- Analyzing screen (mockup 07c): shown while the picked photo is read on-device. -->
     <string name="tessera_scanner_saved_image_analyzing_title">Analyzing photo…</string>
     <!-- What the analysis is doing, stated plainly. -->
-    <string name="tessera_scanner_saved_image_analyzing_reading">Reading the machine-readable zone</string>
-    <!-- Privacy fact under the analyzing indicator: the read is entirely on-device. -->
-    <string name="tessera_scanner_saved_image_analyzing_on_device">On-device — the photo is not uploaded.</string>
-
-    <!-- Candidates screen (mockup 07): tolerant reading resolved an ambiguous glyph more than one way, so
-         EVERY parseable reading is shown for the user to choose among — nothing is chosen for them
-         (Principle 1 / ADR-023). -->
-    <string name="tessera_scanner_saved_image_candidates_title">From photo</string>
-    <!-- Intro over the candidate list. "%1$d" is the number of readings found. The bold-differing-character
-         note refers to the emphasised glyph on each candidate. "Nothing is chosen for you" is the honest
-         reader-not-oracle statement — the SDK surfaces every reading and never picks one. -->
-    <string name="tessera_scanner_saved_image_candidates_intro">Found %1$d possible readings. An ambiguous character differs (bold below) — pick the one matching your document. Nothing is chosen for you.</string>
-    <!-- Per-candidate action: accept THIS reading. Enabled for every candidate regardless of its check-digit
-         verdict — the user decides which reading is theirs (reader, not oracle, Principle 1). -->
-    <string name="tessera_scanner_saved_image_use_this">Use this ›</string>
-    <!-- Spoken note appended to a highlighted MRZ line so the differing glyph is conveyed to a screen reader,
-         not carried by the bold/colour emphasis alone (non-colour a11y). -->
-    <string name="tessera_scanner_saved_image_differs_here">differs here</string>
+    <string name="tessera_scanner_saved_image_analyzing_reading">Reading the document…</string>
 
     <!-- Empty screen (mockup 07b): no MRZ could be located in the picked photo. Never "invalid" — the zone
          couldn't be found, which is a different, honest statement. -->
     <string name="tessera_scanner_saved_image_empty_title">No MRZ found in this photo</string>
-    <string name="tessera_scanner_saved_image_empty_body">The machine-readable zone couldn\'t be located in this image. Use a printed document\'s data page — screens and low-contrast copies often don\'t read.</string>
-    <!-- Privacy note on the empty screen: the photo never leaves the device. -->
-    <string name="tessera_scanner_saved_image_empty_privacy">The photo stays on your device. This SDK doesn\'t upload or store it.</string>
+    <string name="tessera_scanner_saved_image_empty_body">Couldn\'t find the MRZ in this image. Use a clear photo of the printed document - photos of screens or faint copies often don\'t read.</string>
 
     <!-- Shared saved-image actions. -->
     <!-- Pick a different photo (re-launch the picker). -->

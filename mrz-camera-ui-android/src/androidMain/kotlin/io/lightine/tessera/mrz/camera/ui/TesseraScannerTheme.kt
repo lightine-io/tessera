@@ -12,6 +12,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 
 /**
@@ -24,7 +25,10 @@ import androidx.compose.ui.platform.LocalContext
  * - **base scheme** = Material You dynamic color when [opted in][MrzScannerTheme.useDynamicColor] on
  *   Android 12+, else the Material 3 baseline scheme;
  * - **brand accent** ([MrzScannerTheme.brandColor], packed ARGB) tints the scheme's primary when set — a
- *   tint, not a reskin (the rest of the palette stays the module's own).
+ *   tint, not a reskin (the rest of the palette stays the module's own). Because an arbitrary brand colour has
+ *   no guaranteed contrast against a fixed foreground (a light tint under `onPrimary: Color.White` is
+ *   illegible, and vice versa), [onPrimary] is derived from the tint's own relative luminance alongside it —
+ *   see the `brandColor` block below.
  */
 @Composable
 internal fun TesseraScannerTheme(
@@ -53,6 +57,20 @@ internal fun TesseraScannerTheme(
             }
         }
     val colorScheme =
-        theme.brandColor?.let { argb -> baseScheme.copy(primary = Color(argb)) } ?: baseScheme
+        theme.brandColor?.let { argb ->
+            val brand = Color(argb)
+            // A brand tint replaces primary, so it also becomes the Button container colour and the colour
+            // observation text is drawn on (ReviewScreen's MATCHES tone now avoids that path, but Material3's
+            // default Button still uses colorScheme.onPrimary for its label) — an arbitrary brand colour has
+            // no guaranteed contrast against a FIXED foreground. Derive onPrimary from the tint's own relative
+            // luminance instead: dark text on a light brand colour, light text on a dark one. 0.5 is a simple,
+            // documented threshold (not a full WCAG contrast-ratio computation) — good enough to avoid the
+            // clearly-illegible case (e.g. the documented example brandColor, a dark teal, would otherwise pair
+            // with the baseline scheme's light onPrimary and read as light-on-dark-on-dark in dark mode).
+            baseScheme.copy(
+                primary = brand,
+                onPrimary = if (brand.luminance() > 0.5f) Color.Black else Color.White,
+            )
+        } ?: baseScheme
     MaterialTheme(colorScheme = colorScheme, content = content)
 }
