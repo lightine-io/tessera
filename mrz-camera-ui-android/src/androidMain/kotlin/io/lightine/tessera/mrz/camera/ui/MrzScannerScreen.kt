@@ -227,7 +227,18 @@ private fun ScannerFlow(
     // The flow starts on the method [initialState] derives from the consumer's enabledMethods (camera first,
     // else manual entry, else saved image; empty → camera defensively) rather than always camera, so a
     // consumer who disabled camera lands on a working entry point (TES-71).
-    var uiState: ScannerUiState by remember { mutableStateOf(initialState(config.enabledMethods)) }
+    //
+    // TES-102: rememberSaveable(stateSaver = ScannerUiStateSaver) — not plain remember — so the whole flow
+    // state survives a configuration change (rotation, font-scale, locale), which recreates the Activity and
+    // used to silently reset the flow to its start screen. See ScannerUiStateSaver.kt for what each variant
+    // restores as. By deliberate contrast, the session-scoped helpers declared right below (decodeRouted,
+    // the consensus tally, sawTextEver, struggleTimeoutElapsed) stay plain remember: they describe the LIVE
+    // camera session — a latch over a stream, a frame-agreement tally, per-session flags — which restarts
+    // fresh after a recreation along with the camera itself, so persisting them would describe a session
+    // that no longer exists.
+    var uiState: ScannerUiState by rememberSaveable(
+        stateSaver = ScannerUiStateSaver,
+    ) { mutableStateOf(initialState(config.enabledMethods)) }
 
     // A one-shot latch: once a decode has routed on (to review / read-failed / straight back), later decoded
     // frames from the still-running stream must not re-fire. Kept as flow state (not inside the collector) so
