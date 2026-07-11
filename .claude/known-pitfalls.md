@@ -300,6 +300,8 @@ A Cocoa API that takes a *delegate* almost always holds it **weakly** (the frame
 
 **What to do instead:** Use the prescribed driver (now hook-enforced for these tools). And when designing enforcement, pick the mechanism whose trigger actually covers the moment the mistake happens — don't write a file-edit rule to guard a command-line act.
 
+**Postscript (2026-07-11) — the hook itself needs regression tests.** An enforcement-audit ([TES-108](https://lightine.youtrack.cloud/issue/TES-108)) found three matcher defects that had gone unnoticed for weeks: a grep whose *pattern* contained `\|sdkmanager` was falsely blocked (`|` treated as a pipe separator); any command merely *containing* the string `raw-ok` — including a grep searching for it — silently disarmed the guard; and an env-var prefix (`VAR=1 xcodebuild`) dodged the matcher entirely, so the "blocked" iOS commands were never actually intercepted. All three fixed and pinned in `scripts/test-prefer-dev-wrappers.sh`. The lesson extends the meta-lesson above: **an enforcement script is code — it regresses like code and needs tests like code.** A guard that false-positives trains reflexive overrides; a guard that silently misses provides only the *feeling* of enforcement — both are worse than knowing you have no guard.
+
 ---
 
 ## Patching One Handoff in Place Across a Long Session

@@ -23,9 +23,12 @@
 # so this can never block a legitimate command. (`set -e`/`set -u` deliberately
 # NOT used — a stray non-zero or unset var must never become a block.)
 #
-# OVERRIDE: if the prescribed driver genuinely cannot do the job, add the marker
-# `raw-ok` anywhere in the command (e.g. a trailing `# raw-ok`). The override is
-# the conscious checkpoint — use it deliberately, not reflexively.
+# OVERRIDE: if the prescribed driver genuinely cannot do the job, end the command
+# with a trailing `# raw-ok` comment. ONLY the trailing-comment form counts —
+# `raw-ok` appearing elsewhere (argument text, a grep pattern searching for it)
+# does not disarm the guard (it did before 2026-07-11; that was a silent-bypass
+# hole). The override is the conscious checkpoint — use it deliberately, not
+# reflexively. Regression cases live in scripts/test-prefer-dev-wrappers.sh.
 #
 # Deliberately NOT guarded here: plain `adb` (logcat / pm grant are legitimate
 # raw uses; adb screenshots are blocked by block-screenshot.sh) and
@@ -53,15 +56,18 @@ if [ -z "$cmd" ]; then
 fi
 [ -z "$cmd" ] && exit 0
 
-# Conscious override — proceed when the prescribed driver genuinely can't.
-printf '%s' "$cmd" | grep -iq 'raw-ok' && exit 0
-
 # Flatten newlines/tabs to spaces so a multi-line command (a heredoc body, a
 # quoted PR/commit message) is matched as ONE line: `^` then means "start of the
 # whole command", and a tool name sitting inside argument text stays out of
 # command-token position. (`$cmd` — the original, unflattened — is still shown
 # in the message below.)
 flat="$(printf '%s' "$cmd" | tr '\n\r\t' '   ')"
+
+# Conscious override — proceed when the prescribed driver genuinely can't.
+# TRAILING-COMMENT FORM ONLY: `... # raw-ok` at the end of the command. A bare
+# substring match let any command that merely *mentioned* raw-ok (e.g. a grep
+# searching for it) silently bypass the guard — found live 2026-07-11.
+printf '%s' "$flat" | grep -Eiq '#[[:space:]]*raw-ok[[:space:]]*$' && exit 0
 
 # A command token = start-of-command, or right after `&&` / a pipe, then an
 # optional path prefix (.../cmdline-tools/latest/bin/sdkmanager). `android sdk ...`
@@ -70,7 +76,17 @@ flat="$(printf '%s' "$cmd" | tr '\n\r\t' '   ')"
 # left alone. `;` and bare `&` are deliberately NOT separators here — they appear
 # too often in prose ("the sdkmanager & avdmanager tools") to anchor on safely;
 # the cost is missing the rare `cd x; sdkmanager` form, acceptable for a nudge.
-token='(^|&&|[|])[[:space:]]*([[:alnum:]_./~-]*/)?'
+# A pipe counts as a separator only when PRECEDED BY WHITESPACE: regex
+# alternations inside quoted grep/rg patterns (`raw\|sdkmanager`, `raw|sdkmanager`)
+# have no space before the `|`, while a real pipeline almost always does
+# (`cmd | sdkmanager`). Found live 2026-07-11: a grep whose PATTERN named the
+# tools after `\|` was falsely blocked. Accepted miss: `cmd| sdkmanager`
+# (no space before the pipe) slips through — same nudge tradeoff as `;` above.
+# Env-var prefixes (`TESSERA_LOCAL_XCFRAMEWORK=1 xcodebuild ...`) are part of the
+# command token — without this, an env prefix dodged the guard entirely (gap
+# found by the 2026-07-11 test sweep; the documented iOS commands were never
+# actually being intercepted).
+token='(^|&&|[[:space:]][|])[[:space:]]*([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+)*([[:alnum:]_./~-]*/)?'
 
 # Android SDK / AVD / emulator / deploy raw tools -> the Android CLI.
 # `emulator` (the SDK's emulator binary) and `adb install` joined 2026-07-04
