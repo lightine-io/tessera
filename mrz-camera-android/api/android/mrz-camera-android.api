@@ -22,6 +22,7 @@ public final class io/lightine/tessera/mrz/camera/MlKitMrzTextRecognizer : io/li
 	public fun close ()V
 	public fun recognize (Landroidx/camera/core/ImageProxy;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public synthetic fun recognize (Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun restrictToMrzBand ()V
 }
 
 public final class io/lightine/tessera/mrz/camera/MlKitSavedImageRecognizerKt {

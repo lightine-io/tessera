@@ -109,6 +109,21 @@ class MrzFrameAnalyzerTest {
         }
 
     @Test
+    fun finds_the_mrz_despite_an_adjacent_same_width_printed_line() =
+        runTest {
+            // A printed line the SAME width as a TD3 line (44) sits directly against the zone — the exact
+            // shape the old whole-run matcher choked on (it lumped the neighbour in, making a 3×44 "run" that
+            // is not a shape). The neighbour carries a comma, so it is not MRZ-alphabet; the window search
+            // skips it and locks onto the real 2×44 pair. Device-observed noise (blood group / place of birth
+            // lines abut the MRZ on real cards).
+            val printedNeighbour = td3Line1.dropLast(1) + "," // 44 chars, but a comma → not MRZ-alphabet
+            val recognizer = recognizerReturning(textOf(printedNeighbour, td3Line1, td3Line2))
+
+            val decoded = assertIs<MrzScanResult.Decoded>(analyzer(recognizer).analyse(FakeFrame()))
+            assertIs<ParseResult.Success>(decoded.parse)
+        }
+
+    @Test
     fun decodes_a_second_format_to_prove_length_generic_extraction() =
         runTest {
             val decoded = assertIs<MrzScanResult.Decoded>(analyzer(recognizerReturning(textOf(td2Line1, td2Line2))).analyse(FakeFrame()))

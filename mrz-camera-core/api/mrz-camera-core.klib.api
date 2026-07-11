@@ -135,6 +135,37 @@ sealed interface io.lightine.tessera.mrz.camera/CameraError { // io.lightine.tes
     }
 }
 
+sealed interface io.lightine.tessera.mrz.camera/ConsensusVerdict { // io.lightine.tessera.mrz.camera/ConsensusVerdict|null[0]
+    final class Confirmed : io.lightine.tessera.mrz.camera/ConsensusVerdict { // io.lightine.tessera.mrz.camera/ConsensusVerdict.Confirmed|null[0]
+        constructor <init>(io.lightine.tessera.mrz.camera/MrzScanResult.Decoded) // io.lightine.tessera.mrz.camera/ConsensusVerdict.Confirmed.<init>|<init>(io.lightine.tessera.mrz.camera.MrzScanResult.Decoded){}[0]
+
+        final val decoded // io.lightine.tessera.mrz.camera/ConsensusVerdict.Confirmed.decoded|{}decoded[0]
+            final fun <get-decoded>(): io.lightine.tessera.mrz.camera/MrzScanResult.Decoded // io.lightine.tessera.mrz.camera/ConsensusVerdict.Confirmed.decoded.<get-decoded>|<get-decoded>(){}[0]
+
+        final fun component1(): io.lightine.tessera.mrz.camera/MrzScanResult.Decoded // io.lightine.tessera.mrz.camera/ConsensusVerdict.Confirmed.component1|component1(){}[0]
+        final fun copy(io.lightine.tessera.mrz.camera/MrzScanResult.Decoded = ...): io.lightine.tessera.mrz.camera/ConsensusVerdict.Confirmed // io.lightine.tessera.mrz.camera/ConsensusVerdict.Confirmed.copy|copy(io.lightine.tessera.mrz.camera.MrzScanResult.Decoded){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.mrz.camera/ConsensusVerdict.Confirmed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.mrz.camera/ConsensusVerdict.Confirmed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.mrz.camera/ConsensusVerdict.Confirmed.toString|toString(){}[0]
+    }
+
+    final class Gathering : io.lightine.tessera.mrz.camera/ConsensusVerdict { // io.lightine.tessera.mrz.camera/ConsensusVerdict.Gathering|null[0]
+        constructor <init>(kotlin/Int, kotlin/Int) // io.lightine.tessera.mrz.camera/ConsensusVerdict.Gathering.<init>|<init>(kotlin.Int;kotlin.Int){}[0]
+
+        final val agreement // io.lightine.tessera.mrz.camera/ConsensusVerdict.Gathering.agreement|{}agreement[0]
+            final fun <get-agreement>(): kotlin/Int // io.lightine.tessera.mrz.camera/ConsensusVerdict.Gathering.agreement.<get-agreement>|<get-agreement>(){}[0]
+        final val threshold // io.lightine.tessera.mrz.camera/ConsensusVerdict.Gathering.threshold|{}threshold[0]
+            final fun <get-threshold>(): kotlin/Int // io.lightine.tessera.mrz.camera/ConsensusVerdict.Gathering.threshold.<get-threshold>|<get-threshold>(){}[0]
+
+        final fun component1(): kotlin/Int // io.lightine.tessera.mrz.camera/ConsensusVerdict.Gathering.component1|component1(){}[0]
+        final fun component2(): kotlin/Int // io.lightine.tessera.mrz.camera/ConsensusVerdict.Gathering.component2|component2(){}[0]
+        final fun copy(kotlin/Int = ..., kotlin/Int = ...): io.lightine.tessera.mrz.camera/ConsensusVerdict.Gathering // io.lightine.tessera.mrz.camera/ConsensusVerdict.Gathering.copy|copy(kotlin.Int;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.mrz.camera/ConsensusVerdict.Gathering.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.mrz.camera/ConsensusVerdict.Gathering.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.mrz.camera/ConsensusVerdict.Gathering.toString|toString(){}[0]
+    }
+}
+
 sealed interface io.lightine.tessera.mrz.camera/MrzScanResult { // io.lightine.tessera.mrz.camera/MrzScanResult|null[0]
     abstract val quality // io.lightine.tessera.mrz.camera/MrzScanResult.quality|{}quality[0]
         abstract fun <get-quality>(): io.lightine.tessera.mrz.camera/ScanQuality // io.lightine.tessera.mrz.camera/MrzScanResult.quality.<get-quality>|<get-quality>(){}[0]
@@ -330,6 +361,21 @@ final class io.lightine.tessera.mrz.camera/MrzCandidate { // io.lightine.tessera
     final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.mrz.camera/MrzCandidate.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // io.lightine.tessera.mrz.camera/MrzCandidate.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // io.lightine.tessera.mrz.camera/MrzCandidate.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.mrz.camera/MrzDecodeConsensus { // io.lightine.tessera.mrz.camera/MrzDecodeConsensus|null[0]
+    constructor <init>(kotlin/Int = ...) // io.lightine.tessera.mrz.camera/MrzDecodeConsensus.<init>|<init>(kotlin.Int){}[0]
+
+    final val threshold // io.lightine.tessera.mrz.camera/MrzDecodeConsensus.threshold|{}threshold[0]
+        final fun <get-threshold>(): kotlin/Int // io.lightine.tessera.mrz.camera/MrzDecodeConsensus.threshold.<get-threshold>|<get-threshold>(){}[0]
+
+    final fun offer(io.lightine.tessera.mrz.camera/MrzScanResult.Decoded): io.lightine.tessera.mrz.camera/ConsensusVerdict // io.lightine.tessera.mrz.camera/MrzDecodeConsensus.offer|offer(io.lightine.tessera.mrz.camera.MrzScanResult.Decoded){}[0]
+    final fun reset() // io.lightine.tessera.mrz.camera/MrzDecodeConsensus.reset|reset(){}[0]
+
+    final object Companion { // io.lightine.tessera.mrz.camera/MrzDecodeConsensus.Companion|null[0]
+        final const val DEFAULT_THRESHOLD // io.lightine.tessera.mrz.camera/MrzDecodeConsensus.Companion.DEFAULT_THRESHOLD|{}DEFAULT_THRESHOLD[0]
+            final fun <get-DEFAULT_THRESHOLD>(): kotlin/Int // io.lightine.tessera.mrz.camera/MrzDecodeConsensus.Companion.DEFAULT_THRESHOLD.<get-DEFAULT_THRESHOLD>|<get-DEFAULT_THRESHOLD>(){}[0]
+    }
 }
 
 final class io.lightine.tessera.mrz.camera/RecognizedLine { // io.lightine.tessera.mrz.camera/RecognizedLine|null[0]

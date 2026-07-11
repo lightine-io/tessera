@@ -62,13 +62,24 @@ internal class TolerantMrzMatcher(
             if (mrzLines !in distinct) {
                 val parse = MrzParser.parse(mrzLines, referenceTimeProvider()).preCaptured()
                 // Drop structurally-unparseable reconstructions (not plausible readings); keep all that parse,
-                // including check-digit-failing ones (those are PartialSuccess, surfaced for the consumer to weigh).
+                // including check-digit-failing ones (those are PartialSuccess).
                 if (parse !is ParseResult.Failure) {
                     distinct[mrzLines] = MrzCandidate(mrzLines, parse, disambiguations.toList())
                 }
             }
         }
-        return distinct.values.toList()
+
+        // Surface the genuinely plausible readings, bounded so "Choose the reading" stays usable (ADR-023
+        // refinement). Enumerating N ambiguous glyphs yields up to 2^N structurally-parseable reconstructions,
+        // most of which differ only in a NON-check-protected field (e.g. a name glyph) and so break the MRZ's
+        // check digits — those are OCR noise, not real alternative readings. So: when any reconstruction is
+        // check-digit-consistent (a full Success), surface only those; the check-digit self-consistency is what
+        // makes a reconstruction plausible, not the SDK judging the document (Principle 1 — the user still picks
+        // among the surfaced readings, each with its own verdict). If none are consistent (a genuinely noisy or
+        // misprinted MRZ), fall back to every parseable reading. Either way cap the count.
+        val all = distinct.values.toList()
+        val consistent = all.filter { it.parse is ParseResult.Success }
+        return consistent.ifEmpty { all }.take(MAX_SURFACED_CANDIDATES)
     }
 
     private fun normalizeLine(raw: String): String =
@@ -114,8 +125,13 @@ internal class TolerantMrzMatcher(
     )
 
     private companion object {
-        // <= 2^6 = 64 reconstructions parsed per frame; the parse-validity drop keeps the surfaced set small.
+        // <= 2^6 = 64 reconstructions parsed per frame; the check-digit-consistency filter + cap below keep the
+        // SURFACED set small and usable even when many reconstructions parse.
         private const val MAX_VARIED_POSITIONS = 6
+
+        // Upper bound on candidates surfaced to "Choose the reading", so the screen stays usable. Genuine glyph
+        // ambiguity resolves a couple of ways; more than a handful means OCR noise, not real alternatives.
+        private const val MAX_SURFACED_CANDIDATES = 8
 
         private val MRZ_SHAPES: Set<MrzLineShape> =
             listOf(Td1FormatSpec, Td2FormatSpec, Td3FormatSpec, MrvAFormatSpec, MrvBFormatSpec)

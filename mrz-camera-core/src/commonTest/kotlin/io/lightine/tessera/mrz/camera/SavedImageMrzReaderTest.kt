@@ -128,6 +128,24 @@ class SavedImageMrzReaderTest {
         }
 
     @Test
+    fun the_default_mode_is_lenient_so_ocr_injected_spaces_still_read() =
+        runTest {
+            // Regression (device-found): ML Kit routinely injects spaces into MRZ lines from a saved photo, and
+            // the reader's DEFAULT mode must forgive them. The earlier STRICT default made every real photo read
+            // as "No MRZ found" — so this constructs the reader with NO explicit mode (the default) and asserts a
+            // spaced MRZ still decodes. Built directly (not via the STRICT-defaulting test helper) on purpose.
+            val defaultReader =
+                SavedImageMrzReader(
+                    acknowledgement = SavedImageReadingAcknowledgement(),
+                    recognizer = recognizerReturning(withSpace(td3Line1), withSpace(td3Line2)),
+                    telemetry = NoOpTelemetrySink,
+                    referenceTimeProvider = { referenceTime },
+                )
+            val decoded = assertIs<MrzScanResult.Decoded>(defaultReader.read(FakeImage()).scan)
+            assertIs<ParseResult.Success>(decoded.parse)
+        }
+
+    @Test
     fun non_tolerant_reads_surface_no_candidates() =
         runTest {
             val result = reader(recognizerReturning(td3Line1, td3Line2), tolerant = false).read(FakeImage())
@@ -170,6 +188,24 @@ class SavedImageMrzReaderTest {
                 result.candidates.size,
                 "candidates must be distinct",
             )
+        }
+
+    @Test
+    fun tolerant_reading_surfaces_only_consistent_readings_capped() =
+        runTest {
+            // ADR-023 refinement (device-found: a real photo surfaced 64 readings, unusable): when any
+            // reconstruction is check-digit-consistent (a full Success), only those are surfaced — the
+            // check-digit-failing variations are OCR noise, not plausible alternatives — and the surfaced set is
+            // capped so "Choose the reading" stays usable. The specimen has a valid as-recognized reading, so
+            // every surfaced candidate must be a Success, and there must be a small, bounded number of them.
+            val result = reader(recognizerReturning(td3Line1, td3Line2), tolerant = true).read(FakeImage())
+
+            assertTrue(result.candidates.isNotEmpty(), "a specimen with ambiguous glyphs should surface candidates")
+            assertTrue(
+                result.candidates.all { it.parse is ParseResult.Success },
+                "when a check-digit-consistent reading exists, every surfaced candidate must be consistent",
+            )
+            assertTrue(result.candidates.size <= 8, "the surfaced candidate set must be capped (was 64 on a real photo)")
         }
 
     @Test

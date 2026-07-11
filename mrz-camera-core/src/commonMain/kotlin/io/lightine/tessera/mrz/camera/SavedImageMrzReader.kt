@@ -33,7 +33,11 @@ import kotlin.time.Instant
  *   (e.g. `android.net.Uri` on Android, `NSURL` on iOS); obtain the recognizer from its gated platform factory.
  * @param acknowledgement the required saved-image-reading acknowledgement (the opt-in gate; no default).
  * @param recognizer the OCR seam for saved images.
- * @param mode strict (default) or lenient candidate extraction, forwarded to the analyse-frame core.
+ * @param mode lenient (default) or strict line detection, forwarded to the analyse-frame core. **Lenient by
+ *   default** because saved images are OCR'd by ML Kit, which routinely injects spaces into MRZ lines
+ *   (device-observed): lenient strips all whitespace before shape-matching so a real photo's MRZ band is still
+ *   detected, where strict would fail its fixed line width and read nothing. Whitespace is never meaningful in
+ *   an MRZ. Pass [`STRICT`][ParsingMode.STRICT] only for already-clean input.
  * @param tolerant when `true`, also surface candidate disambiguations on the result (default `false`).
  * @param metadataReader the EXIF-reading seam; when `null` no capture metadata is read (default).
  * @param metadataPolicy how much capture metadata to read; [CaptureMetadataPolicy.NONE] (default) reads none.
@@ -44,7 +48,7 @@ import kotlin.time.Instant
 public class SavedImageMrzReader<F>(
     acknowledgement: SavedImageReadingAcknowledgement,
     recognizer: MrzTextRecognizer<F>,
-    private val mode: ParsingMode = ParsingMode.STRICT,
+    private val mode: ParsingMode = ParsingMode.LENIENT,
     private val tolerant: Boolean = false,
     private val metadataReader: CaptureMetadataReader<F>? = null,
     private val metadataPolicy: CaptureMetadataPolicy = CaptureMetadataPolicy.NONE,

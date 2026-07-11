@@ -129,25 +129,34 @@ public class MrzFrameAnalyzer<F>(
         return result.also(::recordTelemetry)
     }
 
-    // Finds the first run of consecutive recognized lines whose (count, length) — after mode-specific
-    // normalization — exactly matches a known ICAO MRZ shape (TD1 3×30, TD2/MRV-B 2×36, TD3/MRV-A
-    // 2×44), and returns that run as the candidate; null when no run matches. Exact-shape matching is
-    // deliberately conservative for this slice: sliding a window over a longer mis-segmented OCR run
-    // is a later refinement, and the live stream's next-frame retry covers the gap meanwhile.
+    // Finds a window of consecutive recognized lines — after mode-specific normalization — that matches a
+    // known ICAO MRZ shape (TD1 3×30, TD2/MRV-B 2×36, TD3/MRV-A 2×44), and returns it as the candidate;
+    // null when none matches. For each shape (lineCount L × lineWidth W) it slides a window of L consecutive
+    // lines and takes the first where every line is exactly W long. Windowing — rather than requiring a whole
+    // equal-length *run* to itself be the shape — tolerates the printed noise a live camera OCRs around the
+    // zone (place-of-birth, blood group, the legal paragraph, device-observed): a stray line of the same
+    // width no longer inflates the run past L and breaks the match, and the shape is still found among longer
+    // output. Width stays EXACT (never padded to fit) so every candidate is parseable and no data is inferred
+    // (Principle 1) — a frame where OCR genuinely dropped or split an MRZ line simply does not match, and the
+    // next frame covers it. Larger shapes first (more lines ⇒ more specific) for a deterministic pick.
     private fun extractMrzCandidate(text: RecognizedText): List<String>? {
         val normalized = text.lines.map { normalizeLine(it.text) }
-        var start = 0
-        while (start < normalized.size) {
-            val length = normalized[start].length
-            var end = start + 1
-            while (end < normalized.size && normalized[end].length == length) end++
-            if (length > 0 && MrzLineShape(end - start, length) in MRZ_SHAPES) {
-                return normalized.subList(start, end).toList()
+        for (shape in MRZ_SHAPES_BY_SPECIFICITY) {
+            for (start in 0..normalized.size - shape.lineCount) {
+                if ((0 until shape.lineCount).all { normalized[start + it].isMrzLineOf(shape.lineLength) }) {
+                    return normalized.subList(start, start + shape.lineCount).toList()
+                }
             }
-            start = end
         }
         return null
     }
+
+    // A normalized line qualifies for a shape's window when it is exactly the shape's width AND every
+    // character is in the MRZ alphabet (A–Z, 0–9, `<`). The alphabet guard is what lets windowing pick the
+    // real zone out of same-width printed noise: a line of the right length but carrying punctuation, digits'
+    // separators, or lowercase left over from surrounding text (already upper-folded and chevron-recovered by
+    // normalizeLine) is rejected, so the window lands on the actual MRZ pair/triple rather than a neighbour.
+    private fun String.isMrzLineOf(width: Int): Boolean = length == width && all { it in 'A'..'Z' || it in '0'..'9' || it == '<' }
 
     // Case is folded to upper (the MRZ alphabet is uppercase-only), and out-of-alphabet chevron glyphs an OCR
     // engine emits for the filler `<` (e.g. ML Kit reads the chevron as `«`) are recovered to `<`. Both are
@@ -208,11 +217,14 @@ public class MrzFrameAnalyzer<F>(
         private val MRZ_CHEVRON_GLYPHS: Set<Char> = setOf('«', '»', '‹', '›', '＜', '＞', '〈', '〉', '⟨', '⟩')
 
         // The distinct ICAO line shapes, sourced from mrz-core's format specs rather than restated as
-        // magic numbers: TD1 3×30, TD2/MRV-B 2×36, TD3/MRV-A 2×44.
-        private val MRZ_SHAPES: Set<MrzLineShape> =
+        // magic numbers: TD1 3×30, TD2/MRV-B 2×36, TD3/MRV-A 2×44. Ordered by line count descending so the
+        // window search tries the more specific (more lines) shape first — deterministic when output could
+        // otherwise satisfy more than one.
+        private val MRZ_SHAPES_BY_SPECIFICITY: List<MrzLineShape> =
             listOf(Td1FormatSpec, Td2FormatSpec, Td3FormatSpec, MrvAFormatSpec, MrvBFormatSpec)
                 .map { MrzLineShape(it.lineCount, it.lineLength) }
-                .toSet()
+                .distinct()
+                .sortedByDescending { it.lineCount }
     }
 }
 

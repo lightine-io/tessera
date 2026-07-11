@@ -143,6 +143,33 @@ public final class io/lightine/tessera/mrz/camera/CharacterDisambiguation {
 	public fun toString ()Ljava/lang/String;
 }
 
+public abstract interface class io/lightine/tessera/mrz/camera/ConsensusVerdict {
+}
+
+public final class io/lightine/tessera/mrz/camera/ConsensusVerdict$Confirmed : io/lightine/tessera/mrz/camera/ConsensusVerdict {
+	public fun <init> (Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;)V
+	public final fun component1 ()Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;
+	public final fun copy (Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;)Lio/lightine/tessera/mrz/camera/ConsensusVerdict$Confirmed;
+	public static synthetic fun copy$default (Lio/lightine/tessera/mrz/camera/ConsensusVerdict$Confirmed;Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;ILjava/lang/Object;)Lio/lightine/tessera/mrz/camera/ConsensusVerdict$Confirmed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDecoded ()Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/mrz/camera/ConsensusVerdict$Gathering : io/lightine/tessera/mrz/camera/ConsensusVerdict {
+	public fun <init> (II)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun copy (II)Lio/lightine/tessera/mrz/camera/ConsensusVerdict$Gathering;
+	public static synthetic fun copy$default (Lio/lightine/tessera/mrz/camera/ConsensusVerdict$Gathering;IIILjava/lang/Object;)Lio/lightine/tessera/mrz/camera/ConsensusVerdict$Gathering;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAgreement ()I
+	public final fun getThreshold ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class io/lightine/tessera/mrz/camera/FrameProvenance : java/lang/Enum {
 	public static final field LIVE_CAMERA Lio/lightine/tessera/mrz/camera/FrameProvenance;
 	public static final field PRE_CAPTURED_IMAGE Lio/lightine/tessera/mrz/camera/FrameProvenance;
@@ -183,6 +210,20 @@ public final class io/lightine/tessera/mrz/camera/MrzCandidate {
 	public final fun getParse ()Lio/lightine/tessera/mrz/parsing/ParseResult;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/mrz/camera/MrzDecodeConsensus {
+	public static final field Companion Lio/lightine/tessera/mrz/camera/MrzDecodeConsensus$Companion;
+	public static final field DEFAULT_THRESHOLD I
+	public fun <init> ()V
+	public fun <init> (I)V
+	public synthetic fun <init> (IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getThreshold ()I
+	public final fun offer (Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;)Lio/lightine/tessera/mrz/camera/ConsensusVerdict;
+	public final fun reset ()V
+}
+
+public final class io/lightine/tessera/mrz/camera/MrzDecodeConsensus$Companion {
 }
 
 public final class io/lightine/tessera/mrz/camera/MrzFrameAnalyzer {
