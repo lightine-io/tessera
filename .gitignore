@@ -129,3 +129,6 @@ node_modules/
 *.tmp
 *.temp
 .cache/
+
+# iOS debug-bridge (idb) artifact directories — tool droppings, never content
+idb-*/

@@ -226,3 +226,19 @@ jobs:
       # iOS targets). The JVM `check` job covers the JVM-bearing modules' common ABI baselines.
       - name: Compile iOS targets, run simulator tests, assemble the XCFramework, check iOS ABI
         run: ./gradlew iosSimulatorArm64Test compileKotlinIosArm64 :mrz-camera-ios:assembleTesseraDebugXCFramework :mrz-camera-ios:checkKotlinAbi
+
+  # The enforcement hooks in .claude/settings.json are code and regress like code
+  # (known-pitfalls: "the hook itself needs regression tests"). Their test scripts are
+  # hermetic bash (throwaway temp dirs, never touch the real repo), so they run anywhere.
+  hook-tests:
+    name: hooks · regression tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Run hook regression tests
+        run: |
+          bash scripts/test/standing-obligations.test.sh
+          bash scripts/test/stop-handoff-check.test.sh
+          bash scripts/test-prefer-dev-wrappers.sh
