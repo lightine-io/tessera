@@ -228,16 +228,24 @@ private fun ScannerFlow(
     // else manual entry, else saved image; empty → camera defensively) rather than always camera, so a
     // consumer who disabled camera lands on a working entry point (TES-71).
     //
-    // TES-102: rememberSaveable(stateSaver = ScannerUiStateSaver) — not plain remember — so the whole flow
-    // state survives a configuration change (rotation, font-scale, locale), which recreates the Activity and
-    // used to silently reset the flow to its start screen. See ScannerUiStateSaver.kt for what each variant
-    // restores as. By deliberate contrast, the session-scoped helpers declared right below (decodeRouted,
-    // the consensus tally, sawTextEver, struggleTimeoutElapsed) stay plain remember: they describe the LIVE
-    // camera session — a latch over a stream, a frame-agreement tally, per-session flags — which restarts
-    // fresh after a recreation along with the camera itself, so persisting them would describe a session
-    // that no longer exists.
+    // TES-102: rememberSaveable(stateSaver = scannerUiStateSaver(...)) — not plain remember — so the whole
+    // flow state survives a configuration change (rotation, font-scale, locale), which recreates the Activity
+    // and used to silently reset the flow to its start screen. See ScannerUiStateSaver.kt for what each
+    // variant restores as. Built fresh from config.enabledMethods (rather than a single top-level Saver) so
+    // the restore gate inside it — gateRestoredState — re-validates a restored state against the CURRENT
+    // config: this restores the pre-fix guarantee that recreation re-derives the flow from the CURRENT
+    // enabledMethods (initialState already did this for a fresh flow; a naively-restoring Saver would have
+    // regressed it, letting a saved state resurrect a method the host has since disabled). A host that
+    // mutates enabledMethods MID-session, with no recreation in between, was never re-validated before this
+    // fix either and stays out of scope — nothing here re-checks a live, un-recreated composition.
+    //
+    // By deliberate contrast, the session-scoped helpers declared right below (decodeRouted, the consensus
+    // tally, sawTextEver, struggleTimeoutElapsed) stay plain remember: they describe the LIVE camera session
+    // — a latch over a stream, a frame-agreement tally, per-session flags — which restarts fresh after a
+    // recreation along with the camera itself, so persisting them would describe a session that no longer
+    // exists.
     var uiState: ScannerUiState by rememberSaveable(
-        stateSaver = ScannerUiStateSaver,
+        stateSaver = scannerUiStateSaver(config.enabledMethods),
     ) { mutableStateOf(initialState(config.enabledMethods)) }
 
     // A one-shot latch: once a decode has routed on (to review / read-failed / straight back), later decoded
@@ -465,12 +473,35 @@ private fun ScannerFlow(
         savedImagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
     }
 
+    // TES-102: a saveable latch guarding the auto-launch below. Before this latch, a configuration change
+    // (rotation, font-scale, locale) that landed the restored flow back on AwaitingSavedImagePick re-fired
+    // this effect from scratch — rotating while sitting on the dismissed-picker PROMPT silently re-opened the
+    // system picker with no new user gesture, and rotating while the picker itself was up double-launched it.
+    // rememberSaveable so the latch's own true/false survives the SAME recreation the flow state does, and it
+    // is checked (not just set) before calling enterSavedImage() below: a restore lands on this effect with
+    // the latch already true (it was set true the first time this state was entered, before the recreation),
+    // so the re-fire is suppressed and the prompt just re-shows quietly. Every GENUINE in-session transition
+    // into the state still auto-launches exactly as before: entering it for the first time flips this from
+    // false, and LEAVING the state (the else branch below) resets it back to false, so a later re-entry (the
+    // switcher's Photo tab, a rescan back into saved-image) auto-launches again. Direct enterSavedImage()
+    // calls elsewhere in the flow — the prompt's own "Choose a photo" button, returnToSource, SavedImageEmpty's
+    // re-pick — are a different code path entirely and are unaffected by this latch.
+    var savedImagePickAutoLaunched by rememberSaveable { mutableStateOf(false) }
+
     // The method switcher's Photo tab and the SAVED_IMAGE-only initial state both land on
     // AwaitingSavedImagePick; entering it launches the picker. Keyed on the state object so a re-entry (e.g.
-    // switch away and back to Photo) re-launches — AwaitingSavedImagePick is a data object, so its identity is
-    // stable across recompositions and the effect fires once per transition into it, not on every recompose.
+    // switch away and back to Photo) re-fires this effect — AwaitingSavedImagePick is a data object, so its
+    // identity is stable across recompositions and the effect fires once per transition into it, not on every
+    // recompose — but savedImagePickAutoLaunched (see above) still gates the ACTUAL launch on top of that.
     LaunchedEffect(uiState) {
-        if (uiState == ScannerUiState.AwaitingSavedImagePick) enterSavedImage()
+        if (uiState == ScannerUiState.AwaitingSavedImagePick) {
+            if (!savedImagePickAutoLaunched) {
+                savedImagePickAutoLaunched = true
+                enterSavedImage()
+            }
+        } else {
+            savedImagePickAutoLaunched = false
+        }
     }
 
     // Switching reading method from the switcher: camera → Scanning, photo → the await-pick launcher state,

@@ -125,6 +125,13 @@ kotlin {
             implementation(libs.androidx.compose.ui.test.junit4)
             implementation(libs.androidx.compose.ui.test.manifest)
             implementation(libs.robolectric)
+            // Test-only (TES-102): kotlin-reflect backs ScannerUiStateSaverTest's variant-completeness guard
+            // — `ScannerUiState::class.sealedSubclasses` structurally proves every sealed variant has a codec
+            // test and a representative fixture, so adding a tenth variant without updating either fails
+            // loudly instead of silently shipping unencodable. `kotlin("reflect")` (the same shorthand
+            // `kotlin("test")` above uses) pins it to this module's own Kotlin plugin version automatically,
+            // rather than a separate catalog entry that could drift from it.
+            implementation(kotlin("reflect"))
         }
     }
 }
