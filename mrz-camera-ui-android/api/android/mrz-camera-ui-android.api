@@ -219,6 +219,7 @@ public final class io/lightine/tessera/mrz/camera/ui/R$string {
 	public static field tessera_scanner_saved_image_prompt_title I
 	public static field tessera_scanner_struggling_hint I
 	public static field tessera_scanner_struggling_manual I
+	public static field tessera_scanner_time_remaining I
 	public static field tessera_scanner_title I
 	public static field tessera_scanner_torch I
 	public static field tessera_scanner_torch_state_off I

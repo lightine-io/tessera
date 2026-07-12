@@ -81,6 +81,11 @@
          an empty string) to remove the attribution. -->
     <string name="tessera_scanner_powered_by">Powered by Tessera</string>
 
+    <!-- Scan-timeout countdown chip (TES-125), shown on every screen while the host set a finite scanTimeout.
+         Only the spoken (screen-reader) description; the visible chip shows the M:SS time itself. %1$s is that
+         time (e.g. "1:30"). Overridable like every key. -->
+    <string name="tessera_scanner_time_remaining">Scan time left: %1$s</string>
+
     <!-- ============================ Camera-initializing state (mockup 01b) ============================ -->
     <!-- Shown while the camera + on-device text reader warm up, before the first preview surface arrives, so
          the screen is never a frozen blank. Auto-transitions to the live preview the moment the surface is

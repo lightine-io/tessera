@@ -13,12 +13,14 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * TES-124: locks the start-gating of the two scan-session timers ([`scanTimeout`][MrzScannerConfig.scanTimeout]
- * and [`struggleTimeout`][MrzScannerConfig.struggleTimeout]) — both run through [awaitCameraActiveThenTimeout],
- * which must start counting only once the camera is active (the first non-null preview surface), never while the
- * preview is still loading. The gate is a pure suspend function over a surface-request flow, so virtual time
- * ([runTest]) exercises it with no real camera and no wall-clock wait — the [String] element type stands in for
- * the Android `SurfaceRequest` the production caller passes (the gate only checks nullness).
+ * Locks the start-gating of the camera-scoped [`struggleTimeout`][MrzScannerConfig.struggleTimeout] hint, which
+ * runs through [awaitCameraActiveThenTimeout]: it must start counting only once the camera is active (the first
+ * non-null preview surface), never while the preview is still loading. The gate is a pure suspend function over
+ * a surface-request flow, so virtual time ([runTest]) exercises it with no real camera and no wall-clock wait —
+ * the [String] element type stands in for the Android `SurfaceRequest` the production caller passes (the gate
+ * only checks nullness). (The session-level `scanTimeout` deadline uses a different mechanism — the
+ * lifecycle-aware `rememberScanDeadline` — verified on-device; its pure formatter is covered by
+ * [ScanCountdownFormatTest].)
  */
 @OptIn(ExperimentalCoroutinesApi::class) // advanceTimeBy(Duration) / runCurrent — TestScope virtual-time control
 class ScanSessionTimersTest {

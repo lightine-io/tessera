@@ -13,11 +13,13 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -30,6 +32,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlin.time.Duration
 
 // The shared navigation scaffold (TES-71) that ties every reading method together: a Material 3 Scaffold with
 // a TopAppBar whose ✕ owns cancel on EVERY screen (closing the earlier gap where the review / read-failed /
@@ -111,6 +114,8 @@ internal fun showsMethodSwitcher(state: ScannerUiState): Boolean =
  *   and which tab is highlighted.
  * @param onClose the global cancel (the flow reports `Cancelled(USER_DISMISSED)`).
  * @param onSelectMethod invoked with the tapped method when the user switches.
+ * @param timeRemaining the scan-timeout time left, shown as a countdown chip on every screen; `null` when the
+ *   host left `scanTimeout` at `INFINITE` (no deadline → no chip). See [rememberScanDeadline] / [ScanCountdownChip].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,6 +124,9 @@ internal fun ScannerScaffold(
     currentState: ScannerUiState,
     onClose: () -> Unit,
     onSelectMethod: (ScanMethod) -> Unit,
+    // Default null (no countdown) so the chrome-focused host tests need not thread a deadline; the production
+    // flow always passes the real remaining time from rememberScanDeadline.
+    timeRemaining: Duration? = null,
     content: @Composable () -> Unit,
 ) {
     val closeLabel = stringResource(R.string.tessera_scanner_close)
@@ -137,10 +145,17 @@ internal fun ScannerScaffold(
                         )
                     }
                 },
-                // The privacy / transparency notice (TES-88), reachable on every screen from the shared chrome
-                // rather than repeated as a banner per screen — one coherent, opt-in explanation of what the
-                // scanner does with the document.
-                actions = { PrivacyNoticeAction() },
+                actions = {
+                    // The scan-timeout countdown (TES-125), shown on EVERY screen while a finite scanTimeout runs
+                    // (the host set a session deadline) — so the user always knows there is a limit and how long
+                    // is left, the same way the Powered-by footer is present on every screen. Nothing shows when
+                    // scanTimeout is INFINITE (timeRemaining == null).
+                    if (timeRemaining != null) ScanCountdownChip(timeRemaining)
+                    // The privacy / transparency notice (TES-88), reachable on every screen from the shared chrome
+                    // rather than repeated as a banner per screen — one coherent, opt-in explanation of what the
+                    // scanner does with the document.
+                    PrivacyNoticeAction()
+                },
             )
         },
         // "Powered by Tessera" attribution, shown once on every screen from the shared chrome (a theme-coloured
@@ -185,6 +200,36 @@ private fun PoweredByFooter() {
                 .navigationBarsPadding()
                 .padding(top = 8.dp, bottom = 16.dp),
     )
+}
+
+/**
+ * The scan-timeout countdown chip (TES-125): a small pill in the top bar showing the time left as `M:SS` while a
+ * finite `scanTimeout` runs, present on every screen (the host set a session deadline, and the user should know
+ * there is one and how long is left). A quiet theme-coloured surface — no `material-icons` dependency (the SDK
+ * avoids it, cf. the ✕ and the torch). The visible `M:SS` is locale-neutral digits; a spoken content description
+ * gives screen readers the meaning. Deliberately NOT an assertive live region — a per-second announcement would
+ * spam TalkBack — so it is read on focus, not shouted every tick.
+ */
+@Composable
+private fun ScanCountdownChip(remaining: Duration) {
+    val text = formatCountdown(remaining)
+    val spoken = stringResource(R.string.tessera_scanner_time_remaining, text)
+    Surface(
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        shape = CircleShape,
+        modifier =
+            Modifier
+                .padding(end = 4.dp)
+                .testTag(COUNTDOWN_TEST_TAG)
+                .semantics { contentDescription = spoken },
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+        )
+    }
 }
 
 /**

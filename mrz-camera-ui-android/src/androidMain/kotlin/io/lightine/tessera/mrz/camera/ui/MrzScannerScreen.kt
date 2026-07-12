@@ -55,6 +55,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -91,6 +92,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import io.lightine.tessera.mrz.camera.CameraError
 import io.lightine.tessera.mrz.camera.CameraXMrzScanner
 import io.lightine.tessera.mrz.camera.ConsensusVerdict
@@ -107,6 +109,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * The default Android MRZ scanner screen — the single public entry point of this module. Drop it into a
@@ -294,6 +297,10 @@ private fun ScannerFlow(
     val haptics = LocalHapticFeedback.current
 
     val onCancel = { onResult(MrzScannerResult.Cancelled(DismissReason.USER_DISMISSED)) }
+
+    // The session-level scan-timeout deadline (TES-124) ends the flow as Cancelled(TIMED_OUT). Distinct reason
+    // from USER_DISMISSED — the host can tell "the user gave up" apart from "my time budget elapsed".
+    val onTimedOut = { onResult(MrzScannerResult.Cancelled(DismissReason.TIMED_OUT)) }
 
     // Routing the moment the reader decodes an MRZ, delegated to the pure decision in routeDecode: a parse
     // failure shows the "couldn't read" screen, instant-return hands the decode straight back, and review
@@ -601,11 +608,18 @@ private fun ScannerFlow(
         }
     }
 
+    // The session-level scan-timeout deadline (TES-124): the host's bound on the whole session, so it lives
+    // HERE at the flow level (not in the camera preview) and runs across every screen. Returns the time left for
+    // the countdown chip (null when scanTimeout is INFINITE → no deadline, no chip), and ends the flow as
+    // Cancelled(TIMED_OUT) when it elapses — on whatever screen the user is on.
+    val scanTimeRemaining = rememberScanDeadline(config.scanTimeout, onElapsed = onTimedOut)
+
     ScannerScaffold(
         enabledMethods = config.enabledMethods,
         currentState = uiState,
         onClose = onCancel,
         onSelectMethod = onSelectMethod,
+        timeRemaining = scanTimeRemaining,
     ) {
         ScannerBody(
             state = uiState,
@@ -675,10 +689,6 @@ private fun ScannerBody(
                 onStruggling = onStruggling,
                 onManualEntry = onManualEntry,
                 showManualEntry = showManualEntry,
-                // The whole-scan deadline (TES-85): once the configured scanTimeout elapses with no confirmed
-                // reading, the flow ends as Cancelled(TIMED_OUT). The default (INFINITE) never fires. The
-                // timer itself lives in CameraPreview, per scanning session, so a rescan restarts it.
-                onTimeout = { onResult(MrzScannerResult.Cancelled(DismissReason.TIMED_OUT)) },
             )
         }
 
@@ -961,17 +971,17 @@ internal fun struggleGateAdvance(
 /**
  * Waits for the camera to become active — the first non-null element of [surfaceRequests] (the live-preview
  * `SurfaceRequest`, published only once CameraX binds and opens the camera) — then waits [timeout] and invokes
- * [onElapsed]. This is what makes the two scan-session timers ([`scanTimeout`][MrzScannerConfig.scanTimeout]
- * and [`struggleTimeout`][MrzScannerConfig.struggleTimeout]) measure time the user spent *actively scanning*
- * rather than time that includes camera boot (TES-124): before this gate a short deadline could fire while the
- * preview was still on the loading state (observed live — a 5s `scanTimeout` returned `Cancelled(TIMED_OUT)`
- * before the camera ever appeared).
+ * [onElapsed]. This is what makes the camera-scoped [`struggleTimeout`][MrzScannerConfig.struggleTimeout] measure
+ * time the user spent *actively scanning* rather than time that includes camera boot: before this gate the
+ * "still looking" hint could appear while the preview was still on the loading state. (The session-level
+ * [`scanTimeout`][MrzScannerConfig.scanTimeout] deadline does NOT use this — it is not camera-scoped; see
+ * [rememberScanDeadline].)
  *
- * A non-finite [timeout] ([Duration.INFINITE], the config default for `scanTimeout`) never arms. If the camera
- * never becomes active the function simply suspends at [first] — the loading state carries no deadline of its
- * own; the camera-status notices (in-use / unavailable) own the not-opening paths, and the composition leaving
- * cancels this. Generic over the surface element type and Compose-free so the start-gating is host-testable with
- * virtual time and no real camera; the caller passes `scanner.surfaceRequest`.
+ * A non-finite [timeout] ([Duration.INFINITE]) never arms. If the camera never becomes active the function
+ * simply suspends at [first] — the loading state carries no struggle deadline of its own; the camera-status
+ * notices (in-use / unavailable) own the not-opening paths, and the composition leaving cancels this. Generic
+ * over the surface element type and Compose-free so the start-gating is host-testable with virtual time and no
+ * real camera; the caller passes `scanner.surfaceRequest`.
  */
 internal suspend fun <T> awaitCameraActiveThenTimeout(
     surfaceRequests: Flow<T?>,
@@ -982,6 +992,83 @@ internal suspend fun <T> awaitCameraActiveThenTimeout(
     surfaceRequests.first { it != null }
     delay(timeout)
     onElapsed()
+}
+
+/** How often the session deadline advances its accumulated active time and refreshes the countdown (TES-124). */
+private const val SCAN_DEADLINE_TICK_MS: Long = 500L
+
+/** Semantics anchor for the scan-countdown chip shown on every screen while a finite scanTimeout runs. Not user-facing. */
+internal const val COUNTDOWN_TEST_TAG: String = "tessera-mrz-countdown"
+
+/**
+ * The **session-level** scan-timeout deadline (TES-124/125/126). Returns the time left to display in the
+ * countdown chip, or `null` when [scanTimeout] is [`INFINITE`][Duration.INFINITE] (no deadline → no countdown),
+ * and fires [onElapsed] once the deadline is reached.
+ *
+ * `scanTimeout` is the host's bound on the user's whole *session* (kiosk turnover, a timed onboarding step) —
+ * not a camera-scanning limit — so this clock is deliberately NOT tied to the camera: it starts the moment the
+ * scanner is entered and runs across every screen (camera, manual, photo, review), method-agnostic. It advances
+ * **only while the host is in the foreground** ([Lifecycle.State.RESUMED], via [repeatOnLifecycle]), so time
+ * spent backgrounded, on the lock screen, or with the camera taken by another app — all of which drop the app
+ * below `RESUMED` — is not counted, and the clock resumes from where it paused (TES-126). The accumulated active
+ * time (and the one-shot fired latch) are [rememberSaveable]-backed so the deadline survives a configuration
+ * change (rotation / font-scale / locale), consistent with the flow-state restoration in [ScannerFlow] (TES-102).
+ *
+ * The countdown reads the same accumulated time this clock advances, so the number the user sees and the moment
+ * the flow actually cancels can never disagree ([`Cancelled(TIMED_OUT)`][DismissReason.TIMED_OUT]).
+ */
+@Composable
+private fun rememberScanDeadline(
+    scanTimeout: Duration,
+    onElapsed: () -> Unit,
+): Duration? {
+    if (!scanTimeout.isFinite()) return null
+    val totalMs = scanTimeout.inWholeMilliseconds
+
+    // Total foreground ("active") time consumed so far, and a one-shot latch. rememberSaveable so both survive a
+    // configuration change — the deadline continues across a rotation rather than restarting (TES-126/102).
+    var accumulatedMs by rememberSaveable(totalMs) { mutableStateOf(0L) }
+    var fired by rememberSaveable(totalMs) { mutableStateOf(false) }
+    val currentOnElapsed by rememberUpdatedState(onElapsed)
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(totalMs) {
+        // repeatOnLifecycle runs the block on each RESUMED entry and cancels it when the app leaves RESUMED —
+        // so the accumulation loop only advances while foreground. Re-entry (return from background / unlock /
+        // camera recovered) resumes from the SAVED accumulatedMs, not from zero, and re-reads the wall clock so
+        // the paused gap is never counted.
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            if (fired) return@repeatOnLifecycle
+            var lastTick = SystemClock.elapsedRealtime()
+            while (accumulatedMs < totalMs) {
+                delay(SCAN_DEADLINE_TICK_MS)
+                val now = SystemClock.elapsedRealtime()
+                // Drift-corrected by the monotonic clock: add the REAL elapsed since the last tick, not the
+                // nominal tick, so a scheduler hiccup does not slow the deadline.
+                accumulatedMs = (accumulatedMs + (now - lastTick)).coerceAtMost(totalMs)
+                lastTick = now
+            }
+            if (!fired) {
+                fired = true
+                currentOnElapsed()
+            }
+        }
+    }
+
+    return (totalMs - accumulatedMs).coerceAtLeast(0L).milliseconds
+}
+
+/**
+ * Formats a countdown [Duration] as `M:SS` (minutes:seconds, seconds zero-padded) — the shape the scan-countdown
+ * chip shows. Seconds are rounded **up** so the chip reads `0:01` through the final second and only shows `0:00`
+ * at true expiry; a negative input (should not occur — the caller coerces at zero) clamps to `0:00`. Minutes are
+ * not capped at two digits (a multi-minute host `scanTimeout` renders e.g. `10:00`). Pure, so it is host-tested.
+ */
+internal fun formatCountdown(remaining: Duration): String {
+    val totalSeconds = ((remaining.inWholeMilliseconds + 999L) / 1000L).coerceAtLeast(0L)
+    val minutes = totalSeconds / 60L
+    val seconds = totalSeconds % 60L
+    return "$minutes:${seconds.toString().padStart(2, '0')}"
 }
 
 /**
@@ -1012,8 +1099,6 @@ internal suspend fun <T> awaitCameraActiveThenTimeout(
  *   confirmed across frames); takes render precedence over [struggling].
  * @param onCameraResult every scanner result off the stream, for the flow's continuous reducer.
  * @param onStruggling fired once the struggle timeout elapses with no decode (flips the flow to struggling).
- * @param onTimeout fired once the whole-scan [`scanTimeout`][MrzScannerConfig.scanTimeout] elapses with no
- *   confirmed reading (the flow ends as `Cancelled(TIMED_OUT)`).
  * @param onManualEntry the "type it instead" escape into manual entry.
  * @param showManualEntry whether that escape is offered at all — `false` when the consumer's
  *   [`enabledMethods`][MrzScannerConfig.enabledMethods] excludes [`MANUAL_ENTRY`][ScanMethod.MANUAL_ENTRY], so
@@ -1026,7 +1111,6 @@ private fun CameraCapture(
     gathering: Boolean,
     onCameraResult: (MrzScanResult) -> Unit,
     onStruggling: () -> Unit,
-    onTimeout: () -> Unit,
     onManualEntry: () -> Unit,
     showManualEntry: Boolean,
 ) {
@@ -1063,14 +1147,12 @@ private fun CameraCapture(
         PermissionScreenState.GRANTED -> {
             CameraPreview(
                 struggleTimeout = config.struggleTimeout,
-                scanTimeout = config.scanTimeout,
                 struggling = struggling,
                 gathering = gathering,
                 showTorchButton = config.showTorchButton,
                 torchOnByDefault = config.torchOnByDefault,
                 onCameraResult = onCameraResult,
                 onStruggling = onStruggling,
-                onTimeout = onTimeout,
                 onManualEntry = onManualEntry,
                 showManualEntry = showManualEntry,
             )
@@ -1159,19 +1241,14 @@ private fun Context.openAppSettings() {
  * The struggle timeout is a [LaunchedEffect] that — via [awaitCameraActiveThenTimeout] — waits for the camera
  * to go live, then waits [struggleTimeout] and fires [onStruggling]; it is keyed on the scanner so it starts
  * once per preview session, and the camera keeps running underneath — a later decode still routes normally, and
- * the flow drops the hint on any progress. The config default is 10s (finite); a non-finite value
- * ([Duration.INFINITE]) means "never struggle", so the effect does not arm.
+ * the flow drops the hint on any progress. It starts when the camera goes active (the first preview surface),
+ * not at composition, so the hint cannot appear while the preview is still loading. The config default is 10s
+ * (finite); a non-finite value ([Duration.INFINITE]) means "never struggle", so the effect does not arm.
  *
- * The scan timeout (TES-85) is a second [LaunchedEffect] on the same key, through the same
- * [awaitCameraActiveThenTimeout]: after [scanTimeout] it fires [onTimeout] (the flow ends as
- * `Cancelled(TIMED_OUT)`). It is the whole-scan *deadline* — distinct from the struggle hint, which only nudges —
- * and, like the struggle timer, runs once per scanning session (a rescan re-mounts this preview and restarts it).
- * The default ([Duration.INFINITE]) never arms, so the scanner runs indefinitely unless the consumer sets a
- * finite [scanTimeout].
- *
- * **Both clocks start when the camera goes active** (TES-124) — the first preview surface, not composition —
- * so each measures time the user spent *actively scanning* and neither can fire while the preview is still on
- * the loading/initializing state (camera-boot time is not counted).
+ * This is a *camera-scoped* timer — the "still looking" hint only means anything over the live preview. The
+ * whole-session [`scanTimeout`][MrzScannerConfig.scanTimeout] give-up deadline is deliberately NOT here: it is
+ * the host's bound on the user's whole session (across every screen, not just the camera), so it lives at the
+ * flow level in [rememberScanDeadline] and this preview knows nothing about it.
  *
  * **Torch (TES-84).** When [showTorchButton] is set and the bound camera has a flash unit, a torch toggle
  * ([TorchButton]) overlays the live preview (mockup 01, top-end). The scanner owns the flash — the seam
@@ -1183,14 +1260,12 @@ private fun Context.openAppSettings() {
 @Composable
 private fun CameraPreview(
     struggleTimeout: Duration,
-    scanTimeout: Duration,
     struggling: Boolean,
     gathering: Boolean,
     showTorchButton: Boolean,
     torchOnByDefault: Boolean,
     onCameraResult: (MrzScanResult) -> Unit,
     onStruggling: () -> Unit,
-    onTimeout: () -> Unit,
     onManualEntry: () -> Unit,
     showManualEntry: Boolean,
 ) {
@@ -1285,21 +1360,11 @@ private fun CameraPreview(
 
         // Struggle timeout: after struggleTimeout of ACTIVE scanning with no decode, surface the neutral hint.
         // The camera keeps running, so a decode arriving later still routes; the flow clears the hint on
-        // progress. TES-124: the clock starts when the camera goes live (the first preview surface), not at
-        // mount — so camera-boot time is not counted and the hint cannot appear while still on the loading state.
+        // progress. The clock starts when the camera goes live (the first preview surface), not at mount — so
+        // camera-boot time is not counted and the hint cannot appear while still on the loading state.
+        // (The whole-session scanTimeout deadline is NOT here — it lives at the flow level in rememberScanDeadline.)
         LaunchedEffect(scanner) {
             awaitCameraActiveThenTimeout(scanner.surfaceRequest, struggleTimeout, onStruggling)
-        }
-
-        // Scan timeout (TES-85): the whole-scan deadline. After scanTimeout of ACTIVE scanning with no confirmed
-        // reading, give up and end the flow as Cancelled(TIMED_OUT). Keyed on the scanner so it runs once per
-        // scanning session (a rescan re-mounts this preview and restarts it), mirroring the struggle timer above —
-        // but where struggle only nudges, this ends the flow. INFINITE (the default) never arms. TES-124: like the
-        // struggle timer, the clock starts only once the camera is active (the first preview surface), so a short
-        // deadline cannot fire while the preview is still loading (observed: a 5s timeout returning TIMED_OUT
-        // before the camera ever showed).
-        LaunchedEffect(scanner) {
-            awaitCameraActiveThenTimeout(scanner.surfaceRequest, scanTimeout, onTimeout)
         }
 
         val surfaceRequest by scanner.surfaceRequest.collectAsStateWithLifecycle()

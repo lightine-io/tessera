@@ -123,12 +123,16 @@ public class MrzScannerTheme internal constructor(
  * @property showTorchButton show the torch toggle over the live preview (default true).
  * @property torchOnByDefault start with the torch on (default false).
  * @property struggleTimeout how long the live camera scans with no decode before the "still looking / type it
- *   instead" hint appears (default 10s). Measured from when the camera becomes active (the live preview), not
- *   from when the screen opens — camera-boot time is not counted.
- * @property scanTimeout total time the live camera scans before the scanner gives up and reports
- *   [`Cancelled(TIMED_OUT)`][DismissReason.TIMED_OUT]; [Duration.INFINITE] (the default) never times out.
- *   Like [struggleTimeout], measured from when the camera becomes active, not from when the screen opens, so a
- *   short deadline is not consumed by camera boot.
+ *   instead" hint appears (default 10s). Camera-scoped: measured from when the camera becomes active (the live
+ *   preview), not from when the screen opens — camera-boot time is not counted.
+ * @property scanTimeout the **session** deadline: total time the user may spend in the scanner before it gives
+ *   up and reports [`Cancelled(TIMED_OUT)`][DismissReason.TIMED_OUT]; [Duration.INFINITE] (the default) never
+ *   times out. This is a bound on the whole session for the *host's* sake (e.g. a kiosk or a timed flow), not a
+ *   camera limit: it starts when the user enters the scanner and runs across every screen (camera, manual,
+ *   photo, review) regardless of method. It counts only foreground time — it pauses while the app is
+ *   backgrounded, the device is locked, or the camera is held by another app, and resumes where it left off. Set
+ *   any duration you need; when finite, the scanner shows the user a live countdown of the time left. There is
+ *   no enforced floor, but pick a value generous enough for a real reading (tens of seconds at least).
  * @property consensusReads how many live-camera frames must decode the **same** document before it is
  *   accepted, shedding transient single-frame OCR misreads the MRZ's checksums cannot catch (e.g. a filler
  *   `<` misread as a letter in the name field). Default 2 ([MrzDecodeConsensus.DEFAULT_THRESHOLD]); `1`
