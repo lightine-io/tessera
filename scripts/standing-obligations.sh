@@ -61,7 +61,10 @@ if [ -n "$latest" ]; then
   # is not "postdating" it — for a warning, a false positive is worse than a false
   # negative. `|| true`: outside a git repo (hermetic tests) the pipeline must not
   # kill the hook.
-  h_epoch=$(stat -f %m "$latest" 2>/dev/null || echo 0)
+  # mtime epoch, portably: GNU stat wants -c %Y; BSD/macOS wants -f %m. GNU must be
+  # tried FIRST — on GNU, `stat -f %m` exits 0 while printing a filesystem report
+  # (garbage for the arithmetic below); on BSD, `stat -c` fails cleanly.
+  h_epoch=$(stat -c %Y "$latest" 2>/dev/null || stat -f %m "$latest" 2>/dev/null || echo 0)
   stale=$(git -C "$root" log --oneline --since="@$((h_epoch + 1))" 2>/dev/null | wc -l | tr -d ' ' || true)
   if [ "${stale:-0}" -gt 0 ]; then
     echo "⚠ STALE: ${stale} commit(s) postdate this handoff — trust git log/status over the banner."

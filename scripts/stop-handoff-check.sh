@@ -31,7 +31,9 @@ if [ -n "$newest" ] && [ "$newest" -nt "$marker" ]; then
   exit 0
 fi
 
-since=$(stat -f %m "$marker" 2>/dev/null || echo 0)
+# mtime epoch, portably: GNU stat first (-c %Y) — on GNU, `stat -f %m` exits 0 while
+# printing a filesystem report; on BSD/macOS, `stat -c` fails cleanly to the fallback.
+since=$(stat -c %Y "$marker" 2>/dev/null || stat -f %m "$marker" 2>/dev/null || echo 0)
 # `|| true`: outside a git repo (hermetic tests) the pipeline must not kill the hook.
 commits=$(git -C "$root" log --oneline --since="@${since}" 2>/dev/null | wc -l | tr -d ' ' || true)
 yt=""

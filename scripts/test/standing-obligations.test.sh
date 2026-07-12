@@ -83,7 +83,9 @@ assert_absent "$out4" "STALE"
 
 echo "Test 5: commit in the SAME second as the handoff write -> no false STALE"
 commit_epoch="$(git -C "$tmp" log -1 --format=%ct)"
-touch -t "$(date -r "$commit_epoch" +%Y%m%d%H%M.%S)" "$newer"  # mtime == commit time
+# epoch → touch-stamp, portably: GNU date wants -d @epoch; BSD/macOS wants -r epoch.
+stamp="$(date -d "@$commit_epoch" +%Y%m%d%H%M.%S 2>/dev/null || date -r "$commit_epoch" +%Y%m%d%H%M.%S)"
+touch -t "$stamp" "$newer"  # mtime == commit time
 out5="$(CLAUDE_PROJECT_DIR="$tmp" bash "$hook")"
 assert_absent "$out5" "STALE"
 
