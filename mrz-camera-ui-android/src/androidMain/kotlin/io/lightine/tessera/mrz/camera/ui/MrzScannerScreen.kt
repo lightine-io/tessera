@@ -103,6 +103,8 @@ import io.lightine.tessera.mrz.camera.SavedImageReadingAcknowledgement
 import io.lightine.tessera.mrz.camera.mlKitSavedImageRecognizer
 import io.lightine.tessera.mrz.parsing.ParseResult
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
 
@@ -957,6 +959,32 @@ internal fun struggleGateAdvance(
 ): Boolean = sawTextEver || effect.sawText
 
 /**
+ * Waits for the camera to become active — the first non-null element of [surfaceRequests] (the live-preview
+ * `SurfaceRequest`, published only once CameraX binds and opens the camera) — then waits [timeout] and invokes
+ * [onElapsed]. This is what makes the two scan-session timers ([`scanTimeout`][MrzScannerConfig.scanTimeout]
+ * and [`struggleTimeout`][MrzScannerConfig.struggleTimeout]) measure time the user spent *actively scanning*
+ * rather than time that includes camera boot (TES-124): before this gate a short deadline could fire while the
+ * preview was still on the loading state (observed live — a 5s `scanTimeout` returned `Cancelled(TIMED_OUT)`
+ * before the camera ever appeared).
+ *
+ * A non-finite [timeout] ([Duration.INFINITE], the config default for `scanTimeout`) never arms. If the camera
+ * never becomes active the function simply suspends at [first] — the loading state carries no deadline of its
+ * own; the camera-status notices (in-use / unavailable) own the not-opening paths, and the composition leaving
+ * cancels this. Generic over the surface element type and Compose-free so the start-gating is host-testable with
+ * virtual time and no real camera; the caller passes `scanner.surfaceRequest`.
+ */
+internal suspend fun <T> awaitCameraActiveThenTimeout(
+    surfaceRequests: Flow<T?>,
+    timeout: Duration,
+    onElapsed: () -> Unit,
+) {
+    if (!timeout.isFinite()) return
+    surfaceRequests.first { it != null }
+    delay(timeout)
+    onElapsed()
+}
+
+/**
  * The camera-permission gate and, once the permission is held, the live preview with a results collector.
  * Reads whether `CAMERA` is held and re-reads it whenever the host returns to the foreground, so a grant made
  * outside this screen (via the host's request OR via the OS settings) takes effect without the consumer
@@ -1128,16 +1156,22 @@ private fun Context.openAppSettings() {
  * collector — stop running the instant that happens; recovery is the flow's `ON_RESUME` observer re-mounting
  * a fresh preview, not anything observed from here.
  *
- * The struggle timeout is a [LaunchedEffect] that waits [struggleTimeout] and then fires [onStruggling]; it
- * is keyed on the scanner so it starts once per preview session, and the camera keeps running underneath —
- * a later decode still routes normally, and the flow drops the hint on any progress. The config default is
- * 10s (finite); a non-finite value ([Duration.INFINITE]) means "never struggle", so the effect does not arm.
+ * The struggle timeout is a [LaunchedEffect] that — via [awaitCameraActiveThenTimeout] — waits for the camera
+ * to go live, then waits [struggleTimeout] and fires [onStruggling]; it is keyed on the scanner so it starts
+ * once per preview session, and the camera keeps running underneath — a later decode still routes normally, and
+ * the flow drops the hint on any progress. The config default is 10s (finite); a non-finite value
+ * ([Duration.INFINITE]) means "never struggle", so the effect does not arm.
  *
- * The scan timeout (TES-85) is a second [LaunchedEffect] on the same key: after [scanTimeout] with no
- * confirmed reading it fires [onTimeout] (the flow ends as `Cancelled(TIMED_OUT)`). It is the whole-scan
- * *deadline* — distinct from the struggle hint, which only nudges — and, like the struggle timer, runs once
- * per scanning session (a rescan re-mounts this preview and restarts it). The default ([Duration.INFINITE])
- * never arms, so the scanner runs indefinitely unless the consumer sets a finite [scanTimeout].
+ * The scan timeout (TES-85) is a second [LaunchedEffect] on the same key, through the same
+ * [awaitCameraActiveThenTimeout]: after [scanTimeout] it fires [onTimeout] (the flow ends as
+ * `Cancelled(TIMED_OUT)`). It is the whole-scan *deadline* — distinct from the struggle hint, which only nudges —
+ * and, like the struggle timer, runs once per scanning session (a rescan re-mounts this preview and restarts it).
+ * The default ([Duration.INFINITE]) never arms, so the scanner runs indefinitely unless the consumer sets a
+ * finite [scanTimeout].
+ *
+ * **Both clocks start when the camera goes active** (TES-124) — the first preview surface, not composition —
+ * so each measures time the user spent *actively scanning* and neither can fire while the preview is still on
+ * the loading/initializing state (camera-boot time is not counted).
  *
  * **Torch (TES-84).** When [showTorchButton] is set and the bound camera has a flash unit, a torch toggle
  * ([TorchButton]) overlays the live preview (mockup 01, top-end). The scanner owns the flash — the seam
@@ -1249,24 +1283,23 @@ private fun CameraPreview(
             scanner.results.collect { result -> onCameraResult(result) }
         }
 
-        // Struggle timeout: after struggleTimeout with no decode, surface the neutral hint. The camera keeps
-        // running, so a decode arriving later still routes; the flow clears the hint on progress.
+        // Struggle timeout: after struggleTimeout of ACTIVE scanning with no decode, surface the neutral hint.
+        // The camera keeps running, so a decode arriving later still routes; the flow clears the hint on
+        // progress. TES-124: the clock starts when the camera goes live (the first preview surface), not at
+        // mount — so camera-boot time is not counted and the hint cannot appear while still on the loading state.
         LaunchedEffect(scanner) {
-            if (struggleTimeout.isFinite()) {
-                delay(struggleTimeout)
-                onStruggling()
-            }
+            awaitCameraActiveThenTimeout(scanner.surfaceRequest, struggleTimeout, onStruggling)
         }
 
-        // Scan timeout (TES-85): the whole-scan deadline. After scanTimeout with no confirmed reading, give up and
-        // end the flow as Cancelled(TIMED_OUT). Keyed on the scanner so it runs once per scanning session (a
-        // rescan re-mounts this preview and restarts it), mirroring the struggle timer above — but where struggle
-        // only nudges, this ends the flow. INFINITE (the default) never arms.
+        // Scan timeout (TES-85): the whole-scan deadline. After scanTimeout of ACTIVE scanning with no confirmed
+        // reading, give up and end the flow as Cancelled(TIMED_OUT). Keyed on the scanner so it runs once per
+        // scanning session (a rescan re-mounts this preview and restarts it), mirroring the struggle timer above —
+        // but where struggle only nudges, this ends the flow. INFINITE (the default) never arms. TES-124: like the
+        // struggle timer, the clock starts only once the camera is active (the first preview surface), so a short
+        // deadline cannot fire while the preview is still loading (observed: a 5s timeout returning TIMED_OUT
+        // before the camera ever showed).
         LaunchedEffect(scanner) {
-            if (scanTimeout.isFinite()) {
-                delay(scanTimeout)
-                onTimeout()
-            }
+            awaitCameraActiveThenTimeout(scanner.surfaceRequest, scanTimeout, onTimeout)
         }
 
         val surfaceRequest by scanner.surfaceRequest.collectAsStateWithLifecycle()

@@ -125,6 +125,10 @@ kotlin {
             implementation(libs.androidx.compose.ui.test.junit4)
             implementation(libs.androidx.compose.ui.test.manifest)
             implementation(libs.robolectric)
+            // Test-only (TES-124): runTest + virtual time to exercise awaitCameraActiveThenTimeout — the pure
+            // suspend gate that starts each scan-session timer only once the camera preview is active — without
+            // a real camera or wall-clock delay. Same catalog entry mrz-camera-core's scan() tests use.
+            implementation(libs.kotlinx.coroutines.test)
             // Test-only (TES-102): kotlin-reflect backs ScannerUiStateSaverTest's variant-completeness guard
             // — `ScannerUiState::class.sealedSubclasses` structurally proves every sealed variant has a codec
             // test and a representative fixture, so adding a tenth variant without updating either fails

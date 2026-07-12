@@ -122,10 +122,13 @@ public class MrzScannerTheme internal constructor(
  * @property reviewMode review (default) vs instant-return once an MRZ decodes.
  * @property showTorchButton show the torch toggle over the live preview (default true).
  * @property torchOnByDefault start with the torch on (default false).
- * @property struggleTimeout how long with no decode before the "still looking / type it instead" hint
- *   appears (default 10s).
- * @property scanTimeout total time before the scanner gives up and reports
+ * @property struggleTimeout how long the live camera scans with no decode before the "still looking / type it
+ *   instead" hint appears (default 10s). Measured from when the camera becomes active (the live preview), not
+ *   from when the screen opens — camera-boot time is not counted.
+ * @property scanTimeout total time the live camera scans before the scanner gives up and reports
  *   [`Cancelled(TIMED_OUT)`][DismissReason.TIMED_OUT]; [Duration.INFINITE] (the default) never times out.
+ *   Like [struggleTimeout], measured from when the camera becomes active, not from when the screen opens, so a
+ *   short deadline is not consumed by camera boot.
  * @property consensusReads how many live-camera frames must decode the **same** document before it is
  *   accepted, shedding transient single-frame OCR misreads the MRZ's checksums cannot catch (e.g. a filler
  *   `<` misread as a letter in the name field). Default 2 ([MrzDecodeConsensus.DEFAULT_THRESHOLD]); `1`
