@@ -90,10 +90,9 @@ logs/
 # real homes (rules / tasks / a future YouTrack) once acted on. Same leading-slash rationale as above.
 /.plans/
 
-# Default-UI design mockups live in .design/ (self-contained HTML, the 0.5.0 scanner screens).
-# The LOCAL files are the source of truth; the Claude Design project "Tessera Default UI" is a one-way
-# rendered mirror (TES-51, .claude/rules/claude-design.md). Local working material (content-placement:
-# local, not the public repo). Same leading-slash rationale.
+# Default-UI design mockups live in .design/ (self-contained local HTML, the 0.5.0 scanner screens).
+# Local working material (content-placement: local, not the public repo); the design-platform
+# decision is open (TES-51). Same leading-slash rationale.
 /.design/
 
 # Local reference copies of external specifications live in .spec/ (e.g., ICAO Doc 9303 PDFs
