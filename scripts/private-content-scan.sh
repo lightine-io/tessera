@@ -39,6 +39,35 @@ set -euo pipefail
 PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}"
 cd "$PROJECT_ROOT"
 
+# ── MRZ-literal guard ─────────────────────────────────────────────────────────
+# "Never commit real document data" made mechanical (2026-07-12 overhaul): a line
+# in MAIN source sets or root-level docs containing a 30+ char MRZ-charset run
+# with at least one filler '<' is blocked. Tests/fixtures are NOT scanned — they
+# legitimately hold synthetic MRZ from the SDK's own generator. Allowed anywhere:
+#   - the published ICAO Doc 9303 specimen (ERIKSSON/UTO family)
+#   - lines carrying an explicit `mrz-ok` marker (curated synthetic examples)
+# Runs before (and independent of) the terms-file scan below: this half protects
+# every contributor, terms file or not.
+MRZ_ALLOW='UTOERIKSSON|L898902C3|mrz-ok'
+MRZ_HITS=$(
+    git ls-files -z '*/src/*Main/**' '*.md' ':!:*/src/*Test*/**' \
+        | xargs -0 grep -EHn '[A-Z0-9<]{30,}' 2>/dev/null \
+        | grep -E ':.*<' \
+        | grep -vE "$MRZ_ALLOW" \
+        || true
+)
+if [ -n "$MRZ_HITS" ]; then
+    {
+        echo "private-content-scan: BLOCKED — MRZ-looking literal outside test fixtures."
+        echo ""
+        echo "$MRZ_HITS"
+        echo ""
+        echo "Real document data must never be committed. If this is a curated"
+        echo "synthetic/specimen example, append an 'mrz-ok' marker comment to the line."
+    } >&2
+    exit 2
+fi
+
 TERMS_FILE=".claude/private-content-terms.local"
 
 if [ ! -f "$TERMS_FILE" ]; then

@@ -1,0 +1,61 @@
+# Board automation (TRIAL — 2026-07-12 overhaul, decision 4): GitHub PR events move
+# the YouTrack Stage field, so the board mirrors reality without anyone remembering.
+#   PR opened/reopened            → Stage Review
+#   PR merged, label `device-qa`  → Stage Test    (device QA runs before Staging;
+#                                                  decision 3: Test = device-QA stage)
+#   PR merged, otherwise          → Stage Staging (merged, unreleased)
+#   Release→Done stays with the release-gate ritual (deliberate human moment).
+#
+# The issue ID is taken from the head branch name or PR title (first TES-<n>).
+# Fails soft by design: no issue ID, no secret, fork PR, or YouTrack down → skip
+# silently. YouTrack is an enhancement, never a dependency (.claude/rules/youtrack.md).
+#
+# Needs the YOUTRACK_TOKEN repo secret: a YouTrack permanent token whose account can
+# update TES issues. Rotate alongside other credentials.
+
+name: youtrack sync
+
+on:
+  pull_request:
+    types: [opened, reopened, closed]
+
+permissions: {}
+
+jobs:
+  sync-stage:
+    name: board · stage sync
+    runs-on: ubuntu-latest
+    # Same-repo PRs only: fork PRs carry no secrets and shouldn't drive the board.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Move the linked issue's Stage
+        env:
+          YOUTRACK_TOKEN: ${{ secrets.YOUTRACK_TOKEN }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+          TITLE: ${{ github.event.pull_request.title }}
+          ACTION: ${{ github.event.action }}
+          MERGED: ${{ github.event.pull_request.merged }}
+          HAS_DEVICE_QA: ${{ contains(github.event.pull_request.labels.*.name, 'device-qa') }}
+        run: |
+          [ -n "$YOUTRACK_TOKEN" ] || { echo "No YOUTRACK_TOKEN secret — skipping (trial not armed)."; exit 0; }
+          issue=$(printf '%s\n%s\n' "$BRANCH" "$TITLE" | grep -oE 'TES-[0-9]+' | head -1 || true)
+          [ -n "$issue" ] || { echo "No TES-<n> in branch or title — skipping."; exit 0; }
+          if [ "$ACTION" = "closed" ]; then
+            [ "$MERGED" = "true" ] || { echo "PR closed without merge — leaving stage untouched."; exit 0; }
+            if [ "$HAS_DEVICE_QA" = "true" ]; then stage="Test"; else stage="Staging"; fi
+          else
+            stage="Review"
+          fi
+          echo "→ $issue: Stage $stage"
+          code=$(curl -sS -o /tmp/yt-resp.json -w '%{http_code}' \
+            -X POST 'https://lightine.youtrack.cloud/api/commands' \
+            -H "Authorization: Bearer $YOUTRACK_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data "{\"query\": \"Stage $stage\", \"issues\": [{\"idReadable\": \"$issue\"}]}" \
+            || echo "000")
+          if [ "$code" = "200" ]; then
+            echo "Moved $issue → $stage."
+          else
+            echo "YouTrack call returned $code — board not updated (soft-fail by design):"
+            cat /tmp/yt-resp.json 2>/dev/null || true
+          fi
