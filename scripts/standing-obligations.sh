@@ -39,11 +39,17 @@ rm -f "$root/.handoffs/.handoff-reminded" "$root/.handoffs/.substantive"
 # the now-usually-empty .plans sweep — is the real orientation artifact. Reads the file
 # live each run, so it can never drift from what was actually written.
 # Once-per-session ssh-agent check: commit signing hangs ~2min when the agent is
-# empty (macOS clears it at login). Warn here — at session start, not per-commit —
-# so the first signed commit never hits the hang. Only the maintainer loads the key.
+# empty (macOS clears it at login). The key's passphrase lives in the macOS keychain
+# (maintainer ran `ssh-add --apple-use-keychain` 2026-07-12), so loading is
+# non-interactive: self-heal here instead of warning. `--apple-load-keychain` is
+# macOS-only and touches no key material directly — it asks the OS keychain to load
+# whatever it holds. Fails silently elsewhere; warn only if the agent is still empty.
 if ! ssh-add -l >/dev/null 2>&1; then
-  echo "⚠ ssh-agent has no identities — the first signed commit will hang. Ask the maintainer to run: ssh-add --apple-load-keychain"
-  echo ""
+  ssh-add --apple-load-keychain >/dev/null 2>&1 || true
+  if ! ssh-add -l >/dev/null 2>&1; then
+    echo "⚠ ssh-agent has no identities (keychain auto-load failed) — the first signed commit will hang. Ask the maintainer to run: ssh-add --apple-load-keychain"
+    echo ""
+  fi
 fi
 
 hd="$root/.handoffs"
