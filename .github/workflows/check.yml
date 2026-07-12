@@ -242,3 +242,11 @@ jobs:
           bash scripts/test/standing-obligations.test.sh
           bash scripts/test/stop-handoff-check.test.sh
           bash scripts/test-prefer-dev-wrappers.sh
+
+      # The constitution has a hard size cap (CLAUDE.md's own first paragraph): past
+      # ~200 lines instruction-following degrades and sediment creeps back.
+      - name: Constitution size guard (CLAUDE.md ≤ 200 lines)
+        run: |
+          lines=$(wc -l < CLAUDE.md)
+          echo "CLAUDE.md: $lines lines (hard cap 200)"
+          [ "$lines" -le 200 ]

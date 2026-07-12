@@ -52,6 +52,16 @@ if ! ssh-add -l >/dev/null 2>&1; then
   fi
 fi
 
+# Source-truth security line: open Dependabot alerts, from the API — never from a
+# handoff (2026-07-12 audit: handoffs said "1 critical" while GitHub held 15 alerts).
+# --cache bounds latency; every failure path (offline, no gh, no repo, no permission)
+# is silent — this line is an enhancement, never a blocker.
+alerts=$(gh api 'repos/{owner}/{repo}/dependabot/alerts?state=open&per_page=100' --cache 1h --jq length 2>/dev/null || true)
+if [ -n "${alerts:-}" ] && [ "$alerts" -gt 0 ] 2>/dev/null; then
+  echo "⚠ Open Dependabot alerts: $alerts (source: gh api — trust this over any note; posture: hybrid-by-reachability)"
+  echo ""
+fi
+
 hd="$root/.handoffs"
 latest=$(ls -1 "$hd"/SESSION-HANDOFF-*.md 2>/dev/null | sort -r | head -1 || true)
 if [ -n "$latest" ]; then
