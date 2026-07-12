@@ -84,7 +84,7 @@ If a prescribed driver is absent, surface it — never silently fall back.
 | What exists; API + feature docs; decisions | [`CHANGELOG.md`](CHANGELOG.md) · [feature docs TES-A-16](https://lightine.youtrack.cloud/articles/TES-A-16) · [ADRs TES-A-17](https://lightine.youtrack.cloud/articles/TES-A-17) |
 | Principles · scope · architecture · testing · conventions · versioning | KB [TES-A-5](https://lightine.youtrack.cloud/articles/TES-A-5) · [TES-A-62](https://lightine.youtrack.cloud/articles/TES-A-62) · [TES-A-9](https://lightine.youtrack.cloud/articles/TES-A-9) · [TES-A-15](https://lightine.youtrack.cloud/articles/TES-A-15) · [TES-A-20](https://lightine.youtrack.cloud/articles/TES-A-20) · [TES-A-8](https://lightine.youtrack.cloud/articles/TES-A-8) |
 | Work items, backlog, why | YouTrack board `TES` — stages: Backlog · Develop · Review (PR open) · Test (device QA) · Staging (merged, unreleased) · Done (released) |
-| Engineering rules by area (load on touch) | [`.claude/rules/`](.claude/rules/) — API design, types module, usage examples, vendor docs, mobile workflow, guides, placement, naming |
+| Engineering rules by area (load on touch) | [`.claude/rules/`](.claude/rules/) — API design, types module, usage examples, vendor docs, mobile workflow, guides, placement, naming, design sync |
 | Git/PR mechanics | [`.claude/git-workflow.md`](.claude/git-workflow.md) |
 | Release ritual (pre-tag gates, review agents, tech-stack review) | [`.claude/skills/release-gate/SKILL.md`](.claude/skills/release-gate/SKILL.md) |
 | Dependency cadence (Apr 1 / Oct 1 — CI opens the issue) | [`.claude/skills/dependency-upgrade-cadence/SKILL.md`](.claude/skills/dependency-upgrade-cadence/SKILL.md) — includes the CLAUDE.md health review |
