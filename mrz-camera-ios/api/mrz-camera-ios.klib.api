@@ -24,6 +24,7 @@ final class io.lightine.tessera.mrz.camera/VisionMrzTextRecognizer : io.lightine
     constructor <init>() // io.lightine.tessera.mrz.camera/VisionMrzTextRecognizer.<init>|<init>(){}[0]
 
     final fun close() // io.lightine.tessera.mrz.camera/VisionMrzTextRecognizer.close|close(){}[0]
+    final fun restrictToMrzBand() // io.lightine.tessera.mrz.camera/VisionMrzTextRecognizer.restrictToMrzBand|restrictToMrzBand(){}[0]
     final suspend fun recognize(kotlinx.cinterop/CPointer<cnames.structs/opaqueCMSampleBuffer>): io.lightine.tessera.mrz.camera/RecognizedText // io.lightine.tessera.mrz.camera/VisionMrzTextRecognizer.recognize|recognize(kotlinx.cinterop.CPointer<cnames.structs.opaqueCMSampleBuffer>){}[0]
 }
 

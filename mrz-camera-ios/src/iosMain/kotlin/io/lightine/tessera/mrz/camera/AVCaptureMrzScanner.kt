@@ -35,8 +35,10 @@ import platform.AVFoundation.AVCaptureDeviceInput
 import platform.AVFoundation.AVCaptureDevicePosition
 import platform.AVFoundation.AVCaptureDevicePositionBack
 import platform.AVFoundation.AVCaptureDeviceTypeBuiltInWideAngleCamera
+import platform.AVFoundation.AVCaptureFocusModeContinuousAutoFocus
 import platform.AVFoundation.AVCaptureOutput
 import platform.AVFoundation.AVCaptureSession
+import platform.AVFoundation.AVCaptureSessionInterruptionEndedNotification
 import platform.AVFoundation.AVCaptureSessionInterruptionReasonKey
 import platform.AVFoundation.AVCaptureSessionInterruptionReasonVideoDeviceInUseByAnotherClient
 import platform.AVFoundation.AVCaptureSessionRuntimeErrorNotification
@@ -45,6 +47,8 @@ import platform.AVFoundation.AVCaptureVideoDataOutput
 import platform.AVFoundation.AVCaptureVideoDataOutputSampleBufferDelegateProtocol
 import platform.AVFoundation.AVMediaTypeVideo
 import platform.AVFoundation.authorizationStatusForMediaType
+import platform.AVFoundation.focusMode
+import platform.AVFoundation.isFocusModeSupported
 import platform.CoreFoundation.CFRelease
 import platform.CoreFoundation.CFRetain
 import platform.CoreMedia.CMSampleBufferRef
@@ -212,6 +216,27 @@ public class AVCaptureMrzScanner(
         ownedRecognizer?.close()
     }
 
+    // Explicit continuous autofocus, applied right after the device is discovered (session setup) — the
+    // iOS counterpart of CameraX's CONTROL_AF_MODE_CONTINUOUS_PICTURE default (see CameraXMrzScanner's
+    // comment on the one-shot-lock pitfall TES-86 found there: a one-shot focus converges once and then
+    // holds, so a document brought in too close and then pulled back stays soft; continuous AF keeps
+    // re-focusing as the scene changes, which is what a handheld MRZ scan needs). Made explicit rather than
+    // left to whichever focus mode the device starts in, mirroring the Android decision even though this
+    // particular failure mode has not been reproduced on iOS — device verification is TES-129 wave 4.
+    // Never throws: a device that does not support continuous AF, or that cannot be locked for
+    // configuration right now (e.g. already locked by another client), simply keeps its current focus mode
+    // — a focus preference is an optimisation, not a precondition for capture.
+    private fun setContinuousAutoFocusIfSupported(device: AVCaptureDevice) {
+        if (!device.isFocusModeSupported(AVCaptureFocusModeContinuousAutoFocus)) return
+        memScoped {
+            val errorPtr = alloc<ObjCObjectVar<NSError?>>()
+            if (device.lockForConfiguration(errorPtr.ptr)) {
+                device.focusMode = AVCaptureFocusModeContinuousAutoFocus
+                device.unlockForConfiguration()
+            }
+        }
+    }
+
     // The AVFoundation capture session bridged to a Flow. Setup runs lazily inside the flow (on the
     // collecting coroutine) so a setup failure — permission not granted, no camera, cannot configure —
     // is thrown here and routed through scan()'s catch -> cameraErrorFor into a CameraError, exactly like
@@ -239,6 +264,10 @@ public class AVCaptureMrzScanner(
                     ).devices
                     .firstOrNull() as? AVCaptureDevice
                     ?: throw CameraUnavailableException("no camera available for the requested position")
+
+            // Explicit continuous autofocus (see setContinuousAutoFocusIfSupported) — set right after the
+            // device is found, before it is wired into the session.
+            setContinuousAutoFocusIfSupported(device)
 
             val input =
                 memScoped {
@@ -324,6 +353,16 @@ public class AVCaptureMrzScanner(
                         )
                     }
                 }
+            // Deliberately a no-op. AVFoundation resumes the session and starts delivering frames again on
+            // its own once the interruption clears — frames flowing again through the capture delegate IS
+            // the recovery signal (mirrors Android's recoverable model, where a CameraState tick with no
+            // error just clears the recoverable-code de-dup latch; AVFoundation's interruption-ended
+            // notification fires once per interruption rather than on a repeating tick, so there is no
+            // latch here to clear and nothing else to do). The observer exists so that is explicit and
+            // torn down deliberately, rather than "nothing observes this notification" being ambiguous
+            // between "handled elsewhere" and "never considered".
+            val interruptionEndedObserver =
+                center.addObserverForName(AVCaptureSessionInterruptionEndedNotification, session, null) {}
             val runtimeErrorObserver =
                 center.addObserverForName(AVCaptureSessionRuntimeErrorNotification, session, null) {
                     frames.close(CameraUnavailableException("the capture session reported a runtime error"))
@@ -337,6 +376,7 @@ public class AVCaptureMrzScanner(
             } finally {
                 mutablePreviewSession.value = null
                 center.removeObserver(interruptionObserver)
+                center.removeObserver(interruptionEndedObserver)
                 center.removeObserver(runtimeErrorObserver)
                 output.setSampleBufferDelegate(null, null)
                 captureDelegate = null

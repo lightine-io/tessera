@@ -3,6 +3,7 @@ package io.lightine.tessera.mrz.camera
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.COpaquePointer
+import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCObjectVar
 import kotlinx.cinterop.alloc
@@ -14,6 +15,8 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.useContents
 import kotlinx.cinterop.value
+import platform.CoreGraphics.CGRect
+import platform.CoreGraphics.CGRectMake
 import platform.CoreMedia.CMSampleBufferGetImageBuffer
 import platform.CoreMedia.CMSampleBufferRef
 import platform.CoreVideo.CVBufferPropagateAttachments
@@ -35,12 +38,14 @@ import platform.CoreVideo.CVPixelBufferUnlockBaseAddress
 import platform.CoreVideo.kCVPixelBufferLock_ReadOnly
 import platform.CoreVideo.kCVReturnSuccess
 import platform.Foundation.NSError
+import platform.ImageIO.kCGImagePropertyOrientationRight
 import platform.Vision.VNImageRequestHandler
 import platform.Vision.VNRecognizeTextRequest
 import platform.Vision.VNRecognizedText
 import platform.Vision.VNRecognizedTextObservation
 import platform.Vision.VNRequestTextRecognitionLevelAccurate
 import platform.posix.memcpy
+import kotlin.concurrent.Volatile
 
 /**
  * The iOS [MrzTextRecognizer], backed by Apple Vision (`VNRecognizeTextRequest`). It reads each
@@ -93,6 +98,11 @@ public class VisionMrzTextRecognizer :
     private var reusableHeight: ULong = 0u
     private var reusableFormat: UInt = 0u
 
+    // When set, Vision restricts recognition to the MRZ band (see restrictToMrzBand) instead of the whole
+    // frame. @Volatile because it may be set from any thread while [recognize] reads it on the analysis
+    // thread — the Android counterpart of MlKitMrzTextRecognizer's bandRestricted.
+    @Volatile private var bandRestricted: Boolean = false
+
     // One Vision request, configured once and reused across frames. Vision supports running a request
     // repeatedly via performRequests, and reuse avoids re-allocating the request (and re-resolving its
     // text-recognition model) on every frame. recognize() is called serially on the analysis thread, so a
@@ -102,6 +112,30 @@ public class VisionMrzTextRecognizer :
             setRecognitionLevel(VNRequestTextRecognitionLevelAccurate)
             setUsesLanguageCorrection(false)
         }
+    }
+
+    /**
+     * Restrict OCR to the **MRZ band** — a centred horizontal band spanning the full width of the frame,
+     * matching the on-screen framing guide. Opt-in (the default UI enables it; headless reading stays
+     * full-frame). It changes only *where* Vision looks, never what is reported (Principle 1 untouched — it
+     * makes no trust decision and does not detect the MRZ, it restricts a fixed region). Idempotent; call
+     * before reading. The band is a fixed internal fraction ([MRZ_BAND_HEIGHT_FRACTION]) — same name and
+     * value as the Android counterpart's `MRZ_BAND_HEIGHT_FRACTION`. This is the Apple Vision counterpart
+     * of ML Kit's crop-the-input approach — ML Kit has no region-of-interest, so Android crops the frame;
+     * Vision has one ([VNRecognizeTextRequest.regionOfInterest]), so this sets it instead of cropping.
+     *
+     * Also fixes the orientation the request runs with. Vision's `regionOfInterest` is normalized against
+     * the image Vision considers *upright*, but this scanner's camera buffers otherwise reach Vision in the
+     * sensor's raw (landscape) orientation — neither this recognizer nor the owning `AVCaptureMrzScanner`
+     * rotates them (TES-86). So restricting the band also passes Vision the documented back-camera/portrait
+     * orientation (`.right` — the exact case Apple's own `CGImagePropertyOrientation` documentation uses:
+     * a portrait photo's sensor data is landscape and tagged `.right`), so the band lands on the actual MRZ
+     * band and the cropped OCR itself reads upright text. This correction is scoped to the opt-in path
+     * only: the unrestricted default below is unchanged (no orientation, full frame), so a headless
+     * consumer's reading stays exactly what shipped.
+     */
+    public fun restrictToMrzBand() {
+        bandRestricted = true
     }
 
     override suspend fun recognize(frame: CMSampleBufferRef): RecognizedText {
@@ -116,7 +150,18 @@ public class VisionMrzTextRecognizer :
         // Drain Vision's per-frame autoreleased *objects* (request handler, results, observations) on this
         // run-loop-less analysis thread; without an enclosing pool they would live until the next GC.
         return autoreleasepool {
-            recognize(VNImageRequestHandler(copy, emptyMap<Any?, Any?>()))
+            val handler =
+                if (bandRestricted) {
+                    // Both set on every frame (cheap struct/property assignment): the region-of-interest
+                    // rect never changes, but writing it here — rather than once in restrictToMrzBand() —
+                    // keeps the mutation and its use on the same (analysis) thread, avoiding any
+                    // cross-thread visibility question for a plain (non-Kotlin-managed) ObjC property.
+                    textRequest.setRegionOfInterest(mrzBandRegionOfInterest)
+                    VNImageRequestHandler(copy, kCGImagePropertyOrientationRight, emptyMap<Any?, Any?>())
+                } else {
+                    VNImageRequestHandler(copy, emptyMap<Any?, Any?>())
+                }
+            recognize(handler)
         }
     }
 
@@ -124,6 +169,16 @@ public class VisionMrzTextRecognizer :
     override fun close() {
         reusableCopy?.let { CVPixelBufferRelease(it) }
         reusableCopy = null
+    }
+
+    // The MRZ band as a normalized, BOTTOM-LEFT-origin CGRect — Vision's regionOfInterest coordinate space
+    // (developer.apple.com/documentation/vision/vnimagebasedrequest/regionofinterest: normalized to the
+    // processed image, origin at the image's lower-left corner; default {{0,0},{1,1}}, i.e. the whole
+    // frame). Computed once (the fraction is a fixed constant) and reused across frames alongside the
+    // shared [textRequest]. See [mrzBandOrigin] for the pure band math this is built from.
+    private val mrzBandRegionOfInterest: CValue<CGRect> by lazy {
+        val (originY, height) = mrzBandOrigin(MRZ_BAND_HEIGHT_FRACTION)
+        CGRectMake(0.0, originY, 1.0, height)
     }
 
     // Copies the camera frame's bytes into [reusableCopy] (plane by plane), allocating/reallocating that
@@ -255,6 +310,22 @@ public class VisionMrzTextRecognizer :
                     candidate?.let { RecognizedLine(text = it.string, confidence = it.confidence) }
                 },
         )
+    }
+
+    internal companion object {
+        // The fraction of the (upright) frame height the MRZ band occupies — same name and value as
+        // Android's MlKitMrzTextRecognizer.MRZ_BAND_HEIGHT_FRACTION (0.18f there; Double here, CGFloat's
+        // Kotlin/Native representation). Centred: see mrzBandOrigin. Tuning history / rationale: TES-86.
+        internal const val MRZ_BAND_HEIGHT_FRACTION: Double = 0.18
+
+        // The centred band's (originY, height), normalized within Vision's regionOfInterest space, for a
+        // given band height fraction. Pure, so the band math is host-testable without a device — unlike
+        // Android's pixel-based crop, Vision's regionOfInterest is normalized against the frame regardless
+        // of its pixel size, so (unlike mrzBandRect on Android) this needs no frame-size input.
+        internal fun mrzBandOrigin(heightFraction: Double): Pair<Double, Double> {
+            val height = heightFraction.coerceIn(0.0, 1.0)
+            return ((1.0 - height) / 2.0) to height
+        }
     }
 }
 
