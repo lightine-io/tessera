@@ -9,7 +9,7 @@ A vendor-neutral SDK for reading, validating, and generating identity document d
 
 Tessera reads Machine Readable Zones (MRZ) from passports, national ID cards, residence permits, machine-readable visas, and similar travel documents conforming to ICAO Doc 9303. It returns extracted data verbatim, with structured validation results — leaving all trust decisions to the integrating application.
 
-> **Status:** In active `0.x` development. `v0.4.0` is the current release on Maven Central (`io.lightine.tessera`), adding **manual entry** — a first-class, headless typed-MRZ reading method (`ManualMrzReader`) available on every target — on top of the `0.2.x` live-camera and `0.3.x` saved-image reading — see [Installation](#installation) and [`CHANGELOG.md`](CHANGELOG.md). The `1.0.0` milestone marks the public-stability and open-source release commitment per [ADR-011](https://lightine.youtrack.cloud/articles/TES-A-41); pre-`1.0.0` releases follow the same strict backward-compatibility commitments as post-`1.0.0` releases. See [`docs/versioning.md`](https://lightine.youtrack.cloud/articles/TES-A-8) for the policy.
+> **Status:** In active `0.x` development. `v0.5.0` is the current release on Maven Central (`io.lightine.tessera`), adding the **default scanner UI** — an optional, out-of-the-box MRZ scanner screen on both platforms (`MrzScannerScreen` in `tessera-mrz-camera-ui-android`, Jetpack Compose; `MrzScannerView` in `TesseraUI` via [tessera-swift](https://github.com/lightine-io/tessera-swift), SwiftUI) layered over the headless APIs — on top of the `0.2.x` live-camera, `0.3.x` saved-image, and `0.4.x` manual-entry reading — see [Installation](#installation) and [`CHANGELOG.md`](CHANGELOG.md). The `1.0.0` milestone marks the public-stability and open-source release commitment per [ADR-011](https://lightine.youtrack.cloud/articles/TES-A-41); pre-`1.0.0` releases follow the same strict backward-compatibility commitments as post-`1.0.0` releases. See [`docs/versioning.md`](https://lightine.youtrack.cloud/articles/TES-A-8) for the policy.
 
 ---
 
@@ -74,7 +74,7 @@ The result type makes the three possible outcomes explicit. The consumer cannot 
 
 ## Installation
 
-Tessera is published to Maven Central under the `io.lightine.tessera` group. The current release is `0.4.0` (JVM + Android; iOS via Swift Package Manager — see [Platforms](#platforms)).
+Tessera is published to Maven Central under the `io.lightine.tessera` group. The current release is `0.5.0` (JVM + Android; iOS via Swift Package Manager — see [Platforms](#platforms)).
 
 ### Gradle (Kotlin DSL)
 
@@ -82,7 +82,7 @@ Use the BOM to keep every Tessera module on one version:
 
 ```kotlin
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:0.4.0"))
+    implementation(platform("io.lightine.tessera:tessera-bom:0.5.0"))
     implementation("io.lightine.tessera:tessera-mrz-core")  // MRZ parsing, validation, generation
 }
 ```
@@ -90,7 +90,7 @@ dependencies {
 Or pin the module version directly, without the BOM:
 
 ```kotlin
-implementation("io.lightine.tessera:tessera-mrz-core:0.4.0")
+implementation("io.lightine.tessera:tessera-mrz-core:0.5.0")
 ```
 
 `tessera-mrz-core` pulls in `tessera-types` transitively — most integrators need only this one module.
@@ -101,17 +101,17 @@ implementation("io.lightine.tessera:tessera-mrz-core:0.4.0")
 <dependency>
     <groupId>io.lightine.tessera</groupId>
     <artifactId>tessera-mrz-core</artifactId>
-    <version>0.4.0</version>
+    <version>0.5.0</version>
 </dependency>
 ```
 
 ### Swift Package Manager (iOS)
 
-In Xcode: **File → Add Package Dependencies…**, enter `https://github.com/lightine-io/tessera-swift`, and choose `0.4.0`. Or in a `Package.swift`:
+In Xcode: **File → Add Package Dependencies…**, enter `https://github.com/lightine-io/tessera-swift`, and choose `0.5.0`. Or in a `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/lightine-io/tessera-swift", from: "0.4.0"),
+    .package(url: "https://github.com/lightine-io/tessera-swift", from: "0.5.0"),
 ]
 ```
 
@@ -157,11 +157,11 @@ The project's documentation is structured for two audiences: integrators (who wa
 
 Tessera is built with Kotlin Multiplatform. Targets activate per-release as the corresponding reading methods land — see [`docs/scope.md`](https://lightine.youtrack.cloud/articles/TES-A-62) for the full roadmap.
 
-Active as of `0.4.0`:
+Active as of `0.5.0`:
 
 - **JVM** — the pure core logic (parsing, validation, generation, lookup tables, transliteration profiles, telemetry contract)
-- **Android** — core logic plus headless live-camera and saved-image reading (CameraX + ML Kit). Minimum API level 23 (Android 6.0), per [ADR-018](https://lightine.youtrack.cloud/articles/TES-A-45)
-- **iOS** — core logic plus headless live-camera and saved-image reading (AVFoundation + Apple Vision), distributed as an XCFramework via Swift Package Manager. Minimum deployment target iOS 18, per [ADR-018](https://lightine.youtrack.cloud/articles/TES-A-45)
+- **Android** — core logic plus headless live-camera, saved-image, and manual-entry reading (CameraX + ML Kit), and the optional default scanner UI (`tessera-mrz-camera-ui-android`, Jetpack Compose). Minimum API level 23 (Android 6.0), per [ADR-018](https://lightine.youtrack.cloud/articles/TES-A-45)
+- **iOS** — core logic plus headless live-camera, saved-image, and manual-entry reading (AVFoundation + Apple Vision), and the optional default scanner UI (`TesseraUI`, SwiftUI), distributed via Swift Package Manager. Minimum deployment target iOS 18, per [ADR-018](https://lightine.youtrack.cloud/articles/TES-A-45)
 
 The architecture supports further targets — Web (JS / Wasm), Desktop (JVM and native) — without changes to the core logic. They are not part of the initial releases but can be activated when there is a use case.
 
