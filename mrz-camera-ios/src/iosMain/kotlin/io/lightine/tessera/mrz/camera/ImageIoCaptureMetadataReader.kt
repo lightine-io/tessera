@@ -1,6 +1,8 @@
 package io.lightine.tessera.mrz.camera
 
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.autoreleasepool
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import platform.CoreImage.CIImage
@@ -22,7 +24,7 @@ import platform.Foundation.NSURL
  * [assembleCaptureMetadata] — unit-tested with synthetic property maps. This class is only the thin platform
  * read: load the image's properties and hand them to that function.
  */
-@OptIn(ExperimentalForeignApi::class)
+@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 internal class ImageIoCaptureMetadataReader : CaptureMetadataReader<NSURL> {
     override suspend fun read(
         image: NSURL,
@@ -33,7 +35,12 @@ internal class ImageIoCaptureMetadataReader : CaptureMetadataReader<NSURL> {
         // the Kotlin/Native equivalent (matching the camera path and the saved-image OCR recognizer; the
         // Android reader makes the same off-caller-thread guarantee via Dispatchers.IO).
         withContext(Dispatchers.Default) {
-            assembleCaptureMetadata(CIImage.imageWithContentsOfURL(image)?.properties, policy)
+            // Drain the autoreleased ObjC objects (the CIImage, its properties dictionary and nested
+            // values) on this run-loop-less thread — without an enclosing pool they would live until the
+            // next GC, the same rationale as the two Vision recognizers' pools in this module.
+            autoreleasepool {
+                assembleCaptureMetadata(CIImage.imageWithContentsOfURL(image)?.properties, policy)
+            }
         }
 }
 

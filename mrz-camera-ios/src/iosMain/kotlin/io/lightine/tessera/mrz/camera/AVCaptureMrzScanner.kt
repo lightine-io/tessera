@@ -466,13 +466,19 @@ public class AVCaptureMrzScanner(
                 if (previewEnabled) mutablePreviewSession.value = session
                 emitAll(frames.receiveAsFlow())
             } finally {
-                activeDevice.value = null
-                mutablePreviewSession.value = null
+                // Identity-guarded clears (TES-133): stop() cancels without joining, so this finally can
+                // run AFTER a restarted session has already published its own device/preview/delegate.
+                // Clearing unconditionally would clobber the new session's state — worst of all
+                // [captureDelegate], whose strong reference is the only thing keeping the new delegate
+                // from being GC'd (the silent capture-stall mode documented on that field). Each field is
+                // cleared only if it still holds THIS session's instance.
+                if (activeDevice.value === device) activeDevice.value = null
+                if (mutablePreviewSession.value === session) mutablePreviewSession.value = null
                 center.removeObserver(interruptionObserver)
                 center.removeObserver(interruptionEndedObserver)
                 center.removeObserver(runtimeErrorObserver)
                 output.setSampleBufferDelegate(null, null)
-                captureDelegate = null
+                if (captureDelegate === delegate) captureDelegate = null
                 session.stopRunning()
                 // Releases a frame still buffered at teardown (via onUndeliveredElement); a no-op if empty.
                 frames.close()

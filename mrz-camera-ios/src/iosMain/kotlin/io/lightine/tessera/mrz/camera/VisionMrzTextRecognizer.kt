@@ -38,6 +38,7 @@ import platform.CoreVideo.CVPixelBufferUnlockBaseAddress
 import platform.CoreVideo.kCVPixelBufferLock_ReadOnly
 import platform.CoreVideo.kCVReturnSuccess
 import platform.Foundation.NSError
+import platform.Foundation.NSLock
 import platform.ImageIO.kCGImagePropertyOrientationRight
 import platform.Vision.VNImageRequestHandler
 import platform.Vision.VNRecognizeTextRequest
@@ -92,9 +93,26 @@ import kotlin.concurrent.Volatile
 public class VisionMrzTextRecognizer :
     MrzTextRecognizer<CMSampleBufferRef>,
     AutoCloseable {
+    // Serializes [recognize] and [close] across threads (TES-133). The owning scanner's stop()/close()
+    // cancel the scan coroutine without joining it — cancellation is cooperative and recognize() has no
+    // suspension points — so a restarted session's first frames, or close() itself, can otherwise overlap
+    // an in-flight recognize() on another thread: a data race on [reusableCopy], and on close a
+    // CVPixelBufferRelease of the buffer Vision is still reading (use-after-free). This lock makes the
+    // "called serially" contract hold even across restart/close; close() blocks for at most one OCR pass.
+    private val stateLock = NSLock()
+
+    // Set by [close] under [stateLock]. A recognize() that lost the race to close returns empty instead
+    // of recreating — and then leaking — the copy buffer its owner has already released.
+    private var closed = false
+
     // A single destination buffer the camera frame is copied into and Vision runs on, reused across
     // frames (see [recognize]). Held until [close]; recreated if the frame's dimensions or format change.
     private var reusableCopy: CVImageBufferRef? = null
+
+    // Test seam (TES-133): whether the reused copy buffer currently exists. Lets the close-gate test
+    // distinguish "returned empty because closed" from "ran the pipeline on a blank frame" — both return
+    // no lines, but only the latter (re)creates the buffer.
+    internal val hasReusableCopy: Boolean get() = reusableCopy != null
     private var reusableWidth: ULong = 0u
     private var reusableHeight: ULong = 0u
     private var reusableFormat: UInt = 0u
@@ -185,6 +203,15 @@ public class VisionMrzTextRecognizer :
     override suspend fun recognize(frame: CMSampleBufferRef): RecognizedText {
         // No backing image buffer (a malformed or non-video sample): nothing to recognize.
         val pixelBuffer = CMSampleBufferGetImageBuffer(frame) ?: return RecognizedText(emptyList())
+        return stateLock.withLock {
+            // Lost the race to close(): the copy buffer is gone and must stay gone (see [closed]).
+            if (closed) return@withLock RecognizedText(emptyList())
+            recognizeLocked(pixelBuffer)
+        }
+    }
+
+    // The body of [recognize], called with [stateLock] held.
+    private fun recognizeLocked(pixelBuffer: CVImageBufferRef): RecognizedText {
         // Copy the frame off the camera's finite buffer pool, into a SINGLE reused buffer (see
         // "Frame ownership"): nothing below ever references the camera buffer (so the owns-session layer
         // can return it to the pool immediately), and reusing one buffer caps memory — Vision retains each
@@ -223,10 +250,17 @@ public class VisionMrzTextRecognizer :
     // single analysis thread.
     private var bandFrameParity: Boolean = false
 
-    /** Releases the reused copy buffer; the owns-the-camera-session scanner calls this on its own close. */
+    /**
+     * Releases the reused copy buffer; the owns-the-camera-session scanner calls this on its own close.
+     * Serialized against [recognize] by [stateLock]: an in-flight OCR pass finishes before the buffer it
+     * is reading is released, and any recognize() arriving after this returns empty (see [closed]).
+     */
     override fun close() {
-        reusableCopy?.let { CVPixelBufferRelease(it) }
-        reusableCopy = null
+        stateLock.withLock {
+            closed = true
+            reusableCopy?.let { CVPixelBufferRelease(it) }
+            reusableCopy = null
+        }
     }
 
     // The active region-of-interest in Vision's coordinate space — normalized to the image AS ORIENTED by
@@ -500,3 +534,14 @@ internal data class MetadataRect(
 internal class VisionRecognitionException(
     message: String,
 ) : Exception(message)
+
+// NSLock counterpart of ReentrantLock.withLock (JVM-only, so not available here): hold the lock exactly
+// for the block, releasing on every exit path. The block must not suspend — NSLock is thread-bound.
+private inline fun <T> NSLock.withLock(block: () -> T): T {
+    lock()
+    try {
+        return block()
+    } finally {
+        unlock()
+    }
+}
