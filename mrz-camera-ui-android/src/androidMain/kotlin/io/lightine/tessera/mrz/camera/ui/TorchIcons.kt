@@ -26,10 +26,17 @@ private fun ImageVector.Builder.svgPath(pathData: String) {
     addPath(pathData = PathParser().parsePathString(pathData).toNodes(), fill = GLYPH_FILL)
 }
 
+// Built once and cached (TES-83): a plain `get()` with no backing field would re-parse the SVG path and
+// rebuild the whole vector node tree on EVERY read — and TorchButton reads one of these on each of its
+// recompositions. The geometry is constant, so build lazily and keep it, the same private-backing-field
+// pattern AndroidX's own Icons.Filled.* uses.
+private var flashOnCache: ImageVector? = null
+private var flashOffCache: ImageVector? = null
+
 /** Flash ON: the Material Symbols `flash_on` lightning-bolt glyph. */
 internal val FlashlightOnIcon: ImageVector
     get() =
-        ImageVector
+        flashOnCache ?: ImageVector
             .Builder(
                 name = "FlashOn",
                 defaultWidth = 24.dp,
@@ -39,11 +46,12 @@ internal val FlashlightOnIcon: ImageVector
             ).apply {
                 svgPath("M7 2v11h3v9l7-12h-4l4-8z")
             }.build()
+            .also { flashOnCache = it }
 
 /** Flash OFF: the Material Symbols `flash_off` glyph — the same bolt with a diagonal strike-through. */
 internal val FlashlightOffIcon: ImageVector
     get() =
-        ImageVector
+        flashOffCache ?: ImageVector
             .Builder(
                 name = "FlashOff",
                 defaultWidth = 24.dp,
@@ -55,3 +63,4 @@ internal val FlashlightOffIcon: ImageVector
                     "M3.27 3L2 4.27l5 5V13h3v9l3.58-6.14L17.73 20 19 18.73 3.27 3zM17 10h-4l4-8H7v2.18l8.46 8.46L17 10z",
                 )
             }.build()
+            .also { flashOffCache = it }

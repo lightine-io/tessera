@@ -175,20 +175,27 @@ internal fun CameraUnavailableContent(
  */
 @Composable
 private fun ReconnectingIndicator() {
-    val animate = animationsEnabled()
-    val transition = rememberInfiniteTransition(label = "reconnecting")
-    val animatedAlpha by transition.animateFloat(
-        initialValue = 0.25f,
-        targetValue = 1f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = 1200),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "reconnecting-dot-alpha",
-    )
-    // Reduce-motion: keep the dot static (full alpha) so the pulse never runs; the text still carries meaning.
-    val alpha = if (animate) animatedAlpha else 1f
+    // Reduce-motion: the infinite transition is not created at all (TES-83) — gating only the *displayed*
+    // alpha would leave the loop ticking (and invalidating this composable) forever with its result thrown
+    // away, since Compose's duration-based animator scale does not cover infiniteRepeatable. The dot stays
+    // static at full alpha; the text still carries the meaning.
+    val alpha =
+        if (animationsEnabled()) {
+            val transition = rememberInfiniteTransition(label = "reconnecting")
+            val animatedAlpha by transition.animateFloat(
+                initialValue = 0.25f,
+                targetValue = 1f,
+                animationSpec =
+                    infiniteRepeatable(
+                        animation = tween(durationMillis = 1200),
+                        repeatMode = RepeatMode.Reverse,
+                    ),
+                label = "reconnecting-dot-alpha",
+            )
+            animatedAlpha
+        } else {
+            1f
+        }
     Row(
         horizontalArrangement = Arrangement.spacedBy(7.dp),
         verticalAlignment = Alignment.CenterVertically,

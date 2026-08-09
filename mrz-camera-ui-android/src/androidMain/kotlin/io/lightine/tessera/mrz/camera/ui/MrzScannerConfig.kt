@@ -5,6 +5,7 @@
 
 package io.lightine.tessera.mrz.camera.ui
 
+import androidx.compose.runtime.Immutable
 import io.lightine.tessera.mrz.camera.MrzDecodeConsensus
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -71,6 +72,7 @@ public enum class DarkMode {
  * @property useDynamicColor opt into Material You dynamic color (Android 12+, wallpaper-sourced). Off by
  *   default so the look does not depend on the device. Has no effect below Android 12.
  */
+@Immutable
 public class MrzScannerTheme internal constructor(
     public val brandColor: Long?,
     public val darkMode: DarkMode,
@@ -147,6 +149,7 @@ public class MrzScannerTheme internal constructor(
  * @property onRequestPermission invoked when the UI needs the camera permission it does not hold — the host
  *   requests it (the SDK never requests a permission itself). `null` (default) means the host owns it entirely.
  */
+@Immutable
 public class MrzScannerConfig internal constructor(
     public val enabledMethods: Set<ScanMethod>,
     public val reviewMode: ReviewMode,

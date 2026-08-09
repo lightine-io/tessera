@@ -11,6 +11,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
@@ -42,35 +43,40 @@ internal fun TesseraScannerTheme(
             DarkMode.OFF -> false
         }
     val context = LocalContext.current
-    val baseScheme =
-        when {
-            theme.useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            }
-
-            darkTheme -> {
-                darkColorScheme()
-            }
-
-            else -> {
-                lightColorScheme()
-            }
-        }
+    // Memoized on the inputs that actually change it (TES-83): the scheme derivation (and the brandColor
+    // copy below) allocates a fresh ColorScheme, so without remember it re-ran on every recomposition of
+    // the theme wrapper for identical inputs.
     val colorScheme =
-        theme.brandColor?.let { argb ->
-            val brand = Color(argb)
-            // A brand tint replaces primary, so it also becomes the Button container colour and the colour
-            // observation text is drawn on (ReviewScreen's MATCHES tone now avoids that path, but Material3's
-            // default Button still uses colorScheme.onPrimary for its label) — an arbitrary brand colour has
-            // no guaranteed contrast against a FIXED foreground. Derive onPrimary from the tint's own relative
-            // luminance instead: dark text on a light brand colour, light text on a dark one. 0.5 is a simple,
-            // documented threshold (not a full WCAG contrast-ratio computation) — good enough to avoid the
-            // clearly-illegible case (e.g. the documented example brandColor, a dark teal, would otherwise pair
-            // with the baseline scheme's light onPrimary and read as light-on-dark-on-dark in dark mode).
-            baseScheme.copy(
-                primary = brand,
-                onPrimary = if (brand.luminance() > 0.5f) Color.Black else Color.White,
-            )
-        } ?: baseScheme
+        remember(theme, darkTheme, context) {
+            val baseScheme =
+                when {
+                    theme.useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+                    }
+
+                    darkTheme -> {
+                        darkColorScheme()
+                    }
+
+                    else -> {
+                        lightColorScheme()
+                    }
+                }
+            theme.brandColor?.let { argb ->
+                val brand = Color(argb)
+                // A brand tint replaces primary, so it also becomes the Button container colour and the colour
+                // observation text is drawn on (ReviewScreen's MATCHES tone now avoids that path, but Material3's
+                // default Button still uses colorScheme.onPrimary for its label) — an arbitrary brand colour has
+                // no guaranteed contrast against a FIXED foreground. Derive onPrimary from the tint's own relative
+                // luminance instead: dark text on a light brand colour, light text on a dark one. 0.5 is a simple,
+                // documented threshold (not a full WCAG contrast-ratio computation) — good enough to avoid the
+                // clearly-illegible case (e.g. the documented example brandColor, a dark teal, would otherwise pair
+                // with the baseline scheme's light onPrimary and read as light-on-dark-on-dark in dark mode).
+                baseScheme.copy(
+                    primary = brand,
+                    onPrimary = if (brand.luminance() > 0.5f) Color.Black else Color.White,
+                )
+            } ?: baseScheme
+        }
     MaterialTheme(colorScheme = colorScheme, content = content)
 }

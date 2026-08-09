@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -561,8 +562,10 @@ internal fun SummaryRow(row: FieldRow) {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        val labelWidthPx = measurer.measure(row.label, style = labelStyle).size.width
-        val valueWidthPx = measurer.measure(row.value, style = valueStyle).size.width
+        // Measured once per (text, style) rather than on every recomposition (TES-83) — the row's strings
+        // are fixed for a given review, so re-measuring them each pass was pure waste.
+        val labelWidthPx = remember(row.label, labelStyle, measurer) { measurer.measure(row.label, style = labelStyle).size.width }
+        val valueWidthPx = remember(row.value, valueStyle, measurer) { measurer.measure(row.value, style = valueStyle).size.width }
         val spacingPx = with(density) { SummaryRowSpacing.roundToPx() }
         val fitsOneLine = labelWidthPx + spacingPx + valueWidthPx <= constraints.maxWidth
 
