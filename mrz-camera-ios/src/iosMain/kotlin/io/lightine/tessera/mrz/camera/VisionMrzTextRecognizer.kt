@@ -44,6 +44,7 @@ import platform.Vision.VNRecognizeTextRequest
 import platform.Vision.VNRecognizedText
 import platform.Vision.VNRecognizedTextObservation
 import platform.Vision.VNRequestTextRecognitionLevelAccurate
+import platform.Vision.VNRequestTextRecognitionLevelFast
 import platform.posix.memcpy
 import kotlin.concurrent.Volatile
 
@@ -103,6 +104,11 @@ public class VisionMrzTextRecognizer :
     // thread — the Android counterpart of MlKitMrzTextRecognizer's bandRestricted.
     @Volatile private var bandRestricted: Boolean = false
 
+    // The viewfinder-supplied guide rect in AVFoundation's metadata-output space (see the rect-taking
+    // [restrictToMrzBand] overload), or null when only the parameterless centred-band form was used.
+    // An immutable holder so the @Volatile write/read hands over all four values atomically.
+    @Volatile private var bandMetadataRect: MetadataRect? = null
+
     // One Vision request, configured once and reused across frames. Vision supports running a request
     // repeatedly via performRequests, and reuse avoids re-allocating the request (and re-resolving its
     // text-recognition model) on every frame. recognize() is called serially on the analysis thread, so a
@@ -110,6 +116,17 @@ public class VisionMrzTextRecognizer :
     private val textRequest: VNRecognizeTextRequest by lazy {
         VNRecognizeTextRequest().apply {
             setRecognitionLevel(VNRequestTextRecognitionLevelAccurate)
+            setUsesLanguageCorrection(false)
+        }
+    }
+
+    // A second reusable request at Vision's FAST recognition level, for the saved-image rescue pass only
+    // (TES-130): on tight MRZ crops the fast path reads `<` filler runs more faithfully than accurate —
+    // accurate's language modelling collapses long chevron runs (device- and photo-verified 2026-08-09).
+    // Same no-language-correction stance; lazily built so the live path never pays for it.
+    private val fastTextRequest: VNRecognizeTextRequest by lazy {
+        VNRecognizeTextRequest().apply {
+            setRecognitionLevel(VNRequestTextRecognitionLevelFast)
             setUsesLanguageCorrection(false)
         }
     }
@@ -138,6 +155,33 @@ public class VisionMrzTextRecognizer :
         bandRestricted = true
     }
 
+    /**
+     * Restrict OCR to the **exact on-screen region** a viewfinder marks — the WYSIWYG form of
+     * [restrictToMrzBand]. The parameterless overload assumes the guide band is a centred fraction of the
+     * frame, which is only true when the preview shows the whole frame; a real viewfinder crops it
+     * (`resizeAspectFill`) and places the guide wherever its layout does, so the on-screen band and a fixed
+     * frame fraction diverge — the iOS counterpart of the Android scanner's CameraX `ViewPort` alignment
+     * (TES-86's WYSIWYG arc). The caller converts the guide's layer rect with AVFoundation's own
+     * `AVCaptureVideoPreviewLayer.metadataOutputRectOfInterest(for:)` — which accounts for the preview's
+     * `videoGravity` crop and frame size — and passes the result here verbatim.
+     *
+     * All four values are therefore in **AVFoundation's metadata-output space**: normalized against the
+     * *unrotated* capture buffer, origin at its top-left (the space that converter documents). The mapping
+     * into Vision's own region-of-interest space (normalized against the image *as oriented* by the `.right`
+     * this recognizer hands Vision, origin bottom-left) stays internal — see [visionRegionOfInterest].
+     * Same reporting contract as the parameterless overload: restricts where Vision looks, never what is
+     * reported. May be called again when layout changes; the latest rect wins.
+     */
+    public fun restrictToMrzBand(
+        x: Double,
+        y: Double,
+        width: Double,
+        height: Double,
+    ) {
+        bandRestricted = true
+        bandMetadataRect = MetadataRect(x, y, width, height)
+    }
+
     override suspend fun recognize(frame: CMSampleBufferRef): RecognizedText {
         // No backing image buffer (a malformed or non-video sample): nothing to recognize.
         val pixelBuffer = CMSampleBufferGetImageBuffer(frame) ?: return RecognizedText(emptyList())
@@ -150,20 +194,34 @@ public class VisionMrzTextRecognizer :
         // Drain Vision's per-frame autoreleased *objects* (request handler, results, observations) on this
         // run-loop-less analysis thread; without an enclosing pool they would live until the next GC.
         return autoreleasepool {
-            val handler =
-                if (bandRestricted) {
-                    // Both set on every frame (cheap struct/property assignment): the region-of-interest
-                    // rect never changes, but writing it here — rather than once in restrictToMrzBand() —
-                    // keeps the mutation and its use on the same (analysis) thread, avoiding any
-                    // cross-thread visibility question for a plain (non-Kotlin-managed) ObjC property.
-                    textRequest.setRegionOfInterest(mrzBandRegionOfInterest)
-                    VNImageRequestHandler(copy, kCGImagePropertyOrientationRight, emptyMap<Any?, Any?>())
-                } else {
-                    VNImageRequestHandler(copy, emptyMap<Any?, Any?>())
-                }
-            recognize(handler)
+            if (bandRestricted) {
+                // Both set on every frame (cheap struct/property assignment): the region-of-interest
+                // rect never changes, but writing it here — rather than once in restrictToMrzBand() —
+                // keeps the mutation and its use on the same (analysis) thread, avoiding any
+                // cross-thread visibility question for a plain (non-Kotlin-managed) ObjC property.
+                val roi = mrzBandRegionOfInterest()
+                textRequest.setRegionOfInterest(roi)
+                fastTextRequest.setRegionOfInterest(roi)
+                // Alternate Vision's recognition level across frames (TES-132 device data): ACCURATE's
+                // language modelling collapses long `<` filler runs, so many sharp, well-framed frames
+                // read exactly 3 band lines that all fail their fixed width; FAST reads chevrons
+                // faithfully but letters slightly worse. Alternating gives every framing both readings
+                // within a fraction of a second at unchanged per-frame cost, and the consensus gate
+                // downstream arbitrates as it already does between any two frames.
+                bandFrameParity = !bandFrameParity
+                recognize(
+                    VNImageRequestHandler(copy, kCGImagePropertyOrientationRight, emptyMap<Any?, Any?>()),
+                    fast = bandFrameParity,
+                )
+            } else {
+                recognize(VNImageRequestHandler(copy, emptyMap<Any?, Any?>()))
+            }
         }
     }
+
+    // Flips every band-restricted frame to alternate the recognition level; only ever touched on the
+    // single analysis thread.
+    private var bandFrameParity: Boolean = false
 
     /** Releases the reused copy buffer; the owns-the-camera-session scanner calls this on its own close. */
     override fun close() {
@@ -171,14 +229,21 @@ public class VisionMrzTextRecognizer :
         reusableCopy = null
     }
 
-    // The MRZ band as a normalized, BOTTOM-LEFT-origin CGRect — Vision's regionOfInterest coordinate space
-    // (developer.apple.com/documentation/vision/vnimagebasedrequest/regionofinterest: normalized to the
-    // processed image, origin at the image's lower-left corner; default {{0,0},{1,1}}, i.e. the whole
-    // frame). Computed once (the fraction is a fixed constant) and reused across frames alongside the
-    // shared [textRequest]. See [mrzBandOrigin] for the pure band math this is built from.
-    private val mrzBandRegionOfInterest: CValue<CGRect> by lazy {
-        val (originY, height) = mrzBandOrigin(MRZ_BAND_HEIGHT_FRACTION)
-        CGRectMake(0.0, originY, 1.0, height)
+    // The active region-of-interest in Vision's coordinate space — normalized to the image AS ORIENTED by
+    // the `.right` handed to the request handler, origin at the oriented image's lower-left corner (the
+    // VNImageBasedRequest.regionOfInterest contract; hypothesis under device confirmation, TES-129 wave 4:
+    // the two instrumented device runs jointly fit oriented-space — a centred band read the document's
+    // dense middle, a would-be-raw strip cut every line's width — and jointly contradict raw-buffer space).
+    // The WYSIWYG rect from the viewfinder wins over the parameterless centred fallback.
+    private fun mrzBandRegionOfInterest(): CValue<CGRect> {
+        val metadata =
+            bandMetadataRect ?: run {
+                // Parameterless fallback: a centred horizontal band of the oriented image, as shipped — an
+                // approximation that is only exact when the consumer's preview shows the whole frame uncropped.
+                val (originY, height) = mrzBandOrigin(MRZ_BAND_HEIGHT_FRACTION)
+                return CGRectMake(0.0, originY, 1.0, height)
+            }
+        return visionRegionOfInterest(metadata)
     }
 
     // Copies the camera frame's bytes into [reusableCopy] (plane by plane), allocating/reallocating that
@@ -284,8 +349,20 @@ public class VisionMrzTextRecognizer :
     // the request config, the run, the result reading, and the top-to-bottom ordering are all exercised on
     // the simulator without a camera. Throwing on a Vision failure is the seam's contract: MrzFrameAnalyzer
     // catches it and surfaces CameraError.OcrFailed.
-    internal fun recognize(handler: VNImageRequestHandler): RecognizedText {
-        val request = textRequest
+    internal fun recognize(
+        handler: VNImageRequestHandler,
+        fast: Boolean = false,
+    ): RecognizedText = RecognizedText(mergeRowFragments(recognizeFragments(handler, fast = fast)))
+
+    // The raw per-observation view of a Vision run — text fragments WITH their normalized bounding boxes —
+    // before row reassembly. The saved-image two-pass rescue (TES-130) needs the geometry to locate and
+    // re-crop candidate MRZ rows; the public path immediately merges via [recognize] above. `fast` selects
+    // the FAST recognition level (see [fastTextRequest]).
+    internal fun recognizeFragments(
+        handler: VNImageRequestHandler,
+        fast: Boolean = false,
+    ): List<TextFragment> {
+        val request = if (fast) fastTextRequest else textRequest
 
         memScoped {
             val errorPtr = alloc<ObjCObjectVar<NSError?>>()
@@ -299,17 +376,27 @@ public class VisionMrzTextRecognizer :
         @Suppress("UNCHECKED_CAST")
         val observations = (request.results as? List<VNRecognizedTextObservation>).orEmpty()
 
-        return RecognizedText(
-            observations
-                // Vision does not guarantee reading order; sort by vertical position. Its normalized
-                // coordinate origin is bottom-left, so a larger boundingBox.origin.y is higher on the
-                // page — descending y is top-to-bottom reading order.
-                .sortedByDescending { it.boundingBox.useContents { origin.y } }
-                .mapNotNull { observation ->
-                    val candidate = observation.topCandidates(1u).firstOrNull() as? VNRecognizedText
-                    candidate?.let { RecognizedLine(text = it.string, confidence = it.confidence) }
-                },
-        )
+        // Vision returns text as observations — regions it segmented itself, NOT guaranteed to be whole
+        // visual lines: on a full-page photo it routinely splits one MRZ row into several fragments
+        // (device-verified 2026-08-09: a 30-char TD1 row arrived as 25 + 5 on the same row), and the
+        // downstream shape match requires each line to be complete and exact-width. ML Kit joins a row's
+        // words into one Text.Line before we ever see them — Vision has no such level — so callers merge
+        // via [mergeRowFragments]. Pure reassembly of what Vision read; nothing is invented (TES-18 stance).
+        return observations.mapNotNull { observation ->
+            val candidate =
+                observation.topCandidates(1u).firstOrNull() as? VNRecognizedText
+                    ?: return@mapNotNull null
+            observation.boundingBox.useContents {
+                TextFragment(
+                    x = origin.x,
+                    y = origin.y,
+                    width = size.width,
+                    height = size.height,
+                    text = candidate.string,
+                    confidence = candidate.confidence,
+                )
+            }
+        }
     }
 
     internal companion object {
@@ -326,11 +413,90 @@ public class VisionMrzTextRecognizer :
             val height = heightFraction.coerceIn(0.0, 1.0)
             return ((1.0 - height) / 2.0) to height
         }
+
+        // Maps a rect from AVFoundation's metadata-output space — normalized to the UNROTATED buffer,
+        // origin top-left (the space `metadataOutputRectOfInterest(for:)` documents) — into Vision's
+        // regionOfInterest space for the `.right`-oriented image this recognizer hands Vision: normalized
+        // to the ORIENTED (portrait) image, origin bottom-left. `.right` means the oriented image is the
+        // raw buffer rotated 90° clockwise, so with normalized top-left coordinates a raw point (x, y)
+        // lands at oriented (1 - y, x); applying that to the rect's corners and then flipping the vertical
+        // origin to bottom-left gives, for a metadata rect (x, y, w, h):
+        //   vision = (1 - y - h,  1 - x - w,  h,  w)
+        // Pure, so the corner math is host-testable without a device. Values are clamped to [0, 1]: Vision
+        // rejects out-of-space rects outright (the request fails), and a viewfinder's guide rect can
+        // legitimately poke a hair outside the buffer after the aspect-fill conversion.
+        // Reassembles Vision's text fragments into whole visual lines: fragments whose vertical extents
+        // overlap by at least half the smaller height share a row; each row's fragments join left-to-right
+        // (ascending x) with nothing inserted between them; rows order top-to-bottom (Vision's normalized
+        // origin is bottom-left, so descending centre-y). A merged line's confidence is the minimum of its
+        // fragments' (the honest signal — a line is no more trustworthy than its worst part). Grouping
+        // compares each fragment to the previous one in centre-y order, which chains — fine for MRZ rows
+        // (widely separated), and a degenerate zero-height fragment can never satisfy the overlap test, so
+        // it conservatively stays its own line. Pure, so the row math is host-testable without a device.
+        internal fun mergeRowFragments(fragments: List<TextFragment>): List<RecognizedLine> = groupRows(fragments).map(::joinRow)
+
+        // The row-grouping half of [mergeRowFragments], exposed separately because the saved-image rescue
+        // (TES-130) needs the grouped rows WITH their geometry to locate and re-crop candidate MRZ rows.
+        internal fun groupRows(fragments: List<TextFragment>): List<List<TextFragment>> {
+            if (fragments.isEmpty()) return emptyList()
+            val rows = mutableListOf<MutableList<TextFragment>>()
+            for (fragment in fragments.sortedByDescending { it.y + it.height / 2.0 }) {
+                val row = rows.lastOrNull()
+                if (row != null && sharesRow(row.last(), fragment)) row.add(fragment) else rows.add(mutableListOf(fragment))
+            }
+            return rows
+        }
+
+        // The joining half of [mergeRowFragments]: one visual row's fragments, left-to-right, nothing
+        // inserted between them; confidence is the minimum of the fragments'.
+        internal fun joinRow(row: List<TextFragment>): RecognizedLine {
+            val parts = row.sortedBy { it.x }
+            return RecognizedLine(
+                text = parts.joinToString(separator = "") { it.text },
+                confidence = parts.mapNotNull { it.confidence }.minOrNull(),
+            )
+        }
+
+        private fun sharesRow(
+            a: TextFragment,
+            b: TextFragment,
+        ): Boolean {
+            val overlap = minOf(a.y + a.height, b.y + b.height) - maxOf(a.y, b.y)
+            return overlap > 0.0 && overlap >= 0.5 * minOf(a.height, b.height)
+        }
+
+        internal fun visionRegionOfInterest(rect: MetadataRect): CValue<CGRect> {
+            val x = (1.0 - rect.y - rect.height).coerceIn(0.0, 1.0)
+            val y = (1.0 - rect.x - rect.width).coerceIn(0.0, 1.0)
+            return CGRectMake(x, y, rect.height.coerceIn(0.0, 1.0 - x), rect.width.coerceIn(0.0, 1.0 - y))
+        }
     }
 }
 
+// One Vision text observation reduced to what row reassembly needs: its normalized bounding box (Vision's
+// bottom-left-origin space) plus the recognized text and confidence. Internal — consumers only ever see the
+// merged [RecognizedLine]s.
+internal data class TextFragment(
+    val x: Double,
+    val y: Double,
+    val width: Double,
+    val height: Double,
+    val text: String,
+    val confidence: Float?,
+)
+
+// A viewfinder-supplied rect in AVFoundation's metadata-output coordinate space (normalized, unrotated
+// buffer, top-left origin). Internal immutable holder so a @Volatile field hands all four values over
+// atomically; kept off the public surface — the public overload takes plain Doubles.
+internal data class MetadataRect(
+    val x: Double,
+    val y: Double,
+    val width: Double,
+    val height: Double,
+)
+
 // Carries Vision's own error description from a failed performRequests so MrzFrameAnalyzer can surface
 // it as a CameraError.OcrFailed. Never carries recognized text (there is none on failure).
-private class VisionRecognitionException(
+internal class VisionRecognitionException(
     message: String,
 ) : Exception(message)

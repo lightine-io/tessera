@@ -16,6 +16,7 @@ final class io.lightine.tessera.mrz.camera/AVCaptureMrzScanner : io.lightine.tes
 
     final fun close() // io.lightine.tessera.mrz.camera/AVCaptureMrzScanner.close|close(){}[0]
     final fun enablePreview() // io.lightine.tessera.mrz.camera/AVCaptureMrzScanner.enablePreview|enablePreview(){}[0]
+    final fun focusOnRegion(kotlin/Double, kotlin/Double, kotlin/Double, kotlin/Double) // io.lightine.tessera.mrz.camera/AVCaptureMrzScanner.focusOnRegion|focusOnRegion(kotlin.Double;kotlin.Double;kotlin.Double;kotlin.Double){}[0]
     final fun start() // io.lightine.tessera.mrz.camera/AVCaptureMrzScanner.start|start(){}[0]
     final fun stop() // io.lightine.tessera.mrz.camera/AVCaptureMrzScanner.stop|stop(){}[0]
 }
@@ -25,6 +26,7 @@ final class io.lightine.tessera.mrz.camera/VisionMrzTextRecognizer : io.lightine
 
     final fun close() // io.lightine.tessera.mrz.camera/VisionMrzTextRecognizer.close|close(){}[0]
     final fun restrictToMrzBand() // io.lightine.tessera.mrz.camera/VisionMrzTextRecognizer.restrictToMrzBand|restrictToMrzBand(){}[0]
+    final fun restrictToMrzBand(kotlin/Double, kotlin/Double, kotlin/Double, kotlin/Double) // io.lightine.tessera.mrz.camera/VisionMrzTextRecognizer.restrictToMrzBand|restrictToMrzBand(kotlin.Double;kotlin.Double;kotlin.Double;kotlin.Double){}[0]
     final suspend fun recognize(kotlinx.cinterop/CPointer<cnames.structs/opaqueCMSampleBuffer>): io.lightine.tessera.mrz.camera/RecognizedText // io.lightine.tessera.mrz.camera/VisionMrzTextRecognizer.recognize|recognize(kotlinx.cinterop.CPointer<cnames.structs.opaqueCMSampleBuffer>){}[0]
 }
 

@@ -34,6 +34,8 @@ import platform.AVFoundation.AVCaptureDeviceDiscoverySession
 import platform.AVFoundation.AVCaptureDeviceInput
 import platform.AVFoundation.AVCaptureDevicePosition
 import platform.AVFoundation.AVCaptureDevicePositionBack
+import platform.AVFoundation.AVCaptureDeviceTypeBuiltInDualWideCamera
+import platform.AVFoundation.AVCaptureDeviceTypeBuiltInTripleCamera
 import platform.AVFoundation.AVCaptureDeviceTypeBuiltInWideAngleCamera
 import platform.AVFoundation.AVCaptureFocusModeContinuousAutoFocus
 import platform.AVFoundation.AVCaptureOutput
@@ -48,9 +50,14 @@ import platform.AVFoundation.AVCaptureVideoDataOutputSampleBufferDelegateProtoco
 import platform.AVFoundation.AVMediaTypeVideo
 import platform.AVFoundation.authorizationStatusForMediaType
 import platform.AVFoundation.focusMode
+import platform.AVFoundation.focusPointOfInterest
+import platform.AVFoundation.focusPointOfInterestSupported
 import platform.AVFoundation.isFocusModeSupported
+import platform.AVFoundation.videoZoomFactor
+import platform.AVFoundation.virtualDeviceSwitchOverVideoZoomFactors
 import platform.CoreFoundation.CFRelease
 import platform.CoreFoundation.CFRetain
+import platform.CoreGraphics.CGPointMake
 import platform.CoreMedia.CMSampleBufferRef
 import platform.Foundation.NSError
 import platform.Foundation.NSNotification
@@ -58,6 +65,7 @@ import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSNumber
 import platform.darwin.NSObject
 import platform.darwin.dispatch_queue_create
+import kotlin.concurrent.AtomicReference
 import kotlin.concurrent.Volatile
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -159,6 +167,12 @@ public class AVCaptureMrzScanner(
     // AVCaptureVideoPreviewLayer. The scanner keeps owning the session and its lifecycle; the UI only draws.
     // @Volatile because enablePreview() may be called from any thread; the bind reads it on Dispatchers.Default.
     @Volatile private var previewEnabled = false
+
+    // The bound camera device while a session runs (null otherwise), so focusOnRegion can retarget focus on
+    // a LIVE session; and the latest requested focus point, remembered across session restarts. Atomic
+    // references: both cross the caller's thread and the Dispatchers.Default session thread.
+    private val activeDevice = AtomicReference<AVCaptureDevice?>(null)
+    private val focusPoint = AtomicReference<FocusPoint?>(null)
     private val mutablePreviewSession = MutableStateFlow<AVCaptureSession?>(null)
 
     /**
@@ -237,6 +251,65 @@ public class AVCaptureMrzScanner(
         }
     }
 
+    // Pins a virtual device's zoom to its wide (1×) constituent. A virtual device's videoZoomFactor 1.0 is
+    // its WIDEST constituent — the ultra-wide's 0.5× field — which would silently change the framing every
+    // consumer expects; the first switch-over factor is, per the AVCaptureDevice.h contract, the boundary
+    // to the next-longer constituent (the wide lens). No-op for a physical (non-virtual) device.
+    private fun pinVirtualDeviceToWideZoom(device: AVCaptureDevice) {
+        val wideFactor = (device.virtualDeviceSwitchOverVideoZoomFactors.firstOrNull() as? NSNumber) ?: return
+        memScoped {
+            val errorPtr = alloc<ObjCObjectVar<NSError?>>()
+            if (device.lockForConfiguration(errorPtr.ptr)) {
+                device.videoZoomFactor = wideFactor.doubleValue
+                device.unlockForConfiguration()
+            }
+        }
+    }
+
+    /**
+     * Aim continuous autofocus at the **MRZ guide region** the viewfinder shows, instead of the frame's
+     * centre — the focus counterpart of `VisionMrzTextRecognizer.restrictToMrzBand(x:y:width:height:)`
+     * (TES-132: with the guide band away from the frame centre, centre-weighted AF happily focuses the
+     * background while the document blurs). All four values are in **AVFoundation's metadata-output space**
+     * (normalized against the unrotated capture buffer, top-left origin) — the exact space
+     * `AVCaptureVideoPreviewLayer.metadataOutputRectOfInterest(for:)` returns AND the space
+     * `focusPointOfInterest` documents, so the viewfinder passes the same converted rect to both. The
+     * region's centre becomes the focus point of interest.
+     *
+     * Safe to call at any time from any thread: applied immediately when the camera is running, remembered
+     * and applied at the next session start otherwise. A device without focus-point support keeps
+     * centre-weighted continuous AF — a focus preference is an optimisation, never a precondition.
+     */
+    public fun focusOnRegion(
+        x: Double,
+        y: Double,
+        width: Double,
+        height: Double,
+    ) {
+        val point = FocusPoint(x = x + width / 2.0, y = y + height / 2.0)
+        focusPoint.value = point
+        activeDevice.value?.let { applyFocusPoint(it, point) }
+    }
+
+    // Applies a stored focus point-of-interest. Setting focusPointOfInterest takes effect only when the
+    // focus MODE is set afterwards (the AVCaptureDevice.h contract), so continuous AF is re-asserted in the
+    // same configuration lock.
+    private fun applyFocusPoint(
+        device: AVCaptureDevice,
+        point: FocusPoint,
+    ) {
+        if (!device.focusPointOfInterestSupported) return
+        if (!device.isFocusModeSupported(AVCaptureFocusModeContinuousAutoFocus)) return
+        memScoped {
+            val errorPtr = alloc<ObjCObjectVar<NSError?>>()
+            if (device.lockForConfiguration(errorPtr.ptr)) {
+                device.focusPointOfInterest = CGPointMake(point.x.coerceIn(0.0, 1.0), point.y.coerceIn(0.0, 1.0))
+                device.focusMode = AVCaptureFocusModeContinuousAutoFocus
+                device.unlockForConfiguration()
+            }
+        }
+    }
+
     // The AVFoundation capture session bridged to a Flow. Setup runs lazily inside the flow (on the
     // collecting coroutine) so a setup failure — permission not granted, no camera, cannot configure —
     // is thrown here and routed through scan()'s catch -> cameraErrorFor into a CameraError, exactly like
@@ -255,10 +328,22 @@ public class AVCaptureMrzScanner(
                 throw CameraPermissionException("CAMERA permission not granted (authorization status not authorized)")
             }
 
+            // Prefer a VIRTUAL device (triple, then dual-wide) over the bare wide-angle lens: a virtual
+            // device automatically falls back to the constituent with the shorter minimum focus distance
+            // when the subject is too close for the active camera (the AVCaptureDevice.h "fallback primary
+            // constituent" contract) — and a document filling the MRZ guide box IS typically inside the
+            // wide lens's minimum focus distance (maintainer-reported blur, TES-132). Discovery returns
+            // devices in the requested order, so the richest available wins; the bare wide angle remains
+            // the fallback for devices with a single back camera.
             val device =
                 AVCaptureDeviceDiscoverySession
                     .discoverySessionWithDeviceTypes(
-                        deviceTypes = listOf(AVCaptureDeviceTypeBuiltInWideAngleCamera),
+                        deviceTypes =
+                            listOf(
+                                AVCaptureDeviceTypeBuiltInTripleCamera,
+                                AVCaptureDeviceTypeBuiltInDualWideCamera,
+                                AVCaptureDeviceTypeBuiltInWideAngleCamera,
+                            ),
                         mediaType = AVMediaTypeVideo,
                         position = cameraPosition,
                     ).devices
@@ -266,8 +351,15 @@ public class AVCaptureMrzScanner(
                     ?: throw CameraUnavailableException("no camera available for the requested position")
 
             // Explicit continuous autofocus (see setContinuousAutoFocusIfSupported) — set right after the
-            // device is found, before it is wired into the session.
+            // device is found, before it is wired into the session. For a virtual device this also pins the
+            // zoom to the wide (1×) field of view: a virtual device's zoom factor 1.0 is its widest
+            // constituent (the ultra-wide), which would change the preview framing consumers expect.
             setContinuousAutoFocusIfSupported(device)
+            pinVirtualDeviceToWideZoom(device)
+            activeDevice.value = device
+            // A focus region requested before the camera opened (the viewfinder's layout usually resolves
+            // first) applies now.
+            focusPoint.value?.let { applyFocusPoint(device, it) }
 
             val input =
                 memScoped {
@@ -374,6 +466,7 @@ public class AVCaptureMrzScanner(
                 if (previewEnabled) mutablePreviewSession.value = session
                 emitAll(frames.receiveAsFlow())
             } finally {
+                activeDevice.value = null
                 mutablePreviewSession.value = null
                 center.removeObserver(interruptionObserver)
                 center.removeObserver(interruptionEndedObserver)
@@ -443,6 +536,13 @@ private class SampleBufferDelegate(
 
 // Carry the kind of capture-availability failure cameraFrames() detected, so cameraErrorFor can map each
 // to the right CameraError through scan()'s catch path. None carries recognized text (there is none).
+// The centre of a requested focus region, in AVFoundation's point-of-interest space (normalized, unrotated
+// picture, top-left origin). Immutable so an AtomicReference hands both coordinates over atomically.
+internal data class FocusPoint(
+    val x: Double,
+    val y: Double,
+)
+
 // `internal` (not private) only so the unit test can construct them to exercise cameraErrorFor.
 internal class CameraPermissionException(
     message: String,
