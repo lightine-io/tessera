@@ -108,14 +108,31 @@ class MrzScannerScreenTest {
     }
 
     @Test
-    fun top_bar_close_reports_cancelled_user_dismissed() {
-        // The shared top bar's ✕ owns cancel on every screen and maps to Cancelled(USER_DISMISSED) — the
-        // full flow wiring, not just the ScannerScaffold in isolation (covered in MethodSwitcherTest).
+    fun top_bar_close_from_the_permission_face_reports_cancelled_permission_denied() {
+        // TES-115: on the host the CAMERA permission is not held, so the flow starts on the permission
+        // grant face — the ✕ from there reports PERMISSION_DENIED (the permission was the blocker), not an
+        // undifferentiated USER_DISMISSED. Full flow wiring: face reported by CameraCapture, reason decided
+        // by dismissReasonFor, delivered through the shared onCancel.
         var result: MrzScannerResult? = null
         composeRule.setContent {
             MrzScannerScreen(config = MrzScannerConfig(), onResult = { result = it })
         }
 
+        composeRule.onNodeWithTag(PERMISSION_GRANT_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Close").performClick()
+        assertEquals(MrzScannerResult.Cancelled(DismissReason.PERMISSION_DENIED), result)
+    }
+
+    @Test
+    fun top_bar_close_from_manual_entry_reports_cancelled_user_dismissed() {
+        // TES-115 counterpart: away from the camera area (manual entry up, no permission face showing —
+        // CameraCapture left composition and cleared its report) the ✕ is a plain USER_DISMISSED.
+        var result: MrzScannerResult? = null
+        composeRule.setContent {
+            MrzScannerScreen(config = MrzScannerConfig(), onResult = { result = it })
+        }
+
+        composeRule.onNodeWithText("Manual").performClick()
         composeRule.onNodeWithContentDescription("Close").performClick()
         assertEquals(MrzScannerResult.Cancelled(DismissReason.USER_DISMISSED), result)
     }
@@ -159,6 +176,48 @@ class MrzScannerScreenTest {
     }
 
     // ----------------------------------------------------------------------------------------------------
+    // TES-115 — dismissReasonFor(): the pure decision behind the reason a close carries. The two Compose
+    // tests above cover the wiring (face reported, reason delivered); these pin the decision table itself.
+
+    @Test
+    fun dismiss_reason_is_camera_unavailable_only_from_the_terminal_camera_error_screen() {
+        assertEquals(
+            DismissReason.CAMERA_UNAVAILABLE,
+            dismissReasonFor(ScannerUiState.CameraUnavailable, permissionFace = null),
+        )
+        // The in-use notice is recoverable, not terminal — a close from it is a plain dismissal.
+        assertEquals(
+            DismissReason.USER_DISMISSED,
+            dismissReasonFor(ScannerUiState.CameraInUse, permissionFace = null),
+        )
+    }
+
+    @Test
+    fun dismiss_reason_is_permission_denied_from_either_permission_face_over_the_camera() {
+        assertEquals(
+            DismissReason.PERMISSION_DENIED,
+            dismissReasonFor(ScannerUiState.Scanning(), permissionFace = PermissionScreenState.NEEDS_GRANT),
+        )
+        assertEquals(
+            DismissReason.PERMISSION_DENIED,
+            dismissReasonFor(ScannerUiState.Scanning(), permissionFace = PermissionScreenState.PERMANENTLY_DENIED),
+        )
+    }
+
+    @Test
+    fun dismiss_reason_is_user_dismissed_everywhere_else_and_ignores_a_stale_permission_face() {
+        assertEquals(
+            DismissReason.USER_DISMISSED,
+            dismissReasonFor(ScannerUiState.Scanning(), permissionFace = null),
+        )
+        // A face value that outlived the camera screen (the state moved on) must not leak into the reason:
+        // the permission face only qualifies while the camera area (Scanning) is what the user is on.
+        assertEquals(
+            DismissReason.USER_DISMISSED,
+            dismissReasonFor(ScannerUiState.ManualRaw(), permissionFace = PermissionScreenState.NEEDS_GRANT),
+        )
+    }
+
     // TES-92 — backEffect(): the pure decision behind the scanner's BackHandler. Host-unit-tested directly,
     // mirroring routeDecode / reduceCameraResult (no real back-press dispatcher needed).
     // ----------------------------------------------------------------------------------------------------

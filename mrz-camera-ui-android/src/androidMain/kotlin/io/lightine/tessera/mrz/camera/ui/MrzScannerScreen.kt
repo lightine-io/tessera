@@ -296,7 +296,18 @@ private fun ScannerFlow(
     // image get their own tap/selection feedback).
     val haptics = LocalHapticFeedback.current
 
-    val onCancel = { onResult(MrzScannerResult.Cancelled(DismissReason.USER_DISMISSED)) }
+    // Which permission face (grant / permanently-denied) the camera area is currently showing, or null when
+    // the permission is granted or the camera screen is not up. Reported by CameraCapture (the permission
+    // state is computed there, from live signals — it is deliberately not a ScannerUiState variant), hoisted
+    // here only so the cancel below can carry an honest reason (TES-115). Transient by design: recomputed by
+    // CameraCapture on every ON_RESUME, so it needs no saver.
+    var permissionFace by remember { mutableStateOf<PermissionScreenState?>(null) }
+
+    // TES-115: the ✕ (and Back at the root — the BackHandler reuses this exact lambda) reports WHY the flow
+    // ended, not just that it did: closed from the terminal camera-error screen → CAMERA_UNAVAILABLE; closed
+    // from a permission face → PERMISSION_DENIED; any other screen → USER_DISMISSED. The decision is the pure
+    // dismissReasonFor so it is host-testable.
+    val onCancel = { onResult(MrzScannerResult.Cancelled(dismissReasonFor(uiState, permissionFace))) }
 
     // The session-level scan-timeout deadline (TES-124) ends the flow as Cancelled(TIMED_OUT). Distinct reason
     // from USER_DISMISSED — the host can tell "the user gave up" apart from "my time budget elapsed".
@@ -633,6 +644,7 @@ private fun ScannerFlow(
             onManualDraftChange = { manualDraft = it },
             onRescanFromReview = returnToSource,
             onStruggling = onStruggling,
+            onPermissionFaceChange = { permissionFace = it },
         )
     }
 }
@@ -660,6 +672,7 @@ private fun ScannerBody(
     onManualDraftChange: (String) -> Unit,
     onRescanFromReview: (ScannerUiState.Review) -> Unit,
     onStruggling: () -> Unit,
+    onPermissionFaceChange: (PermissionScreenState?) -> Unit,
 ) {
     // Route a decode straight to the matching state via routeDecode — the manual-entry success path, which
     // produces a Decoded that follows the identical decode routing (read-failed / review / straight back
@@ -689,6 +702,7 @@ private fun ScannerBody(
                 onStruggling = onStruggling,
                 onManualEntry = onManualEntry,
                 showManualEntry = showManualEntry,
+                onPermissionFaceChange = onPermissionFaceChange,
             )
         }
 
@@ -878,6 +892,25 @@ internal fun backEffect(
         else -> {
             BackEffect.Cancel
         }
+    }
+
+/**
+ * The [DismissReason] a close (the top-bar ✕, or Back at the root — both run the same cancel) carries,
+ * decided purely from what the user was looking at when they closed (TES-115): the terminal camera-error
+ * screen → [DismissReason.CAMERA_UNAVAILABLE]; a permission face over the camera area (grant or
+ * permanently-denied — [permissionFace] is non-null only while one is actually showing) →
+ * [DismissReason.PERMISSION_DENIED]; anything else — including the recoverable in-use notice, which is not
+ * terminal — → [DismissReason.USER_DISMISSED]. Reports what happened, decides nothing beyond it: whether an
+ * unusable camera or an ungranted permission matters is the host's call.
+ */
+internal fun dismissReasonFor(
+    state: ScannerUiState,
+    permissionFace: PermissionScreenState?,
+): DismissReason =
+    when {
+        state is ScannerUiState.CameraUnavailable -> DismissReason.CAMERA_UNAVAILABLE
+        state is ScannerUiState.Scanning && permissionFace != null -> DismissReason.PERMISSION_DENIED
+        else -> DismissReason.USER_DISMISSED
     }
 
 /**
@@ -1103,6 +1136,8 @@ internal fun formatCountdown(remaining: Duration): String {
  * @param showManualEntry whether that escape is offered at all — `false` when the consumer's
  *   [`enabledMethods`][MrzScannerConfig.enabledMethods] excludes [`MANUAL_ENTRY`][ScanMethod.MANUAL_ENTRY], so
  *   a camera-only config never routes the user into a screen they cannot reach any other way.
+ * @param onPermissionFaceChange reports which permission face is currently showing (`null` when granted or
+ *   when this leaves composition), so the flow's cancel can carry an honest [DismissReason] (TES-115).
  */
 @Composable
 private fun CameraCapture(
@@ -1113,6 +1148,7 @@ private fun CameraCapture(
     onStruggling: () -> Unit,
     onManualEntry: () -> Unit,
     showManualEntry: Boolean,
+    onPermissionFaceChange: (PermissionScreenState?) -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -1143,7 +1179,18 @@ private fun CameraCapture(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    when (permissionScreenState(granted = granted, hasAsked = hasAsked, showRationale = showRationale)) {
+    val permissionFace = permissionScreenState(granted = granted, hasAsked = hasAsked, showRationale = showRationale)
+
+    // Report the visible permission face to the flow (TES-115) — GRANTED reports null (no permission screen
+    // is up), and leaving composition (switching method, camera state change) clears it. DisposableEffect
+    // keyed on the face: on a face change the old effect's onDispose runs first, so the net value is always
+    // the currently rendered face.
+    DisposableEffect(permissionFace) {
+        onPermissionFaceChange(permissionFace.takeUnless { it == PermissionScreenState.GRANTED })
+        onDispose { onPermissionFaceChange(null) }
+    }
+
+    when (permissionFace) {
         PermissionScreenState.GRANTED -> {
             CameraPreview(
                 struggleTimeout = config.struggleTimeout,

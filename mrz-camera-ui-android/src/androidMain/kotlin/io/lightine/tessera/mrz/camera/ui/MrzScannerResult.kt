@@ -15,10 +15,16 @@ public enum class DismissReason {
     /** The configured [scanTimeout][MrzScannerConfig.scanTimeout] elapsed with no confirmed reading. */
     TIMED_OUT,
 
-    /** The camera could not be started and there was no path forward (a terminal capture error). */
+    /**
+     * The camera could not be started (a terminal capture error) and the user closed the flow from that
+     * screen. The recoverable camera-in-use notice is NOT this — closing from it is [USER_DISMISSED].
+     */
     CAMERA_UNAVAILABLE,
 
-    /** The camera permission was not granted and the user declined to continue another way. */
+    /**
+     * The camera permission was not granted and the user closed the flow from a permission screen (grant
+     * or permanently-denied) rather than granting it or continuing another way.
+     */
     PERMISSION_DENIED,
 }
 
