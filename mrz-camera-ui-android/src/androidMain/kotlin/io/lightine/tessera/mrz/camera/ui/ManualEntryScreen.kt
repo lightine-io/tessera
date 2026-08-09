@@ -48,8 +48,9 @@ import kotlin.time.Instant
 // auto-correction. Everything the user typed is shown back verbatim (Principle 5).
 //
 // SCOPE (TES-63 raw-entry slice): this builds mockup 06 (raw MRZ entry) only. Field-by-field entry (mockup
-// 06b) was dropped for 0.5.0 (TES-79) as a separate future feature, so the screen shows the primary
-// "Read what I typed" action only, with no "Enter field by field" secondary button.
+// 06b) was decided against entirely (TES-79, won't-do: typed fields are a host-app form, not a document
+// read), so the screen shows the primary "Read what I typed" action only, with no "Enter field by field"
+// secondary button.
 //
 // TES-100: the Auto / Passport / ID card format-hint chip row (plus its "the buttons above just say which
 // document type to expect" note) is REMOVED. It read as a meaningful choice ("tell us the type") when it was

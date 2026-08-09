@@ -11,8 +11,8 @@ import io.lightine.tessera.mrz.camera.RecognizedText
  *
  * Every variant is **wired**: [Scanning] (with its `struggling` / `gathering` overlays), [Review],
  * [ReadFailed], [ManualRaw], [CameraInUse], [CameraUnavailable], and the saved-image states. Manual entry is
- * raw-MRZ-line entry ([ManualRaw], mockup 06); field-by-field entry (mockup 06b) was dropped for 0.5.0 as a
- * separate future feature (TES-79) rather than shipped as a half-declared state. The camera-permission screens
+ * raw-MRZ-line entry ([ManualRaw], mockup 06); field-by-field entry (mockup 06b) was decided against entirely
+ * (TES-79, won't-do: typed fields are a host-app form, not a document read). The camera-permission screens
  * (mockups 04 / 04b) are NOT flow states here: they are rendered by `CameraCapture` from the live permission
  * status, so there are no permission variants in this contract. Nothing here is public — the frozen surface
  * stays `MrzScannerScreen` + config + result (ADR-007); this is internal wiring.
