@@ -2,6 +2,7 @@ package io.lightine.tessera.mrz.camera.ui
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -70,5 +71,19 @@ class MrzScannerConfigTest {
         assertEquals(DarkMode.ON, config.theme.darkMode)
         assertTrue(config.theme.useDynamicColor)
         assertEquals(handler, config.onRequestPermission)
+    }
+
+    @Test
+    fun consensusReads_below_one_fails_to_build() {
+        assertFailsWith<IllegalArgumentException> {
+            MrzScannerConfig { consensusReads = 0 }
+        }
+    }
+
+    @Test
+    fun consensusReads_of_one_builds() {
+        val config = MrzScannerConfig { consensusReads = 1 }
+
+        assertEquals(1, config.consensusReads)
     }
 }

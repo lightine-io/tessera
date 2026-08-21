@@ -140,7 +140,7 @@ public class MrzScannerTheme internal constructor(
  *   `<` misread as a letter in the name field). Default 2 ([MrzDecodeConsensus.DEFAULT_THRESHOLD]); `1`
  *   accepts the first decode (no consensus). Higher values add latency to every successful read for
  *   diminishing benefit — see [MrzDecodeConsensus]. Live camera only; saved-image and manual entry are
- *   one-shot and unaffected.
+ *   one-shot and unaffected. Must be `>= 1`; [Builder.build] throws [IllegalArgumentException] otherwise.
  * @property hapticFeedback fire a short confirming haptic the moment a live-camera read is accepted (the
  *   hands-free "it scanned" cue). Default true. Always honours the device's system haptic setting; set false
  *   to opt the default UI out entirely. Only the camera path buzzes — manual/saved-image already give the
@@ -199,8 +199,9 @@ public class MrzScannerConfig internal constructor(
         }
 
         /** Build the immutable [MrzScannerConfig]. */
-        public fun build(): MrzScannerConfig =
-            MrzScannerConfig(
+        public fun build(): MrzScannerConfig {
+            require(consensusReads >= 1) { "consensusReads must be >= 1, was $consensusReads" }
+            return MrzScannerConfig(
                 enabledMethods = enabledMethods,
                 reviewMode = reviewMode,
                 showTorchButton = showTorchButton,
@@ -212,6 +213,7 @@ public class MrzScannerConfig internal constructor(
                 theme = themeBuilder.build(),
                 onRequestPermission = onRequestPermission,
             )
+        }
     }
 }
 
