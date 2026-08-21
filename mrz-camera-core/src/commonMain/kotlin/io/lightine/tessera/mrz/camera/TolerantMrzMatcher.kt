@@ -1,10 +1,5 @@
 package io.lightine.tessera.mrz.camera
 
-import io.lightine.tessera.mrz.formats.MrvAFormatSpec
-import io.lightine.tessera.mrz.formats.MrvBFormatSpec
-import io.lightine.tessera.mrz.formats.Td1FormatSpec
-import io.lightine.tessera.mrz.formats.Td2FormatSpec
-import io.lightine.tessera.mrz.formats.Td3FormatSpec
 import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.types.vocabulary.ReadMethod
@@ -15,12 +10,13 @@ import kotlin.time.Instant
  * genuinely ambiguous OCR glyphs in a recognized MRZ and surfaces every distinct, structurally-parseable
  * reconstruction with its own parse verdict (see [MrzCandidate]; [ADR-023]).
  *
- * **v1 scope — character disambiguation only.** The matcher works on a run of lines that already matches a
- * known MRZ shape (the same exact-shape line detection the strict analyse-frame core uses), and varies its
- * ambiguous glyphs. The harder half — **length-tolerant / collapsed-filler recovery** (ML Kit collapses long
- * `<` filler runs, so line 1 never reaches its nominal length — see TES-18) — is a deferred refinement and
- * is NOT attempted here: a frame whose lines do not reach a known shape yields no candidates, exactly as
- * strict yields no decode. The refinement is tracked separately.
+ * **v1 scope — character disambiguation only.** The matcher works on a window of lines that already matches a
+ * known MRZ shape, found via [MrzLineDetection] — the SAME windowed extraction, MRZ-alphabet guard, and
+ * chevron-glyph recovery the strict analyse-frame core uses (shared, not restated, since TES-117), and then
+ * varies its ambiguous glyphs. The harder half — **length-tolerant / collapsed-filler recovery** (ML Kit
+ * collapses long `<` filler runs, so line 1 never reaches its nominal length — see TES-18) — is a deferred
+ * refinement and is NOT attempted here: a frame whose lines do not reach a known shape yields no candidates,
+ * exactly as strict yields no decode. The refinement is tracked separately.
  */
 internal class TolerantMrzMatcher(
     private val mode: ParsingMode,
@@ -28,7 +24,8 @@ internal class TolerantMrzMatcher(
 ) {
     /** All distinct, parseable reconstructions of the MRZ in [text]; empty when there is no shape-matched run or nothing ambiguous to resolve. */
     fun candidates(text: RecognizedText): List<MrzCandidate> {
-        val run = findShapeRun(text.lines.map { normalizeLine(it.text) }) ?: return emptyList()
+        val normalized = text.lines.map { MrzLineDetection.normalizeLine(it.text, mode) }
+        val run = MrzLineDetection.findMrzWindow(normalized) ?: return emptyList()
 
         val ambiguous =
             buildList {
@@ -82,27 +79,6 @@ internal class TolerantMrzMatcher(
         return consistent.ifEmpty { all }.take(MAX_SURFACED_CANDIDATES)
     }
 
-    private fun normalizeLine(raw: String): String =
-        when (mode) {
-            ParsingMode.STRICT -> raw.trim().uppercase()
-            ParsingMode.LENIENT -> raw.filterNot(Char::isWhitespace).uppercase()
-        }
-
-    // First run of consecutive lines whose (count, length) matches a known ICAO shape — the strict core's rule.
-    private fun findShapeRun(normalized: List<String>): List<String>? {
-        var start = 0
-        while (start < normalized.size) {
-            val length = normalized[start].length
-            var end = start + 1
-            while (end < normalized.size && normalized[end].length == length) end++
-            if (length > 0 && MrzLineShape(end - start, length) in MRZ_SHAPES) {
-                return normalized.subList(start, end).toList()
-            }
-            start = end
-        }
-        return null
-    }
-
     // A candidate is a saved-image read, so stamp PRE_CAPTURED_IMAGE (the parser alone reports BACKEND_STRING_INPUT).
     private fun ParseResult.preCaptured(): ParseResult {
         val stamped = metadata.copy(readMethod = ReadMethod.PRE_CAPTURED_IMAGE)
@@ -119,11 +95,6 @@ internal class TolerantMrzMatcher(
         val recognized: Char,
     )
 
-    private data class MrzLineShape(
-        val lineCount: Int,
-        val lineLength: Int,
-    )
-
     private companion object {
         // <= 2^6 = 64 reconstructions parsed per frame; the check-digit-consistency filter + cap below keep the
         // SURFACED set small and usable even when many reconstructions parse.
@@ -132,11 +103,6 @@ internal class TolerantMrzMatcher(
         // Upper bound on candidates surfaced to "Choose the reading", so the screen stays usable. Genuine glyph
         // ambiguity resolves a couple of ways; more than a handful means OCR noise, not real alternatives.
         private const val MAX_SURFACED_CANDIDATES = 8
-
-        private val MRZ_SHAPES: Set<MrzLineShape> =
-            listOf(Td1FormatSpec, Td2FormatSpec, Td3FormatSpec, MrvAFormatSpec, MrvBFormatSpec)
-                .map { MrzLineShape(it.lineCount, it.lineLength) }
-                .toSet()
 
         // Conservative, bidirectional OCR glyph confusions within the MRZ alphabet (A–Z, 0–9, <).
         private val CONFUSABLES: Map<Char, List<Char>> =
