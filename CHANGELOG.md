@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 
 - **Release workflow: tessera-swift is tagged only when nothing is still open there** (CI; [TES-138](https://lightine.youtrack.cloud/issue/TES-138)). At `v0.5.0` the workflow merged the Package.swift pin and tagged tessera-swift's `main` head while the TesseraUI PR was still open, so the tag's tree had no `Sources/` — SPM `from: "0.5.0"` resolved to a package without the advertised UI product (remediated by moving the tag). The publish step now stops with a clear error if tessera-swift has any open PR other than its own pin branch; merge or close it and re-run the job (the step was already re-run-safe). The ordering is a new gate 9 in the release-gate skill.
+- **Manual-entry draft length is capped in the default scanner UI** (mrz-camera-ui-android; [TES-137](https://lightine.youtrack.cloud/issue/TES-137)). The manual raw-MRZ text field had no length limit, and the typed draft persists verbatim through `rememberSaveable` on rotation — a very large paste could approach the Binder's roughly 1 MB saved-state limit and fail to restore. Typing or pasting now truncates at 1024 characters, well above any real MRZ, at the field itself and again as a backstop in the state saver. The truncation is silent, not a rejection - a draft that long is already not a readable MRZ. The iOS scanner UI (tessera-swift) gets the same fix in its manual-entry text model.
 
 ## [0.5.0] - 2026-08-09
 

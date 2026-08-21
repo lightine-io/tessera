@@ -91,7 +91,11 @@ internal fun encodeScannerUiState(state: ScannerUiState): List<Any?> =
         }
 
         is ScannerUiState.ManualRaw -> {
-            listOf(TAG_MANUAL_RAW, state.text, state.parseFailed)
+            // TES-137: defensive second truncation at the Bundle boundary itself, in case a caller ever
+            // constructs ScannerUiState.ManualRaw with an over-length text bypassing ManualRawContent's own
+            // onValueChange cap (MANUAL_ENTRY_MAX_CHARS) — this is the last line of defence before the draft
+            // hits `rememberSaveable`'s Bundle and the Binder's ~1MB saved-state limit.
+            listOf(TAG_MANUAL_RAW, state.text.take(MANUAL_ENTRY_MAX_CHARS), state.parseFailed)
         }
 
         is ScannerUiState.ReadFailed -> {
@@ -159,7 +163,9 @@ internal fun decodeScannerUiState(saved: List<Any?>): ScannerUiState? {
 
         TAG_MANUAL_RAW -> {
             if (saved.size != 3) return null
-            val text = saved[1] as? String ?: return null
+            // TES-137: truncate again on restore — a payload from a pre-cap app version, or a Bundle a host
+            // constructed directly, could still carry an over-length draft; restoring must not resurrect one.
+            val text = (saved[1] as? String)?.take(MANUAL_ENTRY_MAX_CHARS) ?: return null
             val parseFailed = saved[2] as? Boolean ?: return null
             ScannerUiState.ManualRaw(text = text, parseFailed = parseFailed)
         }

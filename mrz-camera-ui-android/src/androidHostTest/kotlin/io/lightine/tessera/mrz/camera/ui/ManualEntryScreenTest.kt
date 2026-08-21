@@ -196,6 +196,40 @@ class ManualEntryScreenTest {
     }
 
     @Test
+    fun typing_past_the_cap_leaves_the_field_at_exactly_max_chars() {
+        // TES-137: MANUAL_ENTRY_MAX_CHARS bounds the draft — a paste (or, here, one big performTextInput) far
+        // past the cap must truncate, never reject and never overflow past it. Garbage repeats of a single
+        // character, well past any real MRZ (never real document data).
+        var latestText = ""
+        composeRule.setContent {
+            var text by remember { mutableStateOf("") }
+            latestText = text
+            MrzScannerConfig().let { config ->
+                TesseraScannerTheme(config.theme) {
+                    ManualRawContent(
+                        state = ScannerUiState.ManualRaw(text),
+                        onTextChange = {
+                            text = it
+                            latestText = it
+                        },
+                        onRead = {},
+                    )
+                }
+            }
+        }
+
+        val pasted = "A".repeat(MANUAL_ENTRY_MAX_CHARS + 500)
+        composeRule.onNodeWithTag(MANUAL_RAW_FIELD_TEST_TAG).performTextInput(pasted)
+
+        assertEquals(
+            MANUAL_ENTRY_MAX_CHARS,
+            latestText.length,
+            "a paste past the cap must truncate the draft to exactly MANUAL_ENTRY_MAX_CHARS, not reject it or " +
+                "let it overflow",
+        )
+    }
+
+    @Test
     fun read_this_fires_on_read() {
         var readCalls = 0
         composeRule.setContent {

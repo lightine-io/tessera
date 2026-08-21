@@ -66,6 +66,18 @@ internal const val MANUAL_RAW_TEST_TAG: String = "tessera-mrz-manual-raw"
 internal const val MANUAL_RAW_FIELD_TEST_TAG: String = "tessera-mrz-manual-raw-field"
 
 /**
+ * TES-137: a hard ceiling on the manual-entry draft's length, in characters. A real MRZ is at most 3 lines of
+ * 44 characters (132 chars) plus a little whitespace — 1024 is generously above that (well over 3×44) so a
+ * legitimate typed or pasted MRZ is never truncated, while a multi-MB paste is bounded before it reaches
+ * [ScannerUiState.ManualRaw.text] and, from there, `rememberSaveable`'s Bundle (`ScannerUiStateSaver.kt`'s
+ * `TAG_MANUAL_RAW` slot), which otherwise persists the draft verbatim and can approach the Binder's ~1MB
+ * saved-state limit on rotation. Truncated, never rejected (reader, not oracle, Principle 1): the SDK bounds
+ * storage, it does not judge or reformat what the user typed — a 1024-character MRZ draft is already nonsense
+ * regardless of where the excess came from.
+ */
+internal const val MANUAL_ENTRY_MAX_CHARS: Int = 1024
+
+/**
  * Splits raw typed text into the MRZ lines the reader parses: newline-separated, blank lines dropped, each
  * line trimmed of surrounding whitespace. Kept pure and Compose-free so the text→lines→Decoded pipeline is
  * host-unit-testable without the camera (mirrors how [routeDecode] was extracted).
@@ -170,7 +182,10 @@ internal fun ManualRawContent(
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             OutlinedTextField(
                 value = state.text,
-                onValueChange = onTextChange,
+                // TES-137: truncate to MANUAL_ENTRY_MAX_CHARS before it ever reaches ScannerUiState.ManualRaw
+                // — bounds the draft at the source (typing OR pasting) rather than relying on every caller of
+                // onTextChange to remember the cap.
+                onValueChange = { onTextChange(it.take(MANUAL_ENTRY_MAX_CHARS)) },
                 modifier = Modifier.fillMaxWidth().testTag(MANUAL_RAW_FIELD_TEST_TAG),
                 label = { Text(text = stringResource(R.string.tessera_scanner_manual_field_label)) },
                 textStyle = TextStyle(fontFamily = FontFamily.Monospace),

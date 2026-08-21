@@ -132,6 +132,35 @@ class ScannerUiStateSaverTest {
         assertEquals(clean, decodeScannerUiState(encodeScannerUiState(clean)))
     }
 
+    @Test
+    fun manual_raw_encode_truncates_an_over_length_draft_to_max_chars() {
+        // TES-137: ManualRawContent's own onValueChange already caps typed/pasted input, but this is the
+        // codec's own defensive backstop — a ManualRaw constructed directly (bypassing the Compose field)
+        // with an over-length draft must still be bounded before it reaches the Bundle. Garbage repeats, never
+        // real document data.
+        val overLength = ScannerUiState.ManualRaw(text = "A".repeat(MANUAL_ENTRY_MAX_CHARS + 500), parseFailed = false)
+        val encoded = encodeScannerUiState(overLength)
+        assertEquals(
+            MANUAL_ENTRY_MAX_CHARS,
+            (encoded[1] as String).length,
+            "encode must truncate an over-length draft to exactly MANUAL_ENTRY_MAX_CHARS before it reaches the Bundle",
+        )
+    }
+
+    @Test
+    fun manual_raw_decode_truncates_an_over_length_saved_payload() {
+        // TES-137: a saved payload from a pre-cap app version (or a Bundle a host constructed directly) could
+        // still carry an over-length draft; decode must not resurrect one.
+        val overLengthPayload = listOf("ManualRaw", "B".repeat(MANUAL_ENTRY_MAX_CHARS + 500), false)
+        val restored = decodeScannerUiState(overLengthPayload) as? ScannerUiState.ManualRaw
+
+        assertEquals(
+            MANUAL_ENTRY_MAX_CHARS,
+            restored?.text?.length,
+            "decode must truncate an over-length saved draft to exactly MANUAL_ENTRY_MAX_CHARS, not restore it verbatim",
+        )
+    }
+
     // ---------------------------------------------------------------------------------------------------
     // ReadFailed — recognized-text lines round trip, including a null per-line confidence (NaN sentinel).
     // ---------------------------------------------------------------------------------------------------
