@@ -183,6 +183,17 @@ jobs:
             echo "::notice::${REPO} ${TAG} already published; nothing to do."; exit 0
           fi
 
+          # TES-138 ordering gate: the tag is cut from tessera-swift's main head, so every release-bound
+          # change must already be merged there. At v0.5.0 the UI PR merged after this step ran and the
+          # tag silently excluded it. Any open PR other than our own pin branch stops the publish; merge
+          # (or close) it, then re-run this job — the guards above and below make the re-run safe.
+          OPEN=$(gh pr list --repo "${REPO}" --state open --json number,headRefName \
+                   --jq "[.[] | select(.headRefName != \"${BRANCH}\")] | map(\"#\\(.number) (\\(.headRefName))\") | join(\", \")")
+          if [ -n "${OPEN}" ]; then
+            echo "::error::${REPO} has open PRs that would be excluded from tag ${TAG}: ${OPEN}. Merge or close them, then re-run this job."
+            exit 1
+          fi
+
           # Partial-rerun guard: if a prior run already merged Package.swift but did not tag, tag only.
           CUR=$(gh api "repos/${REPO}/contents/Package.swift" --jq '.content' | base64 -d)
           if printf '%s' "${CUR}" | grep -q "releases/download/${TAG}/Tessera.xcframework.zip"; then

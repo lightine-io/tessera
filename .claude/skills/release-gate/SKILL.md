@@ -31,5 +31,11 @@ Every gate is binary. Run them in order; report per-gate pass/fail to the mainta
    silence.
 8. **Board** — release issue and everything in Staging flips to Done at the tag;
    device-QA issues must have passed through Test.
+9. **tessera-swift is complete BEFORE the monorepo tag** — the release workflow
+   tags tessera-swift at its `main` head right after merging the Package.swift pin,
+   so anything still open there is excluded from the tag (the 0.5.0 incident,
+   TES-138). `gh pr list --repo lightine-io/tessera-swift --state open` must be
+   empty; the workflow enforces this and fails the publish step otherwise (merge,
+   then re-run the job — it is re-run-safe).
 
 **The maintainer pushes the tag. The session never does.**

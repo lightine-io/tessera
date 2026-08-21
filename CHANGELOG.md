@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - **Kotlin 2.4.0 → 2.4.10** (all modules; toolchain — consumer-facing floor). Dependabot patch bump, no build-script migration needed. Artifacts are now produced by the 2.4.10 compiler; same forward-compatibility note as the 2.4.0 entry — pre-1.0, Tessera tracks current stable Kotlin (dependency cadence in [`docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20)). Verified by CI across JVM/Android/iOS targets.
 
+### Fixed
+
+- **Release workflow: tessera-swift is tagged only when nothing is still open there** (CI; [TES-138](https://lightine.youtrack.cloud/issue/TES-138)). At `v0.5.0` the workflow merged the Package.swift pin and tagged tessera-swift's `main` head while the TesseraUI PR was still open, so the tag's tree had no `Sources/` — SPM `from: "0.5.0"` resolved to a package without the advertised UI product (remediated by moving the tag). The publish step now stops with a clear error if tessera-swift has any open PR other than its own pin branch; merge or close it and re-run the job (the step was already re-run-safe). The ordering is a new gate 9 in the release-gate skill.
+
 ## [0.5.0] - 2026-08-09
 
 ### Added
