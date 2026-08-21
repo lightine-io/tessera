@@ -6,7 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-*(nothing yet — 0.5.0 just released)*
+### Changed
+
+- **Kotlin 2.4.0 → 2.4.10** (all modules; toolchain — consumer-facing floor). Dependabot patch bump, no build-script migration needed. Artifacts are now produced by the 2.4.10 compiler; same forward-compatibility note as the 2.4.0 entry — pre-1.0, Tessera tracks current stable Kotlin (dependency cadence in [`docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20)). Verified by CI across JVM/Android/iOS targets.
 
 ## [0.5.0] - 2026-08-09
 
