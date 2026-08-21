@@ -58,7 +58,11 @@ jobs:
           # Tracked in the issue tracker (bcprov test-only triage).
           #   GHSA-574f-3g2m-x479  bcprov GOST 28147 CTR keystream reuse (critical)
           #   GHSA-c3fc-8qff-9hwx  bcprov LDAP injection (moderate)
-          allow-ghsas: GHSA-574f-3g2m-x479, GHSA-c3fc-8qff-9hwx
+          # Kotlin Gradle plugin build-cache deserialization (moderate). Build-time
+          # only — the plugin never reaches a consumer's graph. Patched only in
+          # 2.4.20-Beta1; drop this allowance when Tessera moves to 2.4.20 stable.
+          #   GHSA-r937-wjx7-w2jp  kotlin-gradle-plugin < 2.4.20 (moderate)
+          allow-ghsas: GHSA-574f-3g2m-x479, GHSA-c3fc-8qff-9hwx, GHSA-r937-wjx7-w2jp
           # Wait for dependency-submission.yml to submit the PR's Gradle graph.
           retry-on-snapshot-warnings: true
           retry-on-snapshot-warnings-timeout: 600
