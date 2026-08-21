@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **Default iOS UI: host string override via `MrzScannerConfig.stringsBundle`** (`TesseraUI`, tessera-swift; [TES-139](https://lightine.youtrack.cloud/issue/TES-139)). TES-57 promised a consumer string override on both platforms, but TesseraUI loaded every string from its own package catalog, so a host could not change any wording - Android's resource-merge override had no iOS counterpart. New optional `stringsBundle: Bundle?` on `MrzScannerConfig` (default `nil`, unchanged behaviour): every string now resolves through one internal helper that checks the host bundle's `Localizable` table for the same `tessera_scanner_*` key first and falls back to the module catalog, so a host overrides only the keys it wants. Additive under [ADR-007](https://lightine.youtrack.cloud/articles/TES-A-37) (one property plus a trailing defaulted init parameter; API baseline regenerated). Host-tested (nil bundle, overridden key, non-overridden fallback). The default-UI feature article gets the iOS override section at the next release tag.
+
 ### Changed
 
 - **Kotlin 2.4.0 → 2.4.10** (all modules; toolchain — consumer-facing floor). Dependabot patch bump, no build-script migration needed. Artifacts are now produced by the 2.4.10 compiler; same forward-compatibility note as the 2.4.0 entry — pre-1.0, Tessera tracks current stable Kotlin (dependency cadence in [`docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20)). Verified by CI across JVM/Android/iOS targets.
