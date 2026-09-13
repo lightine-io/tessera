@@ -47,7 +47,7 @@ jobs:
       # JDK 21 to match check.yml; the Gradle daemon still pins to JDK 17
       # (gradle/gradle-daemon-jvm.properties, foojay-provisioned).
       - name: Set up JDK 21
-        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
         with:
           distribution: temurin
           java-version: '21'
@@ -65,7 +65,7 @@ jobs:
           fi
 
       - name: Generate and submit dependency graph
-        uses: gradle/actions/dependency-submission@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        uses: gradle/actions/dependency-submission@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           # Gate only what actually SHIPS — keep build-time/test-only dependencies out of the submitted
           # graph so the dependency-review PR gate (and Dependabot) never block on transitives that cannot
