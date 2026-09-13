@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+*(nothing yet - 0.5.1 just released)*
+
+## [0.5.1] - 2026-09-13
+
 ### Added
 
 - **Default iOS UI: host string override via `MrzScannerConfig.stringsBundle`** (`TesseraUI`, tessera-swift; [TES-139](https://lightine.youtrack.cloud/issue/TES-139)). TES-57 promised a consumer string override on both platforms, but TesseraUI loaded every string from its own package catalog, so a host could not change any wording - Android's resource-merge override had no iOS counterpart. New optional `stringsBundle: Bundle?` on `MrzScannerConfig` (default `nil`, unchanged behaviour): every string now resolves through one internal helper that checks the host bundle's `Localizable` table for the same `tessera_scanner_*` key first and falls back to the module catalog, so a host overrides only the keys it wants. Additive under [ADR-007](https://lightine.youtrack.cloud/articles/TES-A-37) (one property plus a trailing defaulted init parameter; API baseline regenerated). Host-tested (nil bundle, overridden key, non-overridden fallback). The default-UI feature article gets the iOS override section at the next release tag.
@@ -20,6 +24,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Manual-entry draft length is capped in the default scanner UI** (mrz-camera-ui-android; [TES-137](https://lightine.youtrack.cloud/issue/TES-137)). The manual raw-MRZ text field had no length limit, and the typed draft persists verbatim through `rememberSaveable` on rotation — a very large paste could approach the Binder's roughly 1 MB saved-state limit and fail to restore. Typing or pasting now truncates at 1024 characters, well above any real MRZ, at the field itself and again as a backstop in the state saver. The truncation is silent, not a rejection - a draft that long is already not a readable MRZ. The iOS scanner UI (tessera-swift) gets the same fix in its manual-entry text model.
 - **`MrzScannerConfig.consensusReads` is validated at build time** (mrz-camera-ui-android; [TES-116](https://lightine.youtrack.cloud/issue/TES-116)). The builder's `consensusReads` was an unguarded var, so `MrzScannerConfig { consensusReads = 0 }` built silently and the host crashed later when `MrzScannerScreen` composed and `MrzDecodeConsensus` rejected the value. `Builder.build()` now throws `IllegalArgumentException` immediately when `consensusReads` is below 1, with a message naming the offending value. No behaviour change for any value that was already legal (`>= 1`, default unchanged).
 - **Tolerant saved-image reading finds the same MRZ the strict reader does** (`mrz-camera-core`; [TES-117](https://lightine.youtrack.cloud/issue/TES-117)). `MrzFrameAnalyzer` was rewritten to window over candidate lines, guard on the MRZ alphabet, and recover OCR chevron glyphs (`«` etc.) to the filler `<`, but `TolerantMrzMatcher` kept its older, whole-run line detection with no chevron recovery. A headless consumer calling `SavedImageMrzReader(tolerant = true)` could get a successful primary decode with an empty `candidates()` list whenever a same-width printed line sat next to the MRZ, or whenever the OCR engine misread a filler as a chevron - exactly the frames tolerant reading exists for. Line detection is now one shared internal helper (`MrzLineDetection`) used by both the analyzer and the matcher, so they can no longer drift apart; `candidates()` now finds and disambiguates the same MRZ the strict core decodes.
+
+- **iOS review screen: document-code category fallback + standard torch glyphs** (`TesseraUI`, tessera-swift; [TES-111](https://lightine.youtrack.cloud/issue/TES-111) audit). The document-code line fell back to the bare raw code for any type code the exact lookup table missed, where Android already categorized it via mrz-core's `DocumentType.broadCategory` (ICAO reserved-leading-character rule, TES-98/99). iOS now applies the same fallback - mirrored locally as `firstLetterCategory`, since `broadCategory` itself does not cross the Kotlin/Native boundary (a value class is erased; a core-exported replacement is [TES-141](https://lightine.youtrack.cloud/issue/TES-141)). The torch toggle also moves from the flashlight glyphs to the camera-app-standard bolt pair (`bolt.fill`/`bolt.slash.fill`), matching Android's TES-84 convention; VoiceOver state handling is unchanged. Host-tested (`DocumentDisplayTests`).
 
 ## [0.5.0] - 2026-08-09
 
@@ -578,7 +584,8 @@ These are documented commitments that are explicitly *not* in this `[Unreleased]
 - iOS targets, Android targets (waiting on Xcode install / 0.2.0 platform I/O work)
 - Platform I/O modules (`mrz-camera-*`, `emrtd-nfc-*`, `mrz-camera-ui-*`)
 
-[Unreleased]: https://github.com/lightine-io/tessera/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/lightine-io/tessera/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/lightine-io/tessera/releases/tag/v0.5.1
 [0.5.0]: https://github.com/lightine-io/tessera/releases/tag/v0.5.0
 [0.4.0]: https://github.com/lightine-io/tessera/releases/tag/v0.4.0
 [0.3.0]: https://github.com/lightine-io/tessera/releases/tag/v0.3.0
