@@ -1,9 +1,9 @@
 [versions]
 kotlin = "2.4.21"
 agp = "9.4.1"
-spotless = "8.10.3"
+spotless = "8.10.4"
 ktlint = "1.8.0"
-kotest = "6.2.4"
+kotest = "6.2.5"
 kotlinx-datetime = "0.8.0"
 kotlinx-coroutines = "1.11.0"
 maven-publish = "0.37.0"
@@ -13,7 +13,7 @@ dokka = "2.2.0"
 # ships in the app (no runtime model download / no network for OCR), though it still pulls
 # Play Services ML Kit libs + Google's datatransport stack transitively (see reading-risks.md).
 # Both are latest stable.
-camerax = "1.6.1"
+camerax = "1.6.2"
 mlkit-text-recognition = "16.0.1"
 # androidx.exifinterface (mrz-camera-android, 0.3.0) — reads a saved image's EXIF for capture metadata. Latest stable.
 androidx-exifinterface = "1.4.2"
@@ -24,7 +24,7 @@ androidx-exifinterface = "1.4.2"
 # line, so it gets its own key. The Compose compiler is the `org.jetbrains.kotlin.plugin.compose` Gradle
 # plugin pinned to the Kotlin version (below), NOT `buildFeatures.compose` — the KMP-AGP library plugin
 # has no such flag. All latest stable, verified against Google's Maven at write time.
-androidx-compose = "1.11.4"
+androidx-compose = "1.12.1"
 androidx-compose-material3 = "1.4.0"
 # lifecycle-runtime-compose supplies collectAsStateWithLifecycle for the UI's state hoisting. Its latest
 # stable (2.11.0) declares minCompileSdk=37 (Android 17) — met by the repo-wide compileSdk 37. Latest stable.
@@ -36,7 +36,7 @@ androidx-activity-compose = "1.13.0"
 # Robolectric runs the module's Compose UI tests on the JVM host (androidHostTest) — no device/emulator —
 # the Android counterpart of the other modules' pure-JVM host tests, but with an Android runtime so a
 # composable can actually be laid out and queried by semantics. Test-only. Latest stable.
-robolectric = "4.16.1"
+robolectric = "4.17"
 
 [libraries]
 kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest" }
