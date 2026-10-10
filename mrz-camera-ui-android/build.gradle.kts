@@ -46,15 +46,22 @@ mavenPublishing {
 kotlin {
     explicitApi()
 
-    // ABI tracking (ADR-007), identical to mrz-camera-android: Kotlin's abiValidation does not dump the
-    // AGP-KMP `android {}` target, so `checkKotlinAbi` is vacuous here. The android-only public surface
-    // (MrzScannerScreen + MrzScannerConfig + MrzScannerResult) is gated by `checkAndroidAbi` — the
-    // root-build convention that dumps this target's compiled bytecode with binary-compatibility-validator
-    // into the committed api/android/mrz-camera-ui-android.api and fails on an undeclared change (TES-35).
-    // Refresh after an intended change: `./gradlew :mrz-camera-ui-android:updateAndroidAbi`. abiValidation()
-    // stays enabled so a Kotlin-native baseline also appears the moment KGP gains android-target dumping.
+    // ABI tracking (ADR-007). Since Kotlin 2.4.20 (KT-85950) abiValidation dumps the AGP-KMP `android {}`
+    // target too, so this module's android-only public surface (MrzScannerScreen + MrzScannerConfig +
+    // MrzScannerResult) is baselined in api/android/mrz-camera-ui-android.api and gated by `checkKotlinAbi`
+    // like every other module. Refresh after an intended change: `./gradlew updateKotlinAbi`.
+    // The Compose compiler's `ComposableSingletons$…` lambda-holder classes are excluded: they are
+    // generated implementation detail (not consumer API) whose `getLambda$<hash>` members carry a
+    // position-derived hash that shifts across compose-compiler versions — baselining them would
+    // produce spurious ABI breaks. (metalava filters these too.)
     @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
-    abiValidation()
+    abiValidation {
+        filters {
+            exclude {
+                byNames.add("**ComposableSingletons**")
+            }
+        }
+    }
 
     jvmToolchain(21)
 

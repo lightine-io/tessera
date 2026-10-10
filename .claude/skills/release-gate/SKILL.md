@@ -21,8 +21,8 @@ Every gate is binary. Run them in order; report per-gate pass/fail to the mainta
 4. **Empty-module guard** — `./gradlew publishToMavenLocal -Ptessera.skipSigning=true`
    green locally; every module that declares a target produces an artifact (CI
    publish-smoke mirrors this — do not rely on memory of it).
-5. **ABI baselines** — `updateAndroidAbi --rerun-tasks` (it goes UP-TO-DATE-stale),
-   then `checkAndroidAbi` / `checkKotlinAbi` green against committed dumps.
+5. **ABI baselines** — `checkKotlinAbi` green against the committed dumps for every
+   target (jvm, klib, and — since Kotlin 2.4.20 — android under `api/android/`).
 6. **CHANGELOG roll** — `[Unreleased]` → `[X.Y.Z] - YYYY-MM-DD`; fresh `[Unreleased]`
    opened in the same PR.
 7. **Dependabot state** — `gh api repos/{owner}/{repo}/dependabot/alerts?state=open`:

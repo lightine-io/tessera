@@ -125,10 +125,11 @@ jobs:
       # verifyMlKitBundledModel asserts ML Kit stays the bundled (offline) text-recognition model — it
       # resolves androidRuntimeClasspath, so it needs the Android SDK this job provides.
       # Still no emulator / instrumented / live-camera tests (those run locally on a device).
-      # checkAndroidAbi guards the android-only public surface that Kotlin's abiValidation cannot dump
-      # (TES-35): it runs here, not in the SDK-less JVM `check` job, because it compiles the android target.
-      - name: Compile Android targets, run Android host tests, verify ML Kit bundled model + android ABI
-        run: ./gradlew compileAndroidMain :mrz-camera-android:testAndroidHostTest :mrz-camera-ui-android:testAndroidHostTest :types:testAndroidHostTest :mrz-core:testAndroidHostTest :telemetry:testAndroidHostTest :mrz-camera-core:testAndroidHostTest :mrz-camera-android:verifyMlKitBundledModel :mrz-camera-android:checkAndroidAbi :mrz-camera-ui-android:checkAndroidAbi
+      # The android-only public ABI (mrz-camera-android, mrz-camera-ui-android) is gated by the regular
+      # `checkKotlinAbi` inside the `check` job: since Kotlin 2.4.20 abiValidation dumps the AGP-KMP
+      # android target (api/android/<module>.api), so no separate android ABI step runs here.
+      - name: Compile Android targets, run Android host tests, verify ML Kit bundled model
+        run: ./gradlew compileAndroidMain :mrz-camera-android:testAndroidHostTest :mrz-camera-ui-android:testAndroidHostTest :types:testAndroidHostTest :mrz-core:testAndroidHostTest :telemetry:testAndroidHostTest :mrz-camera-core:testAndroidHostTest :mrz-camera-android:verifyMlKitBundledModel
 
   # Empty-module release guard (TES-43 pre-0.5.0 item; the v0.2.0 incident class, PR #154):
   # a module that DECLARES a Kotlin/Native target but produces no klib fails its
