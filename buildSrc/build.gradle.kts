@@ -16,5 +16,5 @@ dependencies {
     implementation("org.jetbrains.kotlinx:binary-compatibility-validator:0.18.2")
     implementation("org.ow2.asm:asm-tree:9.10.1")
     // Keep in sync with libs.versions.toml `kotlin`.
-    implementation("org.jetbrains.kotlin:kotlin-metadata-jvm:2.4.10")
+    implementation("org.jetbrains.kotlin:kotlin-metadata-jvm:2.4.20")
 }
