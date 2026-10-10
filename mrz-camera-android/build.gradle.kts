@@ -32,14 +32,10 @@ mavenPublishing {
 kotlin {
     explicitApi()
 
-    // ABI tracking (ADR-007). Kotlin's abiValidation does not dump the AGP-KMP `android {}` target, so
-    // there is no Kotlin api/ baseline here and `checkKotlinAbi` passes vacuously. The android-only
-    // public surface (CameraXMrzScanner, MlKitMrzTextRecognizer, the saved-image/EXIF factories) is
-    // instead gated by `checkAndroidAbi` — the root-build convention that dumps this target's compiled
-    // bytecode with binary-compatibility-validator into the committed api/android/mrz-camera-android.api
-    // and fails on an undeclared change (TES-35). Refresh after an intended change:
-    // `./gradlew :mrz-camera-android:updateAndroidAbi`. abiValidation() is kept enabled so a Kotlin-native
-    // baseline also appears the moment KGP gains android-target dumping.
+    // ABI tracking (ADR-007). Since Kotlin 2.4.20 (KT-85950) abiValidation dumps the AGP-KMP `android {}`
+    // target too, so this module's android-only public surface (CameraXMrzScanner, MlKitMrzTextRecognizer,
+    // the saved-image/EXIF factories) is baselined in api/android/mrz-camera-android.api and gated by
+    // `checkKotlinAbi` like every other module. Refresh after an intended change: `./gradlew updateKotlinAbi`.
     @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
     abiValidation()
 

@@ -2,16 +2,6 @@ import com.vanniktech.maven.publish.JavaPlatform
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import com.vanniktech.maven.publish.MavenPublishBaseExtension
-import kotlinx.validation.api.dump
-import kotlinx.validation.api.filterOutNonPublic
-import kotlinx.validation.api.loadApiFromJvmClasses
-import java.util.jar.JarFile
-
-// The android-only ABI guard (registerAndroidAbiTasks, below) uses binary-compatibility-validator +
-// asm-tree + kotlin-metadata-jvm. Those are declared in buildSrc/build.gradle.kts (buildSrc's runtime
-// classpath reaches this script), NOT on this project's buildscript classpath — so the build-time
-// classpath is never exposed to the submitted dependency graph (dependency-review gates only shipped
-// deps). See buildSrc/build.gradle.kts and .github/workflows/dependency-submission.yml.
 
 plugins {
     alias(libs.plugins.spotless)
@@ -138,98 +128,4 @@ spotless {
         targetExclude("**/build/**", "**/.gradle/**")
         ktlint(ktlintVersion)
     }
-}
-
-// --- Android-only ABI guard (TES-35) ------------------------------------------------------------
-// Kotlin's abiValidation does not dump the AGP-KMP `android {}` target, so the two modules whose public
-// API lives ONLY in androidMain — mrz-camera-android (CameraXMrzScanner, MlKitMrzTextRecognizer, the
-// saved-image/EXIF factories) and mrz-camera-ui-android (MrzScannerScreen / MrzScannerConfig /
-// MrzScannerResult) — have no machine-checked baseline; their checkKotlinAbi passes vacuously. This
-// guards that surface the way every other module is guarded: it dumps the android target's COMPILED
-// BYTECODE with binary-compatibility-validator (the engine behind abiValidation) into a committed
-// api/android/<module>.api baseline, and fails `check` on any undeclared change (an ADR-007 break).
-// Refresh after an intended change: `./gradlew :<module>:updateAndroidAbi` and commit the baseline.
-// The core modules are NOT in this set: their public API is common (already baselined via the klib/jvm
-// dumps); only these two have android-specific public declarations.
-val androidAbiGuardedModules = setOf("mrz-camera-android", "mrz-camera-ui-android")
-
-fun Project.registerAndroidAbiTasks() {
-    // Capture the project name here (project scope): inside a task's configuration/`doLast`, `name` is
-    // the TASK's name, not the module's — so user-facing strings must use this, not `$moduleName`.
-    val moduleName = name
-    val baseline = file("api/android/$moduleName.api")
-    // The android target's compiled-classes jar (KMP-AGP library plugin output). Reading it needs no
-    // Android SDK — only the compile task that writes it does — so these tasks run wherever the android
-    // target compiles (the android-compile CI job + locally).
-    val bundleTask = "bundleAndroidMainClassesToCompileJar"
-    val classesJar = file("build/intermediates/compile_library_classes_jar/androidMain/$bundleTask/classes.jar")
-
-    fun dumpTo(target: java.io.File) {
-        val raw = StringBuilder()
-        JarFile(classesJar)
-            .loadApiFromJvmClasses()
-            .filterOutNonPublic()
-            .dump(raw)
-        // Drop the Compose compiler's `ComposableSingletons$…` lambda-holder classes: they are
-        // compiler-generated implementation detail (not consumer API), and their `getLambda$<hash>`
-        // members carry a position-derived hash that can shift across compose-compiler versions —
-        // baselining them would produce spurious ABI breaks. (metalava filters these too.) Filtered at
-        // the text level because ClassBinarySignature.name is `internal` in BCV; the dump is a series of
-        // blank-line-separated class blocks, so a block whose header line names ComposableSingletons is
-        // dropped whole.
-        val filtered =
-            raw
-                .toString()
-                .split("\n\n")
-                .map { it.trim('\n') }
-                .filter { it.isNotBlank() && "ComposableSingletons" !in it.substringBefore('\n') }
-                .joinToString(separator = "\n\n", postfix = "\n")
-        target.parentFile.mkdirs()
-        target.writeText(filtered)
-    }
-
-    tasks.register("updateAndroidAbi") {
-        group = "verification"
-        description = "Regenerates the committed android public-ABI baseline (api/android/$moduleName.api)."
-        dependsOn(bundleTask)
-        outputs.file(baseline)
-        doLast { dumpTo(baseline) }
-    }
-
-    // NOT wired into `check`: like verifyMlKitBundledModel, checkAndroidAbi compiles the android target,
-    // so it runs explicitly in the android-compile CI job (which provisions the Android SDK), not on the
-    // SDK-less JVM `check` job. Run it (and updateAndroidAbi) locally against a module directly.
-    tasks.register("checkAndroidAbi") {
-        group = "verification"
-        description = "Fails if the android public ABI changed vs the committed api/android/$moduleName.api."
-        dependsOn(bundleTask)
-        inputs.file(classesJar)
-        // The committed baseline is read in `doLast` but deliberately NOT declared as a formal input: it is
-        // `updateAndroidAbi`'s output, and declaring it here would make Gradle demand a dependency between
-        // the two (they must stay independent — the check compares against the COMMITTED baseline, never a
-        // freshly regenerated one). A verification task always running is fine.
-        doLast {
-            val committed = baseline
-            if (!committed.exists()) {
-                throw GradleException(
-                    "No android ABI baseline for '$moduleName'. Run `./gradlew :$moduleName:updateAndroidAbi` and " +
-                        "commit api/android/$moduleName.api.",
-                )
-            }
-            val current = file("build/android-abi/$moduleName.api")
-            dumpTo(current)
-            if (current.readText() != committed.readText()) {
-                throw GradleException(
-                    "Android public ABI of '$moduleName' changed vs api/android/$moduleName.api (the AGP-KMP android " +
-                        "target, outside Kotlin's abiValidation — TES-35). If intended, run " +
-                        "`./gradlew :$moduleName:updateAndroidAbi` and commit the updated baseline; otherwise it is " +
-                        "an ADR-007 backward-compatibility break.",
-                )
-            }
-        }
-    }
-}
-
-subprojects {
-    if (name in androidAbiGuardedModules) registerAndroidAbiTasks()
 }
