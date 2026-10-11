@@ -57,6 +57,10 @@ Out of scope:
 - Issues in dependencies that do not affect the SDK's behavior
 - General code-quality concerns without a security angle (please open a regular issue or PR)
 
+## Dependency Vulnerabilities
+
+The full transitive dependency graph is submitted to GitHub on every merge to `main`, so Dependabot alerts cover everything the published artifacts pull in. Alerts are reviewed by reachability: a vulnerability in a shipped dependency is fixed, while one in a build-only or test-only dependency can be dismissed, and every dismissal carries a recorded reason. The release gate blocks a tag while any alert is untriaged. There is no PR-time dependency gate: it was removed in 2026-10 because GitHub's snapshot-visibility lag had turned it into a silent pass. Consumers only receive released artifacts, so a dependency sitting on `main` between merge and triage never reaches them.
+
 ## Acknowledgements
 
 The project will credit reporters in release notes for shipped fixes unless they request anonymity.
