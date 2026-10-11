@@ -107,19 +107,31 @@ kotlin {
 // suspenders: the pinned catalog version already constrains it; this makes the constraint enforced.
 //
 // Resolves androidRuntimeClasspath, so it needs the Android SDK present — it runs in the android-compile
-// CI job (and locally), not the SDK-less JVM `check` runner.
-val verifyMlKitBundledModel by tasks.registering {
+// CI job (and locally), not the SDK-less JVM `check` runner. The resolution result is captured as a
+// Provider at configuration time (not looked up inside doLast), so the task action holds no reference to
+// the build script — a configuration-cache requirement; the graph itself is still resolved only when the
+// task runs.
+tasks.register("verifyMlKitBundledModel") {
     group = "verification"
     description =
         "Fails if ML Kit's bundled text-recognition model (text-recognition-bundled-common) " +
         "is not on the Android runtime classpath."
+    val runtimeGraphRoot =
+        configurations.named("androidRuntimeClasspath").flatMap { it.incoming.resolutionResult.rootComponent }
     doLast {
         val marker = "com.google.mlkit:text-recognition-bundled-common"
-        val present =
-            configurations
-                .getByName("androidRuntimeClasspath")
-                .incoming.resolutionResult.allComponents
-                .any { component -> component.moduleVersion?.let { "${it.group}:${it.name}" } == marker }
+        // Walk the resolved graph from its root; a visited set guards against dependency cycles.
+        val visited = HashSet<String>()
+        val queue = ArrayDeque(listOf(runtimeGraphRoot.get()))
+        var present = false
+        while (queue.isNotEmpty() && !present) {
+            val component = queue.removeFirst()
+            if (!visited.add(component.id.displayName)) continue
+            present = component.moduleVersion?.let { "${it.group}:${it.name}" } == marker
+            component.dependencies
+                .filterIsInstance<org.gradle.api.artifacts.result.ResolvedDependencyResult>()
+                .forEach { queue.addLast(it.selected) }
+        }
         if (!present) {
             throw GradleException(
                 "ML Kit bundled-model guard failed: '$marker' is not on androidRuntimeClasspath. " +
