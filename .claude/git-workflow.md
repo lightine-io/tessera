@@ -163,6 +163,14 @@ If a reviewer is involved, request review via `gh pr edit <pr> --add-reviewer <h
 
 ### 10. Merge
 
+**Required checks (branch protection on `main`, set 2026-10-11 — TES-144).** A PR can merge only when all
+six pass: `build & test · JVM`, `build & test · Android`, `build & test · iOS`, `changelog · entry present`,
+`dependency review`, `publish · smoke (empty-module guard)`. "CI green" in the Work Loop means exactly this
+set; the remaining checks (`dependency graph`, `board · stage sync`, `hooks · regression tests`) are advisory.
+`gh pr merge --auto` waits for the required set, so merge-when-green is safe to use. When a workflow adds or
+renames a check, update the protection (`gh api -X PATCH repos/{owner}/{repo}/branches/main/protection/required_status_checks`)
+and this list in the same change.
+
 Merge strategy preferences (default is GitHub repo settings; can be configured per-PR):
 
 - **Rebase and merge** — preserves individual commits on `main`, linear history. Recommended when commits are well-titled and tell a coherent story.
