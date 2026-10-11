@@ -9,7 +9,7 @@ A vendor-neutral SDK for reading, validating, and generating identity document d
 
 Tessera reads Machine Readable Zones (MRZ) from passports, national ID cards, residence permits, machine-readable visas, and similar travel documents conforming to ICAO Doc 9303. It returns extracted data verbatim, with structured validation results — leaving all trust decisions to the integrating application.
 
-> **Status:** In active `0.x` development. `v0.5.0` is the current release on Maven Central (`io.lightine.tessera`), adding the **default scanner UI** — an optional, out-of-the-box MRZ scanner screen on both platforms (`MrzScannerScreen` in `tessera-mrz-camera-ui-android`, Jetpack Compose; `MrzScannerView` in `TesseraUI` via [tessera-swift](https://github.com/lightine-io/tessera-swift), SwiftUI) layered over the headless APIs — on top of the `0.2.x` live-camera, `0.3.x` saved-image, and `0.4.x` manual-entry reading — see [Installation](#installation) and [`CHANGELOG.md`](CHANGELOG.md). The `1.0.0` milestone marks the public-stability and open-source release commitment per [ADR-011](https://lightine.youtrack.cloud/articles/TES-A-41); pre-`1.0.0` releases follow the same strict backward-compatibility commitments as post-`1.0.0` releases. See [`docs/versioning.md`](https://lightine.youtrack.cloud/articles/TES-A-8) for the policy.
+> **Status:** In active `0.x` development. `v0.5.1` is the current release on Maven Central (`io.lightine.tessera`), adding the **default scanner UI** — an optional, out-of-the-box MRZ scanner screen on both platforms (`MrzScannerScreen` in `tessera-mrz-camera-ui-android`, Jetpack Compose; `MrzScannerView` in `TesseraUI` via [tessera-swift](https://github.com/lightine-io/tessera-swift), SwiftUI) layered over the headless APIs — on top of the `0.2.x` live-camera, `0.3.x` saved-image, and `0.4.x` manual-entry reading — see [Installation](#installation) and [`CHANGELOG.md`](CHANGELOG.md). The `1.0.0` milestone marks the public-stability and open-source release commitment per [ADR-011](https://lightine.youtrack.cloud/articles/TES-A-41); pre-`1.0.0` releases follow the same strict backward-compatibility commitments as post-`1.0.0` releases. See [`docs/versioning.md`](https://lightine.youtrack.cloud/articles/TES-A-8) for the policy.
 
 ---
 
@@ -74,7 +74,7 @@ The result type makes the three possible outcomes explicit. The consumer cannot 
 
 ## Installation
 
-Tessera is published to Maven Central under the `io.lightine.tessera` group. The current release is `0.5.0` (JVM + Android; iOS via Swift Package Manager — see [Platforms](#platforms)).
+Tessera is published to Maven Central under the `io.lightine.tessera` group. The current release is `0.5.1` (JVM + Android; iOS via Swift Package Manager — see [Platforms](#platforms)).
 
 ### Gradle (Kotlin DSL)
 
@@ -82,7 +82,7 @@ Use the BOM to keep every Tessera module on one version:
 
 ```kotlin
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:0.5.0"))
+    implementation(platform("io.lightine.tessera:tessera-bom:0.5.1"))
     implementation("io.lightine.tessera:tessera-mrz-core")  // MRZ parsing, validation, generation
 }
 ```
@@ -90,7 +90,7 @@ dependencies {
 Or pin the module version directly, without the BOM:
 
 ```kotlin
-implementation("io.lightine.tessera:tessera-mrz-core:0.5.0")
+implementation("io.lightine.tessera:tessera-mrz-core:0.5.1")
 ```
 
 `tessera-mrz-core` pulls in `tessera-types` transitively — most integrators need only this one module.
@@ -101,17 +101,17 @@ implementation("io.lightine.tessera:tessera-mrz-core:0.5.0")
 <dependency>
     <groupId>io.lightine.tessera</groupId>
     <artifactId>tessera-mrz-core</artifactId>
-    <version>0.5.0</version>
+    <version>0.5.1</version>
 </dependency>
 ```
 
 ### Swift Package Manager (iOS)
 
-In Xcode: **File → Add Package Dependencies…**, enter `https://github.com/lightine-io/tessera-swift`, and choose `0.5.0`. Or in a `Package.swift`:
+In Xcode: **File → Add Package Dependencies…**, enter `https://github.com/lightine-io/tessera-swift`, and choose `0.5.1`. Or in a `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/lightine-io/tessera-swift", from: "0.5.0"),
+    .package(url: "https://github.com/lightine-io/tessera-swift", from: "0.5.1"),
 ]
 ```
 
