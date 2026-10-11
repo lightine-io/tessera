@@ -1,23 +1,17 @@
-# Submits the full resolved Gradle dependency graph — including transitive
-# dependencies — to GitHub's Dependency Graph. GitHub cannot resolve a Gradle
+# Submits the full resolved Gradle dependency graph - including transitive
+# dependencies - to GitHub's Dependency Graph. GitHub cannot resolve a Gradle
 # project's transitive graph on its own, so without this submission Dependabot
-# alerts and the PR gate (dependency-review.yml) see only the directly-declared
-# dependencies. With it, the whole tree is enumerated for CVE alerting — the
-# continuous half of the dependency CVE scan (the project's issue tracker "CI and
-# repository hardening", item 5 / action-plan A4 / Q6).
+# alerts see only the directly-declared dependencies. With it, the whole tree is
+# enumerated for CVE alerting - the continuous half of the dependency CVE scan
+# (the project's issue tracker "CI and repository hardening", item 5 / action-plan
+# A4 / Q6).
 #
-# Runs on push to main (keeps the baseline graph current, so Dependabot alerts
-# cover the full transitive set) and on pull_request (so dependency-review can
-# diff the PR's full graph — that job waits for this submission via
-# retry-on-snapshot-warnings).
-#
-# Pattern 1 (trusted / same-repo PRs) per the gradle/actions docs: submit
-# directly on pull_request. Tessera's PRs are same-repo branches, for which
-# `contents: write` is available; for a fork PR on this public repo GitHub
-# auto-downgrades the token to read, so the submit step simply no-ops rather
-# than escalating privilege. If external fork PRs ever become routine, switch to
-# the fork-safe generate-and-upload + workflow_run pattern (Pattern 2 in those
-# docs).
+# Runs on push to main only, which keeps the baseline graph current so Dependabot
+# alerts cover the full transitive set. There is no PR-time gate: the PR-level
+# dependency-review check was removed (TES-147) because GitHub's snapshot
+# visibility lag made it pass vacuously. Vulnerable dependencies are caught after
+# merge by Dependabot alerts and before every release by the release gate's
+# open-alert check (see SECURITY.md).
 #
 # First-party actions only (GitHub + Gradle Foundation), matching check.yml's
 # supply-chain stance — no third-party scanner enters the build.
@@ -27,14 +21,13 @@ name: dependency submission
 on:
   push:
     branches: [main]
-  pull_request:
 
 permissions:
   contents: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: false
 
 jobs:
   dependency-submission:
@@ -67,14 +60,13 @@ jobs:
       - name: Generate and submit dependency graph
         uses: gradle/actions/dependency-submission@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
-          # Gate only what actually SHIPS — keep build-time/test-only dependencies out of the submitted
-          # graph so the dependency-review PR gate (and Dependabot) never block on transitives that cannot
-          # reach a consumer:
-          #   - `.*[Tt]est(Compile|Runtime)Classpath` — per-target test classpaths (e.g. Robolectric, which
+          # Alert only on what actually SHIPS - keep build-time/test-only dependencies out of the submitted
+          # graph so Dependabot never raises alerts for transitives that cannot reach a consumer:
+          #   - `.*[Tt]est(Compile|Runtime)Classpath` - per-target test classpaths (e.g. Robolectric, which
           #     pulls bcprov). These are project configurations, so exclude-configurations reaches them.
-          # The build-time *buildscript* classpath (e.g. Dokka's jackson) is kept out at the source — by
+          # The build-time *buildscript* classpath (e.g. Dokka's jackson) is kept out at the source - by
           # NOT declaring a root `buildscript {}` block; the buildscript classpath is not a project
-          # configuration, so it cannot be excluded here. Result:
-          # the gate covers the runtime/compile classpaths of the published artifacts only. Consumer-facing
-          # dependency CVEs are still gated.
+          # configuration, so it cannot be excluded here. Result: the submitted graph covers the
+          # runtime/compile classpaths of the published artifacts only, so consumer-facing dependency
+          # CVEs are still alerted.
           dependency-graph-exclude-configurations: '.*[Tt]est(Compile|Runtime)Classpath'
