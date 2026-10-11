@@ -15,6 +15,10 @@ The project bumps the toolchain and dependencies to current stable on a **six-mo
 
 ## What to bump each cycle
 
+Dependabot opens **no version-update PRs for Gradle** (`open-pull-requests-limit: 0`, TES-148): this
+cadence is the only scheduled version pass. Security updates are separate and arrive at once; a
+shipped dependency with a fixed advisory is upgraded immediately, outside the cadence.
+
 Kotlin (and KMP plugin), Gradle wrapper, JDK toolchain floor, dev tooling (Spotless, ktlint), runtime dependencies (kotlinx-datetime, etc.), test dependencies (kotest), and any other plugins pinned in `settings.gradle.kts` (foojay-resolver-convention, etc.).
 
 The complete inventory is whatever has a version pinned in:

@@ -10,13 +10,18 @@
 
 version: 2
 updates:
-  # Gradle / Kotlin dependencies (build.gradle.kts + libs.versions.toml)
+  # Gradle / Kotlin dependencies (build.gradle.kts + libs.versions.toml).
+  # Version-update PRs are OFF (limit 0): versions move only at the six-monthly
+  # dependency cadence (.claude/skills/dependency-upgrade-cadence/SKILL.md). Security
+  # updates are a separate repo setting and are not subject to this limit - an alert
+  # with a fix still gets its PR at once (TES-148). The schedule block is required
+  # by the schema even with the limit at zero.
   - package-ecosystem: gradle
     directory: /
     schedule:
       interval: monthly
       day: monday
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     labels:
       - dependencies
       - gradle
