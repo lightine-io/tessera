@@ -155,8 +155,12 @@ internal class VisionSavedImageRecognizer(
 
     // Reads the file's EXIF orientation (1 when absent — an unrotated image). kCGImagePropertyOrientation's
     // bridged dictionary key is the string "Orientation"; CFBridgingRelease takes ownership of the copy.
+    // The bridged CFDictionary arrives as Any?; its key type is erased, so the cast to Map<Any?, *> is
+    // unchecked by construction — a non-Map value falls through the `as?` to the default below.
     private fun imageOrientation(source: CGImageSourceRef): Int {
         val properties = CGImageSourceCopyPropertiesAtIndex(source, 0u, null) ?: return 1
+
+        @Suppress("UNCHECKED_CAST")
         val bridged = CFBridgingRelease(properties) as? Map<Any?, *> ?: return 1
         return (bridged["Orientation"] as? Number)?.toInt() ?: 1
     }
