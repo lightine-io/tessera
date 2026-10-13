@@ -23,9 +23,11 @@ This is the *content-placement* half of the operating model. The companions:
 
 1. **Git** — the product and the machinery, *plus the offline floor*: code, build, CI, release files, the
    `.claude/` operating files any Claude loads, and the few files a guest needs to fork + open a PR.
-2. **YouTrack — Public KB** — everything the public may read: contributor docs, consumer docs, the decision record.
-3. **YouTrack — Internal KB / Issues** — our private process: roadmap/vision, planning, working notes,
-   in-progress decisions (KB = to *read*; Issues = to *do*).
+2. **YouTrack — Public KB** — what someone *using or contributing to* the SDK must read: consumer docs
+   (folder *Use the SDK*) and contributor docs (folder *Contribute*).
+3. **YouTrack — Internal KB / Issues** — how we work and what we decided along the way: the decision
+   record (folder *Decisions*), process pages (*Process*), recaps and archives (*History*); planning and
+   working notes live in Issues (KB = to *read*; Issues = to *do*).
 4. **Local** — gitignored working notes (`.handoffs/`, `.plans/`, …) and copyright-restricted material
    (the ICAO Doc 9303 spec in `.spec/`). **Unchanged** — see [`folder-organization.md`](folder-organization.md).
 
@@ -40,13 +42,15 @@ on disk*? → **git.** There is no "load from YouTrack" for these, and the build
 `working-patterns.md`, `known-pitfalls.md`, the handoff template, `git-workflow.md`.)*
 
 **2. If not mechanical — is the content public or internal?**
-- **Public** (contributor docs, consumer docs, the decision record) → **Public KB.**
-  *(principles, architecture, conventions, versioning, testing, workflow, reading-risks, the guides,
-  getting-started, dev-environment docs, contributor docs, tech-stack-references, ADRs, feature docs,
-  the public half of scope.)*
-- **Internal** (roadmap/strategy, planning backlog, working notes, in-progress decisions) →
-  **Internal KB** (to read) or **Issues** (to do). *(scope's roadmap, publishing-setup, the recaps/reviews/
-  discovery notes; the deferred-decisions backlog is Issues.)*
+- **Public** (consumer docs, contributor docs) → **Public KB.**
+  *(Use the SDK: getting-started, the guides, reference pages, principles, reading-risks, versioning, the
+  public half of scope. Contribute: contributor setup, dev-environment docs, testing, conventions,
+  architecture, workflow, tech-stack-references.)*
+- **Internal** (the decision record, process, history, planning) → **Internal KB** (to read) or
+  **Issues** (to do). *(Decisions: the ADRs. Process: doc style, publishing-setup, QA playbook, scope's
+  roadmap. History: the recaps/reviews/discovery notes. The deferred-decisions backlog is Issues.)*
+  ADRs are internal since 2026-10-13 (TES-176): outside readers get the *what* on the public pages; the
+  written *why* is revisited for publication at 1.0.
 
 > **A *link* is not a *read*.** Code or docs that merely **link to** a document (a KDoc `see X`, a
 > cross-reference, a citation) do **not** anchor it to git — the link just becomes a KB/GitHub URL. Only a
