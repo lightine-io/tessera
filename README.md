@@ -20,7 +20,7 @@ dependencies {
 }
 ```
 
-Use only the lines you need. A JVM app needs only the first two.
+Use only the lines you need. A JVM app needs only the first two, plus `kotlin { jvmToolchain(21) }`, because the classes target Java 21.
 
 Maven (JVM):
 
