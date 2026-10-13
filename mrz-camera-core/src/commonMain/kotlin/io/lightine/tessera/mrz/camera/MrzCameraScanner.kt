@@ -38,22 +38,26 @@ public interface MrzCameraScanner {
      * The stream of results, one per analysed frame, plus any capture failure surfaced as an
      * [`MrzScanResult.CaptureError`][MrzScanResult.CaptureError]. A hot stream: it emits only while the
      * scanner is running (between [start] and [stop]); collectors that join late see results from that
-     * point on, not a replay. In a live stream the consumer reads each result and waits for the next — a
-     * noisy frame is simply [`NoMrzFound`][MrzScanResult.NoMrzFound] and the next clean frame arrives
-     * within milliseconds (strict + next-frame retry).
+     * point on, with no replay of earlier results, so collect before or right after [start]. The flow
+     * never completes: it stays open across [start] and [stop], so do not wait for it to finish. In a
+     * live stream the consumer reads each result and waits for the next — a noisy frame is simply
+     * [`NoMrzFound`][MrzScanResult.NoMrzFound] and the next clean frame arrives within milliseconds
+     * (strict + next-frame retry).
      *
      * Most [`CaptureError`][MrzScanResult.CaptureError]s are **non-terminal** — a per-frame OCR failure,
-     * or a recoverable camera-in-use / temporarily-unavailable observation — and the stream continues. A
-     * **critical** capture failure (permission denied, fatal hardware) ends the stream. Branch on
-     * [`CaptureError.error`][MrzScanResult.CaptureError] to tell them apart; after the stream ends you
-     * may [start] again (e.g. once the user grants permission).
+     * or a recoverable camera-in-use / temporarily-unavailable observation — and the session continues. A
+     * **critical** capture failure (permission denied, fatal hardware) ends the camera session; the flow
+     * itself stays open and emits no more results until the next [start]. Branch on
+     * [`MrzScanResult.CaptureError`][MrzScanResult.CaptureError] and its `error.code` to tell the cases
+     * apart, rather than waiting for the flow to complete; after a critical failure you may [start]
+     * again (e.g. once the user grants permission).
      */
     public val results: Flow<MrzScanResult>
 
     /**
      * Starts the camera session and begins emitting on [results]. Idempotent while running: calling
      * [start] on an already-running scanner does nothing. Once the session has ended — via [stop], or
-     * because the stream ended on a terminal capture failure — [start] begins a fresh session (the
+     * because the session ended on a critical capture failure — [start] begins a fresh session (the
      * prompt-and-retry path). The consumer must hold the camera permission first (the scanner reports,
      * it does not request).
      *
@@ -66,9 +70,9 @@ public interface MrzCameraScanner {
     public fun start()
 
     /**
-     * Stops the camera session and ends emission on [results]. Idempotent. After [stop] the scanner may
-     * be [start]ed again. Releasing the scanner entirely (closing its camera resources) is the platform
-     * type's own lifecycle concern, documented there.
+     * Stops the camera session, so [results] emits nothing more until the next [start]. Idempotent. After
+     * [stop] the scanner may be [start]ed again. Releasing the scanner entirely (closing its camera
+     * resources) is the platform type's own lifecycle concern, documented there.
      */
     public fun stop()
 }

@@ -22,7 +22,10 @@ public data class CameraFrameEvent(
     public val mrzRegionFound: Boolean,
     /** Coarse aggregate OCR confidence in `[0, 1]`, or `null` if unavailable. */
     public val ocrConfidence: Float?,
-    /** The MRZ format detected when [outcome] is [CameraFrameOutcome.DECODED]; otherwise `null`. */
+    /**
+     * The MRZ format when the parser produced a document (`Success` or `PartialSuccess`); otherwise
+     * `null`, including for a `Failure`.
+     */
     public val detectedFormat: MrzFormat?,
 ) : TelemetryEvent {
     override val name: String get() = EVENT_NAME

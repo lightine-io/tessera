@@ -10,9 +10,10 @@ import kotlin.concurrent.Volatile
  * driving [MrzFrameAnalyzer.scan] as their own owns-session scanner can reuse the same bookkeeping.
  *
  * **The bug this prevents.** A scanner that nulls its job field only in `stop()` stays "running"
- * forever after the results flow completes by itself — e.g. a *terminal* `CaptureError` ends the
- * stream without anyone calling `stop()`. A later `start()` then sees a non-null job and no-ops,
- * silently breaking the documented prompt-and-retry path (`PermissionDenied` → prompt → `start()`).
+ * forever after the session ends by itself — e.g. a *critical* `CaptureError` ends the camera
+ * session without anyone calling `stop()` (the results flow stays open). A later `start()` then sees
+ * a non-null job and no-ops, silently breaking the documented prompt-and-retry path
+ * (`PermissionDenied` → prompt → `start()`).
  * This gate clears the job when the session completes for ANY reason — cancellation via [stop] or
  * natural completion — so [start] works again afterward.
  *

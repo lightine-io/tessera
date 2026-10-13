@@ -195,7 +195,7 @@ public class AVCaptureMrzScanner(
     }
 
     // Tracks the in-flight session and auto-clears it on completion, so start() works again after the
-    // stream ends on its own (a terminal CaptureError), not only after stop(). See CameraSessionGate.
+    // session ends on its own (a critical CaptureError), not only after stop(). See CameraSessionGate.
     private val session = CameraSessionGate()
 
     // STRONG reference to the capture delegate, held for the whole session. AVCaptureVideoDataOutput holds
