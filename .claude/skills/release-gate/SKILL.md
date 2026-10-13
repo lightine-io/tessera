@@ -37,5 +37,9 @@ Every gate is binary. Run them in order; report per-gate pass/fail to the mainta
    TES-138). `gh pr list --repo lightine-io/tessera-swift --state open` must be
    empty; the workflow enforces this and fails the publish step otherwise (merge,
    then re-run the job — it is re-run-safe).
+10. **KB and doc links** — `python3 scripts/kb-linkcheck.py --quiet --allow-internal` exits 0
+    (no dead or wrong-anchor link). Drop `--allow-internal` once TES-169 (private issue links in
+    CHANGELOG) and TES-178 (public pages linking internal articles) are closed; then no public page
+    may link into the internal KB.
 
 **The maintainer pushes the tag. The session never does.**

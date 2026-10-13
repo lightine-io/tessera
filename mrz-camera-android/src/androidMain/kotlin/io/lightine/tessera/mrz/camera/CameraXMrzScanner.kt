@@ -196,7 +196,7 @@ public class CameraXMrzScanner(
     // the user out of the too-close range instead.
 
     // Tracks the in-flight session and auto-clears it on completion, so start() works again after the
-    // stream ends on its own (a terminal CaptureError), not only after stop(). See CameraSessionGate.
+    // session ends on its own (a critical CaptureError), not only after stop(). See CameraSessionGate.
     private val session = CameraSessionGate()
 
     override fun start() {

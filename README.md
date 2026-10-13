@@ -5,200 +5,106 @@
 [![CI](https://github.com/lightine-io/tessera/actions/workflows/check.yml/badge.svg)](https://github.com/lightine-io/tessera/actions/workflows/check.yml)
 [![Kotlin Multiplatform](https://img.shields.io/badge/Kotlin-Multiplatform-blue.svg?logo=kotlin)](https://kotlinlang.org/docs/multiplatform.html)
 
-A vendor-neutral SDK for reading, validating, and generating identity document data.
+Tessera is a vendor-neutral, open-source SDK that reads, validates, and generates the data in the MRZ (machine-readable zone) of passports and ID cards. It is built with Kotlin Multiplatform and runs on Android, iOS, and the JVM. Tessera reports what it read and what it checked. Your app decides what to do with the result. The current release is `0.5.1`.
 
-Tessera reads Machine Readable Zones (MRZ) from passports, national ID cards, residence permits, machine-readable visas, and similar travel documents conforming to ICAO Doc 9303. It returns extracted data verbatim, with structured validation results — leaving all trust decisions to the integrating application.
+## Install
 
-> **Status:** In active `0.x` development. `v0.5.1` is the current release on Maven Central (`io.lightine.tessera`), adding the **default scanner UI** — an optional, out-of-the-box MRZ scanner screen on both platforms (`MrzScannerScreen` in `tessera-mrz-camera-ui-android`, Jetpack Compose; `MrzScannerView` in `TesseraUI` via [tessera-swift](https://github.com/lightine-io/tessera-swift), SwiftUI) layered over the headless APIs — on top of the `0.2.x` live-camera, `0.3.x` saved-image, and `0.4.x` manual-entry reading — see [Installation](#installation) and [`CHANGELOG.md`](CHANGELOG.md). The `1.0.0` milestone marks the public-stability and open-source release commitment per [ADR-011](https://lightine.youtrack.cloud/articles/TES-A-41); pre-`1.0.0` releases follow the same strict backward-compatibility commitments as post-`1.0.0` releases. See [`docs/versioning.md`](https://lightine.youtrack.cloud/articles/TES-A-8) for the policy.
-
----
-
-## What it does
-
-- **Parses all ICAO Doc 9303 MRZ formats**: TD1, TD2, TD3, MRV-A, MRV-B
-- **Validates** structurally, by check digit, and semantically — without making trust decisions
-- **Generates** valid MRZs from structured input, supporting round-trip use cases
-- **Exposes everything it extracts** — raw fields, computed values, validation results, and warnings — so the consumer always knows what was observed and what was inferred
-- **Reads MRZ from a live camera or a saved image** — headless: Android (CameraX + ML Kit) and iOS (AVFoundation + Apple Vision) read live frames or a pre-captured image file through the same parser, with the consumer owning all UI. You can also supply the MRZ string directly, or read a **human-typed MRZ** through the manual-entry reading method (`ManualMrzReader`). NFC-chip reading is planned for a later release (`0.6.0` — see the [roadmap](https://lightine.youtrack.cloud/articles/TES-A-62)).
-- **Runs anywhere the core technology stack supports** — initial mobile targets (Android, iOS) plus future support for backend, desktop, and web
-
----
-
-## What it deliberately does not do
-
-Tessera is a reader, not an oracle. It surfaces observations; the consumer makes trust decisions. Specifically, the SDK does not:
-
-- Decide whether a document is "valid" or "trustworthy" — that depends on the consumer's threat model
-- Verify document authenticity against external registries
-- Perform face matching or liveness detection (these may be added later as separate capabilities)
-- Store any data — no persistence, no caching, no telemetry by default
-- Phone home — no network calls, no analytics, no licensing checks
-
-These are deliberate boundaries. See [`docs/principles.md`](https://lightine.youtrack.cloud/articles/TES-A-5) for the reasoning.
-
----
-
-## Quick example
-
-This example compiles against the published API (verified symbol-by-symbol; the project's documentation rules require it). The public API follows strict backward compatibility throughout `0.x` ([ADR-007](https://lightine.youtrack.cloud/articles/TES-A-37)).
-
-```kotlin
-val result = MrzParser.parse("""
-    P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<
-    L898902C36UTO7408122F1204159ZE184226B<<<<<10
-""".trimIndent())
-
-when (result) {
-    is ParseResult.Success -> {
-        val doc = result.document as TD3  // io.lightine.tessera.mrz.model.TD3
-        println("Name: ${doc.commonFields.primaryIdentifier}, ${doc.commonFields.secondaryIdentifier}")
-        println("Document number: ${doc.commonFields.documentNumber}")
-        // ... use the parsed data
-    }
-    is ParseResult.PartialSuccess -> {
-        // Data extracted, but some validations failed.
-        // Read result.document and result.metadata.validationFailures to decide.
-    }
-    is ParseResult.Failure -> {
-        // The input was structurally too broken to construct a document.
-        println("Parse failed: ${result.error}")
-    }
-}
-```
-
-The result type makes the three possible outcomes explicit. The consumer cannot accidentally treat a `PartialSuccess` as a `Success`.
-
-**More examples** — validation, generation, transliteration, live-camera scanning — are in the [feature guides](https://lightine.youtrack.cloud/articles/TES-A-16); every guide has a copy-paste Usage section.
-
----
-
-## Installation
-
-Tessera is published to Maven Central under the `io.lightine.tessera` group. The current release is `0.5.1` (JVM + Android; iOS via Swift Package Manager — see [Platforms](#platforms)).
-
-### Gradle (Kotlin DSL)
-
-Use the BOM to keep every Tessera module on one version:
+Gradle (Kotlin DSL), for Android and the JVM:
 
 ```kotlin
 dependencies {
     implementation(platform("io.lightine.tessera:tessera-bom:0.5.1"))
-    implementation("io.lightine.tessera:tessera-mrz-core")  // MRZ parsing, validation, generation
+    implementation("io.lightine.tessera:tessera-mrz-core")                // parse, validate, generate
+    implementation("io.lightine.tessera:tessera-mrz-camera-android")      // Android: headless camera reading
+    implementation("io.lightine.tessera:tessera-mrz-camera-ui-android")   // Android: scanner screen
 }
 ```
 
-Or pin the module version directly, without the BOM:
+Use only the lines you need. A JVM app needs only the first two, plus `kotlin { jvmToolchain(21) }`, because the classes target Java 21.
 
-```kotlin
-implementation("io.lightine.tessera:tessera-mrz-core:0.5.1")
-```
-
-`tessera-mrz-core` pulls in `tessera-types` transitively — most integrators need only this one module.
-
-### Maven
+Maven (JVM):
 
 ```xml
 <dependency>
     <groupId>io.lightine.tessera</groupId>
-    <artifactId>tessera-mrz-core</artifactId>
+    <artifactId>tessera-mrz-core-jvm</artifactId>
     <version>0.5.1</version>
 </dependency>
 ```
 
-### Swift Package Manager (iOS)
+Maven does not read Gradle module metadata. Use the `-jvm` artifact, as shown, so its dependencies arrive in the compile scope.
 
-In Xcode: **File → Add Package Dependencies…**, enter `https://github.com/lightine-io/tessera-swift`, and choose `0.5.1`. Or in a `Package.swift`:
+Swift Package Manager (iOS), in `Package.swift`:
 
 ```swift
-dependencies: [
-    .package(url: "https://github.com/lightine-io/tessera-swift", from: "0.5.1"),
-]
+.package(url: "https://github.com/lightine-io/tessera-swift", exact: "0.5.1"),
+// In your target's dependencies:
+.product(name: "Tessera", package: "tessera-swift"),
+.product(name: "TesseraUI", package: "tessera-swift"),  // the scanner screen
 ```
 
-Then `import Tessera`. The iOS binary ships as the `Tessera` XCFramework (minimum deployment target iOS 18, per [ADR-018](https://lightine.youtrack.cloud/articles/TES-A-45)). The Swift surface is provisional through the `0.x` line — see [`tessera-swift`](https://github.com/lightine-io/tessera-swift).
+In Xcode, choose **File > Add Package Dependencies** and enter the same URL.
 
-> **Android** ships the same coordinates as AAR artifacts (e.g. `tessera-mrz-camera-android` for live-camera reading) — use the Gradle/Maven blocks above. See [Platforms](#platforms) for the per-target capability matrix.
+## First MRZ
 
----
+This parses the specimen passport MRZ from ICAO Doc 9303, which is published test data:
+
+```kotlin
+import io.lightine.tessera.mrz.parsing.MrzParser
+import io.lightine.tessera.mrz.parsing.ParseResult
+
+fun main() {
+    val mrz = """
+        P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<
+        L898902C36UTO7408122F1204159ZE184226B<<<<<10
+    """.trimIndent()
+    when (val result = MrzParser.parse(mrz)) {
+        is ParseResult.Success -> {
+            val fields = result.document.commonFields
+            println("Name: ${fields.primaryIdentifier}, ${fields.secondaryIdentifier}")
+            println("Document number: ${fields.documentNumber}")
+        }
+        is ParseResult.PartialSuccess -> println("Read, but some checks failed")
+        is ParseResult.Failure -> println("This is not a readable MRZ")
+    }
+}
+```
+
+For a complete, runnable walkthrough, pick your platform:
+
+- [Read your first MRZ on Android](https://lightine.youtrack.cloud/articles/TES-A-76)
+- [Read your first MRZ on iOS](https://lightine.youtrack.cloud/articles/TES-A-77)
+- [Read your first MRZ on the JVM](https://lightine.youtrack.cloud/articles/TES-A-10)
 
 ## Documentation
 
-The project's documentation is structured for two audiences: integrators (who want to use the SDK) and contributors (who want to understand or extend it).
+The full documentation is in the [public knowledge base](https://lightine.youtrack.cloud/articles/TES-A-3). Start at [Use the SDK](https://lightine.youtrack.cloud/articles/TES-A-16).
 
-### For integrators
+- [Parse an MRZ into fields](https://lightine.youtrack.cloud/articles/TES-A-25) - every format, input form, and option.
+- [Use the default scanner screen](https://lightine.youtrack.cloud/articles/TES-A-74) - the ready-made scan flow on Android and iOS.
+- [Read an MRZ from the live camera](https://lightine.youtrack.cloud/articles/TES-A-40) - the headless camera scanner.
+- [MRZ result types and fields](https://lightine.youtrack.cloud/articles/TES-A-33) - reference for documents, fields, and results.
+- [Errors, failures, and warnings](https://lightine.youtrack.cloud/articles/TES-A-28) - reference for everything the SDK can report.
 
-- [`docs/scope.md`](https://lightine.youtrack.cloud/articles/TES-A-62) — what the SDK supports, what it does not, and what is planned
-- [`docs/getting-started.md`](https://lightine.youtrack.cloud/articles/TES-A-10) — dependency → parse → validate → generate in ten minutes
-- [`docs/guides/android-integration.md`](https://lightine.youtrack.cloud/articles/TES-A-14) — Android: from empty app to a working live-camera MRZ scan
-- [`docs/guides/ios-integration.md`](https://lightine.youtrack.cloud/articles/TES-A-18) — iOS: the same journey in Swift, including the provisional Flow-collection pattern
-- [`docs/features/`](https://lightine.youtrack.cloud/articles/TES-A-16) — usage guides for every capability, each with a copy-paste Usage example
-- **API reference** — KDoc ships as javadoc jars with every module on Maven Central (your IDE picks them up automatically); a hosted Dokka site is a tracked deferral in the project's issue tracker
-- [`docs/reading-risks.md`](https://lightine.youtrack.cloud/articles/TES-A-11) — what each reading method establishes, what it does not, and what additional verification might be needed
-- [Glossary — YouTrack KB](https://lightine.youtrack.cloud/articles/TES-A-4) — definitions of MRZ, eMRTD, BAC, PACE, and other terms used throughout the documentation
-- [`docs/versioning.md`](https://lightine.youtrack.cloud/articles/TES-A-8) — versioning policy and release commitments
-
-### For contributors
-
-- [`docs/principles.md`](https://lightine.youtrack.cloud/articles/TES-A-5) — the foundational principles every design decision honors
-- [`docs/architecture.md`](https://lightine.youtrack.cloud/articles/TES-A-9) — module structure, dependency graph, and technology choices
-- [`docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20) — how documentation is written, how decisions are made, how contributions happen
-- [`docs/testing.md`](https://lightine.youtrack.cloud/articles/TES-A-15) — testing discipline (tests alongside implementation, synthetic data only)
-- [`docs/contributor-setup.md`](https://lightine.youtrack.cloud/articles/TES-A-12) — one-time machine setup for contributors (clone, Git identity, SSH commit signing)
-- [`docs/decisions/`](https://lightine.youtrack.cloud/articles/TES-A-17) — Architecture Decision Records capturing the reasoning behind major choices
-- the project's issue tracker — decisions that have been deliberately deferred, tracked so they are not forgotten
-
-### For maintainers
-
-- [`docs/publishing-setup.md`](https://lightine.youtrack.cloud/articles/TES-A-57) — one-time setup for publishing to Maven Central (PGP signing key, Sonatype Central Portal user token, Gradle credential storage). Maintainer-only; contributors do not need this
-
----
+What changed in each version is in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Platforms
 
-Tessera is built with Kotlin Multiplatform. Targets activate per-release as the corresponding reading methods land — see [`docs/scope.md`](https://lightine.youtrack.cloud/articles/TES-A-62) for the full roadmap.
-
-Active as of `0.5.0`:
-
-- **JVM** — the pure core logic (parsing, validation, generation, lookup tables, transliteration profiles, telemetry contract)
-- **Android** — core logic plus headless live-camera, saved-image, and manual-entry reading (CameraX + ML Kit), and the optional default scanner UI (`tessera-mrz-camera-ui-android`, Jetpack Compose). Minimum API level 23 (Android 6.0), per [ADR-018](https://lightine.youtrack.cloud/articles/TES-A-45)
-- **iOS** — core logic plus headless live-camera, saved-image, and manual-entry reading (AVFoundation + Apple Vision), and the optional default scanner UI (`TesseraUI`, SwiftUI), distributed via Swift Package Manager. Minimum deployment target iOS 18, per [ADR-018](https://lightine.youtrack.cloud/articles/TES-A-45)
-
-The architecture supports further targets — Web (JS / Wasm), Desktop (JVM and native) — without changes to the core logic. They are not part of the initial releases but can be activated when there is a use case.
-
----
-
-## Versioning
-
-Tessera follows [Semantic Versioning 2.0.0](https://semver.org/) with strict backward-compatibility commitments from the first release onward — including the 0.x line. This is stricter than the convention in many open source projects, where 0.x signals "API may change without notice." The choice is deliberate: see [`docs/versioning.md`](https://lightine.youtrack.cloud/articles/TES-A-8) for the reasoning.
-
----
-
-## License
-
-Tessera is released under the Apache License 2.0. The full license text is in the [`LICENSE`](LICENSE) file at the project root. See [`docs/decisions/0010-apache-2-license.md`](https://lightine.youtrack.cloud/articles/TES-A-39) for the reasoning behind the license choice.
-
----
-
-## Security
-
-Tessera is used in trust-related contexts. Security reports are taken seriously and handled privately. See [`SECURITY.md`](SECURITY.md) for the disclosure process, the supported-versions matrix, and what is in and out of scope.
-
----
+| Target | Minimum |
+|---|---|
+| Android | `minSdk` 23 |
+| iOS | iOS 18 |
+| JVM | Java 21 |
+| Kotlin | 2.4 |
 
 ## Contributing
 
-[`CONTRIBUTING.md`](CONTRIBUTING.md) is the short pointer for new contributors; [`docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20) holds the full contribution rules; [`docs/contributor-setup.md`](https://lightine.youtrack.cloud/articles/TES-A-12) covers one-time machine setup. The short version:
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) first. The [Contribute](https://lightine.youtrack.cloud/articles/TES-A-78) pages cover machine setup, testing, and conventions.
 
-- Decisions of architectural or scope significance are recorded as ADRs
-- Disagreement is welcome — the project's culture is dispute-driven, grounded in the principles
-- New conventions are added through normal contribution: proposal, discussion, agreement, then an edit
+## Security
 
-The project is in active `0.x` development. The formal open-source release happens at `1.0.0` per [ADR-011](https://lightine.youtrack.cloud/articles/TES-A-41).
+Report vulnerabilities privately. [`SECURITY.md`](SECURITY.md) explains how.
 
----
+## License
 
-## Acknowledgments
-
-Tessera builds on the work of the International Civil Aviation Organization (ICAO), whose Doc 9303 series defines the standards this SDK implements. The SDK references those standards rather than reproducing them.
-
-The project's design owes a debt to the broader open source community's work on identity document standards, MRZ parsing libraries that came before, and the Kotlin Multiplatform ecosystem that makes shared cross-platform logic practical.
+Apache License 2.0. See [`LICENSE`](LICENSE).

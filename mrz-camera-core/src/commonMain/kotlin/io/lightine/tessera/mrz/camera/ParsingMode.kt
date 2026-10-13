@@ -2,13 +2,16 @@ package io.lightine.tessera.mrz.camera
 
 /**
  * How forgiving the analyse-frame core is of OCR formatting noise when it extracts a candidate MRZ
- * from recognized text. Consumer-chosen; the default is [STRICT]
+ * from recognized text. Consumer-chosen, and the default depends on the reader: [MrzFrameAnalyzer] and
+ * the live scanners ([CameraXMrzScanner], [AVCaptureMrzScanner]) default to [STRICT], while
+ * [SavedImageMrzReader] defaults to [LENIENT]
  * ([ADR-020](https://lightine.youtrack.cloud/articles/TES-A-49)).
  *
  * Neither mode ever changes a data character — the difference is only which lines qualify as an MRZ
  * candidate. (Both fold case to upper, which recovers the intended glyph since the MRZ alphabet is
- * uppercase-only; that is case normalization, not a data decision.) Tolerant mode — check-digit-guided
- * disambiguation of genuinely ambiguous characters — is deferred to 0.3.0 and is not represented here.
+ * uppercase-only; that is case normalization, not a data decision.) Tolerant candidate surfacing —
+ * check-digit-guided disambiguation of genuinely ambiguous characters — is a separate switch, not a
+ * [ParsingMode] value: pass `tolerant = true` to [SavedImageMrzReader].
  */
 public enum class ParsingMode {
     /**
