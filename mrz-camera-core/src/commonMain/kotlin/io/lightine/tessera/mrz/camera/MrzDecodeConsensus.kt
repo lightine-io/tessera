@@ -7,12 +7,14 @@ import io.lightine.tessera.mrz.parsing.ParseResult
  * Accepts a reading only after the same parsed document decodes on [threshold] frames.
  *
  * It selects among readings the camera produced and never builds one. Agreement is on the whole
- * [MrzDocument], not per character. A [ParseResult.PartialSuccess] still counts. A misread that
- * repeats on every frame also reaches agreement. The class is not thread-safe: drive one instance
+ * [MrzDocument], not per character. The frames need not be consecutive: the count is the total
+ * since the last [reset], and other frames between them do not reset it. A
+ * [ParseResult.PartialSuccess] still counts. A misread that repeats on every frame also reaches
+ * agreement. The class is not thread-safe: drive one instance
  * from one collector per scan session, and call [reset] when a new session begins.
  *
- * @property threshold how many frames must decode the same document. At least 1; 1 accepts the
- *   first decode. The default is [DEFAULT_THRESHOLD].
+ * @property threshold how many frames in total must decode the same document. At least 1; 1
+ *   accepts the first decode. The default is [DEFAULT_THRESHOLD].
  * @throws IllegalArgumentException if [threshold] is less than 1.
  * @since 0.5.0
  */

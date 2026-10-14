@@ -88,6 +88,7 @@ internal class ExifCaptureMetadataReader(
  * @param acknowledgement the required saved-image acknowledgement. It has no default.
  * @param context any [Context]; the reader keeps its application context.
  * @return the reader.
+ * @since 0.3.0
  */
 public fun exifCaptureMetadataReader(
     acknowledgement: SavedImageReadingAcknowledgement,

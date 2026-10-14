@@ -151,6 +151,7 @@ private fun rawStringTags(vararg dictionaries: Map<Any?, *>?): Map<String, Strin
  *
  * @param acknowledgement the required saved-image acknowledgement. It has no default.
  * @return the reader.
+ * @since 0.3.0
  */
 public fun imageIoCaptureMetadataReader(acknowledgement: SavedImageReadingAcknowledgement): CaptureMetadataReader<NSURL> =
     ImageIoCaptureMetadataReader()

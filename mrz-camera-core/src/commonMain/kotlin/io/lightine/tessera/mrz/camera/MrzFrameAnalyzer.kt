@@ -50,6 +50,7 @@ public class MrzFrameAnalyzer<F>(
      * @param telemetry where per-frame [CameraFrameEvent]s go. The default is the registered sink.
      * @param referenceTimeProvider supplies the reference instant for date parsing. The default is
      *   the system clock.
+     * @since 0.3.0
      */
     public constructor(
         recognizer: MrzTextRecognizer<F>,

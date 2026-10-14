@@ -31,7 +31,10 @@ public enum class ScanMethod {
 /**
  * What the screen does when the reader decodes an MRZ.
  *
- * A read that fails to parse shows the read-failed screen in both modes.
+ * The same in both modes: a saved photo that fails to parse shows the read-failed screen, and a
+ * photo with no MRZ shows "No MRZ found in this photo". Typed input that fails to parse stays on
+ * the manual screen with a note. The live camera skips a frame that fails to parse and keeps
+ * looking.
  *
  * @since 0.5.0
  */
@@ -112,16 +115,16 @@ public class MrzScannerTheme internal constructor(
  * @property scanTimeout Deadline for the whole session, across every screen. When it passes, the
  *   screen reports [MrzScannerResult.Cancelled] with [DismissReason.TIMED_OUT]. Default
  *   [Duration.INFINITE] (no deadline). It counts only foreground time and pauses while the app is
- *   not resumed, for example in the background or with the device locked. A finite value shows a
- *   countdown.
+ *   not resumed, for example in the background or with the device locked. A camera held by
+ *   another app does not pause it. A finite value shows a countdown.
  * @property consensusReads Number of live-camera frames that must decode the same document before
  *   it is accepted. Default 2 ([MrzDecodeConsensus.DEFAULT_THRESHOLD]); `1` accepts the first
  *   decode. Applies to the live camera only. Must be at least 1; [Builder.build] throws
  *   [IllegalArgumentException] otherwise.
  * @property hapticFeedback Plays a short haptic when a live-camera read is accepted. Default `true`.
  * @property theme Brand and appearance options. See [MrzScannerTheme].
- * @property onRequestPermission Called when the screen needs the camera permission and does not
- *   hold it. The screen never requests the permission itself. With `null` (default) the screen
+ * @property onRequestPermission Called when the user taps the grant button on the permission
+ *   screen. The screen never requests the permission itself. With `null` (default) the screen
  *   shows no grant button.
  * @since 0.5.0
  */

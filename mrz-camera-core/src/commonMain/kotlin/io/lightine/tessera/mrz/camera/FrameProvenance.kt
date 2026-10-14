@@ -5,7 +5,7 @@ import io.lightine.tessera.types.vocabulary.ReadMethod
 /**
  * Where an analyzer's frames come from; sets the reading method on every result.
  *
- * @since 0.2.0
+ * @since 0.3.0
  */
 public enum class FrameProvenance(
     internal val readMethod: ReadMethod,

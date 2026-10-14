@@ -39,8 +39,8 @@ import kotlinx.datetime.LocalDate
  * Encodes an MRZ from a document or from field values, per ICAO Doc 9303.
  *
  * Reports `MrzGenerationFieldOverflow` when a value is longer than its field, and
- * `MrzGenerationUnsupportedCharacters` when a value has a character outside `A-Z`, `0-9`, and `<`.
- * The field-value functions also report `MrzGenerationNumericInNameField` when an identifier
+ * `MrzGenerationUnsupportedCharacters` when a name, number, type, state, nationality, or optional-data
+ * value has a character outside `A-Z`, `0-9`, and `<`. The field-value functions also report `MrzGenerationNumericInNameField` when an identifier
  * contains a digit. A failure holds the first problem found.
  *
  * @since 0.1.0
@@ -57,6 +57,8 @@ public object MrzGenerator {
      * @param document the document to encode.
      * @return [GenerationResult.Success] with the MRZ lines, or [GenerationResult.Failure] with
      *   [MrzGenerationFieldOverflow] or [MrzGenerationUnsupportedCharacters].
+     * @throws IllegalArgumentException if a date part has a character outside `A-Z`, `0-9`, and `<`;
+     *   the check digit cannot be computed. `rawSex` is never checked.
      */
     public fun generate(document: MrzDocument): GenerationResult =
         when (document) {

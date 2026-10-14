@@ -40,6 +40,8 @@ public class MlKitMrzTextRecognizer(
      * The band spans the full width and is 18 percent of the frame height. When CameraX reports a
      * crop rect, the band is centred in that cropped region. Off by default: the recognizer reads
      * the whole frame. Call it before reading.
+     *
+     * @since 0.5.0
      */
     public fun restrictToMrzBand() {
         bandRestricted = true

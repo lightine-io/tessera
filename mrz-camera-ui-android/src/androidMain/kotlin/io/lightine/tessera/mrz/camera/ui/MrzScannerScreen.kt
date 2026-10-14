@@ -118,7 +118,12 @@ import kotlin.time.Duration.Companion.milliseconds
  * [MrzScannerResult.Confirmed] when the user accepts a reading (or at once under
  * [ReviewMode.INSTANT_RETURN]), otherwise [MrzScannerResult.Cancelled]. It never requests the
  * `CAMERA` permission; it calls [MrzScannerConfig.onRequestPermission]. Override its text by
- * defining the same `tessera_scanner_*` string keys in your app.
+ * defining the same `tessera_scanner_*` string keys in your app. The keys
+ * `tessera_scanner_grant_permission` and `tessera_scanner_permission_rationale` are in the module
+ * but never read, so overriding them changes nothing.
+ *
+ * The screen sends `mrz.camera.frame` events to the sink registered in `TelemetrySinkRegistry`; the
+ * default sink drops them.
  *
  * @param config Options for the screen; see [MrzScannerConfig].
  * @param onResult Receives the outcome when the flow ends.

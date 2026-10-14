@@ -158,6 +158,8 @@ public class AVCaptureMrzScanner(
      *
      * It is set once the camera runs after [enablePreview] and [start], and returns to `null` when
      * the session ends.
+     *
+     * @since 0.5.0
      */
     public val previewSession: StateFlow<AVCaptureSession?> = mutablePreviewSession.asStateFlow()
 
@@ -166,6 +168,8 @@ public class AVCaptureMrzScanner(
      *
      * The next running session is published on [previewSession]. Call it before [start]. Preview
      * stays armed for the life of the scanner.
+     *
+     * @since 0.5.0
      */
     public fun enablePreview() {
         previewEnabled = true
@@ -259,6 +263,7 @@ public class AVCaptureMrzScanner(
      * @param y the top edge of the region.
      * @param width the width of the region.
      * @param height the height of the region.
+     * @since 0.5.0
      */
     public fun focusOnRegion(
         x: Double,

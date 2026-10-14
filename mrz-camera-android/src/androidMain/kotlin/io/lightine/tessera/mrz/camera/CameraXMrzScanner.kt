@@ -125,6 +125,8 @@ public class CameraXMrzScanner(
      *
      * It is set once the camera binds after [enablePreview] and [start], and returns to `null` when
      * the session ends.
+     *
+     * @since 0.5.0
      */
     public val surfaceRequest: StateFlow<SurfaceRequest?> = mutableSurfaceRequest.asStateFlow()
 
@@ -136,6 +138,7 @@ public class CameraXMrzScanner(
      *
      * @param viewport when set, preview and analysis bind in one [UseCaseGroup] with this [ViewPort]
      *   and crop the same sensor region. When `null` (the default), their crops can differ.
+     * @since 0.5.0
      */
     public fun enablePreview(viewport: ViewPort? = null) {
         previewEnabled = true
@@ -158,13 +161,18 @@ public class CameraXMrzScanner(
      * [stop] and [start] the torch is requested on again if you last requested on.
      *
      * @param enabled `true` to turn the torch on.
+     * @since 0.5.0
      */
     public fun setTorchEnabled(enabled: Boolean) {
         torchEnabled = enabled
         boundCamera?.let { if (it.cameraInfo.hasFlashUnit()) it.cameraControl.enableTorch(enabled) }
     }
 
-    /** Whether the bound camera has a flash unit; `false` when no camera is bound. */
+    /**
+     * Whether the bound camera has a flash unit; `false` when no camera is bound.
+     *
+     * @since 0.5.0
+     */
     public fun hasTorch(): Boolean = boundCamera?.cameraInfo?.hasFlashUnit() == true
 
     // Autofocus is intentionally left to CameraX's default continuous mode (CONTROL_AF_MODE_CONTINUOUS_PICTURE):

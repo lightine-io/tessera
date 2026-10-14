@@ -190,6 +190,7 @@ internal class VisionSavedImageRecognizer(
  *
  * @param acknowledgement the required saved-image acknowledgement. It has no default.
  * @return the recognizer.
+ * @since 0.3.0
  */
 public fun visionSavedImageRecognizer(acknowledgement: SavedImageReadingAcknowledgement): MrzTextRecognizer<NSURL> =
     VisionSavedImageRecognizer()

@@ -126,6 +126,8 @@ public class VisionMrzTextRecognizer :
      * The band spans the full width and is 18 percent of the frame height. Off by default: Vision
      * reads the whole frame. Call it before reading. A restricted request also runs with the
      * `.right` (portrait) orientation; the unrestricted default passes none.
+     *
+     * @since 0.5.0
      */
     public fun restrictToMrzBand() {
         bandRestricted = true
@@ -143,6 +145,7 @@ public class VisionMrzTextRecognizer :
      * @param y the top edge of the region.
      * @param width the width of the region.
      * @param height the height of the region.
+     * @since 0.5.0
      */
     public fun restrictToMrzBand(
         x: Double,

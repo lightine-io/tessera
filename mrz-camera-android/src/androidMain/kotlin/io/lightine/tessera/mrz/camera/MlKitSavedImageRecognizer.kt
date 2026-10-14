@@ -51,6 +51,7 @@ internal class MlKitSavedImageRecognizer(
  * @param acknowledgement the required saved-image acknowledgement. It has no default.
  * @param context any [Context]; the recognizer keeps its application context.
  * @return the recognizer.
+ * @since 0.3.0
  */
 public fun mlKitSavedImageRecognizer(
     acknowledgement: SavedImageReadingAcknowledgement,
