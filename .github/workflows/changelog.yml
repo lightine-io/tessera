@@ -1,10 +1,10 @@
-# Enforces the CHANGELOG discipline (CLAUDE.md "Required Discipline": every non-trivial PR
-# updates CHANGELOG.md [Unreleased]) structurally instead of by willpower. A PR that does not
-# touch CHANGELOG.md fails this check unless it carries the `no-changelog` label (the recorded
-# trivial-PR escape hatch — apply it WITH the one-line justification in the PR description).
+# Enforces the CHANGELOG rule (CLAUDE.md "The Work Loop", step 4): a PR touches CHANGELOG.md
+# [Unreleased], or carries the `no-changelog` label because nothing ships (state why in the PR
+# description). The same label moves the board issue straight to Done at merge
+# (youtrack-sync.yml), so every merged PR is exactly one of: shipped change or no artifact.
 #
 # Separate workflow (not a job in check.yml) on purpose: it re-runs on label add/remove
-# (`labeled`/`unlabeled` types) without re-running the build matrix — the macOS job in
+# (`labeled`/`unlabeled` types) without re-running the build matrix; the macOS job in
 # check.yml would otherwise re-run on every label change.
 #
 # Action pinned to a full commit SHA per the repo convention (see check.yml header).
@@ -36,8 +36,8 @@ jobs:
       - name: Require a CHANGELOG.md entry (or the no-changelog label)
         run: |
           if git diff --name-only "origin/${{ github.base_ref }}"...HEAD | grep -qx 'CHANGELOG.md'; then
-            echo "CHANGELOG.md touched — ok"
+            echo "CHANGELOG.md touched: ok"
           else
-            echo "::error::This PR does not touch CHANGELOG.md. Add an [Unreleased] entry (CLAUDE.md 'Required Discipline'), or apply the 'no-changelog' label with a one-line justification in the PR description."
+            echo "::error::This PR does not touch CHANGELOG.md. Add an [Unreleased] entry, or apply the 'no-changelog' label when nothing ships and say why in the PR description (.claude/git-workflow.md)."
             exit 1
           fi

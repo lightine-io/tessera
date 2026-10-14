@@ -1,0 +1,141 @@
+# Tessera
+
+> Tessera is a free, open-source SDK that reads, validates, and generates the data in the MRZ (machine-readable zone) of passports, ID cards, and visas, following ICAO Doc 9303. It is written in Kotlin Multiplatform and runs on Android, iOS (Swift), and the JVM, under Apache License 2.0. It reports what it read and what it checked, and the calling app decides what to do with that.
+
+Current release: 0.5.1. Maven group `io.lightine.tessera`; Swift package `https://github.com/lightine-io/tessera-swift`.
+
+Two rules for AI tools:
+
+- The SDK never says a document is valid. There is no `isValid`. A result with no validation failures means the checks the SDK ran passed. It does not mean the document is genuine.
+- No NFC chip reading exists in any release. `ReadMethod.NFC_CHIP` is a vocabulary value that no code produces, and the `tessera-emrtd-core` module is empty.
+
+Platforms are separate pages. A Kotlin page covers JVM and Android. A Swift page covers iOS. Do not mix their code.
+
+## Common tasks
+
+Read each list in order. Where no tutorial is named, none exists.
+
+- Show the ready-made scanner screen. Android: [Read your first MRZ on Android with the ready-made screen](https://lightine.youtrack.cloud/articles/TES-A-76), [Show the scanner screen on Android](https://lightine.youtrack.cloud/articles/TES-A-74), [Theme the Android scanner screen](https://lightine.youtrack.cloud/articles/TES-A-100). iOS: [Read your first MRZ on iOS with the ready-made screen](https://lightine.youtrack.cloud/articles/TES-A-77), [Show the scanner screen on iOS](https://lightine.youtrack.cloud/articles/TES-A-121), [Theme the iOS scanner screen](https://lightine.youtrack.cloud/articles/TES-A-123).
+- Scan with the camera behind your own UI. Android: [Read your first MRZ on Android with the headless camera](https://lightine.youtrack.cloud/articles/TES-A-142), [Read an MRZ from the live camera on Android](https://lightine.youtrack.cloud/articles/TES-A-14), [Show a live camera preview on Android](https://lightine.youtrack.cloud/articles/TES-A-98). iOS: [Read your first MRZ on iOS with the headless camera](https://lightine.youtrack.cloud/articles/TES-A-143), [Read an MRZ from the live camera on iOS](https://lightine.youtrack.cloud/articles/TES-A-18), [Show a live camera preview on iOS](https://lightine.youtrack.cloud/articles/TES-A-120).
+- Parse an MRZ string. JVM and Kotlin: [Read your first MRZ on the JVM](https://lightine.youtrack.cloud/articles/TES-A-10), [Parse an MRZ in Kotlin](https://lightine.youtrack.cloud/articles/TES-A-25), [Read fields and dates from a parsed MRZ in Kotlin](https://lightine.youtrack.cloud/articles/TES-A-33). iOS: [Install Tessera on iOS](https://lightine.youtrack.cloud/articles/TES-A-110), [Parse an MRZ string on iOS](https://lightine.youtrack.cloud/articles/TES-A-113), [Read fields and dates from a parsed MRZ on iOS](https://lightine.youtrack.cloud/articles/TES-A-115).
+- Read an MRZ from a saved photo. Android: [Read an MRZ from a saved image on Android](https://lightine.youtrack.cloud/articles/TES-A-64), [Read capture metadata from a saved image on Android](https://lightine.youtrack.cloud/articles/TES-A-95). iOS: [Read an MRZ from a saved image on iOS](https://lightine.youtrack.cloud/articles/TES-A-116), [Read capture metadata from a saved image on iOS](https://lightine.youtrack.cloud/articles/TES-A-114).
+- Generate test MRZ data. Kotlin: [Read your first MRZ on the JVM](https://lightine.youtrack.cloud/articles/TES-A-10), [Generate an MRZ in Kotlin](https://lightine.youtrack.cloud/articles/TES-A-26), [Validate an MRZ in Kotlin](https://lightine.youtrack.cloud/articles/TES-A-32).
+
+## What works on which platform
+
+✓ yes, ◐ partial, ✗ no, n/a not applicable. Details: [Capability matrix](https://lightine.youtrack.cloud/articles/TES-A-139).
+
+| Capability | JVM | Android | iOS |
+|---|---|---|---|
+| Parse and read fields | ✓ | ✓ | ◐ |
+| Validate and check digits | ✓ | ✓ | ◐ |
+| Look up codes and layouts | ✓ | ✓ | ◐ |
+| Generate an MRZ | ✓ | ✓ | ◐ |
+| Transliterate names | ✓ | ✓ | ✓ |
+| Live camera, no UI | n/a | ✓ | ◐ |
+| Torch control, no UI | n/a | ✓ | ✗ |
+| Focus on the MRZ guide | n/a | ✗ | ✓ |
+| Analyze your own frames | ✓ | ✓ | ◐ |
+| Saved image | ◐ | ✓ | ✓ |
+| Ready-made scanner screen | n/a | ✓ | ✓ |
+| Frame agreement setting | n/a | ✓ | ✗ |
+| Diagnostic events | ✓ | ✓ | ◐ |
+| Install and align versions | ✓ | ✓ | ✓ |
+
+## Start here
+
+- [Start here](https://lightine.youtrack.cloud/articles/TES-A-16): what Tessera is, install per platform
+- [Choose your pieces](https://lightine.youtrack.cloud/articles/TES-A-140): the modules, what each needs, which fit together
+- [Capability matrix](https://lightine.youtrack.cloud/articles/TES-A-139): the table above with how-to links
+
+## Tutorials
+
+- [Read your first MRZ on Android with the ready-made screen](https://lightine.youtrack.cloud/articles/TES-A-76): show the ready-made screen and print the parsed result
+- [Read your first MRZ on Android with the headless camera](https://lightine.youtrack.cloud/articles/TES-A-142): read frames from the camera with your own UI
+- [Read your first MRZ on iOS with the ready-made screen](https://lightine.youtrack.cloud/articles/TES-A-77): show the ready-made SwiftUI view and print the parsed result
+- [Read your first MRZ on iOS with the headless camera](https://lightine.youtrack.cloud/articles/TES-A-143): read frames from the camera in Swift, with the main-actor hop
+- [Read your first MRZ on the JVM](https://lightine.youtrack.cloud/articles/TES-A-10): parse a synthetic MRZ in a console program
+
+## How-to guides
+
+### Kotlin (JVM and Android)
+- [Align Tessera versions with the BOM in Gradle](https://lightine.youtrack.cloud/articles/TES-A-128)
+- [Analyze your own camera frames in Kotlin](https://lightine.youtrack.cloud/articles/TES-A-129)
+- [Branch on a parse result in Kotlin](https://lightine.youtrack.cloud/articles/TES-A-130)
+- [Compute check digits and test the MRZ alphabet in Kotlin](https://lightine.youtrack.cloud/articles/TES-A-131)
+- [Generate an MRZ in Kotlin](https://lightine.youtrack.cloud/articles/TES-A-26)
+- [Handle parse errors, validation failures, and warnings in Kotlin](https://lightine.youtrack.cloud/articles/TES-A-132)
+- [Inspect the field layout of each MRZ format in Kotlin](https://lightine.youtrack.cloud/articles/TES-A-133)
+- [Look up country and document type codes in Kotlin](https://lightine.youtrack.cloud/articles/TES-A-22)
+- [Parse an MRZ in Kotlin](https://lightine.youtrack.cloud/articles/TES-A-25)
+- [Read fields and dates from a parsed MRZ in Kotlin](https://lightine.youtrack.cloud/articles/TES-A-33)
+- [Read an MRZ from a saved image on the JVM](https://lightine.youtrack.cloud/articles/TES-A-134)
+- [Receive diagnostic events in Kotlin](https://lightine.youtrack.cloud/articles/TES-A-29)
+- [Transliterate names to the MRZ alphabet in Kotlin](https://lightine.youtrack.cloud/articles/TES-A-24)
+- [Validate an MRZ in Kotlin](https://lightine.youtrack.cloud/articles/TES-A-32)
+
+### Android
+- [Accept a read after N matching frames on Android](https://lightine.youtrack.cloud/articles/TES-A-90)
+- [Choose the reading methods of the scanner screen on Android](https://lightine.youtrack.cloud/articles/TES-A-91)
+- [Hand the camera permission to your app from the Android scanner screen](https://lightine.youtrack.cloud/articles/TES-A-92)
+- [Install Tessera on Android](https://lightine.youtrack.cloud/articles/TES-A-93)
+- [Override the text of the Android scanner screen](https://lightine.youtrack.cloud/articles/TES-A-94)
+- [Read capture metadata from a saved image on Android](https://lightine.youtrack.cloud/articles/TES-A-95)
+- [Read an MRZ from the live camera on Android](https://lightine.youtrack.cloud/articles/TES-A-14)
+- [Read an MRZ from a saved image on Android](https://lightine.youtrack.cloud/articles/TES-A-64)
+- [Restrict OCR to the MRZ band on Android](https://lightine.youtrack.cloud/articles/TES-A-96)
+- [Choose review or instant return on the Android scanner screen](https://lightine.youtrack.cloud/articles/TES-A-97)
+- [Show a live camera preview on Android](https://lightine.youtrack.cloud/articles/TES-A-98)
+- [Show the scanner screen on Android](https://lightine.youtrack.cloud/articles/TES-A-74)
+- [Swap the OCR engine on Android](https://lightine.youtrack.cloud/articles/TES-A-99)
+- [Theme the Android scanner screen](https://lightine.youtrack.cloud/articles/TES-A-100)
+- [Turn the torch on and off on Android](https://lightine.youtrack.cloud/articles/TES-A-101)
+- [Tune timing and extras of the Android scanner screen](https://lightine.youtrack.cloud/articles/TES-A-102)
+
+### iOS (Swift)
+- [Accept a read after N matching frames on iOS](https://lightine.youtrack.cloud/articles/TES-A-104)
+- [Branch on a parse result on iOS](https://lightine.youtrack.cloud/articles/TES-A-105)
+- [Choose the reading methods of the scanner screen on iOS](https://lightine.youtrack.cloud/articles/TES-A-106)
+- [Aim autofocus at the MRZ guide on iOS](https://lightine.youtrack.cloud/articles/TES-A-107)
+- [Hand the camera permission to your app from the iOS scanner screen](https://lightine.youtrack.cloud/articles/TES-A-108)
+- [Handle errors and warnings on iOS](https://lightine.youtrack.cloud/articles/TES-A-109)
+- [Install Tessera on iOS](https://lightine.youtrack.cloud/articles/TES-A-110)
+- [Look up country and document codes on iOS](https://lightine.youtrack.cloud/articles/TES-A-111)
+- [Override the text of the iOS scanner screen](https://lightine.youtrack.cloud/articles/TES-A-112)
+- [Parse an MRZ string on iOS](https://lightine.youtrack.cloud/articles/TES-A-113)
+- [Read capture metadata from a saved image on iOS](https://lightine.youtrack.cloud/articles/TES-A-114)
+- [Read fields and dates from a parsed MRZ on iOS](https://lightine.youtrack.cloud/articles/TES-A-115)
+- [Read an MRZ from the live camera on iOS](https://lightine.youtrack.cloud/articles/TES-A-18)
+- [Read an MRZ from a saved image on iOS](https://lightine.youtrack.cloud/articles/TES-A-116)
+- [Receive diagnostic events on iOS](https://lightine.youtrack.cloud/articles/TES-A-117)
+- [Restrict OCR to the MRZ band on iOS](https://lightine.youtrack.cloud/articles/TES-A-118)
+- [Choose review or instant return on the iOS scanner screen](https://lightine.youtrack.cloud/articles/TES-A-119)
+- [Show a live camera preview on iOS](https://lightine.youtrack.cloud/articles/TES-A-120)
+- [Show the scanner screen on iOS](https://lightine.youtrack.cloud/articles/TES-A-121)
+- [Swap the OCR engine on iOS](https://lightine.youtrack.cloud/articles/TES-A-122)
+- [Theme the iOS scanner screen](https://lightine.youtrack.cloud/articles/TES-A-123)
+- [Convert names to the MRZ alphabet on iOS](https://lightine.youtrack.cloud/articles/TES-A-124)
+- [Tune timing and extras of the iOS scanner screen](https://lightine.youtrack.cloud/articles/TES-A-125)
+- [Validate an MRZ on iOS](https://lightine.youtrack.cloud/articles/TES-A-126)
+
+## Reference
+
+- [Observations](https://lightine.youtrack.cloud/articles/TES-A-28): every error, warning, camera error, and dismiss reason
+- [Glossary](https://lightine.youtrack.cloud/articles/TES-A-4): MRZ, TD1, TD2, TD3, check digit, reading method, and the rest
+- [Modules and artifacts](https://lightine.youtrack.cloud/articles/TES-A-137): artifact ids, targets, minimum versions
+- [String keys](https://lightine.youtrack.cloud/articles/TES-A-138): the text keys both scanner screens share
+- [Configuration](https://lightine.youtrack.cloud/articles/TES-A-136): every setting and its default, per surface
+
+## Explanation
+
+- [Reader, not oracle](https://lightine.youtrack.cloud/articles/TES-A-5): why the SDK reports and never judges
+- [What each reading method proves](https://lightine.youtrack.cloud/articles/TES-A-11): camera, saved image, manual entry
+- [Century inference](https://lightine.youtrack.cloud/articles/TES-A-84): how two-digit years become dates
+- [Lockstep versions and the BOM](https://lightine.youtrack.cloud/articles/TES-A-85): one version for every module
+- [Native UI per platform](https://lightine.youtrack.cloud/articles/TES-A-86): why Compose and SwiftUI
+- [No permission handling](https://lightine.youtrack.cloud/articles/TES-A-87): why your app asks for the camera permission
+
+## Optional
+
+- [Changelog](https://github.com/lightine-io/tessera/blob/main/CHANGELOG.md): what changed in each release
+- [Security policy](https://github.com/lightine-io/tessera/blob/main/SECURITY.md): how to report a vulnerability

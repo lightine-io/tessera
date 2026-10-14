@@ -1,45 +1,57 @@
 ---
 name: release-gate
-description: Pre-tag release ritual for Tessera. Invoke when a release issue becomes the session focus, when preparing to tag any version (0.x or later), or when the maintainer says "prepare the release" / "cut X.Y.Z". Runs the tech-stack review, the three review agents, and the mechanical pre-tag checks. Read-only until the maintainer approves each fix; the maintainer triggers the actual tag.
+description: Pre-tag release ritual for Tessera. Invoke when a release issue becomes the session focus, when preparing to tag any version (0.x or later), or when the maintainer says "prepare the release" / "cut X.Y.Z". Runs the tech-stack review, the two review agents, the documentation checks, and the mechanical pre-tag checks. Read-only until the maintainer approves each fix; the maintainer pushes the tag.
 ---
 
-# Release Gate — the pre-tag ritual
+# Release gate: the pre-tag ritual
 
-Every gate is binary. Run them in order; report per-gate pass/fail to the maintainer.
+Every gate is binary. Run them in order and report pass or fail per gate to the
+maintainer. Record the results as a comment on the release issue.
 
-1. **Tech-stack review** — run the
-   [`pre-release-tech-stack-review`](../pre-release-tech-stack-review/SKILL.md) skill
-   (trigger is pre-start of release work, but if it was missed — as it was for 0.5.0 —
-   run it here; late beats never).
-2. **Review agents, diverse lenses** — launch all three on the release diff
-   (last tag → HEAD): `doc-consistency-reviewer`, `qa-coverage-reviewer`,
-   `security-reviewer` (Agent tool, parallel). Diverse reviewers catch non-overlapping
-   problems. Triage findings with the maintainer; fix or consciously accept each.
-3. **Scope-vs-reality audit** — everything CHANGELOG/`[Unreleased]` and the feature
-   docs claim for this version actually exists and is tested. Either implement the
-   gap or re-scope the claim downward. Never tag before reality matches the claim.
-4. **Empty-module guard** — `./gradlew publishToMavenLocal -Ptessera.skipSigning=true`
-   green locally; every module that declares a target produces an artifact (CI
-   publish-smoke mirrors this — do not rely on memory of it).
-5. **ABI baselines** — `checkKotlinAbi` green against the committed dumps for every
-   target (jvm, klib, and — since Kotlin 2.4.20 — android under `api/android/`).
-6. **CHANGELOG roll** — `[Unreleased]` → `[X.Y.Z] - YYYY-MM-DD`; fresh `[Unreleased]`
-   opened in the same PR.
-7. **Dependabot state** — `gh api repos/{owner}/{repo}/dependabot/alerts?state=open`:
-   anything shipped-artifact-reachable is triaged before the tag (hybrid-by-
-   reachability posture); build/test-only alerts get a recorded dismissal reason, not
-   silence.
-8. **Board** — release issue and everything in Staging flips to Done at the tag;
-   device-QA issues must have passed through Test.
-9. **tessera-swift is complete BEFORE the monorepo tag** — the release workflow
-   tags tessera-swift at its `main` head right after merging the Package.swift pin,
-   so anything still open there is excluded from the tag (the 0.5.0 incident,
-   TES-138). `gh pr list --repo lightine-io/tessera-swift --state open` must be
-   empty; the workflow enforces this and fails the publish step otherwise (merge,
-   then re-run the job — it is re-run-safe).
-10. **KB and doc links** — `python3 scripts/kb-linkcheck.py --quiet --allow-internal` exits 0
-    (no dead or wrong-anchor link). Drop `--allow-internal` once TES-169 (private issue links in
-    CHANGELOG) and TES-178 (public pages linking internal articles) are closed; then no public page
-    may link into the internal KB.
+1. **Tech-stack review.** Best at the start of release work; if it was skipped, do it
+   here. Answer each in one or two lines:
+   - Do the foundational choices (KMP, native UI per platform, sealed result types) still
+     fit what this release builds?
+   - Which new dependencies does it need, and are they maintained, licence-compatible
+     with Apache-2.0, and free of known CVEs?
+   - Which local tooling can the build not provision (SDKs, CLIs, test hardware such as
+     an NFC-capable device)?
+   - Which API commitments would this release lock in that deserve a second look?
+   - Has any tool reached end of life since the last dependency cadence?
+   A significant change of direction becomes an ADR in the internal KB (TES-A-17).
+2. **Review agents.** Launch `qa-coverage-reviewer` and `security-reviewer` in parallel
+   on the release diff (last tag to HEAD). Triage each finding with the maintainer: fix
+   it or accept it with a recorded reason.
+3. **Documentation.**
+   - `python3 -I scripts/check-docs.py code-docs --swift ../tessera-swift` exits 0.
+   - `python3 -I scripts/check-docs.py style --kdoc --swift ../tessera-swift` exits 0.
+   - `python3 -I scripts/check-docs.py shelf <folder>` exits 0. The folder holds the
+     release's public pages: the vault's `kb-public/new/`, or an export of the public KB
+     arranged the same way. The check reads local files only; the repo-root `llms.txt`
+     must list every consumer tutorial and how-to by title.
+   - Scope against reality: everything `[Unreleased]` and the release's pages claim
+     exists and is tested. Implement the gap or narrow the claim; never tag before they
+     match.
+   - The release's draft pages are ready to publish at the tag.
+4. **Empty-module guard.** `./gradlew publishToMavenLocal -Ptessera.skipSigning=true` is
+   green locally, and every module that declares a target produces an artifact (CI
+   `publish · smoke` runs the same command; do not rely on memory of it).
+5. **ABI baselines.** `checkKotlinAbi` is green against the committed dumps for every
+   target (jvm, klib, and android under `api/android/`).
+6. **CHANGELOG roll.** `[Unreleased]` becomes `[X.Y.Z] - YYYY-MM-DD`, with a fresh
+   `[Unreleased]` opened in the same PR.
+7. **Dependabot.** `gh api repos/{owner}/{repo}/dependabot/alerts?state=open`: anything
+   a shipped artifact can reach is triaged before the tag; build-only and test-only
+   alerts get a recorded dismissal reason.
+8. **Board.** The release issue and everything in Staging move to Done at the tag.
+   Issues with the `device-qa` label have passed through Test.
+9. **tessera-swift is complete before the tag.** The release workflow tags tessera-swift
+   at its `main` head right after merging the Package.swift pin, so an open PR there is
+   left out of the tag (the 0.5.0 incident, TES-138).
+   `gh pr list --repo lightine-io/tessera-swift --state open` must be empty. The workflow
+   enforces this and fails the publish step otherwise (merge, then re-run the job).
+10. **KB and doc links.** `python3 -I scripts/kb-linkcheck.py --quiet --allow-internal`
+    exits 0. Drop `--allow-internal` once TES-169 and TES-178 are closed; then no public
+    page may link into the internal KB.
 
 **The maintainer pushes the tag. The session never does.**

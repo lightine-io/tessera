@@ -48,7 +48,7 @@ subprojects {
             // signing plugin automatically when this is called; credentials are read from
             // `signingInMemoryKey` / `signingInMemoryKeyId` / `signingInMemoryKeyPassword`
             // (set per-machine in `~/.gradle/gradle.properties`, never committed — see
-            // `docs/publishing-setup.md`).
+            // the publishing setup page in the internal knowledge base).
             //
             // `tessera.skipSigning` is the explicit escape hatch for the `publish-smoke` CI
             // guard (check.yml): that job runs `publishToMavenLocal` on keyless PR runners to

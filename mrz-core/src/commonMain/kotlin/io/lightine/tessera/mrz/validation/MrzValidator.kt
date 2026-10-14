@@ -225,8 +225,8 @@ public object MrzValidator {
         // TD3 personal-number check digit: distinguish "filler with populated personal number"
         // (a documented real-world deviation surfaced as a warning) from "wrong digit" (a strict
         // ICAO non-conformance surfaced as a validation failure). See
-        // `docs/features/mrz-parsing.md` "Personal Number Check Digit as Filler" and
-        // [ADR-013](../../../decisions/0013-recognition-failures-are-warnings.md).
+        // the observations reference (MrzPersonalNumberCheckDigitFiller) and ADR-013 in the
+        // internal decision record.
         val rawPersonalNumber = Td3FormatSpec.personalNumber.extractFrom(rawLines)
         val personalNumberCheck = document.personalNumberCheckDigit
         val personalNumberHasContent = rawPersonalNumber.any { it != '<' }

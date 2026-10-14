@@ -122,7 +122,7 @@ public object MrzParser {
     }
 
     // Auto-detect dispatches by line count + per-line length + leading character of line 1
-    // (per docs/features/mrz-parsing.md "Auto-Detect Behavior"). Inputs whose shape does not
+    // (the rule the parse how-to page describes). Inputs whose shape does not
     // match any supported format produce MrzFormatNotDetected; the caller can then choose to
     // surface the failure or retry through a format-specific entry point with a corrected input.
     // Conservative by design: when shape plausibly fits multiple formats and the leading
