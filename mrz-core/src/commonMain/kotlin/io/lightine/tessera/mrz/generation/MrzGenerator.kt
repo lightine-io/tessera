@@ -36,38 +36,27 @@ import io.lightine.tessera.types.vocabulary.UnmappedCharacter
 import kotlinx.datetime.LocalDate
 
 /**
- * Encodes [`MrzDocument`][MrzDocument] objects (or sets of raw field values) into MRZ
- * lines per ICAO Doc 9303. The encoded MRZ is returned as a list of strings (one per
- * line) inside [`GenerationResult.Success`][GenerationResult.Success]; encoding failures
- * (field overflow, missing required fields, characters outside the MRZ alphabet) are
- * returned as [`GenerationResult.Failure`][GenerationResult.Failure].
+ * Encodes an MRZ from a document or from field values, per ICAO Doc 9303.
  *
- * Two families of entry points:
+ * Reports `MrzGenerationFieldOverflow` when a value is longer than its field, and
+ * `MrzGenerationUnsupportedCharacters` when a value has a character outside `A-Z`, `0-9`, and `<`.
+ * The field-value functions also report `MrzGenerationNumericInNameField` when an identifier
+ * contains a digit. A failure holds the first problem found.
  *
- * 1. **Document-input methods** — [`generate(document: MrzDocument)`][generate] and the
- *    type-specific overloads. Encodes a fully-constructed document; the consumer is
- *    responsible for ensuring the document's text fields already contain only MRZ-alphabet
- *    characters. Returns
- *    [`MrzGenerationUnsupportedCharacters`][io.lightine.tessera.types.errors.MrzGenerationUnsupportedCharacters]
- *    when they don't (this closes a silent-failure gap on the existing path).
- *
- * 2. **Primitive-input methods** — [generateTD3], [generateTD2], [generateTD1],
- *    [generateMrvA], [generateMrvB]. Take individual field values plus an optional
- *    [`TransliterationProfile`][TransliterationProfile]; when a profile is supplied, the
- *    primary and secondary identifiers are run through it before encoding, and the
- *    per-field audit trail is surfaced on
- *    [`ResultMetadata.transliterationDetails`][io.lightine.tessera.mrz.parsing.ResultMetadata]
- *    per Principle 5 ([ADR-014](https://lightine.youtrack.cloud/articles/TES-A-47)).
- *
- * See
- * [`docs/features/mrz-generation.md`](https://lightine.youtrack.cloud/articles/TES-A-26)
- * for the full feature description.
+ * @since 0.1.0
  */
 public object MrzGenerator {
     /**
-     * Polymorphic dispatch over the [MrzDocument] sealed hierarchy. Consumers holding a typed
-     * `MrzDocument` reference (typically from `MrzParser.parse(input).document`) can call this
-     * directly without narrowing to the specific variant.
+     * Encodes a document of any format as MRZ lines.
+     *
+     * Pads short fields with `<` and computes every check digit; the check digits stored in the
+     * document are not used. Checks the width and characters of the document type, issuing state,
+     * name field, document number, nationality, and optional data. Writes the date parts and
+     * `rawSex` as they are.
+     *
+     * @param document the document to encode.
+     * @return [GenerationResult.Success] with the MRZ lines, or [GenerationResult.Failure] with
+     *   [MrzGenerationFieldOverflow] or [MrzGenerationUnsupportedCharacters].
      */
     public fun generate(document: MrzDocument): GenerationResult =
         when (document) {
@@ -78,19 +67,19 @@ public object MrzGenerator {
             is MrvB -> generate(document)
         }
 
-    /** Encodes a TD3 passport document. See [generate]. */
+    /** Encodes a TD3 (passport) document as 2 MRZ lines. Reports as [generate] does. */
     public fun generate(document: TD3): GenerationResult = generateTd3(document)
 
-    /** Encodes a TD2 identity document. See [generate]. */
+    /** Encodes a TD2 document as 2 MRZ lines. Reports as [generate] does. */
     public fun generate(document: TD2): GenerationResult = generateTd2(document)
 
-    /** Encodes a TD1 identity card. See [generate]. */
+    /** Encodes a TD1 (identity card) document as 3 MRZ lines. Reports as [generate] does. */
     public fun generate(document: TD1): GenerationResult = generateTd1(document)
 
-    /** Encodes an MRV-A Type-A visa. See [generate]. */
+    /** Encodes an MRV-A (Type-A visa) document as 2 MRZ lines. Reports as [generate] does. */
     public fun generate(document: MrvA): GenerationResult = generateMrvA(document)
 
-    /** Encodes an MRV-B Type-B visa. See [generate]. */
+    /** Encodes an MRV-B (Type-B visa) document as 2 MRZ lines. Reports as [generate] does. */
     public fun generate(document: MrvB): GenerationResult = generateMrvB(document)
 
     // ----------------------------------------------------------------
@@ -105,23 +94,28 @@ public object MrzGenerator {
     // ----------------------------------------------------------------
 
     /**
-     * Encodes a TD3 (passport) MRZ from primitive field values. Date fields take
-     * [`LocalDate`][kotlinx.datetime.LocalDate]; the sex field takes
-     * [`Sex`][io.lightine.tessera.types.vocabulary.Sex]; everything else is a string in
-     * the consumer's preferred representation.
+     * Encodes a TD3 (passport) MRZ from field values.
      *
-     * If [transliteration] is non-null, [primaryIdentifier] and [secondaryIdentifier] are
-     * run through the profile (with Unicode normalization first, per ADR-014). The
-     * per-field audit trail is exposed on the result's
-     * [`ResultMetadata.transliterationDetails`][io.lightine.tessera.mrz.parsing.ResultMetadata]
-     * field; any unmapped characters produce
-     * [`MrzGenerationUnsupportedCharacters`][io.lightine.tessera.types.errors.MrzGenerationUnsupportedCharacters].
-     * If [transliteration] is null, the identifier strings are used verbatim and must
-     * already contain only MRZ-alphabet characters.
+     * Joins the identifiers with `<<`, or uses only the primary if the secondary is empty, and
+     * replaces spaces with `<`. The name field holds up to 39 characters. Pads short fields
+     * with `<` and computes every check digit.
      *
-     * Returns [`GenerationResult.Failure`][GenerationResult.Failure] for field overflow,
-     * missing required fields, or unsupported characters; otherwise
-     * [`GenerationResult.Success`][GenerationResult.Success] with the two encoded MRZ lines.
+     * @param documentType the document type code, up to 2 characters.
+     * @param issuingState the issuing state code, up to 3 characters.
+     * @param documentNumber the document number, up to 9 characters.
+     * @param primaryIdentifier the primary identifier (surname). Must not contain digits.
+     * @param secondaryIdentifier the secondary identifier (given names). Must not contain digits.
+     * @param nationality the nationality code, up to 3 characters.
+     * @param dateOfBirth the date of birth. Only the last two digits of the year are written.
+     * @param sex the sex. `Sex.UNSPECIFIED` is written as `<`.
+     * @param dateOfExpiry the date of expiry. Only the last two digits of the year are written.
+     * @param personalNumber the personal number, up to 14 characters.
+     * @param transliteration the profile that maps both identifiers to the MRZ alphabet, or `null`
+     *   to use them as given. Defaults to `null`.
+     * @return [GenerationResult.Success] with the MRZ lines, or [GenerationResult.Failure] with
+     *   [MrzGenerationNumericInNameField], [MrzGenerationUnsupportedCharacters], or
+     *   [MrzGenerationFieldOverflow]. The result metadata holds the transliteration details when the
+     *   profile processed a non-empty identifier.
      */
     public fun generateTD3(
         documentType: String,
@@ -165,9 +159,28 @@ public object MrzGenerator {
     }
 
     /**
-     * Encodes a TD2 (smaller identity document) MRZ from primitive field values.
-     * Parameter semantics — including the optional [transliteration] profile — match
-     * [generateTD3]; the format-specific extra is [optionalData].
+     * Encodes a TD2 MRZ from field values.
+     *
+     * Joins the identifiers with `<<`, or uses only the primary if the secondary is empty, and
+     * replaces spaces with `<`. The name field holds up to 31 characters. Pads short fields
+     * with `<` and computes every check digit.
+     *
+     * @param documentType the document type code, up to 2 characters.
+     * @param issuingState the issuing state code, up to 3 characters.
+     * @param documentNumber the document number, up to 9 characters.
+     * @param primaryIdentifier the primary identifier (surname). Must not contain digits.
+     * @param secondaryIdentifier the secondary identifier (given names). Must not contain digits.
+     * @param nationality the nationality code, up to 3 characters.
+     * @param dateOfBirth the date of birth. Only the last two digits of the year are written.
+     * @param sex the sex. `Sex.UNSPECIFIED` is written as `<`.
+     * @param dateOfExpiry the date of expiry. Only the last two digits of the year are written.
+     * @param optionalData the optional data, up to 7 characters.
+     * @param transliteration the profile that maps both identifiers to the MRZ alphabet, or `null`
+     *   to use them as given. Defaults to `null`.
+     * @return [GenerationResult.Success] with the MRZ lines, or [GenerationResult.Failure] with
+     *   [MrzGenerationNumericInNameField], [MrzGenerationUnsupportedCharacters], or
+     *   [MrzGenerationFieldOverflow]. The result metadata holds the transliteration details when the
+     *   profile processed a non-empty identifier.
      */
     public fun generateTD2(
         documentType: String,
@@ -210,9 +223,29 @@ public object MrzGenerator {
     }
 
     /**
-     * Encodes a TD1 (identity card) MRZ from primitive field values. Parameter semantics
-     * — including the optional [transliteration] profile — match [generateTD3]; the
-     * format-specific extras are [optionalData1] (line 1) and [optionalData2] (line 2).
+     * Encodes a TD1 (identity card) MRZ from field values.
+     *
+     * Joins the identifiers with `<<`, or uses only the primary if the secondary is empty, and
+     * replaces spaces with `<`. The name field holds up to 30 characters. Pads short fields
+     * with `<` and computes every check digit.
+     *
+     * @param documentType the document type code, up to 2 characters.
+     * @param issuingState the issuing state code, up to 3 characters.
+     * @param documentNumber the document number, up to 9 characters.
+     * @param primaryIdentifier the primary identifier (surname). Must not contain digits.
+     * @param secondaryIdentifier the secondary identifier (given names). Must not contain digits.
+     * @param nationality the nationality code, up to 3 characters.
+     * @param dateOfBirth the date of birth. Only the last two digits of the year are written.
+     * @param sex the sex. `Sex.UNSPECIFIED` is written as `<`.
+     * @param dateOfExpiry the date of expiry. Only the last two digits of the year are written.
+     * @param optionalData1 the optional data on line 1, up to 15 characters.
+     * @param optionalData2 the optional data on line 2, up to 11 characters.
+     * @param transliteration the profile that maps both identifiers to the MRZ alphabet, or `null`
+     *   to use them as given. Defaults to `null`.
+     * @return [GenerationResult.Success] with the MRZ lines, or [GenerationResult.Failure] with
+     *   [MrzGenerationNumericInNameField], [MrzGenerationUnsupportedCharacters], or
+     *   [MrzGenerationFieldOverflow]. The result metadata holds the transliteration details when the
+     *   profile processed a non-empty identifier.
      */
     public fun generateTD1(
         documentType: String,
@@ -257,9 +290,28 @@ public object MrzGenerator {
     }
 
     /**
-     * Encodes an MRV-A (Type-A visa) MRZ from primitive field values. Parameter semantics
-     * — including the optional [transliteration] profile — match [generateTD3]; the
-     * format-specific extra is [optionalData]. MRV-A has no composite check digit.
+     * Encodes an MRV-A (Type-A visa) MRZ from field values.
+     *
+     * Joins the identifiers with `<<`, or uses only the primary if the secondary is empty, and
+     * replaces spaces with `<`. The name field holds up to 39 characters. Pads short fields
+     * with `<` and computes every check digit. An MRV-A has no composite check digit.
+     *
+     * @param documentType the document type code, up to 2 characters.
+     * @param issuingState the issuing state code, up to 3 characters.
+     * @param documentNumber the document number, up to 9 characters.
+     * @param primaryIdentifier the primary identifier (surname). Must not contain digits.
+     * @param secondaryIdentifier the secondary identifier (given names). Must not contain digits.
+     * @param nationality the nationality code, up to 3 characters.
+     * @param dateOfBirth the date of birth. Only the last two digits of the year are written.
+     * @param sex the sex. `Sex.UNSPECIFIED` is written as `<`.
+     * @param dateOfExpiry the date of expiry. Only the last two digits of the year are written.
+     * @param optionalData the optional data, up to 16 characters.
+     * @param transliteration the profile that maps both identifiers to the MRZ alphabet, or `null`
+     *   to use them as given. Defaults to `null`.
+     * @return [GenerationResult.Success] with the MRZ lines, or [GenerationResult.Failure] with
+     *   [MrzGenerationNumericInNameField], [MrzGenerationUnsupportedCharacters], or
+     *   [MrzGenerationFieldOverflow]. The result metadata holds the transliteration details when the
+     *   profile processed a non-empty identifier.
      */
     public fun generateMrvA(
         documentType: String,
@@ -302,9 +354,28 @@ public object MrzGenerator {
     }
 
     /**
-     * Encodes an MRV-B (Type-B visa) MRZ from primitive field values. Parameter semantics
-     * — including the optional [transliteration] profile — match [generateTD3]; the
-     * format-specific extra is [optionalData]. MRV-B has no composite check digit.
+     * Encodes an MRV-B (Type-B visa) MRZ from field values.
+     *
+     * Joins the identifiers with `<<`, or uses only the primary if the secondary is empty, and
+     * replaces spaces with `<`. The name field holds up to 31 characters. Pads short fields
+     * with `<` and computes every check digit. An MRV-B has no composite check digit.
+     *
+     * @param documentType the document type code, up to 2 characters.
+     * @param issuingState the issuing state code, up to 3 characters.
+     * @param documentNumber the document number, up to 9 characters.
+     * @param primaryIdentifier the primary identifier (surname). Must not contain digits.
+     * @param secondaryIdentifier the secondary identifier (given names). Must not contain digits.
+     * @param nationality the nationality code, up to 3 characters.
+     * @param dateOfBirth the date of birth. Only the last two digits of the year are written.
+     * @param sex the sex. `Sex.UNSPECIFIED` is written as `<`.
+     * @param dateOfExpiry the date of expiry. Only the last two digits of the year are written.
+     * @param optionalData the optional data, up to 8 characters.
+     * @param transliteration the profile that maps both identifiers to the MRZ alphabet, or `null`
+     *   to use them as given. Defaults to `null`.
+     * @return [GenerationResult.Success] with the MRZ lines, or [GenerationResult.Failure] with
+     *   [MrzGenerationNumericInNameField], [MrzGenerationUnsupportedCharacters], or
+     *   [MrzGenerationFieldOverflow]. The result metadata holds the transliteration details when the
+     *   profile processed a non-empty identifier.
      */
     public fun generateMrvB(
         documentType: String,

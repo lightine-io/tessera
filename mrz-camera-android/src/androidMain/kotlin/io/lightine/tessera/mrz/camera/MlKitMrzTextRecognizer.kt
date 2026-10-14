@@ -14,18 +14,13 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
- * The Android [MrzTextRecognizer], backed by ML Kit Text Recognition (the **bundled** Latin model —
- * no Play Services, no network). It reads each CameraX [ImageProxy], runs ML Kit, and returns the
- * recognized lines for [MrzFrameAnalyzer] to turn into an MRZ candidate. It makes no trust decision
- * about what it reads — OCR only.
+ * Recognizes text in CameraX frames with ML Kit Text Recognition (the bundled Latin model).
  *
- * **Frame ownership.** This reads the [ImageProxy] but never closes it; the caller that produced the
- * frame (CameraX's `ImageAnalysis.Analyzer`, wired up by the owns-the-camera-session layer) closes it
- * after analysis, exactly as CameraX requires. It does, however, own the ML Kit [TextRecognizer] it
- * holds: call [close] to release it (this type is [AutoCloseable]).
+ * It reads each [ImageProxy] and never closes it: the caller closes the frame. Close the
+ * recognizer to release the ML Kit client.
  *
- * @param recognizer the underlying ML Kit recognizer. Defaults to the bundled Latin recognizer; a
- *   custom one may be injected (for example a script-specific model).
+ * @param recognizer the ML Kit client. The default is the bundled Latin recognizer.
+ * @since 0.2.0
  */
 public class MlKitMrzTextRecognizer(
     private val recognizer: TextRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS),
@@ -40,18 +35,24 @@ public class MlKitMrzTextRecognizer(
     @Volatile private var bandRestricted: Boolean = false
 
     /**
-     * Restrict OCR to the **MRZ band** — the bottom of the upright frame, where the machine-readable zone sits
-     * on a document held upright and lined up with the default UI's framing guide. Opt-in (the default UI
-     * enables it; headless reading stays full-frame). It changes only *where* OCR looks, never what is
-     * reported (Principle 1 untouched — it makes no trust decision and does not detect the MRZ, it crops a
-     * fixed band). Idempotent; call before reading. The band is a fixed internal fraction
-     * ([MRZ_BAND_HEIGHT_FRACTION]). This is the ML Kit counterpart of Apple Vision's
-     * `VNRecognizeTextRequest.regionOfInterest` — ML Kit has no region-of-interest, so the frame is cropped.
+     * Limits OCR to a horizontal band in the vertical centre of the upright frame.
+     *
+     * The band spans the full width and is 18 percent of the frame height. When CameraX reports a
+     * crop rect, the band is centred in that cropped region. Off by default: the recognizer reads
+     * the whole frame. Call it before reading.
      */
     public fun restrictToMrzBand() {
         bandRestricted = true
     }
 
+    /**
+     * Runs ML Kit on [frame] and returns the recognized lines.
+     *
+     * Returns no lines when the frame has no backing image. It does not close the frame.
+     *
+     * @param frame the CameraX frame to read.
+     * @return the recognized lines.
+     */
     override suspend fun recognize(frame: ImageProxy): RecognizedText {
         val input =
             if (bandRestricted) {

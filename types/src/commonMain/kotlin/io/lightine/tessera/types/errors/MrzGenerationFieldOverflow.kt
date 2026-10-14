@@ -4,13 +4,16 @@ import io.lightine.tessera.types.vocabulary.MrzField
 import io.lightine.tessera.types.vocabulary.MrzFormat
 
 /**
- * Generation error: a field value supplied to
- * [`MrzGenerator`][io.lightine.tessera.mrz.generation.MrzGenerator] exceeds the maximum
- * length the [format] permits for that [field]. Carries both the [maxLength] and the
- * [observedLength] so consumers can decide how to abbreviate or truncate.
+ * Generation error: a value is longer than its field allows in the [format].
  *
- * The SDK does not auto-truncate (Principle 1 — reader, not oracle); the consumer must
- * decide what to do with the overflow.
+ * The generator never shortens a value.
+ *
+ * @property format The format being generated.
+ * @property field The field that overflowed.
+ * @property maxLength Maximum length of the field, in characters.
+ * @property observedLength Length of the supplied value, in characters.
+ * @property observedValue The supplied value.
+ * @since 0.1.0
  */
 public data class MrzGenerationFieldOverflow(
     val format: MrzFormat,
@@ -19,6 +22,7 @@ public data class MrzGenerationFieldOverflow(
     val observedLength: Int,
     val observedValue: String,
 ) : MrzGenerationError() {
+    /** English text for logs: the format, the field, both lengths, and the value. */
     override val description: String
         get() =
             "Format $format field ${this.field} expected at most $maxLength characters; " +

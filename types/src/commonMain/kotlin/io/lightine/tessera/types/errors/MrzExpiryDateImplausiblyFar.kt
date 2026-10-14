@@ -3,22 +3,22 @@ package io.lightine.tessera.types.errors
 import kotlinx.datetime.LocalDate
 
 /**
- * Warning: the document's [expiryDate] is more than [thresholdYears] after [referenceDate].
+ * Warning: the expiry date is more than [thresholdYears] after [referenceDate].
  *
- * Emitted by [`MrzValidator`][io.lightine.tessera.mrz.validation.MrzValidator]. The
- * threshold is currently 10 years; documents with longer validity periods exist but are
- * uncommon, and a far-future expiry is often a sign of transcription error.
+ * Reported by the validator when the computed expiry date is later than the reference date
+ * plus 10 years.
  *
- * A warning rather than a validation failure because the SDK does not commit to "this
- * document is invalid" based on expiry plausibility alone (Principle 1 — reader, not
- * oracle). Configurable thresholds are a deferred enhancement; see
- * the project's issue tracker.
+ * @property expiryDate The computed expiry date.
+ * @property referenceDate The UTC date the expiry date was compared with.
+ * @property thresholdYears The limit that was exceeded, in years (10).
+ * @since 0.1.0
  */
 public data class MrzExpiryDateImplausiblyFar(
     val expiryDate: LocalDate,
     val referenceDate: LocalDate,
     val thresholdYears: Int,
 ) : MrzWarning() {
+    /** English text for logs: the expiry date, the limit, and the reference date. */
     override val description: String
         get() = "Document expiry date $expiryDate is more than $thresholdYears years after reference date $referenceDate"
 }

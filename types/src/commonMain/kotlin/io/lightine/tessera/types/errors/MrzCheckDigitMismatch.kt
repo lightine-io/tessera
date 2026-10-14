@@ -3,15 +3,16 @@ package io.lightine.tessera.types.errors
 import io.lightine.tessera.types.vocabulary.MrzField
 
 /**
- * Validation failure: the check digit recorded on the MRZ for a given [field] does not
- * match the value the SDK computes from the field's content per ICAO Doc 9303. Carries
- * the [expected] (computed) and [observed] (recorded) digits and the [position] of the
- * recorded digit in the concatenated MRZ string.
+ * Validation failure: a printed check digit differs from the one the SDK computes.
  *
- * Emitted by [`MrzValidator`][io.lightine.tessera.mrz.validation.MrzValidator]. A check
- * digit mismatch means the document is structurally well-formed but does not internally
- * agree; it may indicate transcription error, deliberate tampering, or a non-conforming
- * issuer.
+ * Reported by the validator for the document number, date of birth, date of expiry,
+ * optional data (TD3 personal number only), and composite check digits.
+ *
+ * @property field The field the check digit covers.
+ * @property expected The check digit the SDK computed from the field.
+ * @property observed The check digit printed on the document.
+ * @property position Zero-based index of the printed check digit across the lines joined with no separator.
+ * @since 0.1.0
  */
 public data class MrzCheckDigitMismatch(
     val field: MrzField,
@@ -19,6 +20,7 @@ public data class MrzCheckDigitMismatch(
     val observed: Char,
     val position: Int,
 ) : MrzValidationError() {
+    /** English text for logs: the field, the position, and both digits. */
     override val description: String
         get() = "Check digit for ${this.field} at position $position: expected '$expected', observed '$observed'"
 }

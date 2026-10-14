@@ -1,25 +1,23 @@
 package io.lightine.tessera.types.vocabulary
 
 /**
- * The five MRZ formats defined by ICAO Doc 9303. Each
- * [`MrzDocument`][io.lightine.tessera.mrz.model.MrzDocument] variant reports its
- * format via this enum.
+ * The MRZ formats defined by ICAO Doc 9303.
  *
- * - [TD1] — 3 lines × 30 characters, per ICAO Doc 9303 Part 5 (identity cards)
- * - [TD2] — 2 lines × 36 characters, per ICAO Doc 9303 Part 6 (smaller identity documents)
- * - [TD3] — 2 lines × 44 characters, per ICAO Doc 9303 Part 4 (passports)
- * - [MRV_A] — 2 lines × 44 characters, per ICAO Doc 9303 Part 7 (Type-A visas)
- * - [MRV_B] — 2 lines × 36 characters, per ICAO Doc 9303 Part 7 (Type-B visas)
- *
- * TD2 / MRV-B and TD3 / MRV-A share line dimensions; the parser disambiguates by the leading
- * `V` character that marks a visa. Format-specific shapes (composite check digit presence,
- * field positions, format-specific extras) are documented on the corresponding
- * [`MrzDocument`][io.lightine.tessera.mrz.model.MrzDocument] subtype.
+ * @since 0.1.0
  */
 public enum class MrzFormat {
+    /** Three lines of 30 characters. Identity cards. */
     TD1,
+
+    /** Two lines of 36 characters. Smaller identity documents. */
     TD2,
+
+    /** Two lines of 44 characters. Passports. */
     TD3,
+
+    /** Two lines of 44 characters. Type-A visas. */
     MRV_A,
+
+    /** Two lines of 36 characters. Type-B visas. */
     MRV_B,
 }

@@ -3,17 +3,15 @@ package io.lightine.tessera.mrz.transliteration
 import io.lightine.tessera.types.vocabulary.MrzField
 
 /**
- * Per-field audit trail of transliteration applied during MRZ generation. Exposed on
- * [`ResultMetadata.transliterationDetails`][io.lightine.tessera.mrz.parsing.ResultMetadata]
- * per Principle 5 (transparency) and
- * [ADR-014](https://lightine.youtrack.cloud/articles/TES-A-47):
- * consumers can inspect the post-normalization, pre-transliteration form for each field
- * the SDK rewrote, alongside the original input and the encoded output.
+ * The transliteration a generator applied, one entry per name identifier.
  *
- * Populated only by the primitive-input generator methods (e.g.,
- * [`MrzGenerator.generateTD3`][io.lightine.tessera.mrz.generation.MrzGenerator]) when a
- * profile was supplied. `null` on parse paths and on generation paths that took no
- * profile.
+ * The generator sets it on [io.lightine.tessera.mrz.parsing.ResultMetadata.transliterationDetails]
+ * when you pass a profile.
+ *
+ * @property profileIdentifier Identifier of the profile that ran.
+ * @property transliteratedFields One entry for each non-empty primary or secondary identifier
+ *   passed through the profile.
+ * @since 0.1.0
  */
 public data class TransliterationDetails(
     val profileIdentifier: String,
@@ -21,10 +19,13 @@ public data class TransliterationDetails(
 )
 
 /**
- * A single entry in [TransliterationDetails.transliteratedFields]: which [field] was
- * rewritten, the consumer's [originalInput], the Unicode-NFC-normalized form
- * ([normalizedInput]) the profile saw, and the resulting [transliteratedOutput] that was
- * encoded into the MRZ.
+ * One value passed through a transliteration profile.
+ *
+ * @property field The MRZ field the value belongs to.
+ * @property originalInput The value as passed in.
+ * @property normalizedInput The value after Unicode NFC normalization, as the profile saw it.
+ * @property transliteratedOutput The profile's output for the value.
+ * @since 0.1.0
  */
 public data class TransliteratedField(
     val field: MrzField,

@@ -5,26 +5,25 @@ import io.lightine.tessera.mrz.recognition.DocumentType
 import io.lightine.tessera.types.vocabulary.Sex
 
 /**
- * The set of MRZ fields present in every supported format. Concrete
- * [`MrzDocument`][MrzDocument] subtypes hold a [CommonFields] plus any format-specific
- * extras.
+ * The MRZ fields that every format carries.
  *
- * Field semantics:
- * - [primaryIdentifier], [secondaryIdentifier] — the decoded name components from
- *   ICAO Doc 9303's `<<`-separated name field. Filler `<` characters are decoded as
- *   spaces. Apostrophes and hyphens are lossy under the ICAO encoding; consumers who
- *   need the original presentation should use [rawNameField].
- * - [nameTruncated] — `true` when the name field fills the available width with no
- *   trailing filler (ICAO convention: a complete name always leaves at least one trailing
- *   `<`). See [`MrzNameTruncated`][io.lightine.tessera.types.errors.MrzNameTruncated].
- * - [rawNameField] — the name field exactly as encoded on the document, before decoding.
- * - [sex] — the SDK's [`Sex`][io.lightine.tessera.types.vocabulary.Sex] enum, derived
- *   from [rawSex]. Both are exposed per Principle 5 (transparency).
- * - [rawSex] — the actual character on the document. May be outside the ICAO allowed
- *   set if the document is non-conforming; see
- *   [`MrzInvalidSexValue`][io.lightine.tessera.types.errors.MrzInvalidSexValue].
- * - [checkDigits] — the check digits as recorded on the document, not as the SDK would
- *   compute them. See [MrzCheckDigits].
+ * @property documentType Document type code as printed, with trailing `<` removed.
+ * @property issuingState Issuing state code as printed.
+ * @property primaryIdentifier Name before the first `<<`. Each `<` reads as a space.
+ * @property secondaryIdentifier Name after the first `<<`, each `<` read as a space. Empty if there
+ *   is none.
+ * @property nameTruncated `true` if the name field ends without a `<`.
+ * @property rawNameField Name field exactly as printed, before decoding. It keeps what the two
+ *   identifiers lose.
+ * @property documentNumber Document number as printed, including any `<` filler.
+ * @property nationality Nationality code as printed.
+ * @property dateOfBirth Date of birth.
+ * @property sex Sex read from [rawSex]: `M` is male, `F` is female, any other character is
+ *   unspecified.
+ * @property rawSex Sex character as printed.
+ * @property dateOfExpiry Date of expiry.
+ * @property checkDigits Check digits as printed.
+ * @since 0.1.0
  */
 public data class CommonFields(
     val documentType: DocumentType,

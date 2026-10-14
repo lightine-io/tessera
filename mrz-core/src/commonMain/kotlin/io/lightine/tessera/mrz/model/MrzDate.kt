@@ -7,28 +7,23 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 /**
- * An MRZ-encoded date: the raw two-digit year, month, and day components exactly as
- * recorded on the document, together with the SDK's inference of which full
- * [`LocalDate`][kotlinx.datetime.LocalDate] those components most likely represent.
+ * An MRZ date: the printed year, month, and day, plus an inferred full date.
  *
- * Per [ADR-008](https://lightine.youtrack.cloud/articles/TES-A-38):
- * the SDK exposes both the raw components and the computed date so consumers can decide
- * which to trust. The [inferenceMethod] enum records how the computed date (if any) was
- * picked.
- *
- * For birth dates the SDK applies a sliding-window heuristic (candidate must be in the
- * past relative to the reference time and within [MAX_PLAUSIBLE_AGE_YEARS]); for expiry
- * dates a different window (10 years past, 50 years future). When no candidate fits, only
- * the raw components are populated and [inferenceMethod] is [MrzDateInferenceMethod.RAW_ONLY].
- *
- * The tri-state [componentsFormCalendarDate] distinguishes "we couldn't tell"
- * (`null`, raw components didn't parse as numerics) from "valid calendar date for at
- * least one candidate century" (`true`) and "not a real calendar date" (`false`).
- * [componentsExceedBirthAgeLimit] is parallel — only populated for birth dates that
- * form a calendar date but exceed the plausible-age window.
- *
- * Use the [parseBirth] and [parseExpiry] factories rather than constructing directly;
- * they handle component parsing, century inference, and the tri-state flags consistently.
+ * @property rawYear The two year characters as printed.
+ * @property rawMonth The two month characters as printed.
+ * @property rawDay The two day characters as printed.
+ * @property computedYear The four-digit year chosen by century inference. `null` if
+ *   [inferenceMethod] is [MrzDateInferenceMethod.RAW_ONLY].
+ * @property computedDate The full date. `null` if [inferenceMethod] is
+ *   [MrzDateInferenceMethod.RAW_ONLY].
+ * @property inferenceMethod How the century was chosen. Default: [MrzDateInferenceMethod.RAW_ONLY].
+ * @property componentsFormCalendarDate `true` if the components form a real date in the 2000s or
+ *   the 1900s, `false` if they form none, `null` if they are not two-digit numbers. Default:
+ *   `null`.
+ * @property componentsExceedBirthAgeLimit Birth dates only. `true` if the date is real and not
+ *   after the reference time but more than 130 years before it, `false` if inference succeeded or
+ *   the date is after the reference time, `null` otherwise. Default: `null`.
+ * @since 0.1.0
  */
 public data class MrzDate(
     val rawYear: String,
@@ -40,19 +35,24 @@ public data class MrzDate(
     val componentsFormCalendarDate: Boolean? = null,
     val componentsExceedBirthAgeLimit: Boolean? = null,
 ) {
+    /** Factories that parse printed date components. */
     public companion object {
         internal const val MAX_PLAUSIBLE_AGE_YEARS: Int = 130
         private const val EXPIRY_PAST_WINDOW_YEARS = 10
         private const val EXPIRY_FUTURE_WINDOW_YEARS = 50
 
         /**
-         * Parses a birth-date MRZ field. Returns an [MrzDate] whose [computedDate] (if
-         * resolved) is in the past relative to [referenceTime] and whose age is within
-         * [MAX_PLAUSIBLE_AGE_YEARS]. When no candidate century fits, returns an [MrzDate]
-         * with only the raw components populated and [inferenceMethod] = `RAW_ONLY`.
+         * Parses a birth date and infers its century.
          *
-         * [referenceTime] defaults to the current system time. Tests typically pass an
-         * explicit reference so they don't depend on the wall clock.
+         * @param rawYear The two year characters.
+         * @param rawMonth The two month characters.
+         * @param rawDay The two day characters.
+         * @param referenceTime The moment to judge against, compared as a UTC date. Default: the
+         *   system clock.
+         * @return A date with [MrzDate.computedDate] set from the first of the 2000s and the 1900s
+         *   whose date is not after the reference time and at most 130 years before it. If neither
+         *   fits, only the printed components are set and the method is
+         *   [MrzDateInferenceMethod.RAW_ONLY].
          */
         public fun parseBirth(
             rawYear: String,
@@ -99,12 +99,17 @@ public data class MrzDate(
         }
 
         /**
-         * Parses an expiry-date MRZ field. Returns an [MrzDate] whose [computedDate]
-         * (if resolved) is within 10 years before to 50 years after [referenceTime].
-         * When no candidate century fits, returns an [MrzDate] with only the raw
-         * components populated and [inferenceMethod] = `RAW_ONLY`.
+         * Parses an expiry date and infers its century.
          *
-         * [referenceTime] defaults to the current system time.
+         * @param rawYear The two year characters.
+         * @param rawMonth The two month characters.
+         * @param rawDay The two day characters.
+         * @param referenceTime The moment to judge against, compared as a UTC date. Default: the
+         *   system clock.
+         * @return A date with [MrzDate.computedDate] set from the first of the 2000s and the 1900s
+         *   whose year is from 10 years before to 50 years after the reference year. If neither
+         *   fits, only the printed components are set and the method is
+         *   [MrzDateInferenceMethod.RAW_ONLY].
          */
         public fun parseExpiry(
             rawYear: String,

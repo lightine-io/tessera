@@ -3,76 +3,39 @@ package io.lightine.tessera.mrz.camera
 import kotlinx.coroutines.flow.Flow
 
 /**
- * The owns-the-camera-session convenience: the SDK runs the platform camera internally and streams a
- * [MrzScanResult] per analysed frame, so the consumer never touches `bindToLifecycle` / `ImageAnalysis`
- * (Android) or `AVCaptureSession` (iOS). It is the second of the two camera-reading layers
- * ([ADR-020](https://lightine.youtrack.cloud/articles/TES-A-49)),
- * built on top of the analyse-frame core ([MrzFrameAnalyzer]) — the same OCR → extract → parse pipeline,
- * now driven by a live frame stream instead of a single hand-supplied frame.
+ * Runs the platform camera and streams a [MrzScanResult] for analysed frames on [results].
  *
- * **Still headless.** The scanner draws nothing: a consumer that wants a live preview attaches its own
- * preview surface. **Permission requests and camera availability remain the consumer's responsibility**
- * (`scope.md` "permission boundary"); when a capture cannot proceed the scanner *reports* a typed
- * [CameraError] on [results] as a [`MrzScanResult.CaptureError`][MrzScanResult.CaptureError] — it never
- * throws from the stream, crashes, or hangs (ADR-020).
+ * The scanner draws nothing and never requests the camera permission. It reports a capture failure
+ * as a [CameraError] on [results] and does not throw from the stream.
  *
- * **Contract shape — Kotlin frozen, Swift projection provisional.** This interface — and the
- * [MrzFrameAnalyzer.scan] engine it is built on — is the UI-agnostic, frame-source-agnostic contract
- * that iOS mirrors. Two freeze states apply at the `0.2.0` tag under
- * [ADR-007](https://lightine.youtrack.cloud/articles/TES-A-37):
- *
- * - **Kotlin/Android: freeze-ready and locked at the tag** (validated against the AVFoundation
- *   implementation). The member shapes here — [results] as a [Flow], [start], [stop] — are stable for
- *   the whole `0.x` line.
- * - **Objective-C/Swift projection: provisional through `0.x`.** How these members surface to a Swift
- *   caller — notably [results] as a Kotlin [Flow] handle rather than a native `AsyncSequence`, and
- *   `suspend` functions as completion handlers — is explicitly **not** locked at `0.2.0`. Tessera may
- *   add an idiomatic-Swift surface later in `0.x` (a hand-written `AsyncStream`/callback adapter, or a
- *   tool such as SKIE) even though that changes the Swift projection of existing members — a change
- *   ADR-007 would otherwise forbid. Marking the Swift projection provisional now is what keeps that
- *   later adapter a legal, non-breaking change; see "Swift `Flow` / coroutines ergonomics" in
- *   the project's issue tracker.
+ * @since 0.2.0
  */
 public interface MrzCameraScanner {
     /**
-     * The stream of results, one per analysed frame, plus any capture failure surfaced as an
-     * [`MrzScanResult.CaptureError`][MrzScanResult.CaptureError]. A hot stream: it emits only while the
-     * scanner is running (between [start] and [stop]); collectors that join late see results from that
-     * point on, with no replay of earlier results, so collect before or right after [start]. The flow
-     * never completes: it stays open across [start] and [stop], so do not wait for it to finish. In a
-     * live stream the consumer reads each result and waits for the next — a noisy frame is simply
-     * [`NoMrzFound`][MrzScanResult.NoMrzFound] and the next clean frame arrives within milliseconds
-     * (strict + next-frame retry).
+     * The stream of results for analysed frames, including capture errors.
      *
-     * Most [`CaptureError`][MrzScanResult.CaptureError]s are **non-terminal** — a per-frame OCR failure,
-     * or a recoverable camera-in-use / temporarily-unavailable observation — and the session continues. A
-     * **critical** capture failure (permission denied, fatal hardware) ends the camera session; the flow
-     * itself stays open and emits no more results until the next [start]. Branch on
-     * [`MrzScanResult.CaptureError`][MrzScanResult.CaptureError] and its `error.code` to tell the cases
-     * apart, rather than waiting for the flow to complete; after a critical failure you may [start]
-     * again (e.g. once the user grants permission).
+     * Frames that arrive while one is being analysed are dropped, so results are not one per frame.
+     * The flow is hot: it emits only between [start] and [stop], replays nothing, and never completes.
+     * A terminal [MrzScanResult.CaptureError] ends the session and the flow then emits nothing until
+     * the next [start]; a non-terminal one leaves the session running. See [CameraError] for which
+     * members are terminal. Each platform scanner states the thread its recognizer runs on.
      */
     public val results: Flow<MrzScanResult>
 
     /**
-     * Starts the camera session and begins emitting on [results]. Idempotent while running: calling
-     * [start] on an already-running scanner does nothing. Once the session has ended — via [stop], or
-     * because the session ended on a critical capture failure — [start] begins a fresh session (the
-     * prompt-and-retry path). The consumer must hold the camera permission first (the scanner reports,
-     * it does not request).
+     * Starts the camera session and begins emitting on [results].
      *
-     * **Threading.** The lifecycle methods ([start], [stop], and a platform `close`) are not
-     * thread-safe; call them from a single thread — typically the UI thread / Swift main actor, the
-     * idiomatic place for camera lifecycle. Concurrent calls from multiple threads are not supported and
-     * may race (e.g. two `start`s both passing the idempotence check). Collecting [results], by contrast,
-     * is safe from any coroutine.
+     * Does nothing while a session is running. After [stop], or after a terminal capture error, it
+     * starts a new session. The caller must hold the camera permission first. Call it from one thread,
+     * typically the UI thread; concurrent lifecycle calls are not supported.
      */
     public fun start()
 
     /**
-     * Stops the camera session, so [results] emits nothing more until the next [start]. Idempotent. After
-     * [stop] the scanner may be [start]ed again. Releasing the scanner entirely (closing its camera
-     * resources) is the platform type's own lifecycle concern, documented there.
+     * Stops the camera session, so [results] emits nothing until the next [start].
+     *
+     * Does nothing when the session is stopped. Releasing the camera resources is the platform type's
+     * `close`.
      */
     public fun stop()
 }

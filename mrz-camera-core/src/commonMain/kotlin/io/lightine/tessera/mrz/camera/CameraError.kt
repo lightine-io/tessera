@@ -1,79 +1,84 @@
 package io.lightine.tessera.mrz.camera
 
 /**
- * A capture-layer failure, surfaced on [`MrzScanResult.CaptureError`][MrzScanResult.CaptureError]
- * as a sealed result — never thrown, never crashing or hanging
- * ([ADR-020](https://lightine.youtrack.cloud/articles/TES-A-49)).
- * This is the `Camera…` family the [error taxonomy](https://lightine.youtrack.cloud/articles/TES-A-28)
- * names, kept distinct from the `mrz-core` parse/validation taxonomy: it describes a failure to
- * *obtain* a reading, not a judgement about a reading's content.
+ * A failure to obtain a reading, reported on [MrzScanResult.CaptureError]; never thrown.
  *
- * Each member carries a stable English [code] a consumer can switch on and localize; the
- * human-readable detail is for diagnostics, not end users.
+ * Each member has a stable English [code] to switch on. A report is terminal when it ends the
+ * camera session and non-terminal when the session stays running; each member says which.
  *
- * The family grows as the camera layers land. The analyse-frame core produces [OcrFailed]; the
- * owns-the-camera-session layer ([MrzCameraScanner]) adds the capture-availability failures
- * [CameraUnavailable], [PermissionDenied], and [CameraInUse] — each surfaced when the camera cannot
- * be started, never thrown. Their host-reproducible trigger is the scanner surfacing them as a sealed
- * result; the platform mapping from a real failure to the right member was verified on a device (the
- * live-device slice) for the [PermissionDenied], [CameraUnavailable], and [CameraInUse] paths.
- * [CameraInUse] is recoverable: it is surfaced **non-terminally** while the session stays bound and the
- * platform camera framework auto-resumes the stream once the other client releases the camera.
+ * @since 0.2.0
  */
 public sealed interface CameraError {
-    /** A stable, switch-on-able English code (e.g. `"camera.ocr_failed"`). Consumers localize it. */
+    /** A stable English code to switch on, for example `camera.ocr_failed`. */
     public val code: String
 
     /**
-     * Human-readable diagnostic detail — for diagnostics, not display, and never document data. On some
-     * paths it carries raw platform exception text, so treat it as opaque: do not forward it verbatim to
-     * a remote log sink.
+     * Diagnostic detail, not for display and never document data.
+     *
+     * It can hold raw platform exception text: do not forward it to a remote log.
      */
     public val message: String
 
     /**
-     * The platform OCR engine failed to process a frame — for example it threw, or reported an
-     * error instead of a result. The analyse-frame core surfaces this rather than letting the
-     * exception propagate, so the consumer can decide whether to retry on the next frame.
+     * The OCR engine failed on a frame or saved image, for example by throwing.
+     *
+     * Non-terminal: the session continues with the next frame.
+     *
+     * @property message diagnostic detail.
+     * @since 0.2.0
      */
     public data class OcrFailed(
         override val message: String,
     ) : CameraError {
+        /** Stable code: `camera.ocr_failed`. */
         override val code: String get() = "camera.ocr_failed"
     }
 
     /**
-     * The camera could not be opened — no usable camera on the device, or the platform reported the
-     * hardware as unavailable. Distinct from [PermissionDenied] (a usable camera the app may not yet
-     * access) and [CameraInUse] (a usable camera another client holds).
+     * The camera could not be opened, or the platform reported a failure.
+     *
+     * Terminal, except on Android when CameraX reports a temporary error and retries: that report
+     * is non-terminal and the session stays bound.
+     *
+     * @property message diagnostic detail.
+     * @since 0.2.0
      */
     public data class CameraUnavailable(
         override val message: String,
     ) : CameraError {
+        /** Stable code: `camera.unavailable`. */
         override val code: String get() = "camera.unavailable"
     }
 
     /**
-     * The camera permission is not granted, so the session cannot start. **Requesting the permission is
-     * the consumer's responsibility** (`scope.md` "permission boundary"); the scanner only reports this
-     * so the consumer can prompt and retry. The SDK never requests a permission on the consumer's behalf.
+     * The camera permission is not granted.
+     *
+     * Terminal. The SDK never requests the permission: request it, then call
+     * [MrzCameraScanner.start] again.
+     *
+     * @property message diagnostic detail.
+     * @since 0.2.0
      */
     public data class PermissionDenied(
         override val message: String,
     ) : CameraError {
+        /** Stable code: `camera.permission_denied`. */
         override val code: String get() = "camera.permission_denied"
     }
 
     /**
-     * The camera is held by another client (another app, or another part of this app). Surfaced as a
-     * **non-terminal** observation while the session stays bound: the platform camera framework (CameraX
-     * on Android, AVFoundation on iOS) auto-recovers and resumes the stream when the other holder
-     * releases the camera. The consumer need not restart — it is reported so a preview/UI can reflect
-     * the interruption.
+     * Another client holds the camera.
+     *
+     * Non-terminal: the session stays bound and capture resumes when the other client releases the
+     * camera.
+     *
+     * @property message diagnostic detail.
+     * @since 0.2.0
      */
     public data class CameraInUse(
         override val message: String,
     ) : CameraError {
+        /** Stable code: `camera.in_use`. */
         override val code: String get() = "camera.in_use"
     }
 }

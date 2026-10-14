@@ -1,57 +1,68 @@
 package io.lightine.tessera.mrz.formats
 
 /**
- * The shared contract for every ICAO Doc 9303 MRZ format specification.
+ * The field positions of one MRZ format.
  *
- * Each implementing object names the field positions for one format and provides the
- * arithmetic for converting line-relative [FieldSpec] coordinates into the global position
- * in the concatenated MRZ used for error reporting.
- *
- * The fields below are present in every supported format. Formats that also define a
- * composite check digit (TD1, TD2, TD3 per ICAO Doc 9303 Parts 4-6) implement the
- * [MrzFormatSpecWithComposite] sub-interface that adds the composite-related fields.
- * Visa formats (MRV-A, MRV-B per Part 7) implement this base interface only.
- *
- * Sealed to the `mrz-core` module — adding a new format spec requires declaring it within
- * this module so the closed set matches the sealed [io.lightine.tessera.mrz.model.MrzDocument]
- * hierarchy.
+ * @since 0.1.0
  */
 public sealed interface MrzFormatSpec {
+    /** Number of lines in the MRZ. */
     public val lineCount: Int
+
+    /** Number of characters on each line. */
     public val lineLength: Int
 
+    /** Position of the document type. */
     public val documentType: FieldSpec
+
+    /** Position of the issuing state. */
     public val issuingState: FieldSpec
+
+    /** Position of the name field. */
     public val rawNameField: FieldSpec
+
+    /** Position of the document number. */
     public val documentNumber: FieldSpec
+
+    /** Position of the document number check digit. */
     public val documentNumberCheckDigit: FieldSpec
+
+    /** Position of the nationality. */
     public val nationality: FieldSpec
+
+    /** Position of the date of birth. */
     public val dateOfBirth: FieldSpec
+
+    /** Position of the date of birth check digit. */
     public val dateOfBirthCheckDigit: FieldSpec
+
+    /** Position of the sex character. */
     public val sex: FieldSpec
+
+    /** Position of the date of expiry. */
     public val dateOfExpiry: FieldSpec
+
+    /** Position of the date of expiry check digit. */
     public val dateOfExpiryCheckDigit: FieldSpec
 
     /**
-     * Convert a line-relative [FieldSpec] into the position in the concatenated MRZ string
-     * (line 0 occupies positions `[0, lineLength)`, line 1 occupies `[lineLength, 2 * lineLength)`,
-     * and so on). Used in error reporting so consumers can point at the failing character.
+     * Returns the index of a field's first character in the lines joined without a separator.
+     *
+     * @param field The field position, relative to its line.
+     * @return `field.line * lineLength + field.startInLine`.
      */
     public fun globalPositionOf(field: FieldSpec): Int = field.line * lineLength + field.startInLine
 }
 
 /**
- * Extension of [MrzFormatSpec] for formats that define a composite check digit per ICAO Doc 9303.
+ * A format spec for formats with a composite check digit: TD1, TD2, and TD3.
  *
- * Implemented by TD1 (Part 5), TD2 (Part 6), and TD3 (Part 4). Visa formats (MRV-A, MRV-B per
- * Part 7) do NOT define a composite check digit and therefore implement only the base
- * [MrzFormatSpec], not this sub-interface.
- *
- * The `compositeInputFields` list names the field ranges that concatenate to form the input
- * to the composite check digit computation; the exact ranges differ per format and are
- * documented on the implementing object.
+ * @since 0.1.0
  */
 public sealed interface MrzFormatSpecWithComposite : MrzFormatSpec {
+    /** Position of the composite check digit. */
     public val compositeCheckDigit: FieldSpec
+
+    /** Positions whose text, joined in order, is the input of the composite check digit. */
     public val compositeInputFields: List<FieldSpec>
 }

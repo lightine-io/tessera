@@ -1,27 +1,35 @@
 package io.lightine.tessera.types.vocabulary
 
 /**
- * A symbolic name for an MRZ field, used as a discriminator on errors and warnings that
- * need to identify which field they refer to.
+ * A named MRZ field, used by observations to say which field they refer to.
  *
- * Used by error types such as
- * [`MrzCheckDigitMismatch`][io.lightine.tessera.types.errors.MrzCheckDigitMismatch],
- * [`MrzDateNotInCalendar`][io.lightine.tessera.types.errors.MrzDateNotInCalendar],
- * [`MrzGenerationFieldOverflow`][io.lightine.tessera.types.errors.MrzGenerationFieldOverflow],
- * and others. Position information is carried alongside the field name so consumers can
- * render precise per-character diagnostics.
- *
- * The enumerated names are SDK-internal symbols, not strings drawn from any external
- * specification.
+ * @since 0.1.0
  */
 public enum class MrzField {
+    /** The document type code. */
     DOCUMENT_TYPE,
+
+    /** The issuing state code. */
     ISSUING_STATE,
+
+    /** The name field: primary and secondary identifiers. */
     NAME_FIELD,
+
+    /** The document number. */
     DOCUMENT_NUMBER,
+
+    /** The nationality code. */
     NATIONALITY,
+
+    /** The date of birth. */
     DATE_OF_BIRTH,
+
+    /** The date of expiry. */
     DATE_OF_EXPIRY,
+
+    /** The optional data field, or the personal number on a TD3. */
     OPTIONAL_DATA,
+
+    /** The composite check digit, which covers several fields. */
     COMPOSITE,
 }

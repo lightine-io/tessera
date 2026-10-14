@@ -47,53 +47,33 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
- * The Android owns-the-camera-session scanner: runs CameraX internally and streams a [MrzScanResult] per
- * analysed frame, so the consumer never touches `ImageAnalysis` / `bindToLifecycle`
- * ([ADR-020](https://lightine.youtrack.cloud/articles/TES-A-49)).
- * It binds an [ImageAnalysis] use case (back-pressure [STRATEGY_KEEP_ONLY_LATEST][ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST]
- * — only the newest frame is analysed; intermediate frames are dropped, which is exactly what a live MRZ
- * scan wants) to the supplied [lifecycleOwner], pipes each `ImageProxy` through [MrzFrameAnalyzer.scan],
- * and closes the proxy once analysed (CameraX cannot deliver the next frame until the current one is
- * closed — memory hygiene).
+ * Runs CameraX on Android and streams [MrzScanResult]s from analysed frames.
  *
- * **Headless by default; live preview is opt-in.** No preview surface is created unless the consumer
- * arms one via [enablePreview]. Left un-armed (the default), the scanner binds only [ImageAnalysis] and
- * a pure-OCR consumer's camera session is unchanged — it draws nothing (ADR-020). Armed, the *same*
- * session that feeds analysis also binds a CameraX [Preview], whose [SurfaceRequest] is published on
- * [surfaceRequest] for a viewfinder (e.g. `CameraXViewfinder` in `mrz-camera-ui-android`) to render —
- * never a second camera. **The consumer holds the `CAMERA` permission** before [start] — this scanner
- * reports a [CameraError.PermissionDenied] on [results], it never requests permission (`scope.md`
- * "permission boundary").
+ * It binds an [ImageAnalysis] use case to [lifecycleOwner] with the keep-only-latest strategy, and
+ * closes every frame after analysis. Frames that arrive while one is being analysed are dropped, so
+ * results are not one per frame. The scanner creates no preview unless you call [enablePreview]. The
+ * caller must hold the `CAMERA` permission before [start]; the scanner reports
+ * [CameraError.PermissionDenied] and never requests it.
  *
- * **Verification status.** The contract this implements (the [MrzCameraScanner] interface and the
- * [scan][MrzFrameAnalyzer.scan] engine) is host-tested in `mrz-camera-core`, and the
- * recoverable-vs-critical state classification ([classifyCameraState]) is host-tested here in
- * `androidHostTest`. The CameraX wiring is compiled on CI and was verified end-to-end on a physical
- * device (the live-device slice): the back camera opens, frames stream, each [ImageProxy] is closed, and
- * results flow. That slice established that CameraX surfaces a failed open **asynchronously through camera
- * state**, not as a bind-time exception. CameraX classifies those state errors as *critical* (no
- * auto-recovery — permission / fatal hardware / camera removed) or *recoverable* (the camera is in use, or
- * the open can be retried — CameraX keeps retrying, parking the camera in `PENDING_OPEN`). This scanner
- * ends the session only on a **critical** error (close the flow → terminal [CaptureError][MrzScanResult.CaptureError]);
- * a **recoverable** one it surfaces as a *non-terminal* [CameraError.CameraInUse] /
- * [CameraError.CameraUnavailable] while staying bound, so CameraX recovers and the stream resumes when the
- * blocker clears. The permission/fatal (critical) path was device-verified to surface
- * [CameraError.PermissionDenied]; the live in-use (recoverable) scenario — a second client taking then
- * releasing the camera — is device-verified separately (the Simulator/emulator cannot stage camera
- * contention; see the project's issue tracker).
+ * A [CameraError.PermissionDenied] or a critical [CameraError.CameraUnavailable] ends the session.
+ * A [CameraError.CameraInUse], and a [CameraError.CameraUnavailable] reported while CameraX is
+ * retrying, leave the session bound; the stream resumes when the camera recovers. A
+ * [CameraError.OcrFailed] covers one frame. Close the scanner to release the analysis executor and
+ * the recognizer.
  *
- * @param appContext an application [Context] (held for the camera-provider lookup; pass
- *   `context.applicationContext` to avoid leaking an Activity).
- * @param lifecycleOwner the lifecycle the camera session is bound to; CameraX starts/stops the camera as
- *   this lifecycle moves, in addition to [start]/[stop].
- * @param recognizer the OCR seam. Defaults to the bundled ML Kit recognizer, which this scanner then owns
- *   and releases on [close]; a consumer-supplied recognizer that is [AutoCloseable] is likewise released
- *   on [close], since the scanner owns the OCR resource for its session.
- * @param mode strict (default) or lenient candidate extraction, forwarded to the analyse-frame core.
- * @param telemetry where per-frame [CameraFrameEvent]s go. Defaults to the application's registered sink
- *   ([TelemetrySinkRegistry.current][TelemetrySinkRegistry]; [NoOpTelemetrySink] when none is registered).
- *   Pass an explicit sink to override per instance.
- * @param cameraSelector which lens to use; defaults to the back camera (documents face the rear lens).
+ * @param appContext an application [Context], used to look up the camera provider. Pass
+ *   `context.applicationContext`.
+ * @param lifecycleOwner the lifecycle the camera session is bound to. CameraX also starts and
+ *   stops the camera as this lifecycle moves.
+ * @param recognizer the OCR engine. The default is [MlKitMrzTextRecognizer]. The scanner closes a
+ *   recognizer that is [AutoCloseable] when it is closed.
+ * @param mode how tolerant candidate extraction is of OCR formatting noise. The default is
+ *   [ParsingMode.STRICT].
+ * @param telemetry where per-frame [CameraFrameEvent]s go. The default is the registered sink
+ *   ([TelemetrySinkRegistry.current][TelemetrySinkRegistry]), or [NoOpTelemetrySink] when none is
+ *   registered.
+ * @param cameraSelector which lens to use. The default is the back camera.
+ * @since 0.2.0
  */
 public class CameraXMrzScanner(
     private val appContext: Context,
@@ -119,6 +99,12 @@ public class CameraXMrzScanner(
             extraBufferCapacity = 16,
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
         )
+
+    /**
+     * Results for analysed frames and capture errors. A slow collector misses the oldest pending
+     * results. The scanner calls the recognizer on the main thread, so a custom
+     * [MrzTextRecognizer] runs there.
+     */
     override val results: Flow<MrzScanResult> = mutableResults.asSharedFlow()
 
     // Opt-in live-preview seam (additive; the scanner is headless by default — ADR-020). Read at bind
@@ -135,28 +121,21 @@ public class CameraXMrzScanner(
     private val mutableSurfaceRequest = MutableStateFlow<SurfaceRequest?>(null)
 
     /**
-     * The live-preview surface request, or `null` when no preview is active. Emits a [SurfaceRequest] once
-     * the camera opens **after** [enablePreview] has armed the preview and [start] binds the session; back
-     * to `null` when the session ends. A `CameraXViewfinder` (in `mrz-camera-ui-android`) collects this and
-     * renders the preview — the UI only draws; this scanner keeps owning the session and lifecycle.
-     * Stays `null` for the headless default (preview not armed).
+     * The CameraX [SurfaceRequest] of the live preview, or `null` when no preview is active.
+     *
+     * It is set once the camera binds after [enablePreview] and [start], and returns to `null` when
+     * the session ends.
      */
     public val surfaceRequest: StateFlow<SurfaceRequest?> = mutableSurfaceRequest.asStateFlow()
 
     /**
-     * Arms the live camera preview for subsequent [start]s: the next session binds a CameraX [Preview] use
-     * case alongside analysis and publishes its [SurfaceRequest] on [surfaceRequest]. Opt-in so the default
-     * remains headless (ADR-020) — a pure-OCR consumer never pays for a Preview use case. Idempotent; call
-     * before [start]. There is no disarm: preview stays on for this scanner's lifetime once armed (the
-     * default UI arms once at construction).
+     * Arms the live preview for later [start] calls.
      *
-     * @param viewport optional preview↔analysis **WYSIWYG** viewport. When supplied, the preview and analysis
-     *   use cases bind in a [UseCaseGroup] with this [ViewPort], so CameraX crops both to the **same** sensor
-     *   region — the region the viewfinder shows is the region the analyzer receives. Build it from the
-     *   viewfinder's on-screen size and display rotation (`ViewPort.Builder(Rational(w, h), rotation)`). This
-     *   is what makes a region-of-interest crop (e.g. the MRZ band) line up with the on-screen framing guide.
-     *   `null` (the default) keeps the prior behaviour — the two use cases bind independently, and their crop
-     *   rects are not guaranteed to match.
+     * The next session binds a CameraX [Preview] next to analysis and publishes its [SurfaceRequest]
+     * on [surfaceRequest]. Call it before [start]. Preview stays armed for the life of the scanner.
+     *
+     * @param viewport when set, preview and analysis bind in one [UseCaseGroup] with this [ViewPort]
+     *   and crop the same sensor region. When `null` (the default), their crops can differ.
      */
     public fun enablePreview(viewport: ViewPort? = null) {
         previewEnabled = true
@@ -172,15 +151,20 @@ public class CameraXMrzScanner(
     @Volatile private var boundCamera: Camera? = null
 
     /**
-     * Turns the active camera's torch on or off. Safe to call before [start] (applied when the camera binds)
-     * or while running; a no-op on a camera with no flash unit. The torch turns off when the session unbinds.
+     * Turns the torch of the active camera on or off.
+     *
+     * Call it before [start] or while running. It does nothing on a camera without a flash unit. The
+     * scanner keeps the last requested state and applies it each time the camera binds, so after
+     * [stop] and [start] the torch is requested on again if you last requested on.
+     *
+     * @param enabled `true` to turn the torch on.
      */
     public fun setTorchEnabled(enabled: Boolean) {
         torchEnabled = enabled
         boundCamera?.let { if (it.cameraInfo.hasFlashUnit()) it.cameraControl.enableTorch(enabled) }
     }
 
-    /** Whether the active camera has a flash unit (torch). `false` until the camera has bound at least once. */
+    /** Whether the bound camera has a flash unit; `false` when no camera is bound. */
     public fun hasTorch(): Boolean = boundCamera?.cameraInfo?.hasFlashUnit() == true
 
     // Autofocus is intentionally left to CameraX's default continuous mode (CONTROL_AF_MODE_CONTINUOUS_PICTURE):
@@ -199,6 +183,7 @@ public class CameraXMrzScanner(
     // session ends on its own (a critical CaptureError), not only after stop(). See CameraSessionGate.
     private val session = CameraSessionGate()
 
+    /** Binds CameraX to [lifecycleOwner] and begins emitting on [results]. */
     override fun start() {
         session.start {
             scope.launch {
@@ -212,11 +197,12 @@ public class CameraXMrzScanner(
         }
     }
 
+    /** Stops the session and unbinds this scanner's use cases. */
     override fun stop() {
         session.stop()
     }
 
-    /** Stops the session, releases the analysis executor, and closes the OCR recognizer it owns. */
+    /** Stops the session, releases the analysis executor, and closes the recognizer if closeable. */
     override fun close() {
         stop()
         scope.cancel()

@@ -1,44 +1,43 @@
 package io.lightine.tessera.mrz.camera
 
 /**
- * Capture metadata read from a saved image's embedded EXIF, exposed to help a consumer assess saved-image
- * risk ([reading-risks](https://lightine.youtrack.cloud/articles/TES-A-11)).
+ * Capture metadata (EXIF) read from a saved image, as the file reports it.
  *
- * **Every field is self-reported by the file and unverifiable by the SDK** — EXIF can be absent, stripped,
- * or fabricated, so a present value is what the file *claims*, not a fact the SDK establishes (Principle 4).
- * There is deliberately **no `isScreenshot` / `isEdited` verdict**: those are not reliable EXIF facts, and
- * synthesizing one would be the SDK deciding (reader-not-oracle). The consumer infers from the raw fields
- * ([software], the absence of camera fields, [rawTags]). See [ADR-023](https://lightine.youtrack.cloud/articles/TES-A-63).
+ * Every field is self-reported by the file and the SDK does not verify it. The type holds no
+ * screenshot or edited verdict. It is filled only when a [SavedImageMrzReader] has a
+ * [CaptureMetadataReader] and a policy other than [CaptureMetadataPolicy.NONE]. It holds personal
+ * data (location, device fields, raw tags): do not log it verbatim.
  *
- * Only populated when a [SavedImageMrzReader] is given a [CaptureMetadataReader] and a non-`NONE`
- * [CaptureMetadataPolicy]; [location] only when that policy is [CaptureMetadataPolicy.INCLUDING_LOCATION].
- *
- * **Contains PII — do not log verbatim.** [location] is precise geolocation; the device fields and [rawTags]
- * are identifying. Redact before logging.
+ * @since 0.3.0
  */
 public data class CaptureMetadata(
-    /** The capture timestamp the file reports — the raw EXIF `DateTimeOriginal` string — or `null` if absent. Self-reported. */
+    /** The raw EXIF `DateTimeOriginal` string, or `null` if absent. */
     public val reportedCaptureTime: String?,
-    /** The capturing device make the file reports (EXIF `Make`), or `null`. Self-reported. */
+    /** The device make the file reports (EXIF `Make`), or `null`. */
     public val deviceMake: String?,
-    /** The capturing device model the file reports (EXIF `Model`), or `null`. Self-reported. */
+    /** The device model the file reports (EXIF `Model`), or `null`. */
     public val deviceModel: String?,
-    /** The software the file reports having processed it (EXIF `Software`), or `null`. A hint of editing, never proof. */
+    /** The software the file reports (EXIF `Software`), or `null`. */
     public val software: String?,
     /**
-     * The GPS location the file reports, or `null`. **Precise-location PII.** Non-`null` only when the read
-     * used [CaptureMetadataPolicy.INCLUDING_LOCATION] and the tag was present; under the other policies the
-     * GPS bytes are not read at all.
+     * The GPS location the file reports, or `null`.
+     *
+     * Set only when the read used [CaptureMetadataPolicy.INCLUDING_LOCATION] and the file has the tag.
      */
     public val location: GeoLocation?,
     /**
-     * The raw EXIF tags the reader collected (tag name → raw string value), for full transparency
-     * (Principle 5), or `null` if not collected. May itself hold identifying data — treat as PII.
+     * The non-GPS EXIF tags collected, by tag name; `null` if none were found.
+     *
+     * The tags come from a fixed list that differs by platform.
      */
     public val rawTags: Map<String, String>?,
 )
 
-/** A GPS coordinate from a saved image's EXIF. **Precise-location PII — do not log verbatim.** */
+/**
+ * A GPS coordinate from a saved image's EXIF. Precise location: do not log verbatim.
+ *
+ * @since 0.3.0
+ */
 public data class GeoLocation(
     /** Latitude in decimal degrees (positive north). */
     public val latitude: Double,
@@ -47,18 +46,19 @@ public data class GeoLocation(
 )
 
 /**
- * How much capture metadata a [SavedImageMrzReader] reads from a saved image — the opt-in-within-opt-in gate
- * for the PII in EXIF ([ADR-023](https://lightine.youtrack.cloud/articles/TES-A-63)). The contract is
- * **read-suppression, not field-suppression**: the GPS bytes are never read unless [INCLUDING_LOCATION] is
- * chosen, rather than read-and-then-nulled.
+ * How much capture metadata a [SavedImageMrzReader] reads from a saved image.
+ *
+ * The reader does not read the GPS tags unless [INCLUDING_LOCATION] is chosen.
+ *
+ * @since 0.3.0
  */
 public enum class CaptureMetadataPolicy {
-    /** Read no capture metadata at all (the default). No EXIF is read. */
+    /** Reads no capture metadata. The default. */
     NONE,
 
-    /** Read non-location metadata (timestamp, device, software); GPS is never read. */
+    /** Reads the timestamp, device, software, and raw tags. Never reads GPS. */
     EXCLUDING_LOCATION,
 
-    /** Read the above plus GPS ([CaptureMetadata.location]) — precise-location PII; opt-in-within-opt-in. */
+    /** Reads the above and the GPS location into [CaptureMetadata.location]. */
     INCLUDING_LOCATION,
 }

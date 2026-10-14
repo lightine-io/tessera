@@ -1,23 +1,19 @@
 package io.lightine.tessera.telemetry
 
 /**
- * Utilities for masking sensitive content in telemetry event payloads.
+ * Helpers that mask sensitive text before it goes into a telemetry payload.
  *
- * 0.1.0 ships one helper: [redactMrzLine]. Additional helpers (document number, name,
- * date-of-birth, etc.) are added alongside the events that need them, in the releases
- * of the emitting modules. Speculating on the surface for events that do not yet exist
- * would lock the wrong API under
- * [ADR-007](https://lightine.youtrack.cloud/articles/TES-A-37).
+ * @since 0.1.0
  */
 public object Redaction {
     /**
-     * Returns [line] with every ASCII letter and digit replaced by `'*'`. Filler
-     * characters (`'<'`) and any other non-alphanumeric characters are preserved
-     * verbatim, so the output keeps the same length and overall shape as the input.
+     * Replaces every ASCII letter and digit in [line] with `'*'`.
      *
-     * The function does not validate the input: malformed lines (wrong length, content
-     * outside the MRZ alphabet) are masked the same way. Validation is the caller's
-     * responsibility if they need it.
+     * Filler (`'<'`) and other characters stay as they are, so the result has the same length
+     * as [line]. The function does not validate [line].
+     *
+     * @param line The text to mask, usually one MRZ line.
+     * @return The masked text.
      */
     public fun redactMrzLine(line: String): String =
         buildString(line.length) {

@@ -42,34 +42,33 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 /**
- * Validates parsed [`MrzDocument`][MrzDocument] objects against the per-field and
- * cross-field checks defined by ICAO Doc 9303 and by the SDK's documented warnings.
+ * Checks a parsed MRZ for check digit, date, and sex observations and returns them.
  *
- * Returns a [ValidationResult] carrying any
- * [`MrzValidationError`][io.lightine.tessera.types.errors.MrzValidationError]s (per-field
- * structural failures: check digit mismatches, calendar-invalid dates, out-of-range sex
- * characters) and any
- * [`MrzWarning`][io.lightine.tessera.types.errors.MrzWarning]s (informational
- * observations: implausible dates, name truncation, unknown country/document codes).
+ * Reports `MrzCheckDigitMismatch`, `MrzDateNotInCalendar`, and `MrzInvalidSexValue` as validation
+ * failures. Reports `MrzExpiryDatePast`, `MrzExpiryDateImplausiblyFar`,
+ * `MrzBirthDateImplausiblyOld`, `MrzNameTruncated`, `MrzUnknownCountryCode`,
+ * `MrzUnknownDocumentTypeCode`, `MrzSexCharacterX`, and `MrzPersonalNumberCheckDigitFiller` as
+ * warnings. Visa formats have no composite check digit and no optional-data check digit.
  *
- * `MrzParser` invokes the validator internally and folds the result into
- * [`ResultMetadata`][io.lightine.tessera.mrz.parsing.ResultMetadata]; consumers reading
- * parser output rarely need to call the validator directly. Direct callers are typically
- * tests or callers re-validating a document constructed from primitive inputs.
- *
- * See
- * [`docs/features/mrz-validation.md`](https://lightine.youtrack.cloud/articles/TES-A-32)
- * for the full feature description.
+ * @since 0.1.0
  */
 public object MrzValidator {
     private val VALID_SEX_CHARACTERS = setOf('M', 'F', '<', 'X')
     private const val EXPIRY_IMPLAUSIBLY_FAR_THRESHOLD_YEARS = 10
 
     /**
-     * Validates [document], using [referenceTime] for date-window checks (expiry past,
-     * expiry implausibly far in the future, birth date implausibly old). Defaults to the
-     * current system time; the parser passes its own `referenceTime` through so parser
-     * and validator agree on the date interpretation.
+     * Validates a parsed document and returns its validation failures and warnings.
+     *
+     * Reads the field text from `document.rawLines`, so the document must come from [MrzParser]
+     * or carry `rawLines`. Reads the printed check digits from `document.commonFields.checkDigits`.
+     * Reports [MrzExpiryDatePast] only when the expiry date is strictly earlier than the reference
+     * date, and [MrzExpiryDateImplausiblyFar] when it is more than 10 years after it. Both compare
+     * UTC dates.
+     *
+     * @param document the document to check.
+     * @param referenceTime the instant that sets the date checks. Defaults to the current time.
+     * @return the validation failures and warnings. `structuralFailure` is `null`.
+     * @throws IndexOutOfBoundsException if `document.rawLines` is empty.
      */
     public fun validate(
         document: MrzDocument,
@@ -84,35 +83,44 @@ public object MrzValidator {
         }
 
     /**
-     * Validates a raw MRZ [input], auto-detecting the format, by running it through the full parse
-     * + validate pipeline ([MrzParser.parse]) and returning the validation verdict. The same
-     * per-format validators run as for [`validate(document)`][validate], so a check digit failure
-     * found here is the identical typed error the parser-internal path produces (single source of
-     * truth).
+     * Parses an MRZ string, detecting the format, and returns its validation result.
      *
-     * If [input] cannot be parsed structurally (wrong line count/length, a character outside the
-     * MRZ alphabet, or an unrecognized shape), the returned result's
-     * [`structuralFailure`][ValidationResult.structuralFailure] is non-null and the per-field
-     * [`validationFailures`][ValidationResult.validationFailures] are empty — the deeper layers
-     * could not run. The validator never refuses to return a result.
+     * Runs [MrzParser.parse] and reports what the parser attached to the result. If the parse fails,
+     * `structuralFailure` holds the parse error and `validationFailures` and `warnings` are empty.
+     *
+     * @param input the MRZ text.
+     * @param referenceTime the instant that sets the date checks. Defaults to the current time.
+     * @return the validation failures and warnings, or the parse error in `structuralFailure`.
      */
     public fun validate(
         input: String,
         referenceTime: Instant = Clock.System.now(),
     ): ValidationResult = MrzParser.parse(input, referenceTime).toValidationResult()
 
-    /** Validates pre-split raw MRZ [input] lines, auto-detecting the format. See [validate]. */
+    /**
+     * Parses pre-split MRZ lines, detecting the format, and returns their validation result.
+     *
+     * Reports the same as [validate] with a string.
+     *
+     * @param input the MRZ lines, one element per line.
+     * @param referenceTime the instant that sets the date checks. Defaults to the current time.
+     * @return the validation failures and warnings, or the parse error in `structuralFailure`.
+     */
     public fun validate(
         input: List<String>,
         referenceTime: Instant = Clock.System.now(),
     ): ValidationResult = MrzParser.parse(input, referenceTime).toValidationResult()
 
     /**
-     * Validates a raw MRZ [input] against an explicit [format], skipping auto-detection. A
-     * mis-shaped input reports
-     * [`MrzInvalidLength`][io.lightine.tessera.types.errors.MrzInvalidLength] (against the format's
-     * dimensions) on [`structuralFailure`][ValidationResult.structuralFailure] rather than the
-     * auto-detect path's `MrzFormatNotDetected`. See [validate].
+     * Parses an MRZ string as the given format and returns its validation result.
+     *
+     * Runs the format-specific parser. A line count or line length that does not fit [format] gives
+     * `MrzInvalidLength` in `structuralFailure`, not `MrzFormatNotDetected`.
+     *
+     * @param input the MRZ text.
+     * @param format the format to read [input] as.
+     * @param referenceTime the instant that sets the date checks. Defaults to the current time.
+     * @return the validation failures and warnings, or the parse error in `structuralFailure`.
      */
     public fun validate(
         input: String,
@@ -120,7 +128,16 @@ public object MrzValidator {
         referenceTime: Instant = Clock.System.now(),
     ): ValidationResult = parseAs(format, input, referenceTime).toValidationResult()
 
-    /** Validates pre-split raw MRZ [input] lines against an explicit [format]. See [validate]. */
+    /**
+     * Parses pre-split MRZ lines as the given format and returns their validation result.
+     *
+     * Reports the same as [validate] with a string and a format.
+     *
+     * @param input the MRZ lines, one element per line.
+     * @param format the format to read [input] as.
+     * @param referenceTime the instant that sets the date checks. Defaults to the current time.
+     * @return the validation failures and warnings, or the parse error in `structuralFailure`.
+     */
     public fun validate(
         input: List<String>,
         format: MrzFormat,

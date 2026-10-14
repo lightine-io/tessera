@@ -141,12 +141,16 @@ private fun rawStringTags(vararg dictionaries: Map<Any?, *>?): Map<String, Strin
     }
 
 /**
- * Creates the iOS saved-image EXIF metadata reader. Reading saved images is opt-in: this REQUIRES a
- * [SavedImageReadingAcknowledgement] (no default). Pass the result to [SavedImageMrzReader] as its
- * `metadataReader`; it reads only what the [CaptureMetadataPolicy] permits (GPS only under
- * [CaptureMetadataPolicy.INCLUDING_LOCATION]).
+ * Creates the iOS reader for the EXIF of a saved image, read from a file [NSURL].
  *
- * @param acknowledgement the required saved-image-reading acknowledgement (the opt-in gate).
+ * Pass it to [SavedImageMrzReader] as `metadataReader`. It reads GPS only under
+ * [CaptureMetadataPolicy.INCLUDING_LOCATION]. [CaptureMetadata.rawTags] holds up to ten non-GPS
+ * tags: `DateTimeOriginal`, `DateTime`, `Make`, `Model`, `Software`, `Orientation`,
+ * `PixelXDimension`, `PixelYDimension`, `ImageWidth`, and `ImageLength`. Missing tags give `null`
+ * fields.
+ *
+ * @param acknowledgement the required saved-image acknowledgement. It has no default.
+ * @return the reader.
  */
 public fun imageIoCaptureMetadataReader(acknowledgement: SavedImageReadingAcknowledgement): CaptureMetadataReader<NSURL> =
     ImageIoCaptureMetadataReader()

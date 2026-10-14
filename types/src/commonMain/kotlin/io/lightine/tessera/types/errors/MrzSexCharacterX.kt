@@ -1,32 +1,20 @@
 package io.lightine.tessera.types.errors
 
 /**
- * Warning: the sex field contains the character `X`, which the ICAO Doc 9303 2021
- * Eighth Edition does not list as a valid MRZ sex character.
+ * Warning: the sex character is `X`.
  *
- * Per Part 4 §4.2.2.2, Part 5 §4.2.2.2, Part 6 §4.2.2.2, and Part 7 §4.2.2.2 /
- * §7.2.2.2, the MRZ sex character is canonically `F`, `M`, or `<` (filler for
- * unspecified) only. `X` is reserved for the **VIZ** ("Visual Inspection Zone")
- * per the Note p / f clauses, with the explicit instruction *"the filler character
- * (`<`) shall be used in this field in the MRZ and an X in this field in the VIZ"*.
+ * Reported by the validator. ICAO lists `X` for the visual zone only, but some issuers
+ * print it in the MRZ. The parsed `Sex` is `UNSPECIFIED`, and `CommonFields.rawSex` keeps the `X`.
  *
- * Real-world practice has nonetheless adopted `X` in the MRZ position for documents
- * issued by states using a non-binary or unspecified sex designation. The SDK accepts
- * `X` without rejection (Principle 1 — reader, not oracle: do not refuse documents the
- * real world actually issues) but surfaces this warning so consumers can identify the
- * spec deviation and decide how to handle it. Surfaced as a warning rather than as
- * [MrzInvalidSexValue] (which is reserved for characters outside `{M, F, <, X}` entirely).
- *
- * Strict consumers who want to treat the deviation as disqualifying check
- * `warnings.isEmpty()` together with `validationFailures.isEmpty()`. Permissive
- * consumers (the typical case) can ignore the warning.
- *
- * [observed] is always `'X'`; the field exists for symmetry with [MrzInvalidSexValue].
+ * @property observed The sex character as printed. Always `'X'`.
+ * @property position Zero-based index of the character across the lines joined with no separator.
+ * @since 0.1.0
  */
 public data class MrzSexCharacterX(
     val observed: Char,
     val position: Int,
 ) : MrzWarning() {
+    /** English text for logs: the position and the `X` character. */
     override val description: String
         get() =
             "Sex field at position $position contains 'X' (non-binary / unspecified). " +

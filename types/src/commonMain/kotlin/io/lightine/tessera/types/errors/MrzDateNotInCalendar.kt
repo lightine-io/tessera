@@ -3,16 +3,17 @@ package io.lightine.tessera.types.errors
 import io.lightine.tessera.types.vocabulary.MrzField
 
 /**
- * Validation failure: a date field's raw components (year/month/day) do not form a real
- * calendar date for any candidate century (e.g., month `13`, day `32`, or `February 30`).
- * Carries the raw components verbatim so consumers can render them as the document
- * presents them.
+ * Validation failure: a date's numeric parts form no real calendar date, for example month `13`.
  *
- * Emitted by [`MrzValidator`][io.lightine.tessera.mrz.validation.MrzValidator] when
- * [`MrzDate.componentsFormCalendarDate`][io.lightine.tessera.mrz.model.MrzDate.componentsFormCalendarDate]
- * is `false`. Distinct from inference-window misses (e.g., expiry > 50 years out): those
- * dates are in the calendar but outside the SDK's plausibility window, and do not emit
- * this failure.
+ * Reported by the validator for the date of birth and date of expiry when no century turns
+ * the parts into a real date. Parts that are not digits are not reported here.
+ *
+ * @property field The date field, `DATE_OF_BIRTH` or `DATE_OF_EXPIRY`.
+ * @property rawYear The two year digits as printed.
+ * @property rawMonth The two month digits as printed.
+ * @property rawDay The two day digits as printed.
+ * @property position Zero-based index of the first date character across the lines joined with no separator.
+ * @since 0.1.0
  */
 public data class MrzDateNotInCalendar(
     val field: MrzField,
@@ -21,6 +22,7 @@ public data class MrzDateNotInCalendar(
     val rawDay: String,
     val position: Int,
 ) : MrzValidationError() {
+    /** English text for logs: the field, the position, and the raw date parts. */
     override val description: String
         get() =
             "Date in ${this.field} at position $position is not a real calendar date: " +

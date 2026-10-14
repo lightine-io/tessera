@@ -29,47 +29,53 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 /**
- * Parses MRZ strings into [`MrzDocument`][io.lightine.tessera.mrz.model.MrzDocument]
- * objects per ICAO Doc 9303. Provides both auto-detecting and format-specific entry
- * points.
+ * Parses MRZ text into an [io.lightine.tessera.mrz.model.MrzDocument] per ICAO Doc 9303.
  *
- * Two families of entry points:
+ * Every entry point returns a [ParseResult]. The parser runs the validator on each document it
+ * builds and puts the outcome on the result metadata. It reports check digit mismatches, dates
+ * that are not in the calendar, and sex characters outside `M`, `F`, `<`, and `X` as validation
+ * failures. It reports `MrzExpiryDatePast`, `MrzExpiryDateImplausiblyFar`,
+ * `MrzBirthDateImplausiblyOld`, `MrzNameTruncated`, `MrzUnknownCountryCode`,
+ * `MrzUnknownDocumentTypeCode`, `MrzSexCharacterX`, and `MrzPersonalNumberCheckDigitFiller` as
+ * warnings.
  *
- * 1. **Auto-detecting** — [parse]. Identifies the format from the input's line count and
- *    per-line lengths and dispatches to the matching format-specific parser. Returns
- *    [`MrzFormatNotDetected`][io.lightine.tessera.types.errors.MrzFormatNotDetected]
- *    when the input shape does not match any supported format. Inputs whose shape is
- *    ambiguous between a non-visa and a visa format are disambiguated by the leading
- *    `V` character on line 1 (per Principle 1: dispatch is deterministic, never
- *    "ambiguous").
+ * Every sex character other than `M` and `F`, including `X` and `Z`, maps to `Sex.UNSPECIFIED`;
+ * `rawSex` keeps the printed character. The reading method of every result is
+ * `ReadMethod.BACKEND_STRING_INPUT`.
  *
- * 2. **Format-specific** — [parseTD3], [parseTD2], [parseTD1], [parseMRVA], [parseMRVB].
- *    Use these when the consumer already knows the expected format. Format-specific
- *    parsers return [`MrzInvalidLength`][io.lightine.tessera.types.errors.MrzInvalidLength]
- *    (not [`MrzFormatNotDetected`][io.lightine.tessera.types.errors.MrzFormatNotDetected])
- *    when the input doesn't match the format's dimensions.
- *
- * Every entry point optionally accepts a [`referenceTime`][kotlin.time.Instant] used for
- * date-window inference (2-digit year disambiguation, expiry-past warnings, etc.). The
- * default is the current system time; tests typically pass an explicit reference so they
- * don't depend on the wall clock.
- *
- * See
- * [`docs/features/mrz-parsing.md`](https://lightine.youtrack.cloud/articles/TES-A-25)
- * for the full feature description.
+ * @since 0.1.0
  */
 public object MrzParser {
     /**
-     * Parses [input] by auto-detecting the format from its shape. Line endings (`\n`,
-     * `\r\n`, `\r`) are normalized; leading empty lines are dropped; trailing whitespace
-     * is trimmed before detection. See the dispatch rules in the class-level KDoc.
+     * Parses an MRZ string, detecting the format from its line count and line lengths.
+     *
+     * Splits [input] on `\n`, `\r\n`, or `\r`, drops leading empty lines, and trims
+     * trailing whitespace. Three lines of 30 characters read as TD1. Two lines of 36 read as
+     * TD2, or MRV-B if line 1 starts with `V`. Two lines of 44 read as TD3, or MRV-A if line 1
+     * starts with `V`. Lowercase letters count as outside the MRZ alphabet.
+     *
+     * @param input the MRZ text.
+     * @param referenceTime the instant that picks the century of two-digit years and sets the
+     *   date warnings. Defaults to the current time.
+     * @return [ParseResult.Success] or [ParseResult.PartialSuccess] with the document, or
+     *   [ParseResult.Failure] with [MrzFormatNotDetected] if the shape fits no format, or
+     *   [MrzCharacterSetViolation] for the first character outside `A-Z`, `0-9`, and `<`.
      */
     public fun parse(
         input: String,
         referenceTime: Instant = Clock.System.now(),
     ): ParseResult = parse(splitLines(input), referenceTime)
 
-    /** Convenience overload of [parse] accepting pre-split lines. */
+    /**
+     * Parses pre-split lines, detecting the format from the line count and line lengths.
+     *
+     * Uses [input] as given. Reports and returns the same as [parse] with a string.
+     *
+     * @param input the MRZ lines, one element per line.
+     * @param referenceTime the instant that picks the century of two-digit years and sets the
+     *   date warnings. Defaults to the current time.
+     * @return the parse result, as for [parse] with a string.
+     */
     public fun parse(
         input: List<String>,
         referenceTime: Instant = Clock.System.now(),
@@ -150,20 +156,33 @@ public object MrzParser {
     private fun startsWithVisaPrefix(line: String): Boolean = line.isNotEmpty() && line[0] == 'V'
 
     /**
-     * Parses [input] as TD3 (passport, 2 lines × 44 characters per ICAO Doc 9303 Part 4).
-     * Returns [`MrzInvalidLength`][io.lightine.tessera.types.errors.MrzInvalidLength] if
-     * the input does not match the format's dimensions;
-     * [`MrzCharacterSetViolation`][io.lightine.tessera.types.errors.MrzCharacterSetViolation]
-     * if any character is outside the MRZ alphabet. Structurally-valid inputs produce
-     * [`Success`][ParseResult.Success] or [`PartialSuccess`][ParseResult.PartialSuccess]
-     * depending on whether the validator surfaced failures.
+     * Parses an MRZ string as a TD3 (passport) MRZ: 2 lines of 44 characters.
+     *
+     * Splits [input] on `\n`, `\r\n`, or `\r`, drops leading empty lines, and trims
+     * trailing whitespace. Lowercase letters count as outside the MRZ alphabet.
+     *
+     * @param input the MRZ text.
+     * @param referenceTime the instant that picks the century of two-digit years and sets the
+     *   date warnings. Defaults to the current time.
+     * @return [ParseResult.Success] or [ParseResult.PartialSuccess] with the document, or
+     *   [ParseResult.Failure] with [MrzInvalidLength] if the line count or a line length does not fit,
+     *   or [MrzCharacterSetViolation] for the first character outside `A-Z`, `0-9`, and `<`.
      */
     public fun parseTD3(
         input: String,
         referenceTime: Instant = Clock.System.now(),
     ): ParseResult = parseTD3(splitLines(input), referenceTime)
 
-    /** Convenience overload of [parseTD3] accepting pre-split lines. */
+    /**
+     * Parses pre-split lines as a TD3 (passport) MRZ: 2 lines of 44 characters.
+     *
+     * Uses [input] as given. Reports and returns the same as [parseTD3] with a string.
+     *
+     * @param input the MRZ lines, one element per line.
+     * @param referenceTime the instant that picks the century of two-digit years and sets the
+     *   date warnings. Defaults to the current time.
+     * @return the parse result, as for [parseTD3] with a string.
+     */
     public fun parseTD3(
         input: List<String>,
         referenceTime: Instant = Clock.System.now(),
@@ -193,15 +212,33 @@ public object MrzParser {
     }
 
     /**
-     * Parses [input] as TD2 (smaller identity document, 2 lines × 36 characters per
-     * ICAO Doc 9303 Part 6). Error and result semantics match [parseTD3].
+     * Parses an MRZ string as a TD2 MRZ: 2 lines of 36 characters.
+     *
+     * Splits [input] on `\n`, `\r\n`, or `\r`, drops leading empty lines, and trims
+     * trailing whitespace. Lowercase letters count as outside the MRZ alphabet.
+     *
+     * @param input the MRZ text.
+     * @param referenceTime the instant that picks the century of two-digit years and sets the
+     *   date warnings. Defaults to the current time.
+     * @return [ParseResult.Success] or [ParseResult.PartialSuccess] with the document, or
+     *   [ParseResult.Failure] with [MrzInvalidLength] if the line count or a line length does not fit,
+     *   or [MrzCharacterSetViolation] for the first character outside `A-Z`, `0-9`, and `<`.
      */
     public fun parseTD2(
         input: String,
         referenceTime: Instant = Clock.System.now(),
     ): ParseResult = parseTD2(splitLines(input), referenceTime)
 
-    /** Convenience overload of [parseTD2] accepting pre-split lines. */
+    /**
+     * Parses pre-split lines as a TD2 MRZ: 2 lines of 36 characters.
+     *
+     * Uses [input] as given. Reports and returns the same as [parseTD2] with a string.
+     *
+     * @param input the MRZ lines, one element per line.
+     * @param referenceTime the instant that picks the century of two-digit years and sets the
+     *   date warnings. Defaults to the current time.
+     * @return the parse result, as for [parseTD2] with a string.
+     */
     public fun parseTD2(
         input: List<String>,
         referenceTime: Instant = Clock.System.now(),
@@ -231,16 +268,34 @@ public object MrzParser {
     }
 
     /**
-     * Parses [input] as MRV-A (Type-A visa, 2 lines × 44 characters per ICAO Doc 9303
-     * Part 7). Error and result semantics match [parseTD3]; MRV-A has no composite check
-     * digit per the spec.
+     * Parses an MRZ string as an MRV-A (Type-A visa) MRZ: 2 lines of 44 characters.
+     *
+     * Splits [input] on `\n`, `\r\n`, or `\r`, drops leading empty lines, and trims
+     * trailing whitespace. Lowercase letters count as outside the MRZ alphabet.
+     * An MRV-A has no composite check digit.
+     *
+     * @param input the MRZ text.
+     * @param referenceTime the instant that picks the century of two-digit years and sets the
+     *   date warnings. Defaults to the current time.
+     * @return [ParseResult.Success] or [ParseResult.PartialSuccess] with the document, or
+     *   [ParseResult.Failure] with [MrzInvalidLength] if the line count or a line length does not fit,
+     *   or [MrzCharacterSetViolation] for the first character outside `A-Z`, `0-9`, and `<`.
      */
     public fun parseMRVA(
         input: String,
         referenceTime: Instant = Clock.System.now(),
     ): ParseResult = parseMRVA(splitLines(input), referenceTime)
 
-    /** Convenience overload of [parseMRVA] accepting pre-split lines. */
+    /**
+     * Parses pre-split lines as an MRV-A (Type-A visa) MRZ: 2 lines of 44 characters.
+     *
+     * Uses [input] as given. Reports and returns the same as [parseMRVA] with a string.
+     *
+     * @param input the MRZ lines, one element per line.
+     * @param referenceTime the instant that picks the century of two-digit years and sets the
+     *   date warnings. Defaults to the current time.
+     * @return the parse result, as for [parseMRVA] with a string.
+     */
     public fun parseMRVA(
         input: List<String>,
         referenceTime: Instant = Clock.System.now(),
@@ -270,16 +325,34 @@ public object MrzParser {
     }
 
     /**
-     * Parses [input] as MRV-B (Type-B visa, 2 lines × 36 characters per ICAO Doc 9303
-     * Part 7). Error and result semantics match [parseTD3]; MRV-B has no composite check
-     * digit per the spec.
+     * Parses an MRZ string as an MRV-B (Type-B visa) MRZ: 2 lines of 36 characters.
+     *
+     * Splits [input] on `\n`, `\r\n`, or `\r`, drops leading empty lines, and trims
+     * trailing whitespace. Lowercase letters count as outside the MRZ alphabet.
+     * An MRV-B has no composite check digit.
+     *
+     * @param input the MRZ text.
+     * @param referenceTime the instant that picks the century of two-digit years and sets the
+     *   date warnings. Defaults to the current time.
+     * @return [ParseResult.Success] or [ParseResult.PartialSuccess] with the document, or
+     *   [ParseResult.Failure] with [MrzInvalidLength] if the line count or a line length does not fit,
+     *   or [MrzCharacterSetViolation] for the first character outside `A-Z`, `0-9`, and `<`.
      */
     public fun parseMRVB(
         input: String,
         referenceTime: Instant = Clock.System.now(),
     ): ParseResult = parseMRVB(splitLines(input), referenceTime)
 
-    /** Convenience overload of [parseMRVB] accepting pre-split lines. */
+    /**
+     * Parses pre-split lines as an MRV-B (Type-B visa) MRZ: 2 lines of 36 characters.
+     *
+     * Uses [input] as given. Reports and returns the same as [parseMRVB] with a string.
+     *
+     * @param input the MRZ lines, one element per line.
+     * @param referenceTime the instant that picks the century of two-digit years and sets the
+     *   date warnings. Defaults to the current time.
+     * @return the parse result, as for [parseMRVB] with a string.
+     */
     public fun parseMRVB(
         input: List<String>,
         referenceTime: Instant = Clock.System.now(),
@@ -309,15 +382,33 @@ public object MrzParser {
     }
 
     /**
-     * Parses [input] as TD1 (identity card, 3 lines × 30 characters per ICAO Doc 9303
-     * Part 5). Error and result semantics match [parseTD3].
+     * Parses an MRZ string as a TD1 (identity card) MRZ: 3 lines of 30 characters.
+     *
+     * Splits [input] on `\n`, `\r\n`, or `\r`, drops leading empty lines, and trims
+     * trailing whitespace. Lowercase letters count as outside the MRZ alphabet.
+     *
+     * @param input the MRZ text.
+     * @param referenceTime the instant that picks the century of two-digit years and sets the
+     *   date warnings. Defaults to the current time.
+     * @return [ParseResult.Success] or [ParseResult.PartialSuccess] with the document, or
+     *   [ParseResult.Failure] with [MrzInvalidLength] if the line count or a line length does not fit,
+     *   or [MrzCharacterSetViolation] for the first character outside `A-Z`, `0-9`, and `<`.
      */
     public fun parseTD1(
         input: String,
         referenceTime: Instant = Clock.System.now(),
     ): ParseResult = parseTD1(splitLines(input), referenceTime)
 
-    /** Convenience overload of [parseTD1] accepting pre-split lines. */
+    /**
+     * Parses pre-split lines as a TD1 (identity card) MRZ: 3 lines of 30 characters.
+     *
+     * Uses [input] as given. Reports and returns the same as [parseTD1] with a string.
+     *
+     * @param input the MRZ lines, one element per line.
+     * @param referenceTime the instant that picks the century of two-digit years and sets the
+     *   date warnings. Defaults to the current time.
+     * @return the parse result, as for [parseTD1] with a string.
+     */
     public fun parseTD1(
         input: List<String>,
         referenceTime: Instant = Clock.System.now(),

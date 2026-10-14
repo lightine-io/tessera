@@ -3,27 +3,22 @@ package io.lightine.tessera.types.errors
 import io.lightine.tessera.types.vocabulary.MrzFormat
 
 /**
- * Generation error: a name field (primary or secondary identifier) contains numeric
- * characters, which ICAO Doc 9303 Part 3 §4.6 forbids in MRZ name fields.
+ * Generation error: a primary or secondary identifier contains a digit.
  *
- * Spec text from §4.6: *"Numeric characters shall not be used in the name fields of
- * the MRZ."*
+ * Reported by the generator methods that take a primary and secondary identifier,
+ * before any transliteration profile runs. The generator never removes the digits.
  *
- * Emitted by the primitive-input methods of
- * [`MrzGenerator`][io.lightine.tessera.mrz.generation.MrzGenerator] (`generateTD3`,
- * `generateTD2`, etc.) when [observedValue] (the consumer's `primaryIdentifier` or
- * `secondaryIdentifier` argument) contains digits. The SDK does not strip the digits
- * silently (Principle 1 — reader, not oracle); the consumer must decide how to handle
- * them (e.g., remove them, transliterate spelled-out forms, or reject the input).
- *
- * [observedValue] carries the original consumer-supplied string (before transliteration);
- * [numericCharacters] lists each digit encountered, in order of appearance.
+ * @property format The format being generated.
+ * @property observedValue The identifier as supplied, before transliteration.
+ * @property numericCharacters Each digit found, in order of appearance.
+ * @since 0.1.0
  */
 public data class MrzGenerationNumericInNameField(
     val format: MrzFormat,
     val observedValue: String,
     val numericCharacters: List<Char>,
 ) : MrzGenerationError() {
+    /** English text for logs: the format, the distinct digits, and the value. */
     override val description: String
         get() {
             val distinct = numericCharacters.distinct().joinToString(", ") { "'$it'" }

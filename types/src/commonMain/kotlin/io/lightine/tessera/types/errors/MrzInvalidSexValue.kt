@@ -1,27 +1,20 @@
 package io.lightine.tessera.types.errors
 
 /**
- * Validation failure: the sex field contains a character outside the SDK's accepted set
- * (`M`, `F`, `<`, `X`). Carries the [observed] character and its zero-based [position]
- * in the concatenated MRZ string.
+ * Validation failure: the sex character is not `M`, `F`, `<`, or `X`.
  *
- * Emitted by [`MrzValidator`][io.lightine.tessera.mrz.validation.MrzValidator]. The SDK
- * does not coerce the value into a [`Sex`][io.lightine.tessera.types.vocabulary.Sex]
- * enum when it falls outside the accepted set (Principle 1 — reader, not oracle);
- * consumers see both the raw character (via `CommonFields.rawSex`) and this failure.
+ * Reported by the validator. The parsed `Sex` is `UNSPECIFIED` for this character, and
+ * `CommonFields.rawSex` keeps it. The character `X` is reported as [MrzSexCharacterX] instead.
  *
- * **Spec note:** the ICAO Doc 9303 2021 Eighth Edition lists the *canonical* MRZ sex
- * characters as `M`, `F`, `<` only (per Part 4 §4.2.2.2 and the corresponding sections
- * in Parts 5/6/7). The character `X` is reserved for the **VIZ** per the spec's
- * Note p/f clauses. Real-world practice has nonetheless adopted `X` in the MRZ for
- * non-binary or unspecified documents, so the SDK accepts `X` without producing this
- * failure — it surfaces [MrzSexCharacterX] (a warning) instead. Characters outside
- * `{M, F, <, X}` entirely (e.g., `Z`, `0`) produce this validation failure.
+ * @property observed The sex character as printed.
+ * @property position Zero-based index of the character across the lines joined with no separator.
+ * @since 0.1.0
  */
 public data class MrzInvalidSexValue(
     val observed: Char,
     val position: Int,
 ) : MrzValidationError() {
+    /** English text for logs: the position, the character, and the accepted set. */
     override val description: String
         get() =
             "Sex field at position $position contains '$observed'; accepted values are " +

@@ -1,19 +1,20 @@
 package io.lightine.tessera.types.errors
 
 /**
- * Parse error: the auto-detecting [`MrzParser.parse`][io.lightine.tessera.mrz.parsing.MrzParser]
- * could not match the input's line count and per-line lengths to any supported format
- * (TD1, TD2, TD3, MRV-A, MRV-B). Carries the observed shape so consumers can diagnose
- * the mismatch.
+ * Parse error: the line count and line lengths fit no supported format.
  *
- * Only emitted by the auto-detecting entry point; the format-specific entry points (e.g.,
- * `parseTD3`) surface [MrzInvalidLength] instead because they already know which format
- * was attempted.
+ * Reported only by the auto-detecting entry point. Empty input is reported this way too.
+ * A format-specific entry point reports [MrzInvalidLength] instead.
+ *
+ * @property observedLineCount Number of lines in the input.
+ * @property observedLineLengths Length of each input line, in order.
+ * @since 0.1.0
  */
 public data class MrzFormatNotDetected(
     val observedLineCount: Int,
     val observedLineLengths: List<Int>,
 ) : MrzParseError() {
+    /** English text for logs: the observed shape and the shapes the SDK accepts. */
     override val description: String
         get() =
             "MRZ format could not be detected from input shape: " +

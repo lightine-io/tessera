@@ -3,30 +3,12 @@ package io.lightine.tessera.mrz.recognition
 import io.lightine.tessera.types.vocabulary.CountryCodeCategory
 
 /**
- * The SDK's recognized country codes for MRZ issuing state and nationality positions.
+ * The country codes the SDK recognizes: ISO 3166-1 alpha-3 codes and the ICAO Doc 9303 Part 3
+ * extensions.
  *
- * Contains:
- * - All currently-assigned ISO 3166-1 alpha-3 country codes (categorized as [`STATE`][CountryCodeCategory.STATE])
- * - ICAO Doc 9303 Part 3 §5 extensions (Parts A through H): special nationality codes
- *   for British classes, the European Union, United Nations documents, international
- *   organizations, stateless persons, refugees, deprecated states, the synthetic specimen
- *   code, and ICAO's own master-list-signing code
+ * The validator reports a code that is not in the table as an `MrzUnknownCountryCode` warning.
  *
- * **Verification context.** Populated during the 2026-05-18 pre-tag conformance pass
- * (finding F7) — see `CONFORMANCE-NOTES-2026-05-18.md`. The ISO 3166-1 alpha-3 codes
- * are widely-treated facts; community-maintained datasets (e.g., the Debian `iso-codes`
- * package) embed identical content. The ICAO §5 extensions are read from Doc 9303 Part 3.
- *
- * Codes not present in this table surface as
- * [`MrzUnknownCountryCode`][io.lightine.tessera.types.errors.MrzUnknownCountryCode]
- * warnings rather than validation failures, per
- * [ADR-013](https://lightine.youtrack.cloud/articles/TES-A-44).
- *
- * **Note on countries in transition.** ISO 3166-1 occasionally updates entries (name
- * changes, code additions, code reservations). This table reflects the assignments as of
- * the 2026-05-18 verification; deprecated codes that ICAO §5 specifically references for
- * backward compatibility on still-circulating documents (Netherlands Antilles `ANT`,
- * Neutral Zone `NTZ`) are categorized as [`HISTORICAL`][CountryCodeCategory.HISTORICAL].
+ * @since 0.1.0
  */
 public object CountryCodeTable {
     private val entries: List<CountryCodeEntry> =
@@ -322,12 +304,22 @@ public object CountryCodeTable {
 
     private val byCode: Map<String, CountryCodeEntry> = entries.associateBy { it.code }
 
-    /** Returns the entry for [code], or `null` if the code is not in the table. */
+    /**
+     * Returns the entry for a code.
+     *
+     * @param code The code to look up. The match is exact and case-sensitive.
+     * @return The entry, or `null` if the table has none.
+     */
     public fun lookup(code: String): CountryCodeEntry? = byCode[code]
 
-    /** Returns every entry currently in the table, in registration order. */
+    /** Returns every entry in the table, in table order. */
     public fun all(): List<CountryCodeEntry> = entries
 
-    /** Returns every entry in the table whose category matches [category]. */
+    /**
+     * Returns the entries of one category.
+     *
+     * @param category The category to select.
+     * @return The matching entries, in table order.
+     */
     public fun byCategory(category: CountryCodeCategory): List<CountryCodeEntry> = entries.filter { it.category == category }
 }
