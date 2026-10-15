@@ -124,4 +124,4 @@ No new Area is needed now. Add one only when 5 or more open issues do not fit.
 - M: about a day or two, a few places
 - L: more than that, or unclear. Split it before starting if you can.
 
-Do not add or sum sizes. The board check (`.claude/skills/board-check/SKILL.md`) looks for missing fields, missing Outcome blocks, code names in titles, and stages that contradict GitHub.
+A Done issue keeps the Release and Effort it had; nobody clears them (the YouTrack connector cannot clear a field). Do not add or sum sizes. The board check (`.claude/skills/board-check/SKILL.md`) looks for missing fields, missing Outcome blocks, code names in titles, and stages that contradict GitHub.
