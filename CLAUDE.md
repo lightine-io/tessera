@@ -50,9 +50,9 @@ lives in local MCP config and is never committed.
 2. **One focus issue at a time.** Work hangs on an issue: YouTrack `TES` in Develop
    when available, otherwise a GitHub issue. No issue: write one first.
 3. **Capture, don't chase.** Anything discovered mid-work (bug, idea, decision, doc
-   gap, a correction from Padre) becomes an issue of 80 words or fewer NOW: imperative
-   Title · What/Why (2-3 sentences) · Where (file pointers) · Repro or Trigger ·
-   Done-when (binary checks). Then back to the focus issue.
+   gap, a correction from Padre) becomes an issue NOW, written per
+   [`.claude/issue-style.md`](.claude/issue-style.md): a plain title, a plain top
+   (Problem · Why it matters · Done when), then the details. Then back to the focus issue.
 4. **Done = merged.** Branch off `origin/main` (`feature/`, `fix/`, `docs/`, `chore/`;
    CI checks the name). Tests and docs ship with the feature: the PR template's
    checklist, placed per [`.claude/rules/documentation.md`](.claude/rules/documentation.md).
@@ -106,6 +106,7 @@ If a prescribed driver is absent, surface it; never silently fall back.
 | Work items, backlog, why | YouTrack board `TES`. Stages: Backlog · Develop · Review (PR open) · Test (merged with the `device-qa` label, device QA; when QA passes the maintainer moves it to Staging, or to Done if it carries `no-changelog`) · Staging (merged with a CHANGELOG entry, awaiting release) · Done (released, or merged with the `no-changelog` label). `youtrack-sync.yml` sets Review, Test, Staging, and the `no-changelog` Done |
 | Where content goes; what a feature PR carries | [`.claude/rules/documentation.md`](.claude/rules/documentation.md) (public docs live in the public KB, not the repo; the repo-root `llms.txt` links them) · [PR template](.github/pull_request_template.md) |
 | Engineering rules by area (load on touch) | [`.claude/rules/`](.claude/rules/): API design, types module, platform work, documentation |
+| Writing issues; checking the board | [`.claude/issue-style.md`](.claude/issue-style.md) · [`.claude/skills/board-check/SKILL.md`](.claude/skills/board-check/SKILL.md) |
 | Git/PR mechanics, merge strategy, required checks | [`.claude/git-workflow.md`](.claude/git-workflow.md) |
 | Release ritual (tech-stack review, review agents, doc checks, pre-tag gates) | [`.claude/skills/release-gate/SKILL.md`](.claude/skills/release-gate/SKILL.md) |
 | Dependency cadence (Apr 1 / Oct 1; CI opens the issue) | [`.claude/skills/dependency-upgrade-cadence/SKILL.md`](.claude/skills/dependency-upgrade-cadence/SKILL.md), including the CLAUDE.md health review |
