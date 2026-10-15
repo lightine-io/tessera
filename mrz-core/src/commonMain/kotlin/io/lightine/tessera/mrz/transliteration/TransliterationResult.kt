@@ -3,28 +3,29 @@ package io.lightine.tessera.mrz.transliteration
 import io.lightine.tessera.types.vocabulary.UnmappedCharacter
 
 /**
- * The outcome of a [TransliterationProfile] applying its mapping rules to a normalized
- * input string. Sealed root with two variants:
+ * The result of applying a transliteration profile: [Success] or [Failure].
  *
- * - [Success] — every input character was either already in the MRZ alphabet or mapped
- *   to one or more MRZ-alphabet characters by the profile. Profiles with a documented
- *   fallback policy (such as the shipped ICAO and AZE profiles, which map unrecognized
- *   characters to the filler `<`) always return [Success].
- * - [Failure] — at least one input character could not be mapped, and the profile has
- *   no fallback policy. The unmappable characters are returned via [Failure.unmappedCharacters]
- *   so consumers can identify exactly what failed and decide how to recover.
+ * The `ICAO` and `AZE` profiles map unmapped characters to `<` and always return [Success].
  *
- * Matches the project's sealed-result-type pattern (
- * [`ParseResult`][io.lightine.tessera.mrz.parsing.ParseResult],
- * [`GenerationResult`][io.lightine.tessera.mrz.generation.GenerationResult]).
+ * @since 0.1.0
  */
 public sealed class TransliterationResult {
-    /** Every input character was handled; [output] is in the MRZ alphabet. */
+    /**
+     * Every character was handled.
+     *
+     * @property output The mapped text, in the MRZ alphabet.
+     * @since 0.1.0
+     */
     public data class Success(
         val output: String,
     ) : TransliterationResult()
 
-    /** One or more input characters could not be mapped and no fallback applied. */
+    /**
+     * At least one character could not be mapped and the profile has no fallback.
+     *
+     * @property unmappedCharacters The characters that could not be mapped.
+     * @since 0.1.0
+     */
     public data class Failure(
         val unmappedCharacters: List<UnmappedCharacter>,
     ) : TransliterationResult()

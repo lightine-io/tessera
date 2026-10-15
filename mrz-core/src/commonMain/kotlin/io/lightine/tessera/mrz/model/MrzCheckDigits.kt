@@ -1,18 +1,15 @@
 package io.lightine.tessera.mrz.model
 
 /**
- * The check digits exactly as recorded on the document.
+ * The check digits exactly as printed on the document, not computed by the SDK.
  *
- * These are the values the SDK read from the MRZ, not the values the SDK would compute
- * from the field content (Principle 5 — transparency).
- * [`MrzValidator`][io.lightine.tessera.mrz.validation.MrzValidator] cross-checks each
- * recorded digit against the computed value and emits
- * [`MrzCheckDigitMismatch`][io.lightine.tessera.types.errors.MrzCheckDigitMismatch] on
- * mismatch.
- *
- * [optionalData] is nullable because not every format has an optional-data check digit
- * (TD2 doesn't); [composite] is nullable because the visa formats (MRV-A, MRV-B) per
- * ICAO Doc 9303 Part 7 do not have a composite check digit.
+ * @property documentNumber Check digit of the document number.
+ * @property dateOfBirth Check digit of the date of birth.
+ * @property dateOfExpiry Check digit of the date of expiry.
+ * @property optionalData Check digit of the optional data. `null` in every format except TD3, where
+ *   it is the personal number check digit.
+ * @property composite Composite check digit. `null` in MRV-A and MRV-B.
+ * @since 0.1.0
  */
 public data class MrzCheckDigits(
     val documentNumber: Char,

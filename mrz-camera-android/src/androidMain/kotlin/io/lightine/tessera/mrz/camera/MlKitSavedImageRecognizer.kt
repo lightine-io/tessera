@@ -43,14 +43,15 @@ internal class MlKitSavedImageRecognizer(
 }
 
 /**
- * Creates the Android saved-image OCR recognizer. Reading saved images is opt-in: this REQUIRES a
- * [SavedImageReadingAcknowledgement] (no default) — the consumer's explicit acknowledgement of the higher
- * saved-image risk (see [SavedImageMrzReader] and
- * [reading-risks](https://lightine.youtrack.cloud/articles/TES-A-11)). The returned recognizer reads a
- * content/file [Uri]; pass it to [SavedImageMrzReader], which releases it when the reader is closed.
+ * Creates the Android saved-image OCR recognizer, which reads an image [Uri] with ML Kit.
  *
- * @param acknowledgement the required saved-image-reading acknowledgement (the opt-in gate).
- * @param context any [Context]; its application context is retained for `InputImage.fromFilePath`.
+ * Pass it to [SavedImageMrzReader], which closes it when the reader is closed. A decode or read
+ * failure is thrown, and [MrzFrameAnalyzer] reports it as [CameraError.OcrFailed].
+ *
+ * @param acknowledgement the required saved-image acknowledgement. It has no default.
+ * @param context any [Context]; the recognizer keeps its application context.
+ * @return the recognizer.
+ * @since 0.3.0
  */
 public fun mlKitSavedImageRecognizer(
     acknowledgement: SavedImageReadingAcknowledgement,

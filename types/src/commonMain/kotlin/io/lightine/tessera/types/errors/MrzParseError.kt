@@ -1,14 +1,10 @@
 package io.lightine.tessera.types.errors
 
 /**
- * Sealed sub-root for errors emitted by
- * [`MrzParser`][io.lightine.tessera.mrz.parsing.MrzParser]. A parse error means the SDK
- * could not produce an [`MrzDocument`][io.lightine.tessera.mrz.model.MrzDocument] from
- * the input; the parser returns
- * [`ParseResult.Failure`][io.lightine.tessera.mrz.parsing.ParseResult.Failure] carrying
- * the concrete error and the raw input that produced it.
+ * Root of the errors that stop `MrzParser` from building a document.
  *
- * See [MrzError] for the relationship to validation errors and warnings, which use
- * separate roots.
+ * Returned in `ParseResult.Failure`.
+ *
+ * @since 0.1.0
  */
 public sealed class MrzParseError : MrzError()

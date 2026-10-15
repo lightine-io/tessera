@@ -1,17 +1,24 @@
-# Board automation (TRIAL — 2026-07-12 overhaul, decision 4): GitHub PR events move
-# the YouTrack Stage field, so the board mirrors reality without anyone remembering.
-#   PR opened/reopened            → Stage Review
-#   PR merged, label `device-qa`  → Stage Test    (device QA runs before Staging;
-#                                                  decision 3: Test = device-QA stage)
-#   PR merged, otherwise          → Stage Staging (merged, unreleased)
-#   Release→Done stays with the release-gate ritual (deliberate human moment).
+# Board automation: GitHub PR events move the YouTrack Stage field, so the board mirrors
+# GitHub without anyone remembering.
+#   PR opened or reopened                 -> Stage Review
+#   PR merged, label `device-qa`          -> Stage Test     (device QA after merge)
+#   PR merged, label `no-changelog`       -> Stage Done     (no shipped artifact)
+#   PR merged, otherwise                  -> Stage Staging  (merged, awaiting release)
+#   Staging -> Done at the release tag stays with the release gate (a deliberate human step).
 #
-# The issue ID is taken from the head branch name or PR title (first TES-<n>).
-# Fails soft by design: no issue ID, no secret, fork PR, or YouTrack down → skip
-# silently. YouTrack is an enhancement, never a dependency (.claude/rules/youtrack.md).
+# Why `no-changelog` is the Done signal: the required `changelog · entry present` check
+# already forces every PR to either touch CHANGELOG.md or carry this label. CHANGELOG.md
+# is the record of what ships, so "no entry" means "no shipped artifact": process, CI,
+# and docs-only changes (CLAUDE.md "Pointer table", the stage line). The signal is in the
+# event payload (no API call, no checkout) and cannot be forgotten. A label typed by hand
+# could be; a path filter would need a hand-kept list of which paths ship.
+#
+# The issue id comes from the head branch name or PR title (first TES-<n>).
+# Fails soft by design: no issue id, no secret, a fork PR, or YouTrack down -> skip.
+# YouTrack is an enhancement, never a dependency (CLAUDE.md "YouTrack").
 #
 # Needs the YOUTRACK_TOKEN repo secret: a YouTrack permanent token whose account can
-# update TES issues. Rotate alongside other credentials.
+# update TES issues. Rotate it with the other credentials.
 
 name: youtrack sync
 
@@ -25,7 +32,7 @@ jobs:
   sync-stage:
     name: board · stage sync
     runs-on: ubuntu-latest
-    # Same-repo PRs only: fork PRs carry no secrets and shouldn't drive the board.
+    # Same-repo PRs only: fork PRs carry no secrets and do not drive the board.
     if: github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Move the linked issue's Stage
@@ -36,17 +43,20 @@ jobs:
           ACTION: ${{ github.event.action }}
           MERGED: ${{ github.event.pull_request.merged }}
           HAS_DEVICE_QA: ${{ contains(github.event.pull_request.labels.*.name, 'device-qa') }}
+          NO_CHANGELOG: ${{ contains(github.event.pull_request.labels.*.name, 'no-changelog') }}
         run: |
-          [ -n "$YOUTRACK_TOKEN" ] || { echo "No YOUTRACK_TOKEN secret — skipping (trial not armed)."; exit 0; }
+          [ -n "$YOUTRACK_TOKEN" ] || { echo "No YOUTRACK_TOKEN secret; skipping."; exit 0; }
           issue=$(printf '%s\n%s\n' "$BRANCH" "$TITLE" | grep -oE 'TES-[0-9]+' | head -1 || true)
-          [ -n "$issue" ] || { echo "No TES-<n> in branch or title — skipping."; exit 0; }
+          [ -n "$issue" ] || { echo "No TES-<n> in branch or title; skipping."; exit 0; }
           if [ "$ACTION" = "closed" ]; then
-            [ "$MERGED" = "true" ] || { echo "PR closed without merge — leaving stage untouched."; exit 0; }
-            if [ "$HAS_DEVICE_QA" = "true" ]; then stage="Test"; else stage="Staging"; fi
+            [ "$MERGED" = "true" ] || { echo "PR closed without merge; stage untouched."; exit 0; }
+            if [ "$HAS_DEVICE_QA" = "true" ]; then stage="Test"
+            elif [ "$NO_CHANGELOG" = "true" ]; then stage="Done"
+            else stage="Staging"; fi
           else
             stage="Review"
           fi
-          echo "→ $issue: Stage $stage"
+          echo "$issue: Stage $stage"
           code=$(curl -sS -o /tmp/yt-resp.json -w '%{http_code}' \
             -X POST 'https://lightine.youtrack.cloud/api/commands' \
             -H "Authorization: Bearer $YOUTRACK_TOKEN" \
@@ -54,8 +64,8 @@ jobs:
             --data "{\"query\": \"Stage $stage\", \"issues\": [{\"idReadable\": \"$issue\"}]}" \
             || echo "000")
           if [ "$code" = "200" ]; then
-            echo "Moved $issue → $stage."
+            echo "Moved $issue to $stage."
           else
-            echo "YouTrack call returned $code — board not updated (soft-fail by design):"
+            echo "YouTrack returned $code; board not updated (soft-fail by design):"
             cat /tmp/yt-resp.json 2>/dev/null || true
           fi

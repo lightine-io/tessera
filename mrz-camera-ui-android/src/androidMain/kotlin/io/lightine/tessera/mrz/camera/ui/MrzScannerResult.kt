@@ -3,60 +3,52 @@ package io.lightine.tessera.mrz.camera.ui
 import io.lightine.tessera.mrz.camera.MrzScanResult
 
 /**
- * Why the default scanner UI ended without a confirmed reading — carried by
- * [`Cancelled`][MrzScannerResult.Cancelled] so the host can branch on *what happened* rather than seeing
- * one undifferentiated cancel. The set is public and freezes at the 0.5.0 tag; new reasons may be added
- * later (branch with an `else`).
+ * Why the scanner screen ended without a confirmed reading.
+ *
+ * Carried by [MrzScannerResult.Cancelled].
+ *
+ * @since 0.5.0
  */
 public enum class DismissReason {
-    /** The user backed out / pressed cancel. */
+    /** The user closed the screen, including from the recoverable camera-in-use notice. */
     USER_DISMISSED,
 
-    /** The configured [scanTimeout][MrzScannerConfig.scanTimeout] elapsed with no confirmed reading. */
+    /** The [MrzScannerConfig.scanTimeout] deadline passed before a reading was confirmed. */
     TIMED_OUT,
 
-    /**
-     * The camera could not be started (a terminal capture error) and the user closed the flow from that
-     * screen. The recoverable camera-in-use notice is NOT this — closing from it is [USER_DISMISSED].
-     */
+    /** The user closed the screen from the terminal camera-unavailable screen. */
     CAMERA_UNAVAILABLE,
 
-    /**
-     * The camera permission was not granted and the user closed the flow from a permission screen (grant
-     * or permanently-denied) rather than granting it or continuing another way.
-     */
+    /** The user closed the screen from a camera permission screen (grant or permanently denied). */
     PERMISSION_DENIED,
 }
 
 /**
- * The terminal outcome [MrzScannerScreen] hands back through its `onResult` callback — the single point
- * where the default UI returns control to the host app. A sealed interface so the consumer branches
- * exhaustively.
+ * The outcome [MrzScannerScreen] reports when its flow ends.
  *
- * The screen is a one-shot flow: it drives the camera / saved-image / manual-entry reading internally and
- * calls back exactly once, with either a [Confirmed] reading the user accepted or a [Cancelled] carrying
- * the [reason][Cancelled.reason]. Per-frame scan results, quality signals, and capture errors stay inside
- * the UI; only this final decision crosses the boundary.
+ * Per-frame results, quality signals, and capture errors stay inside the screen.
+ *
+ * @since 0.5.0
  */
 public sealed interface MrzScannerResult {
     /**
-     * The user reviewed a decoded MRZ and accepted it (or [instant-return][ReviewMode.INSTANT_RETURN]
-     * returned it without a review step). [result] is the SDK's own
-     * [`MrzScanResult.Decoded`][MrzScanResult.Decoded] — the verbatim parse verdict (including a
-     * check-digit mismatch: `PartialSuccess`) plus the raw recognized text and quality signals, exactly as
-     * the headless reader produced it. The UI adds no judgement of its own (Principle 1); a UI-confirmed
-     * reading is identical to a headless one.
+     * The user accepted a decoded MRZ, or [ReviewMode.INSTANT_RETURN] returned it without review.
      *
-     * **Contains document PII** — the parsed fields and raw OCR — so do not log it verbatim (same caution
-     * as [MrzScanResult] itself).
+     * The reading is never a parse failure. A check-digit mismatch is reported as a partial success.
+     * It holds document data, so do not log it verbatim.
+     *
+     * @property result The decoded reading, as the headless reader produced it.
+     * @since 0.5.0
      */
     public data class Confirmed(
         public val result: MrzScanResult.Decoded,
     ) : MrzScannerResult
 
     /**
-     * The flow ended without a confirmed reading. [reason] says why (user backed out, timed out, terminal
-     * camera error, or declined permission) so the host can respond appropriately.
+     * The flow ended without a confirmed reading.
+     *
+     * @property reason Why the flow ended.
+     * @since 0.5.0
      */
     public data class Cancelled(
         public val reason: DismissReason,

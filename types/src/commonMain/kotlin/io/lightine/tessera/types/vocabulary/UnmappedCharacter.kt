@@ -1,16 +1,11 @@
 package io.lightine.tessera.types.vocabulary
 
 /**
- * A single character that a transliteration profile could not map into the MRZ alphabet,
- * together with its zero-based position in the post-normalization input string.
+ * A character that a transliteration profile could not map into the MRZ alphabet.
  *
- * Carried in lists by
- * [`TransliterationResult.Failure`][io.lightine.tessera.mrz.transliteration.TransliterationResult.Failure]
- * and by
- * [`MrzGenerationUnsupportedCharacters`][io.lightine.tessera.types.errors.MrzGenerationUnsupportedCharacters]
- * so consumers can identify exactly which characters were problematic and where they
- * appeared. Lives in `types.vocabulary` rather than the transliteration package so that
- * error types in the `types` module can reference it without depending on `mrz-core`.
+ * @property character The character that was not mapped.
+ * @property position Zero-based index of the character in the normalized input.
+ * @since 0.1.0
  */
 public data class UnmappedCharacter(
     val character: Char,

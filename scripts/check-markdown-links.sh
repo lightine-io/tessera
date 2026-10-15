@@ -2,14 +2,12 @@
 # Verify every clickable markdown link in committed docs resolves to a
 # file (or directory) a fresh cloner can actually see.
 #
-# Complements scripts/check-cross-references.sh, which checks backtick-only
-# prose mentions of `*.md` filenames but does not check `[text](path)`
-# markdown links and uses the local filesystem rather than the git index
-# (so it does not catch links to gitignored files).
+# Companion: scripts/check-docs.py pointers checks backticked file names,
+# paths into the retired docs folder, and CLAUDE.md section names.
 #
 # This script uses `git ls-files` as ground truth, so a link to a file that
-# exists locally but is not tracked (e.g., SESSION-HANDOFF-*, CONFORMANCE-*)
-# is reported as broken, matching what a cloner sees.
+# exists locally but is not tracked (for example a handoff in .handoffs/) is
+# reported as broken, matching what a cloner sees.
 #
 # Known limitations:
 # - Inline links only: `[text](url)`. Reference-style `[text][ref]` is not
@@ -29,7 +27,7 @@ tracked_paths=$(mktemp)
 trap 'rm -f "$tracked_paths"' EXIT
 
 # Tracked files plus every ancestor directory of a tracked file. Git does not
-# track directories directly, but directory links like [docs/](docs/) are
+# track directories directly, but directory links like [scripts/](scripts/) are
 # legitimate on GitHub if the directory contains tracked files.
 git ls-files | awk '
 {
@@ -58,7 +56,7 @@ normalize_path() {
             ''|.) ;;
             ..)
                 # Pop logically (decrement i); leave stale slots above i in
-                # the array — subsequent writes overwrite them, and the join
+                # the array; subsequent writes overwrite them, and the join
                 # loop only reads 0..i-1. Avoids the bash 3.2 + set -u
                 # empty-array unbound-variable bug that bites array rebuilds.
                 if [ "$i" -gt 0 ]; then

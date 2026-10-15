@@ -1,32 +1,24 @@
 package io.lightine.tessera.mrz.camera
 
 /**
- * How forgiving the analyse-frame core is of OCR formatting noise when it extracts a candidate MRZ
- * from recognized text. Consumer-chosen, and the default depends on the reader: [MrzFrameAnalyzer] and
- * the live scanners ([CameraXMrzScanner], [AVCaptureMrzScanner]) default to [STRICT], while
- * [SavedImageMrzReader] defaults to [LENIENT]
- * ([ADR-020](https://lightine.youtrack.cloud/articles/TES-A-49)).
+ * How tolerant candidate extraction is of OCR formatting noise.
  *
- * Neither mode ever changes a data character — the difference is only which lines qualify as an MRZ
- * candidate. (Both fold case to upper, which recovers the intended glyph since the MRZ alphabet is
- * uppercase-only; that is case normalization, not a data decision.) Tolerant candidate surfacing —
- * check-digit-guided disambiguation of genuinely ambiguous characters — is a separate switch, not a
- * [ParsingMode] value: pass `tolerant = true` to [SavedImageMrzReader].
+ * Neither mode changes a data character; both fold case to upper. [MrzFrameAnalyzer] and the live
+ * scanners default to [STRICT]. [SavedImageMrzReader] defaults to [LENIENT]. Disambiguating
+ * ambiguous characters is the separate `tolerant` option of [SavedImageMrzReader].
+ *
+ * @since 0.2.0
  */
 public enum class ParsingMode {
     /**
-     * Accept a line as an MRZ candidate only when it already has an exact MRZ line length after
-     * trimming surrounding whitespace (and folding to upper case). Internal spacing or a wrong length
-     * disqualifies the line. For live camera this pairs with next-frame retry: a noisy frame yields no
-     * candidate and is dropped; a clean frame arrives within milliseconds.
+     * Accepts only lines of the exact MRZ length after trimming and upper-casing. A space inside a
+     * line disqualifies it, so a line that OCR splits with stray spaces is not detected.
      */
     STRICT,
 
     /**
-     * Additionally tolerate benign whitespace noise — strip every space within a line before checking
-     * its length — so an MRZ the engine split with stray spaces still qualifies. Forgives formatting
-     * only: it never substitutes, inserts, or removes a non-whitespace character (that would be a data
-     * decision, which the reader-not-oracle stance forbids).
+     * Also removes every space inside a line before checking its length. Changes no other
+     * character.
      */
     LENIENT,
 }

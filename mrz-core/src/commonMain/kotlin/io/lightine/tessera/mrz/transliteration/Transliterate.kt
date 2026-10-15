@@ -1,16 +1,10 @@
 package io.lightine.tessera.mrz.transliteration
 
 /**
- * Public end-to-end transliteration entry point. Composes Unicode normalization (per
- * [ADR-014](https://lightine.youtrack.cloud/articles/TES-A-47),
- * internal) with profile application (per
- * [ADR-009](https://lightine.youtrack.cloud/articles/TES-A-42)),
- * surfacing the post-normalization, pre-transliteration form alongside the original
- * input and the profile's output per Principle 5.
+ * Normalizes text to Unicode NFC, then applies this profile.
  *
- * Use this when you want transliteration outside the generator (for example, to
- * pre-transliterate a name before passing it to a non-primitive generator entry point,
- * or to apply a profile to a value that isn't an MRZ field at all).
+ * @param input The text to transliterate.
+ * @return The profile identifier, the original and normalized text, and the profile's result.
  */
 public fun TransliterationProfile.transliterate(input: String): TransliterationOutcome {
     val normalized = normalizeForTransliteration(input)
@@ -24,9 +18,13 @@ public fun TransliterationProfile.transliterate(input: String): TransliterationO
 }
 
 /**
- * The outcome of [`TransliterationProfile.transliterate`][transliterate]: which profile
- * ran, what the consumer passed in, what the SDK saw after Unicode normalization, and
- * the profile's [TransliterationResult].
+ * The outcome of [transliterate].
+ *
+ * @property profileIdentifier Identifier of the profile that ran.
+ * @property originalInput The text as passed in.
+ * @property normalizedInput The text after Unicode NFC normalization, as the profile saw it.
+ * @property result The profile's result.
+ * @since 0.1.0
  */
 public data class TransliterationOutcome(
     val profileIdentifier: String,

@@ -72,58 +72,30 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
 
 /**
- * The iOS owns-the-camera-session scanner: runs an `AVCaptureSession` internally and streams a
- * [MrzScanResult] per analysed frame, so the consumer never touches `AVCaptureSession` /
- * `AVCaptureVideoDataOutput`
- * ([ADR-020](https://lightine.youtrack.cloud/articles/TES-A-49)).
- * It is the iOS analogue of the Android `CameraXMrzScanner`, built on the same platform-agnostic
- * [scan][MrzFrameAnalyzer.scan] engine: it adds an [AVCaptureVideoDataOutput] to the session
- * (`alwaysDiscardsLateVideoFrames = true` — the iOS counterpart of CameraX's
- * `STRATEGY_KEEP_ONLY_LATEST`; AVFoundation drops late frames rather than queueing stale ones),
- * delivers each `CMSampleBuffer` through the analyse-frame core, and releases it once analysed.
+ * Runs an `AVCaptureSession` on iOS and streams [MrzScanResult]s from analysed frames.
  *
- * **Headless.** No preview layer is created; a consumer that wants one attaches its own
- * `AVCaptureVideoPreviewLayer`. **The consumer holds camera permission** before [start] — this scanner
- * reads the authorization status ([AVCaptureDevice.authorizationStatusForMediaType], which only reads,
- * never prompts) and reports a [CameraError.PermissionDenied] on [results] when it is not granted; it
- * never calls `requestAccessForMediaType` (`scope.md` "permission boundary").
+ * It analyses at most one frame every 200 ms and drops the rest, and keeps only the newest frame
+ * that is waiting, so results are not one per frame. It creates no preview layer; call
+ * [enablePreview] and attach your own layer to [previewSession]. The caller must hold the camera
+ * permission before [start]: the scanner reads the authorization status, reports
+ * [CameraError.PermissionDenied] when it is not granted, and never requests it.
  *
- * **`CMSampleBuffer` lifetime — the genuinely-new iOS concern.** Unlike Android's `ImageProxy` (a JVM
- * object CameraX keeps alive until `close()`), a `CMSampleBuffer` delivered to the capture delegate is a
- * Core Foundation type valid only for the duration of the delegate callback, and Kotlin/Native's ARC
- * does **not** manage CF types. So this scanner takes explicit ownership: the delegate [CFRetain]s each
- * buffer before handing it across the coroutine boundary, and the buffer is [CFRelease]d exactly once —
- * either by [scan]'s `releaseFrame` after it is analysed, or by the frame channel's `onUndeliveredElement`
- * when it is dropped (a newer frame arrived first) or the session tears down. This is the retain/release
- * counterpart of Android's mandatory `ImageProxy::close`.
+ * A [CameraError.PermissionDenied] and a [CameraError.CameraUnavailable] end the session. A
+ * [CameraError.CameraUnavailable] means no camera, a session that cannot be configured, or a
+ * capture runtime error. A [CameraError.CameraInUse] is reported when another client interrupts
+ * the session; the session stays bound and capture resumes when the interruption ends. A
+ * [CameraError.OcrFailed] covers one frame. Close the scanner to stop it and release the
+ * recognizer.
  *
- * **Back-pressure differs from Android by design.** Android blocks CameraX's analysis executor on a
- * rendezvous send; iOS must **not** block AVFoundation's serial sample-buffer queue (Apple's guidance —
- * blocking it stalls capture). Instead the delegate does a non-blocking send into a capacity-1
- * `DROP_OLDEST` channel: the newest frame always wins, and a frame the analyzer has not yet taken when a
- * newer one arrives is dropped (released) rather than analysed stale — the same "only the latest frame"
- * intent, reached without blocking the capture queue.
- *
- * **Verification status.** The contract this implements (the [MrzCameraScanner] interface and the
- * [scan][MrzFrameAnalyzer.scan] engine) is host-tested in `mrz-camera-core`, and the in-use interruption
- * reason check ([isVideoDeviceInUseReason]) is host-tested in `iosTest`. The AVFoundation wiring is compiled
- * on the `ios-compile` CI job. The live-camera behaviour — frame streaming and the `CMSampleBuffer`
- * retain/release accounting under load — is device-verified separately (the iOS Simulator has no camera),
- * exactly as the Android scanner's CameraX wiring was. Capture failures split the same way as Android's
- * recoverable-vs-critical CameraState contract: a *runtime error* is terminal ([CameraError.CameraUnavailable]);
- * an *interruption* is recoverable — the `videoDeviceInUseByAnotherClient` reason is surfaced as a
- * **non-terminal** [CameraError.CameraInUse] while the session stays bound and AVFoundation resumes capture
- * when the interruption ends (the other reasons recover silently). The live in-use scenario — a second client
- * taking then releasing the camera — is device-verified (see the project's issue tracker).
- *
- * @param recognizer the OCR seam. Defaults to the Apple Vision recognizer; a consumer-supplied
- *   recognizer that is [AutoCloseable] is released on [close], since the scanner owns the OCR resource
- *   for its session.
- * @param mode strict (default) or lenient candidate extraction, forwarded to the analyse-frame core.
- * @param telemetry where per-frame [CameraFrameEvent]s go. Defaults to the application's registered sink
- *   ([TelemetrySinkRegistry.current][TelemetrySinkRegistry]; [NoOpTelemetrySink] when none is registered).
- *   Pass an explicit sink to override per instance.
- * @param cameraPosition which lens to use; defaults to the back camera (documents face the rear lens).
+ * @param recognizer the OCR engine. The default is [VisionMrzTextRecognizer]. The scanner closes
+ *   a recognizer that is [AutoCloseable] when it is closed.
+ * @param mode how tolerant candidate extraction is of OCR formatting noise. The default is
+ *   [ParsingMode.STRICT].
+ * @param telemetry where per-frame [CameraFrameEvent]s go. The default is the registered sink
+ *   ([TelemetrySinkRegistry.current][TelemetrySinkRegistry]), or [NoOpTelemetrySink] when none is
+ *   registered.
+ * @param cameraPosition which camera to use. The default is the back camera.
+ * @since 0.2.0
  */
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 public class AVCaptureMrzScanner(
@@ -159,6 +131,12 @@ public class AVCaptureMrzScanner(
             extraBufferCapacity = 16,
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
         )
+
+    /**
+     * Results for analysed frames and capture errors. A slow collector misses the oldest pending
+     * results. The scanner calls the recognizer on `Dispatchers.Default`, so a custom
+     * [MrzTextRecognizer] runs there.
+     */
     override val results: Flow<MrzScanResult> = mutableResults.asSharedFlow()
 
     // Opt-in live-preview seam (additive; the scanner is headless by default — ADR-020), the iOS mirror of
@@ -176,19 +154,22 @@ public class AVCaptureMrzScanner(
     private val mutablePreviewSession = MutableStateFlow<AVCaptureSession?>(null)
 
     /**
-     * The running [AVCaptureSession] to preview, or `null` when no preview is active. Emits the session once
-     * the camera opens **after** [enablePreview] has armed the preview and [start] runs the session; back to
-     * `null` when the session ends. A SwiftUI viewfinder (in `TesseraUI`) collects this and attaches an
-     * `AVCaptureVideoPreviewLayer` — the UI only draws; this scanner keeps owning the session and lifecycle.
-     * Stays `null` for the headless default (preview not armed).
+     * The running [AVCaptureSession] to preview, or `null` when no preview is active.
+     *
+     * It is set once the camera runs after [enablePreview] and [start], and returns to `null` when
+     * the session ends.
+     *
+     * @since 0.5.0
      */
     public val previewSession: StateFlow<AVCaptureSession?> = mutablePreviewSession.asStateFlow()
 
     /**
-     * Arms the live camera preview for subsequent [start]s: the next running session is published on
-     * [previewSession] for a viewfinder to render. Opt-in so the default remains headless (ADR-020) — a
-     * pure-OCR consumer never exposes its session. Idempotent; call before [start]. There is no disarm:
-     * preview stays armed for this scanner's lifetime once set (the default UI arms once at construction).
+     * Arms the live preview for later [start] calls.
+     *
+     * The next running session is published on [previewSession]. Call it before [start]. Preview
+     * stays armed for the life of the scanner.
+     *
+     * @since 0.5.0
      */
     public fun enablePreview() {
         previewEnabled = true
@@ -206,6 +187,7 @@ public class AVCaptureMrzScanner(
     // after a single frame). Keeping this reference for the session's lifetime is the fix.
     private var captureDelegate: SampleBufferDelegate? = null
 
+    /** Starts the capture session and begins emitting on [results]. */
     override fun start() {
         session.start {
             scope.launch {
@@ -219,11 +201,12 @@ public class AVCaptureMrzScanner(
         }
     }
 
+    /** Stops the capture session. */
     override fun stop() {
         session.stop()
     }
 
-    /** Stops the session and closes the OCR recognizer it owns. */
+    /** Stops the session and closes the recognizer if it is [AutoCloseable]. */
     override fun close() {
         stop()
         scope.cancel()
@@ -267,18 +250,20 @@ public class AVCaptureMrzScanner(
     }
 
     /**
-     * Aim continuous autofocus at the **MRZ guide region** the viewfinder shows, instead of the frame's
-     * centre — the focus counterpart of `VisionMrzTextRecognizer.restrictToMrzBand(x:y:width:height:)`
-     * (TES-132: with the guide band away from the frame centre, centre-weighted AF happily focuses the
-     * background while the document blurs). All four values are in **AVFoundation's metadata-output space**
-     * (normalized against the unrotated capture buffer, top-left origin) — the exact space
-     * `AVCaptureVideoPreviewLayer.metadataOutputRectOfInterest(for:)` returns AND the space
-     * `focusPointOfInterest` documents, so the viewfinder passes the same converted rect to both. The
-     * region's centre becomes the focus point of interest.
+     * Aims continuous autofocus at the centre of a region.
      *
-     * Safe to call at any time from any thread: applied immediately when the camera is running, remembered
-     * and applied at the next session start otherwise. A device without focus-point support keeps
-     * centre-weighted continuous AF — a focus preference is an optimisation, never a precondition.
+     * Pass the rectangle that `AVCaptureVideoPreviewLayer.metadataOutputRectConverted(fromLayerRect:)`
+     * returns for the guide, the same rectangle you pass to
+     * [VisionMrzTextRecognizer.restrictToMrzBand]. The values are in AVFoundation metadata-output
+     * space: normalized against the unrotated capture buffer, origin at the top left. The call is
+     * applied at once while the camera runs, otherwise at the next start, and can come from any
+     * thread. A device without focus-point support keeps centre-weighted autofocus.
+     *
+     * @param x the left edge of the region.
+     * @param y the top edge of the region.
+     * @param width the width of the region.
+     * @param height the height of the region.
+     * @since 0.5.0
      */
     public fun focusOnRegion(
         x: Double,

@@ -1,34 +1,28 @@
 package io.lightine.tessera.mrz.camera
 
 /**
- * The outcome of reading an MRZ from a single saved image ([SavedImageMrzReader.read]).
+ * The result of reading one saved image: the scan outcome, any candidates, and capture metadata.
  *
- * It **composes** the same [MrzScanResult] the live-camera path produces, exposed as [scan]: a saved-image
- * MRZ runs through the identical parse/validate pipeline and validates identically to a camera-sourced or
- * typed-in one — only the read-method provenance differs ([FrameProvenance.PRE_CAPTURED_IMAGE]). Reusing the
- * locked camera result keeps the contract stable; this wrapper is the saved-image-specific result type that
- * also carries the additional saved-image channels — the tolerant-mode [candidates] and the optional
- * [captureMetadata].
+ * [scan] has the same shape as a live-camera result and differs only in its reading method,
+ * `PRE_CAPTURED_IMAGE`. The type holds document data and can hold a precise location: do not log it
+ * verbatim.
  *
- * **Contains document PII — do not log verbatim.** [scan] holds the parsed document fields and raw OCR text,
- * [candidates] hold reconstructed MRZ lines, and [captureMetadata] can hold precise GPS — so this type's
- * generated `toString()` surfaces personal data. Branch and log only non-PII fields (see the warnings on
- * [MrzScanResult] / [MrzCandidate] / [CaptureMetadata]). The SDK itself never logs these values.
+ * @since 0.3.0
  */
 public data class SavedImageScanResult(
-    /** The MRZ read outcome — `Decoded` / `NoMrzFound` / `CaptureError`, identical in shape to the camera path. */
+    /** The MRZ read outcome: `Decoded`, `NoMrzFound`, or `CaptureError`. */
     public val scan: MrzScanResult,
     /**
-     * Candidate reconstructions from tolerant disambiguation, surfaced **alongside** [scan] and never
-     * replacing it. **Empty** unless the read was tolerant (`SavedImageMrzReader(tolerant = true)`) and the
-     * recognized MRZ had genuinely ambiguous glyphs to resolve. All distinct, parseable candidates are
-     * surfaced, unranked — the consumer chooses, using each [MrzCandidate.parse] verdict. See [MrzCandidate].
+     * The reconstructions listed by tolerant reading, unranked and alongside [scan].
+     *
+     * Empty unless the read was tolerant and the recognized MRZ had ambiguous characters. See
+     * [MrzCandidate] for which reconstructions are listed.
      */
     public val candidates: List<MrzCandidate>,
     /**
-     * Capture metadata (EXIF) read from the image, or `null` when not requested (the default
-     * [CaptureMetadataPolicy.NONE], or no [CaptureMetadataReader] supplied) or unavailable. Self-reported and
-     * unverifiable — see [CaptureMetadata].
+     * The capture metadata read from the image.
+     *
+     * `null` when none was requested: policy [CaptureMetadataPolicy.NONE] or no [CaptureMetadataReader].
      */
     public val captureMetadata: CaptureMetadata?,
 )

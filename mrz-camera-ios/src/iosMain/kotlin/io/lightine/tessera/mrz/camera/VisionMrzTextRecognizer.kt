@@ -50,44 +50,15 @@ import platform.posix.memcpy
 import kotlin.concurrent.Volatile
 
 /**
- * The iOS [MrzTextRecognizer], backed by Apple Vision (`VNRecognizeTextRequest`). It reads each
- * AVFoundation [CMSampleBufferRef][platform.CoreMedia.CMSampleBufferRef], copies it into an independent
- * pixel buffer (so Vision never references the camera's buffer pool — see *Frame ownership*), runs Vision
- * on-device, and returns the recognized lines for [MrzFrameAnalyzer] to turn into an MRZ candidate.
- * It makes no trust decision about what it reads — OCR only. The iOS analogue of the Android
- * `MlKitMrzTextRecognizer`, binding the analyse-frame core's frame type to `F = CMSampleBufferRef`
- * (the type an `AVCaptureVideoDataOutput` delivers), exactly as Android binds `F = ImageProxy`.
+ * Recognizes text in camera sample buffers with Apple Vision, on the device.
  *
- * **Vision configuration.** [`recognitionLevel`][VNRecognizeTextRequest.recognitionLevel] is `.accurate`
- * and **[`usesLanguageCorrection`][VNRecognizeTextRequest.usesLanguageCorrection] is `false`**: the MRZ is
- * not natural language, so language correction would *change* characters — the reader-not-oracle stance
- * forbids that. Recognized observations are ordered top-to-bottom (Vision does not guarantee reading
- * order) so the analyzer sees the MRZ lines in document order.
+ * Vision runs at the accurate level with language correction off, so it does not alter characters,
+ * and lines are ordered top to bottom. When the band is restricted, it alternates between the accurate
+ * and fast levels on successive frames. The recognizer copies each frame into its own buffer and
+ * keeps no reference to the camera buffer after [recognize] returns; the caller releases the sample
+ * buffer. Close the recognizer to release the copy buffer.
  *
- * **Frame ownership — copied off the camera pool.** This reads the sample buffer but never releases it;
- * the caller that produced the frame (the `AVCaptureVideoDataOutput` delegate, wired up by the
- * owns-the-camera-session layer) owns its lifetime, exactly as AVFoundation requires. Crucially it holds
- * **no reference** to the camera's frame buffer once [recognize] returns: it byte-copies the frame into an
- * independent, plain (heap-backed, not IOSurface-backed) `CVPixelBuffer` — row-by-row, honouring each
- * buffer's own bytes-per-row — and runs Vision on the copy. This follows Apple's
- * [guidance](https://developer.apple.com/forums/thread/679250): when you hold a sample buffer longer than
- * the delegate callback (we do — Vision is slower than the frame interval), copy the pixel data out so the
- * finite `AVCaptureVideoDataOutput` pool can recycle, rather than handing Vision the camera buffer and
- * pinning it through the graphics stack's deferred lifetime. A *single* copy buffer is reused across frames
- * and released on [close]: reusing one buffer instead of allocating per frame keeps the copy's own memory
- * to one frame's worth (device-verified — a fresh buffer per frame piled up). It is safe because
- * `performRequests` is synchronous: Vision has finished reading before the next frame overwrites the
- * buffer. (The capture *stall* seen during bring-up was a **separate** bug — the camera session's
- * sample-buffer delegate being garbage-collected, fixed in `AVCaptureMrzScanner` by holding a strong
- * reference — not anything about this buffer; see that class and the project's issue tracker.)
- *
- * **Threading.** Vision's `performRequests` is synchronous and CPU-bound; [recognize] runs it on the
- * calling coroutine's thread. The owns-the-camera-session layer drives frames on a background dispatch
- * queue, off the main thread.
- *
- * **PII.** Recognized MRZ text is kept out of any thrown failure message — on a Vision failure there is
- * no recognized text to leak, and the failure surfaces as [`CameraError.OcrFailed`][CameraError.OcrFailed]
- * carrying only Vision's own error description.
+ * @since 0.2.0
  */
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 public class VisionMrzTextRecognizer :
@@ -150,45 +121,31 @@ public class VisionMrzTextRecognizer :
     }
 
     /**
-     * Restrict OCR to the **MRZ band** — a centred horizontal band spanning the full width of the frame,
-     * matching the on-screen framing guide. Opt-in (the default UI enables it; headless reading stays
-     * full-frame). It changes only *where* Vision looks, never what is reported (Principle 1 untouched — it
-     * makes no trust decision and does not detect the MRZ, it restricts a fixed region). Idempotent; call
-     * before reading. The band is a fixed internal fraction ([MRZ_BAND_HEIGHT_FRACTION]) — same name and
-     * value as the Android counterpart's `MRZ_BAND_HEIGHT_FRACTION`. This is the Apple Vision counterpart
-     * of ML Kit's crop-the-input approach — ML Kit has no region-of-interest, so Android crops the frame;
-     * Vision has one ([VNRecognizeTextRequest.regionOfInterest]), so this sets it instead of cropping.
+     * Limits Vision to a horizontal band in the vertical centre of the frame.
      *
-     * Also fixes the orientation the request runs with. Vision's `regionOfInterest` is normalized against
-     * the image Vision considers *upright*, but this scanner's camera buffers otherwise reach Vision in the
-     * sensor's raw (landscape) orientation — neither this recognizer nor the owning `AVCaptureMrzScanner`
-     * rotates them (TES-86). So restricting the band also passes Vision the documented back-camera/portrait
-     * orientation (`.right` — the exact case Apple's own `CGImagePropertyOrientation` documentation uses:
-     * a portrait photo's sensor data is landscape and tagged `.right`), so the band lands on the actual MRZ
-     * band and the cropped OCR itself reads upright text. This correction is scoped to the opt-in path
-     * only: the unrestricted default below is unchanged (no orientation, full frame), so a headless
-     * consumer's reading stays exactly what shipped.
+     * The band spans the full width and is 18 percent of the frame height. Off by default: Vision
+     * reads the whole frame. Call it before reading. A restricted request also runs with the
+     * `.right` (portrait) orientation; the unrestricted default passes none.
+     *
+     * @since 0.5.0
      */
     public fun restrictToMrzBand() {
         bandRestricted = true
     }
 
     /**
-     * Restrict OCR to the **exact on-screen region** a viewfinder marks — the WYSIWYG form of
-     * [restrictToMrzBand]. The parameterless overload assumes the guide band is a centred fraction of the
-     * frame, which is only true when the preview shows the whole frame; a real viewfinder crops it
-     * (`resizeAspectFill`) and places the guide wherever its layout does, so the on-screen band and a fixed
-     * frame fraction diverge — the iOS counterpart of the Android scanner's CameraX `ViewPort` alignment
-     * (TES-86's WYSIWYG arc). The caller converts the guide's layer rect with AVFoundation's own
-     * `AVCaptureVideoPreviewLayer.metadataOutputRectOfInterest(for:)` — which accounts for the preview's
-     * `videoGravity` crop and frame size — and passes the result here verbatim.
+     * Limits Vision to the on-screen region a viewfinder marks.
      *
-     * All four values are therefore in **AVFoundation's metadata-output space**: normalized against the
-     * *unrotated* capture buffer, origin at its top-left (the space that converter documents). The mapping
-     * into Vision's own region-of-interest space (normalized against the image *as oriented* by the `.right`
-     * this recognizer hands Vision, origin bottom-left) stays internal — see [visionRegionOfInterest].
-     * Same reporting contract as the parameterless overload: restricts where Vision looks, never what is
-     * reported. May be called again when layout changes; the latest rect wins.
+     * Pass the rectangle that `AVCaptureVideoPreviewLayer.metadataOutputRectConverted(fromLayerRect:)`
+     * returns for the guide, unchanged. The values are in AVFoundation metadata-output space:
+     * normalized against the unrotated capture buffer, origin at the top left. The latest call wins.
+     * A restricted request also runs with the `.right` (portrait) orientation.
+     *
+     * @param x the left edge of the region.
+     * @param y the top edge of the region.
+     * @param width the width of the region.
+     * @param height the height of the region.
+     * @since 0.5.0
      */
     public fun restrictToMrzBand(
         x: Double,
@@ -200,6 +157,16 @@ public class VisionMrzTextRecognizer :
         bandMetadataRect = MetadataRect(x, y, width, height)
     }
 
+    /**
+     * Runs Vision on [frame] and returns the recognized lines, ordered top to bottom.
+     *
+     * Returns no lines when the sample has no image buffer or the recognizer is closed.
+     * [AVCaptureMrzScanner] calls it on `Dispatchers.Default`; the call blocks that thread while
+     * Vision runs.
+     *
+     * @param frame the sample buffer to read.
+     * @return the recognized lines.
+     */
     override suspend fun recognize(frame: CMSampleBufferRef): RecognizedText {
         // No backing image buffer (a malformed or non-video sample): nothing to recognize.
         val pixelBuffer = CMSampleBufferGetImageBuffer(frame) ?: return RecognizedText(emptyList())
@@ -251,9 +218,9 @@ public class VisionMrzTextRecognizer :
     private var bandFrameParity: Boolean = false
 
     /**
-     * Releases the reused copy buffer; the owns-the-camera-session scanner calls this on its own close.
-     * Serialized against [recognize] by [stateLock]: an in-flight OCR pass finishes before the buffer it
-     * is reading is released, and any recognize() arriving after this returns empty (see [closed]).
+     * Releases the reused copy buffer.
+     *
+     * It waits for a running recognition to finish, and later [recognize] calls return no lines.
      */
     override fun close() {
         stateLock.withLock {

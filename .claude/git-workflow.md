@@ -1,225 +1,55 @@
-# Git and GitHub Workflow
-
-This document captures the operational detail of how code lands in this project. The critical rules are summarized in [`CLAUDE.md`](../CLAUDE.md); the steps and command-level detail live here.
-
-The branching model is **GitHub Flow**: `main` is the trunk and is always shippable. Feature work lives in short-lived branches off `main`, returns via pull request, gets reviewed, and merges back. There is no long-lived `develop` branch, no release branches, no hotfix branches. A future need (e.g., maintaining 0.x while 1.x is in development) can introduce one if it earns its keep, not before.
-
----
-
-## Branch Naming
-
-Branches are named for what they contain:
-
-- **`feature/<short-description>`** — new functionality, e.g., `feature/validator`, `feature/td2-parser`.
-- **`fix/<short-description>`** — bug fixes, e.g., `fix/check-digit-overflow`.
-- **`docs/<short-description>`** — documentation-only changes, e.g., `docs/align-illustrative-shapes`.
-- **`chore/<short-description>`** — build, tooling, dependency bumps, repository maintenance.
-
-Names are descriptive enough that a reviewer reading the GitHub PR list knows what the branch is about without opening the PR.
-
-### Worktree Default Branches
-
-Claude Code worktrees auto-generate branch names like `claude/confident-albattani-6f0935`. **Rename before pushing** — the auto-generated name is meaningless to reviewers. From inside the worktree:
-
-```sh
-git branch -m claude/confident-albattani-6f0935 feature/<descriptive-name>
-```
-
-The worktree directory keeps its original name; only the branch reference changes.
-
----
-
-## Per-PR Workflow
-
-The standard flow when starting work on a new feature or fix:
-
-### 1. Create the branch off latest `main`
-
-```sh
-git fetch origin
-git checkout -b feature/<descriptive-name> origin/main
-```
-
-If you're in a worktree that already has a branch checked out, either rename that branch (above) or create a new one off `origin/main`.
-
-### 2. Make the changes
-
-Edit code, write tests, update relevant feature docs and ADRs as commitments are made or discovered. Per [`CLAUDE.md`](../CLAUDE.md) Documentation Sync rules, doc updates are part of the slice, not a follow-up.
-
-### 3. Update `CHANGELOG.md`
-
-Every non-trivial PR adds entries to the `[Unreleased]` section, grouped per [Keep a Changelog](https://keepachangelog.com/) categories: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`. Trivial PRs (typo fixes, single-character edits) can skip the changelog with an explanation in the PR description **and the `no-changelog` label** — CI enforces this (`.github/workflows/changelog.yml` fails any PR that neither touches `CHANGELOG.md` nor carries the label; adding/removing the label re-runs the check without re-running the builds).
-
-When `0.1.0` is tagged, the `[Unreleased]` section becomes `[0.1.0] - YYYY-MM-DD` and a new `[Unreleased]` section is opened.
-
-### 4. Run the private-content scan
-
-**Required before every push to a public-or-soon-to-be-public remote.**
-
-For Claude Code sessions, this is automated. The PreToolUse hook in `.claude/settings.json` fires on every `Bash(git push *)` call and runs `scripts/private-content-scan.sh`. If the script exits non-zero, the push is blocked and the offending lines surface as the block reason. You don't need to remember to run it — the hook does.
-
-**The hook is silent in the transcript on PASS — this is by design, not a bug.** PreToolUse hooks' stdout goes to Claude Code's debug log rather than the session transcript ([hooks reference](https://code.claude.com/docs/en/hooks)), and the `statusMessage` spinner is too brief to register on a sub-second scan. So a successful `git push` from a Claude session looks identical whether the hook ran or didn't run. **The BLOCK path is loud, however:** when the script exits non-zero, the tool-call result includes a `PreToolUse:Bash hook error:` prefix followed by the script's full stderr (the `BLOCKED` summary line, the matching `file:line:content` reference, and the "Resolution:" block) verbatim — so a failed scan is immediately visible and specific in the session. The asymmetry is intentional: PASS is the common case and shouldn't add transcript noise on every push, while BLOCK is rare and needs to be unmissable. If you ever need to verify the hook is actually wired up without parsing debug logs, temporarily add a known scan term to `.claude/private-content-terms.local`, attempt a push, and confirm the script's `BLOCKED ...` stderr surfaces as the tool-call block reason — then remove the term.
-
-For manual pushes (from a regular terminal), run the script yourself before pushing:
-
-```sh
-bash scripts/private-content-scan.sh
-```
-
-The script reads scan terms from `.claude/private-content-terms.local` (gitignored — each contributor maintains their own; see "First-time setup" below). It greps `git ls-files`-tracked `.md`, `.kt`, and `.gradle*` files for case-insensitive substring matches, then filters out the documented false positives.
-
-Expected exit codes:
-
-- **0** — `no private content found in tracked files.` Proceed.
-- **0** with `terms file not found ... skipping.` — no terms configured locally; the scan no-ops. See "First-time setup" below.
-- **2** — `BLOCKED — possible private content found...` Stop and inspect the listed lines.
-
-#### First-time setup
-
-Create `.claude/private-content-terms.local` with one substring per line. Lines starting with `#` are comments; blank lines are skipped. The file is gitignored and stays on your local machine only. The terms themselves are the private context being protected, so the file must never be committed (`.gitignore` already excludes it).
-
-#### Documented false positives
-
-The script's `FALSE_POSITIVES` extended-regex excludes lines matching:
-
-- **`InvalidData`** in `docs/features/mrz-error-taxonomy.md` — generic English compound; substring matches the scan but the word is not private context.
-
-If a NEW generic substring needs to be allowlisted, update `FALSE_POSITIVES` in `scripts/private-content-scan.sh` AND document it here in the same PR.
-
-##### Why "Azerbaijan" is not in the scan or the false-positive list
-
-Earlier versions of the scan included `azerbaij` as a term and required two false-positive exclusions (`"Azerbaijan"` in the ISO 3166 table and `azerbaij.pdf` in ALA-LC citation URLs). That was an over-correction: Azerbaijan is a country, not private context. The user is openly from Azerbaijan, Tessera ships AZE transliteration as one profile among many, and the ISO 3166 table includes Azerbaijan alongside ~250 other countries. The term and its associated false positives were removed together in the scan's slim pass.
-
-Country names, ISO codes, and citation URLs that reference country names are NEVER private context and should not be added to the scan terms file.
-
-### 5. Run verification
-
-Doc-only PRs:
-
-```sh
-bash scripts/check-cross-references.sh
-```
-
-Code PRs:
-
-```sh
-./gradlew spotlessApply build
-bash scripts/check-cross-references.sh
-```
-
-The build runs spotless, ktlint, all unit tests, and property tests. All must pass before push.
-
-### 6. Commit
-
-Per the existing commit-message style: short imperative subject, blank line, body explaining the *why*. Use HEREDOC for the body to preserve formatting. Always include the Co-Authored-By trailer for commits Claude makes, naming the **current session's model** (the placeholder below — don't copy a stale model name from an old commit; the trailer records which model co-authored):
-
-```sh
-git commit -m "$(cat <<'EOF'
-Short imperative subject
-
-Body explaining what changed and why. The why is more valuable than
-the what; the diff already shows the what.
-
-Co-Authored-By: Claude <current model name> <noreply@anthropic.com>
-EOF
-)"
-```
-
-### 7. Push
-
-```sh
-git push -u origin feature/<descriptive-name>
-```
-
-The `-u` sets upstream tracking so subsequent pushes work without arguments.
-
-The `gh` CLI is set up as a Git credential helper in this environment (via `gh auth setup-git`), so HTTPS pushes work without prompting for credentials.
-
-### 8. Open the PR
-
-```sh
-gh pr create --base main --head feature/<descriptive-name> \
-  --title "<concise PR title>" \
-  --body "$(cat <<'EOF'
-<PR description following the template at .github/pull_request_template.md>
-EOF
-)"
-```
-
-The template has these sections:
-
-- **Summary** — 1-3 sentences on what the PR does and why.
-- **Documentation Impact** — every doc the PR touches or should touch.
-- **Tests** — what was added, total count, any flakiness.
-- **Open Questions Touched** — items in the project's issue tracker resolved, modified, or added.
-- **Changelog** — confirm `CHANGELOG.md` `[Unreleased]` is updated.
-- **Verification** — checklist (`./gradlew build`, cross-references, private-content scan, branch name).
-
-When pushing from `gh pr create` directly, the template body needs to be passed via `--body`. The template at `.github/pull_request_template.md` is what fills in if a PR is opened via the web UI; for CLI creation, paste the relevant sections in `--body`.
-
-### 9. Review
-
-If a reviewer is involved, request review via `gh pr edit <pr> --add-reviewer <handle>` or assign on GitHub. Address comments via follow-up commits on the branch (don't squash-rebase mid-review unless requested — preserves comment threads against specific commits).
-
-### 10. Merge
-
-**Required checks (branch protection on `main`, set 2026-10-11 — TES-144).** A PR can merge only when all
-five pass: `build & test · JVM`, `build & test · Android`, `build & test · iOS`, `changelog · entry present`,
-`publish · smoke (empty-module guard)`. "CI green" in the Work Loop means exactly this set; the remaining
-checks (`board · stage sync`, `hooks · regression tests`) are advisory. (The PR-time `dependency review` check
-was removed in TES-147; dependency vulnerabilities are handled after merge and at the release gate - see
-`SECURITY.md`.)
-`gh pr merge --auto` waits for the required set, so merge-when-green is safe to use. When a workflow adds or
-renames a check, update the protection (`gh api -X PATCH repos/{owner}/{repo}/branches/main/protection/required_status_checks`)
-and this list in the same change.
-
-Merge strategy preferences (default is GitHub repo settings; can be configured per-PR):
-
-- **Rebase and merge** — preserves individual commits on `main`, linear history. Recommended when commits are well-titled and tell a coherent story.
-- **Squash and merge** — collapses to one commit on `main`, hides intermediate steps. Recommended when commits are messy or "WIP" style.
-- **Merge commit** — preserves all commits + a merge commit indicating where they joined. Useful for clearly bounded feature branches.
-
-After merge:
-
-```sh
-# locally, off the now-deleted feature branch:
-git checkout -b <next-branch-name> origin/main   # new work
-# or
-git switch main && git pull                      # back to trunk
-git branch -d feature/<descriptive-name>         # delete the merged local branch
-```
-
-GitHub auto-deletes the remote branch if "Automatically delete head branches" is enabled in the repo settings.
-
----
-
-## Worktree Cleanup
-
-If the work was done in a Claude Code worktree, the worktree directory remains after the branch is deleted. Clean up from outside the worktree:
-
-```sh
-# from main checkout (not from inside the worktree):
-git worktree remove .claude/worktrees/<worktree-name>
-```
-
-Or let Claude Code clean up automatically when the next session creates a new worktree (default behavior).
-
----
-
-## Notes for Future AI Sessions
-
-- **`gh` CLI is installed and authed** in this user's environment as of 2026-05-04. Future sessions can push and create PRs from the session itself; no need to ask the user to do it manually unless something has broken.
-- **`gh auth setup-git`** is the bridge between Git's HTTPS push and `gh`'s credentials. Without it, `git push` will hit "could not read Username for 'https://github.com'" even when `gh auth status` shows logged in.
-- **PR template** at `.github/pull_request_template.md` auto-applies to web-UI PR creation. For CLI creation, the body is provided explicitly via `--body` — paste the template sections in.
-- **CHANGELOG-on-every-PR** is the discipline. The PR template has a checkbox; future sessions should default to updating the changelog rather than treating it as optional.
-- **Private-content scan** is mandatory before every push to a public-or-soon-to-be-public remote. Automated for Claude via the PreToolUse hook in `.claude/settings.json` calling `scripts/private-content-scan.sh`; manual pushes run the script directly. Scan terms live in the gitignored `.claude/private-content-terms.local` (per-contributor). Sole documented false positive: `InvalidData` in [Feature: MRZ Error Taxonomy](https://lightine.youtrack.cloud/articles/TES-A-28) (substring matches but is generic English, not private context). Country names (e.g., Azerbaijan) are not in the scan and not in the false-positive list — see "Run the private-content scan" above for why.
-
----
-
-## Related Documents
-
-- [`CLAUDE.md`](../CLAUDE.md) — project root rules; this document is the operational expansion of the "Git and GitHub Workflow" section there.
-- [`docs/conventions.md`](https://lightine.youtrack.cloud/articles/TES-A-20) — naming conventions, code style.
-- [`docs/versioning.md`](https://lightine.youtrack.cloud/articles/TES-A-8) — Keep a Changelog format and SemVer rules.
-- `.github/pull_request_template.md` — auto-applied PR description template.
-- `scripts/private-content-scan.sh` — runs the private-content scan; reads terms from the gitignored `.claude/private-content-terms.local` (per-contributor). Called automatically by the PreToolUse hook in `.claude/settings.json` and runnable manually before any push.
+# Git and PR mechanics
+
+GitHub Flow: `main` is always shippable, branches are short, every change goes through a
+pull request. Prefer small focused PRs; an approved multi-step issue (a docs sweep, for
+example) gets one branch and one PR at the end.
+
+## Branch
+
+- `feature/`, `fix/`, `docs/`, or `chore/` plus a short description, off `origin/main`:
+  `git fetch origin && git checkout -b fix/check-digit-overflow origin/main`.
+- CI (`repo · rules`) fails any other name; Dependabot's branches are exempt.
+- A Claude Code worktree starts on `claude/<random>`: rename it before pushing
+  (`git branch -m <new-name>`).
+
+## Before you push
+
+- `./gradlew spotlessApply check`.
+- `CHANGELOG.md` entry under `[Unreleased]` (Keep a Changelog groups), or the
+  `no-changelog` label when nothing ships. CI `changelog · entry present` checks for
+  one or the other; the label also tells the board the issue is Done at merge.
+- AI sessions: the push hook runs `scripts/private-content-scan.sh` (the MRZ guard, plus
+  the terms in your gitignored `.claude/private-content-terms.local`). It is silent on
+  pass and loud on block. Manual pushes: run it yourself. A generic word that only
+  contains a term goes into `FALSE_POSITIVES` in the script, with its reason.
+
+## Commit
+
+Short imperative subject, blank line, then the why. Branch protection requires signed
+commits only on `main`: GitHub signs the squash commit it makes at merge, so a
+contributor need not sign branch commits. Release tags must be signed too (a tag
+ruleset); the maintainer signs them with SSH. Commits an AI session makes end with a
+`Co-Authored-By:` line naming the current model.
+
+## Pull request
+
+`gh pr create --base main --title "type(scope): subject (TES-n or #n)" --body-file <file>`,
+with the body filled from `.github/pull_request_template.md`. The PR title, or the commit
+title for a one-commit PR, becomes the squash commit. The `TES-n` lets the board follow
+the PR; outside contributors use the GitHub issue number `#n`.
+
+## Merge
+
+Required checks (branch protection on `main`): `build & test · JVM`,
+`build & test · Android`, `build & test · iOS`, `publish · smoke (empty-module guard)`,
+`changelog · entry present`, `repo · rules`. `board · stage sync` is advisory. When a
+workflow adds or renames a check, update the protection and this list in the same PR.
+
+**Strategy: squash merge.** Rebase merge is allowed for a PR whose commits each stand
+alone. Merge commits are off in the repository settings. This is the only place the
+strategy is written down.
+
+`gh pr merge <n> --squash --auto`, then confirm with
+`gh pr view <n> --json state --jq .state` (expect `MERGED`). GitHub deletes the remote
+branch; delete the local one (`git branch -d <branch>`). Remove a finished worktree from
+the main checkout: `git worktree remove .claude/worktrees/<name>`.

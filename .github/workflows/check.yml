@@ -4,10 +4,10 @@
 # wait on.
 #
 # Scope:
-# - The `check` job runs the JVM `check` only — it does not compile the mobile
+# - The `check` job runs the JVM `check` only - it does not compile the mobile
 #   targets. `gradle check` excludes the Android target (which compiles via
 #   `assemble`/`compileAndroidMain`, not `check`) and the iOS targets (which need
-#   a macOS runner with Xcode — a Linux runner cannot build Apple targets at all).
+#   a macOS runner with Xcode - a Linux runner cannot build Apple targets at all).
 # - The `android-compile` job (added at 0.2.0's mrz-camera-android slice) compiles
 #   every module's Android target on a Linux runner with the Android SDK, so the
 #   ML Kit / CameraX code in androidMain is type-checked on CI. It also runs
@@ -15,18 +15,21 @@
 #   no jvm target to carry them in the `check` job). Still no emulator, no instrumented
 #   tests, no live camera (those run locally / on a device).
 # - The `ios-compile` job (added at 0.2.0's mrz-camera-ios slice) compiles every
-#   module's iOS targets on a macOS runner — the only runner that can build Apple
-#   targets — and runs the iosSimulatorArm64 host tests. It type-checks the
+#   module's iOS targets on a macOS runner - the only runner that can build Apple
+#   targets - and runs the iosSimulatorArm64 host tests. It type-checks the
 #   commonMain/iosMain code (the core modules' iOS targets and, from the iOS camera
 #   slice, the AVFoundation/Vision code) that the Linux jobs cannot. Device/live-camera
 #   runs are local/manual; the Simulator has no camera.
-# - JS / Wasm remain per-release-activated per docs/scope.md "Supported Platforms".
+# - JS / Wasm targets are activated per release; none is active today.
+# - The `repo-rules` job holds the cheap repository checks (hook and script tests, the MRZ
+#   guard, documentation pointers and style, links, branch name, the types-module rule, the
+#   CLAUDE.md size cap). It is a required check.
 # - JDK 21 to match each module's jvmToolchain(21); the Gradle daemon is pinned to
 #   JDK 17 (gradle/gradle-daemon-jvm.properties, foojay-provisioned).
-# - Gradle 9.5.1 via the project's wrapper
+# - Gradle 9.8.1 via the project's wrapper (gradle/wrapper/gradle-wrapper.properties).
 # - Every action is pinned to a full commit SHA with a trailing `# vX.Y.Z` version
 #   comment (supply-chain hardening, the issue tracker ("CI and repository hardening")
-#   item 3 — a mutable tag like `@v6` can be repointed). Dependabot's github-actions
+#   item 3 - a mutable tag like `@v6` can be repointed). Dependabot's github-actions
 #   updates bump both the SHA and the comment. Keep new actions pinned the same way.
 
 name: check
@@ -35,8 +38,8 @@ on:
   pull_request:
   push:
     branches: [main]
-  # Weekly scheduled run (Mon 06:00 UTC): catches toolchain/dependency rot between PRs —
-  # a remote action deprecation, an SDK download breaking, a cache going stale — on a repo
+  # Weekly scheduled run (Mon 06:00 UTC): catches toolchain/dependency rot between PRs:
+  # a remote action deprecation, an SDK download breaking, a cache going stale - on a repo
   # that can sit quiet for days. workflow_dispatch allows an on-demand full-matrix run.
   schedule:
     - cron: "0 6 * * 1"
@@ -72,12 +75,6 @@ jobs:
       - name: Run gradle check
         run: ./gradlew check
 
-      - name: Run cross-reference validator
-        run: bash scripts/check-cross-references.sh
-
-      - name: Run markdown link validator
-        run: bash scripts/check-markdown-links.sh
-
   android-compile:
     name: build & test · Android
     runs-on: ubuntu-latest
@@ -92,8 +89,8 @@ jobs:
           java-version: '21'
 
       # ubuntu-latest ships the Android SDK (ANDROID_SDK_ROOT set) with recent platforms preinstalled
-      # — including the compileSdk used here, whose platform directory and sdkmanager package id are
-      # `android-37.0` (API 37, Android 17 — stable/GA 2026-06-16, ADR-017). The `.0` is Android's
+      # - including the compileSdk used here, whose platform directory and sdkmanager package id are
+      # `android-37.0` (API 37, Android 17 - stable/GA 2026-06-16, ADR-017). The `.0` is Android's
       # finalized minor-version scheme, not a preview marker (source.properties: CodeName empty,
       # PreviewSdkInt=0). So this is normally a no-op; the guarded install is only a fallback for a
       # runner image that lacks android-37.0. Using the preinstalled sdkmanager keeps CI on first-party
@@ -115,14 +112,14 @@ jobs:
 
       # Compiles every module's androidMain (the core modules and mrz-camera-android's ML Kit recognizer
       # + CameraX scanner). Most host tests run in the `check` job via each module's jvm target;
-      # mrz-camera-android is Android-only (no jvm target), so its androidHostTest unit tests — the
-      # CameraState recoverable/critical classification — run here, where the Android SDK is present.
-      # mrz-camera-ui-android is likewise Android-only (Jetpack Compose), so its androidHostTest suite —
-      # a config unit test plus a Robolectric-driven Compose render/callback smoke test — also runs here.
+      # mrz-camera-android is Android-only (no jvm target), so its androidHostTest unit tests - the
+      # CameraState recoverable/critical classification - run here, where the Android SDK is present.
+      # mrz-camera-ui-android is likewise Android-only (Jetpack Compose), so its androidHostTest suite
+      # (a config unit test plus a Robolectric-driven Compose render/callback smoke test) also runs here.
       # The four source-bearing common modules enable withHostTest{}, so their COMMON test suites also
-      # execute against the Android target here (~600 tests on the JVM host with the Android variant) —
+      # execute against the Android target here (~600 tests on the JVM host with the Android variant):
       # the Android target is no longer compile-only on CI.
-      # verifyMlKitBundledModel asserts ML Kit stays the bundled (offline) text-recognition model — it
+      # verifyMlKitBundledModel asserts ML Kit stays the bundled (offline) text-recognition model - it
       # resolves androidRuntimeClasspath, so it needs the Android SDK this job provides.
       # Still no emulator / instrumented / live-camera tests (those run locally on a device).
       # The android-only public ABI (mrz-camera-android, mrz-camera-ui-android) is gated by the regular
@@ -133,7 +130,7 @@ jobs:
 
   # Empty-module release guard (TES-43 pre-0.5.0 item; the v0.2.0 incident class, PR #154):
   # a module that DECLARES a Kotlin/Native target but produces no klib fails its
-  # generateMetadataFileFor<Target>Publication task — and nothing pre-tag executes those tasks.
+  # generateMetadataFileFor<Target>Publication task - and nothing pre-tag executes those tasks.
   # The release dry-run marks every generateMetadataFile* task SKIPPED (verified 2026-07-03),
   # so the failure only surfaced mid-release, after environment approval. This job runs a REAL
   # local publish on every PR and push to main, executing the exact failure site with no
@@ -141,7 +138,7 @@ jobs:
   # explicit escape hatch in the root build.gradle.kts) skips PGP signing, which keyless
   # runners cannot do. macOS runner because K/N publication metadata needs the Apple toolchain.
   # Rule of thumb this enforces: a module that declares a target must produce an artifact for
-  # it; empty placeholders (emrtd-core, logging) declare JVM+Android only — an empty jar/aar
+  # it; empty placeholders (emrtd-core, logging) declare JVM+Android only - an empty jar/aar
   # is valid, a missing klib is not.
   publish-smoke:
     name: publish · smoke (empty-module guard)
@@ -164,7 +161,7 @@ jobs:
           restore-keys: konan-${{ runner.os }}-
 
       # publishToMavenLocal builds every module's Android target, which now compiles against
-      # android-37.0 (API 37 / Android 17 — see the android-compile job's note). Guarded install,
+      # android-37.0 (API 37 / Android 17 - see the android-compile job's note). Guarded install,
       # same first-party-sdkmanager approach.
       - name: Ensure Android SDK platform 37
         run: |
@@ -216,10 +213,10 @@ jobs:
 
       # Compiles every module's iOS targets and runs the common host tests on the simulator.
       # iosSimulatorArm64Test compiles + runs (the simulator executes Apple-Silicon test binaries);
-      # the iosArm64 (device) target is compile-only here — it cannot execute on an Apple-Silicon
-      # runner — but compiling it catches target-specific breaks.
+      # the iosArm64 (device) target is compile-only here - it cannot execute on an Apple-Silicon
+      # runner - but compiling it catches target-specific breaks.
       # assembleTesseraDebugXCFramework links the umbrella SPM artifact (ADR-019) across both iOS
-      # slices, so the framework's `export(...)` surface is validated on every PR — a broken export
+      # slices, so the framework's `export(...)` surface is validated on every PR - a broken export
       # (e.g. a removed api dependency) fails CI here instead of at the release slice. (Debug, not
       # release: same export wiring, faster link; the release variant is built at the 0.2.0 release.)
       # :mrz-camera-ios:checkKotlinAbi validates the iOS-only module's public ABI against its committed
@@ -228,26 +225,71 @@ jobs:
       - name: Compile iOS targets, run simulator tests, assemble the XCFramework, check iOS ABI
         run: ./gradlew iosSimulatorArm64Test compileKotlinIosArm64 :mrz-camera-ios:assembleTesseraDebugXCFramework :mrz-camera-ios:checkKotlinAbi
 
-  # The enforcement hooks in .claude/settings.json are code and regress like code
-  # (known-pitfalls: "the hook itself needs regression tests"). Their test scripts are
-  # hermetic bash (throwaway temp dirs, never touch the real repo), so they run anywhere.
-  hook-tests:
-    name: hooks · regression tests
+  # Cheap repository checks, hermetic and fast. Required (branch protection), so every
+  # rule here can fail a merge. The hook tests use throwaway temp folders and never touch
+  # the checkout. Rule homes: .claude/rules/documentation.md, .claude/git-workflow.md,
+  # .claude/rules/types-module-discipline.md, CLAUDE.md "Safety invariants".
+  repo-rules:
+    name: repo · rules
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Run hook regression tests
+      - name: Branch name
+        if: github.event_name == 'pull_request'
+        env:
+          HEAD_REF: ${{ github.head_ref }}
         run: |
-          bash scripts/test/standing-obligations.test.sh
-          bash scripts/test/stop-handoff-check.test.sh
-          bash scripts/test-prefer-dev-wrappers.sh
+          case "$HEAD_REF" in
+            feature/*|fix/*|docs/*|chore/*|dependabot/*) echo "branch ok: $HEAD_REF" ;;
+            *) echo "::error::Branch '$HEAD_REF' must start with feature/, fix/, docs/ or chore/ (.claude/git-workflow.md)."; exit 1 ;;
+          esac
 
-      # The constitution has a hard size cap (CLAUDE.md's own first paragraph): past
-      # ~200 lines instruction-following degrades and sediment creeps back.
-      - name: Constitution size guard (CLAUDE.md ≤ 200 lines)
+      - name: Hook and script tests
+        run: |
+          python3 -I scripts/test/test_check_docs.py
+          bash scripts/test/session-banner.test.sh
+          bash scripts/test/stop-handoff-check.test.sh
+          bash scripts/test/private-content-scan.test.sh
+          bash scripts/test/outward-content-scan.test.sh
+          bash scripts/test/block-screenshot.test.sh
+          bash scripts/test/prefer-dev-wrappers.test.sh
+
+      - name: No real document data (MRZ guard)
+        run: bash scripts/private-content-scan.sh --mrz-only
+
+      - name: Documentation pointers and style
+        run: |
+          python3 -I scripts/check-docs.py pointers
+          python3 -I scripts/check-docs.py style
+
+      - name: Markdown links
+        run: bash scripts/check-markdown-links.sh
+
+      - name: types module holds types only
+        run: |
+          if git grep -nE '^(public |internal |private )?((inline|suspend|infix|operator|tailrec) )*(fun|val|var) ' -- 'types/src/*.kt'; then
+            echo "::error::Top-level function or property in types/ (.claude/rules/types-module-discipline.md)."
+            exit 1
+          fi
+
+      # Past ~200 lines instruction-following degrades and sediment creeps back.
+      - name: CLAUDE.md size cap (200 lines)
         run: |
           lines=$(wc -l < CLAUDE.md)
-          echo "CLAUDE.md: $lines lines (hard cap 200)"
+          echo "CLAUDE.md: $lines lines (cap 200)"
           [ "$lines" -le 200 ]
+
+  # Weekly (and on demand) only: the public KB is outside our control and YouTrack is
+  # never a dependency, so a dead KB link must not block a PR. Not a required check.
+  kb-links:
+    name: docs · KB links
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check KB and repo links
+        run: python3 -I scripts/kb-linkcheck.py --quiet --allow-internal

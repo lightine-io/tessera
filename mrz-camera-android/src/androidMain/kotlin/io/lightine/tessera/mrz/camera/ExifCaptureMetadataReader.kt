@@ -78,13 +78,17 @@ internal class ExifCaptureMetadataReader(
 }
 
 /**
- * Creates the Android saved-image EXIF metadata reader. Reading saved images is opt-in: this REQUIRES a
- * [SavedImageReadingAcknowledgement] (no default). Pass the result to [SavedImageMrzReader] as its
- * `metadataReader`; it reads only what the [CaptureMetadataPolicy] permits (GPS only under
- * [CaptureMetadataPolicy.INCLUDING_LOCATION]).
+ * Creates the Android reader for the EXIF of a saved image [Uri].
  *
- * @param acknowledgement the required saved-image-reading acknowledgement (the opt-in gate).
- * @param context any [Context]; its application context is retained for opening the image `Uri`.
+ * Pass it to [SavedImageMrzReader] as `metadataReader`. It reads GPS only under
+ * [CaptureMetadataPolicy.INCLUDING_LOCATION]. [CaptureMetadata.rawTags] holds up to eight non-GPS
+ * tags: `DateTimeOriginal`, `DateTime`, `Make`, `Model`, `Software`, `Orientation`, `ImageWidth`,
+ * and `ImageLength`. An unreadable or malformed image gives all-`null` fields.
+ *
+ * @param acknowledgement the required saved-image acknowledgement. It has no default.
+ * @param context any [Context]; the reader keeps its application context.
+ * @return the reader.
+ * @since 0.3.0
  */
 public fun exifCaptureMetadataReader(
     acknowledgement: SavedImageReadingAcknowledgement,

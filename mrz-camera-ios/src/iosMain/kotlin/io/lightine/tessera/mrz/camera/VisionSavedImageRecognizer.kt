@@ -181,13 +181,16 @@ internal class VisionSavedImageRecognizer(
 }
 
 /**
- * Creates the iOS saved-image OCR recognizer. Reading saved images is opt-in: this REQUIRES a
- * [SavedImageReadingAcknowledgement] (no default) — the consumer's explicit acknowledgement of the higher
- * saved-image risk (see [SavedImageMrzReader] and
- * [reading-risks](https://lightine.youtrack.cloud/articles/TES-A-11)). The returned recognizer reads a file
- * [NSURL] via Apple Vision; pass it to [SavedImageMrzReader], which releases it when the reader is closed.
+ * Creates the iOS saved-image OCR recognizer, which reads a file [NSURL] with Apple Vision.
  *
- * @param acknowledgement the required saved-image-reading acknowledgement (the opt-in gate).
+ * Pass it to [SavedImageMrzReader], which closes it when the reader is closed. It runs on
+ * `Dispatchers.Default`. It re-reads likely MRZ rows from a tighter crop and puts the lines whose
+ * length matches an MRZ line width ahead of the first-pass lines, which it keeps. A Vision failure
+ * on the first pass is thrown, and [MrzFrameAnalyzer] reports it as [CameraError.OcrFailed].
+ *
+ * @param acknowledgement the required saved-image acknowledgement. It has no default.
+ * @return the recognizer.
+ * @since 0.3.0
  */
 public fun visionSavedImageRecognizer(acknowledgement: SavedImageReadingAcknowledgement): MrzTextRecognizer<NSURL> =
     VisionSavedImageRecognizer()

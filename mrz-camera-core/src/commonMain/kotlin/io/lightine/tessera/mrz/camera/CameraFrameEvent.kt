@@ -4,14 +4,12 @@ import io.lightine.tessera.telemetry.TelemetryEvent
 import io.lightine.tessera.types.vocabulary.MrzFormat
 
 /**
- * Telemetry emitted once per analysed frame. Camera reading is the first SDK component to emit
- * telemetry — the [`TelemetrySink`][io.lightine.tessera.telemetry.TelemetrySink] contract has
- * shipped since 0.1.0 with no emitters
- * ([ADR-015](https://lightine.youtrack.cloud/articles/TES-A-48)).
+ * Telemetry emitted once per analysed frame, with diagnostics and no document data.
  *
- * Carries **diagnostics only and no document data**: counts, booleans, a coarse confidence, the
- * detected format, and an outcome label. It never includes recognized text or any parsed field, so a
- * sink can be wired to any log/metrics backend without leaking PII.
+ * It holds counts, booleans, a coarse confidence, the detected format, and an outcome. It never
+ * holds recognized text or a parsed field.
+ *
+ * @since 0.2.0
  */
 public data class CameraFrameEvent(
     /** What analysing the frame produced. */
@@ -22,28 +20,31 @@ public data class CameraFrameEvent(
     public val mrzRegionFound: Boolean,
     /** Coarse aggregate OCR confidence in `[0, 1]`, or `null` if unavailable. */
     public val ocrConfidence: Float?,
-    /**
-     * The MRZ format when the parser produced a document (`Success` or `PartialSuccess`); otherwise
-     * `null`, including for a `Failure`.
-     */
+    /** The MRZ format when the parse produced a document, otherwise `null` (including a failure). */
     public val detectedFormat: MrzFormat?,
 ) : TelemetryEvent {
+    /** Event name: `mrz.camera.frame`. */
     override val name: String get() = EVENT_NAME
 
+    /** Constants for [CameraFrameEvent]. */
     public companion object {
-        /** The stable [`TelemetryEvent.name`][TelemetryEvent.name] for this event type. */
+        /** The event name: `mrz.camera.frame`. */
         public const val EVENT_NAME: String = "mrz.camera.frame"
     }
 }
 
-/** The outcome of analysing a single frame, for telemetry routing. */
+/**
+ * The outcome of analysing one frame, for telemetry.
+ *
+ * @since 0.2.0
+ */
 public enum class CameraFrameOutcome {
-    /** A candidate was located and run through the parser (the parse verdict may still be a failure). */
+    /** A candidate was located and parsed. The parse can still be a failure. */
     DECODED,
 
-    /** OCR ran but located no MRZ-shaped candidate. */
+    /** OCR ran and located no MRZ-shaped candidate. */
     NO_MRZ_FOUND,
 
-    /** The OCR step failed; see [`CameraError.OcrFailed`][CameraError.OcrFailed]. */
+    /** The OCR step failed; see [CameraError.OcrFailed]. */
     OCR_FAILED,
 }

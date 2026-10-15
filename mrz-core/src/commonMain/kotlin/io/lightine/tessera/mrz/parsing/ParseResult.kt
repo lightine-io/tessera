@@ -4,43 +4,49 @@ import io.lightine.tessera.mrz.model.MrzDocument
 import io.lightine.tessera.types.errors.MrzParseError
 
 /**
- * The outcome of [`MrzParser`][MrzParser.parse] parsing input. Three variants:
+ * The result of parsing an MRZ: [Success], [PartialSuccess], or [Failure].
  *
- * - [Success] — the input parsed cleanly and the validator surfaced no failures (warnings
- *   may still be present in [metadata]).
- * - [PartialSuccess] — the input parsed cleanly at the structural level but the validator
- *   surfaced one or more per-field failures. The [`document`][PartialSuccess.document] is
- *   still populated; consumers decide whether to trust it given the validation failures
- *   in [metadata].
- * - [Failure] — the input could not be parsed at all (wrong shape, characters outside the
- *   MRZ alphabet, no recognized format). Carries the [`error`][Failure.error] and the
- *   raw input that produced it.
+ * Success and PartialSuccess hold the personal data of the document, and Failure holds the raw
+ * input, so do not log a whole result verbatim.
  *
- * Every variant carries [metadata]: [`ReadMethod`][io.lightine.tessera.types.vocabulary.ReadMethod],
- * any [`MrzWarning`][io.lightine.tessera.types.errors.MrzWarning]s, any
- * [`MrzValidationError`][io.lightine.tessera.types.errors.MrzValidationError]s, and the
- * transliteration audit trail (which is `null` for parser-produced results since the
- * parser does not transliterate).
- *
- * **Contains document PII — do not log verbatim.** [Success]/[PartialSuccess] carry the parsed
- * [`MrzDocument`][MrzDocument] (name, document number, nationality, dates), and [Failure] carries the
- * raw [`rawInput`][Failure.rawInput] MRZ string. Their auto-generated `toString()` surfaces that
- * personal data, so logging a whole `ParseResult` in production leaks it. Log only non-PII fields, or
- * redact first. The SDK never logs these values itself.
+ * @since 0.1.0
  */
 public sealed class ParseResult {
+    /** The reading method, warnings, and validation failures of this result. */
     public abstract val metadata: ResultMetadata
 
+    /**
+     * The input parsed and the validator found no validation failure.
+     *
+     * @property document The parsed document.
+     * @property metadata The reading method and any warnings.
+     * @since 0.1.0
+     */
     public data class Success(
         val document: MrzDocument,
         override val metadata: ResultMetadata,
     ) : ParseResult()
 
+    /**
+     * The input parsed, and the validator found at least one validation failure.
+     *
+     * @property document The parsed document.
+     * @property metadata The reading method, warnings, and the validation failures.
+     * @since 0.1.0
+     */
     public data class PartialSuccess(
         val document: MrzDocument,
         override val metadata: ResultMetadata,
     ) : ParseResult()
 
+    /**
+     * The input could not be parsed.
+     *
+     * @property error Why parsing failed.
+     * @property rawInput The input lines joined with `\n`.
+     * @property metadata The reading method, with empty warnings and validation failures.
+     * @since 0.1.0
+     */
     public data class Failure(
         val error: MrzParseError,
         val rawInput: String?,

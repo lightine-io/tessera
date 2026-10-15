@@ -6,27 +6,24 @@ Tessera is a vendor-neutral SDK for reading, validating, and generating identity
 
 | Version | Supported with security fixes |
 |---|---|
-| Latest released `0.x` minor | ✅ |
-| Earlier `0.x` releases | ❌ — upgrade to the latest minor |
+| Latest released `0.x` minor | Yes |
+| Earlier `0.x` releases | No. Upgrade to the latest minor. |
 
-Until `1.0.0` (the public-stability and open-source commitment per [ADR-011](https://lightine.youtrack.cloud/articles/TES-A-41)), only the latest minor in the `0.x` line receives backports. After `1.0.0`, a longer-support policy will be established and documented here.
+Until `1.0.0`, only the latest minor in the `0.x` line receives fixes. After `1.0.0`, a longer-support policy will be set and documented here.
 
 ## Reporting a Vulnerability
 
-**Please do not open public issues for security reports.**
+**Do not open a public issue for a security report.**
 
-Use one of the following private channels:
-
-1. **Preferred: GitHub's "Report a vulnerability" feature.** Go to the [repository Security tab](https://github.com/lightine-io/tessera/security) → *Advisories* → *Report a vulnerability*. This opens a private security advisory visible only to the project maintainer.
-2. **Alternative: email** asker.asadov@gmail.com with `[Tessera Security]` in the subject line.
+Use GitHub's private reporting: open the [repository Security tab](https://github.com/lightine-io/tessera/security), choose *Advisories*, then *Report a vulnerability*. This opens a private security advisory that only the maintainer can see.
 
 Include in your report:
 
 - A description of the vulnerability
 - Steps to reproduce (or a minimal reproducing example)
-- Affected version(s) — release tag, branch, or commit SHA
-- Your assessment of impact (data exposure, integrity, availability, etc.)
-- Whether the issue is already public (e.g., disclosed in a CVE, published elsewhere) or known privately to others
+- Affected version(s): release tag, branch, or commit SHA
+- Your assessment of impact (data exposure, integrity, availability, and so on)
+- Whether the issue is already public (for example disclosed in a CVE or published elsewhere) or known privately to others
 
 ## Response Timeline
 
@@ -41,7 +38,7 @@ These are targets, not guarantees. Tessera is a small project and timelines depe
 
 ## Scope
 
-Tessera is a pure-logic SDK for MRZ (parsing, generation, validation), the data model, error taxonomy, lookup tables, transliteration profiles, and the telemetry contract. Its core does no I/O. As of `0.2.0`, the optional camera-reading modules (`mrz-camera-*`) perform **camera input only** — reading frames in memory to locate and OCR the MRZ, releasing them promptly — and still make no network calls, write no files, and store nothing. The SDK never phones home.
+Tessera reads and checks MRZ text: parsing, generation, validation, the data model, error taxonomy, lookup tables, transliteration profiles, and the telemetry contract. The core modules do no I/O. The camera modules (`mrz-camera-*`) read camera frames and saved images in memory to locate and read the MRZ, and the Android UI module adds the scanner screens and a system photo picker. The source holds no network code, writes no files, and stores nothing. The SDK never phones home.
 
 Reports concerning the following are in scope:
 
@@ -49,17 +46,17 @@ Reports concerning the following are in scope:
 - Crashes or denial-of-service on malformed input
 - Information leakage through error messages or logging
 - Dependencies with known vulnerabilities that materially affect the SDK
-- Cryptographic concerns (when chip verification ships in `0.6.0`)
+- Cryptographic concerns, once NFC chip reading ships (BAC, PACE)
 
 Out of scope:
 
 - Issues caused by consumer code misusing the SDK
 - Issues in dependencies that do not affect the SDK's behavior
-- General code-quality concerns without a security angle (please open a regular issue or PR)
+- General code-quality concerns without a security angle (open a regular issue or PR)
 
 ## Dependency Vulnerabilities
 
-The full transitive dependency graph is submitted to GitHub on every merge to `main`, so Dependabot alerts cover everything the published artifacts pull in. Alerts are reviewed by reachability: a vulnerability in a shipped dependency is fixed, while one in a build-only or test-only dependency can be dismissed, and every dismissal carries a recorded reason. The release gate blocks a tag while any alert is untriaged. There is no PR-time dependency gate: it was removed in 2026-10 because GitHub's snapshot-visibility lag had turned it into a silent pass. Consumers only receive released artifacts, so a dependency sitting on `main` between merge and triage never reaches them.
+The full transitive dependency graph is submitted to GitHub on every merge to `main`, so Dependabot alerts cover everything the published artifacts pull in. Alerts are reviewed by reachability: a vulnerability in a shipped dependency is fixed, while one in a build-only or test-only dependency can be dismissed, and every dismissal carries a recorded reason. Before each release tag the maintainer lists the open alerts and triages every one (a release checklist step, not a CI job). There is no PR-time dependency gate: it was removed in 2026-10 because GitHub's snapshot-visibility lag had turned it into a silent pass. Consumers only receive released artifacts, so a dependency sitting on `main` between merge and triage never reaches them.
 
 ## Acknowledgements
 

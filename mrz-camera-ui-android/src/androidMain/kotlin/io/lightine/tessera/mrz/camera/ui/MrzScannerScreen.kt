@@ -112,38 +112,21 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * The default Android MRZ scanner screen — the single public entry point of this module. Drop it into a
- * host app to get an out-of-the-box scanning UI (live camera, saved image, and manual entry, per
- * [config]) without building one; consumers who want their own UI use the headless reading APIs directly
- * and never depend on this module.
+ * Shows the default Android MRZ scanner and reports the outcome through [onResult].
  *
- * The screen owns the whole reading flow internally and reports back exactly once through [onResult] —
- * either a [`Confirmed`][MrzScannerResult.Confirmed] reading the user accepted or
- * [`Cancelled`][MrzScannerResult.Cancelled]. It adds no trust judgement of its own: a reading confirmed
- * here is the SDK's verbatim verdict (Principle 1).
+ * Offers the reading methods in [MrzScannerConfig.enabledMethods]. Reports
+ * [MrzScannerResult.Confirmed] when the user accepts a reading (or at once under
+ * [ReviewMode.INSTANT_RETURN]), otherwise [MrzScannerResult.Cancelled]. It never requests the
+ * `CAMERA` permission; it calls [MrzScannerConfig.onRequestPermission]. Override its text by
+ * defining the same `tessera_scanner_*` string keys in your app. The keys
+ * `tessera_scanner_grant_permission` and `tessera_scanner_permission_rationale` are in the module
+ * but never read, so overriding them changes nothing.
  *
- * **Slice status:** all three reading methods are wired end to end and tied together by a shared navigation
- * scaffold (a top bar whose ✕ cancels from every screen, plus a Camera / Photo / Type method switcher on the
- * capture & entry screens — TES-71). The live-camera path routes a decoded MRZ to a review screen (parsed
- * fields + honest observations) the user accepts or rescans, a parse failure to a "couldn't read" screen,
- * [`INSTANT_RETURN`][ReviewMode.INSTANT_RETURN] returns a decode with no review step, a long spell with no
- * read overlays a neutral "still looking / type it instead" hint, and the two camera-status conditions
- * (another app holds the camera — recoverable; the camera can't start — terminal) each show a notice with a
- * manual-entry escape. Manual raw-MRZ entry and saved-image (photo) reading are wired. The flow's start
- * screen derives from [`enabledMethods`][MrzScannerConfig.enabledMethods]. The signature (one config in, one
- * result out) is the shape that freezes at the 0.5.0 tag.
+ * The screen sends `mrz.camera.frame` events to the sink registered in `TelemetrySinkRegistry`; the
+ * default sink drops them.
  *
- * **Localization / rebranding.** All user-facing copy is drawn from this module's overridable `tessera_*`
- * string resources: a consumer app translates or rebrands any label by defining a string with the same key
- * in its own resources (Android's resource merge prefers the app's value — no API involved). The key set
- * is a frozen part of the public contract; see `res/values/strings.xml`.
- *
- * **Permission boundary.** The screen never requests the `CAMERA` permission itself; it *reads* whether
- * the permission is held and, when it is not, hands the request to the host through
- * [config.onRequestPermission][MrzScannerConfig.onRequestPermission] (`scope.md` "permission boundary").
- *
- * @param config appearance and permission-handoff options; see [MrzScannerConfig].
- * @param onResult called once when the flow ends, with the user's terminal decision.
+ * @param config Options for the screen; see [MrzScannerConfig].
+ * @param onResult Receives the outcome when the flow ends.
  */
 @Composable
 public fun MrzScannerScreen(

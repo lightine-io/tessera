@@ -3,17 +3,17 @@ package io.lightine.tessera.types.errors
 import kotlinx.datetime.LocalDate
 
 /**
- * Warning: every century candidate the SDK could pick for the birth date implies an age
- * greater than [thresholdYears] relative to [referenceDate]. Carries the raw date
- * components verbatim so consumers can render them as the document presents them.
+ * Warning: no century puts the birth date in the past within [thresholdYears] of [referenceDate].
  *
- * Emitted by [`MrzValidator`][io.lightine.tessera.mrz.validation.MrzValidator] when the
- * birth date's century could not be inferred (because both 1900 and 2000-base years would
- * imply ages > [thresholdYears]). The threshold is currently 130 years — outside the
- * known range of human lifespans, but inside the range of recoverable transcription errors.
+ * Reported when the year, month, and day form a real date but every century candidate is
+ * either in the future or older than [thresholdYears] (130) at the reference date.
  *
- * A warning rather than a validation failure because the SDK does not commit to "this
- * document is invalid" based on age plausibility alone (Principle 1 — reader, not oracle).
+ * @property rawYear The two year digits as printed.
+ * @property rawMonth The two month digits as printed.
+ * @property rawDay The two day digits as printed.
+ * @property referenceDate The UTC date the age was measured against.
+ * @property thresholdYears The age limit that was exceeded, in years.
+ * @since 0.1.0
  */
 public data class MrzBirthDateImplausiblyOld(
     val rawYear: String,
@@ -22,6 +22,7 @@ public data class MrzBirthDateImplausiblyOld(
     val referenceDate: LocalDate,
     val thresholdYears: Int,
 ) : MrzWarning() {
+    /** English text for logs: the raw date parts, the age limit, and the reference date. */
     override val description: String
         get() =
             "Document birth date components (year='$rawYear', month='$rawMonth', day='$rawDay') " +

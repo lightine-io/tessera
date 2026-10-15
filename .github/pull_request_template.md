@@ -1,60 +1,27 @@
-## Summary
+## What and why
 
-<!-- 1-3 sentences describing what this PR does and why. Reviewers read this first. -->
-
-## Documentation Impact
-
-<!--
-List every doc this PR touches or should have touched. If a doc was updated, name it.
-If a commitment in a doc is now implemented, name the doc + the commitment.
-If this PR introduces a new "deliberate gap" (intentionally incomplete behavior), say so
-and link to where it's tracked (the project's issue tracker entry, file-level comment, locked test).
-
-Examples:
-- Updated `docs/features/mrz-data-model.md` to clarify `documentType` trimming rule.
-- Implements `MrzCheckDigitMismatch` per `docs/features/mrz-error-taxonomy.md`.
-- Deferred: name field truncation detection (tracked in handoff watch items).
--->
+<!-- One to three sentences. Link the issue: TES-n or #n. -->
 
 ## Tests
 
-<!--
-- New tests added: <count + categories (unit / property / integration)>
-- Tests modified: <list>
-- Total project test count after this PR: <number>
-- Any flakiness or environment dependencies: <list>
--->
-
-## Open Questions Touched
-
-<!--
-Items in the project's issue tracker that this PR resolves, modifies, or adds.
-- Resolved: <entry>
-- Added: <entry>
-- Modified: <entry>
--->
+<!-- What you added or changed. "None" needs a reason. -->
 
 ## Changelog
 
-<!--
-Confirm `CHANGELOG.md` `[Unreleased]` section is updated to reflect this PR's changes,
-grouped Added / Changed / Deprecated / Removed / Fixed / Security per Keep a Changelog.
-For non-trivial PRs this is required (per `docs/versioning.md` and CLAUDE.md).
+- [ ] `CHANGELOG.md` entry under `[Unreleased]`, or the `no-changelog` label because nothing ships (say why here). CI checks for one or the other; the label also moves the board issue to Done at merge.
 
-Trivial/infra PRs skip the changelog by applying the `no-changelog` LABEL (with a one-line
-justification below). The CI check `changelog · entry present` honors that label and NOTHING
-else — a "N/A" note in this body alone will NOT make it pass, the check will go red. So: touch
-CHANGELOG.md, or apply the label. One or the other, every PR.
--->
+## Feature documentation
 
-- [ ] CHANGELOG.md `[Unreleased]` updated — **or** apply the `no-changelog` label (CI checks the label, not a body note) and justify in one line: <!-- why -->
+<!-- Delete this section when the PR adds or changes no public API or capability.
+     Public pages live in the public KB, not in this repo: link the draft pages here and
+     the maintainer publishes them at the release. Where each piece goes:
+     .claude/rules/documentation.md. Not applicable? Say why. -->
 
-
-## Verification
-
-<!-- Quick sanity checklist before requesting review. -->
-
-- [ ] `./gradlew build` passes locally
-- [ ] `bash scripts/check-cross-references.sh` reports all cross-references resolve
-- [ ] No private content in the diff (per memory `feedback_private_content_scan.md`)
-- [ ] Branch name follows convention (`feature/...`, `fix/...`, `docs/...`)
+- [ ] Capability matrix (public KB page): row added or updated
+- [ ] One how-to page (public KB) per platform marked ✓ in that row
+- [ ] Code docs on every new public declaration
+- [ ] Every code block on those pages: each symbol checked against the source, and the files listed in the page's `sources:` header (until the `:samples` module exists)
+- [ ] `llms.txt` (repo root): one line per new tutorial or how-to page; link text is the page title, link is its KB article URL
+- [ ] Explanation page (public KB), if this PR made a decision a user should understand (plus an ADR in the internal KB if it binds future work)
+- [ ] CHANGELOG line (above)
+- [ ] API reference: nothing by hand; it is the Dokka javadoc jar that `publish · smoke` builds from the code docs (there are no per-type pages)

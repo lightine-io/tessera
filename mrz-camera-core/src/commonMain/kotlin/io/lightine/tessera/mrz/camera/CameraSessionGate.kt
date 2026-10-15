@@ -4,39 +4,26 @@ import kotlinx.coroutines.Job
 import kotlin.concurrent.Volatile
 
 /**
- * Tracks the single in-flight camera-session [Job] behind a [MrzCameraScanner], so the scanner's
- * start/stop contract holds even when the session ends on its own. It is a small building block for
- * the analyse-frame layer: the bundled [CameraXMrzScanner]/[AVCaptureMrzScanner] use it, and a consumer
- * driving [MrzFrameAnalyzer.scan] as their own owns-session scanner can reuse the same bookkeeping.
+ * Tracks the one running camera-session [Job] of a [MrzCameraScanner].
  *
- * **The bug this prevents.** A scanner that nulls its job field only in `stop()` stays "running"
- * forever after the session ends by itself — e.g. a *critical* `CaptureError` ends the camera
- * session without anyone calling `stop()` (the results flow stays open). A later `start()` then sees
- * a non-null job and no-ops, silently breaking the documented prompt-and-retry path
- * (`PermissionDenied` → prompt → `start()`).
- * This gate clears the job when the session completes for ANY reason — cancellation via [stop] or
- * natural completion — so [start] works again afterward.
+ * The gate clears the job when the session ends for any reason, cancelled by [stop] or finished on
+ * its own, so [start] works again. [start] and [stop] are not thread-safe: call them from one
+ * lifecycle thread.
  *
- * **Threading.** [start] and [stop] are not thread-safe by themselves; call them from a single
- * lifecycle thread (the contract on [MrzCameraScanner]). The completion handler, however, runs on an
- * arbitrary thread — [Job.invokeOnCompletion] gives no dispatcher guarantee — so the tracked job is
- * `@Volatile` for cross-thread visibility (notably on Kotlin/Native, where the iOS scanner completes
- * on `Dispatchers.Default` while lifecycle calls are main-thread), and the handler clears the field
- * only when it still refers to the job it was registered for. That identity guard means a completing
- * *old* session can never clear a freshly [start]ed *new* one.
+ * @since 0.2.0
  */
 public class CameraSessionGate {
     @Volatile
     private var job: Job? = null
 
-    /** True while a session is running. */
+    /** `true` while a session is running. */
     public val isRunning: Boolean
         get() = job != null
 
     /**
-     * Starts a session via [launch] when idle; a no-op while one is already running. The launched
-     * [Job] is tracked and auto-cleared on completion, so a later [start] after the session ends —
-     * cancelled via [stop] or completed on its own — begins a fresh session.
+     * Starts a session with [launch] when idle; does nothing while one is running.
+     *
+     * @param launch starts the session and returns its [Job].
      */
     public fun start(launch: () -> Job) {
         if (job != null) return
@@ -45,7 +32,7 @@ public class CameraSessionGate {
         started.invokeOnCompletion { if (job === started) job = null }
     }
 
-    /** Cancels the running session, if any, and clears the gate. Idempotent. */
+    /** Cancels the running session, if any. Does nothing when idle. */
     public fun stop() {
         job?.cancel()
         job = null

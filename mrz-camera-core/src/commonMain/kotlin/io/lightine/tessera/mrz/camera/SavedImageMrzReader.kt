@@ -6,44 +6,29 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 /**
- * Reads an MRZ from a single **saved image** — the headless convenience for pre-captured image reading,
- * the saved-image sibling of the live-camera [MrzCameraScanner]
- * ([ADR-023](https://lightine.youtrack.cloud/articles/TES-A-63)). Built on the analyse-frame core: a still
- * image is one frame with no next frame to retry, so this wraps a [MrzFrameAnalyzer] configured with
- * [FrameProvenance.PRE_CAPTURED_IMAGE]. The consumer never sets provenance and so cannot mis-stamp the read
- * method, and a saved-image MRZ validates identically to a camera-sourced one (same parser, same result).
+ * Reads an MRZ from one saved image.
  *
- * **Opt-in, disabled by default.** Construction REQUIRES a [SavedImageReadingAcknowledgement] with no
- * default — saved images carry more risk than a live capture
- * ([reading-risks](https://lightine.youtrack.cloud/articles/TES-A-11)). Passing it is the consumer's explicit
- * acknowledgement; it confers no SDK judgement about the image (Principle 1).
+ * Saved-image reading is off unless you pass a [SavedImageReadingAcknowledgement]. Results carry
+ * the reading method `PRE_CAPTURED_IMAGE`. The reader wraps a [MrzFrameAnalyzer], so parsing and
+ * validation match a camera read. Close the reader to release the recognizer.
  *
- * **Tolerant disambiguation ([tolerant]).** Orthogonal to [mode] (strict/lenient line detection): when on,
- * each read additionally enumerates how the recognized MRZ's ambiguous glyphs could be resolved and surfaces
- * every distinct, parseable reconstruction on [SavedImageScanResult.candidates] — never picking one (see
- * [MrzCandidate]). Off by default.
- *
- * **Capture metadata ([metadataReader] + [metadataPolicy]).** When a [metadataReader] is supplied and
- * [metadataPolicy] is not [CaptureMetadataPolicy.NONE], each read also returns the image's EXIF on
- * [SavedImageScanResult.captureMetadata]. [metadataPolicy] is the opt-in-within-opt-in gate for GPS PII —
- * the policy is forwarded to the reader, which suppresses GPS at read time under
- * [CaptureMetadataPolicy.EXCLUDING_LOCATION] (see [CaptureMetadata]). Off by default.
- *
- * @param F the saved-image input type — the platform file reference recognized by [recognizer]
- *   (e.g. `android.net.Uri` on Android, `NSURL` on iOS); obtain the recognizer from its gated platform factory.
- * @param acknowledgement the required saved-image-reading acknowledgement (the opt-in gate; no default).
- * @param recognizer the OCR seam for saved images.
- * @param mode lenient (default) or strict line detection, forwarded to the analyse-frame core. **Lenient by
- *   default** because saved images are OCR'd by ML Kit, which routinely injects spaces into MRZ lines
- *   (device-observed): lenient strips all whitespace before shape-matching so a real photo's MRZ band is still
- *   detected, where strict would fail its fixed line width and read nothing. Whitespace is never meaningful in
- *   an MRZ. Pass [`STRICT`][ParsingMode.STRICT] only for already-clean input.
- * @param tolerant when `true`, also surface candidate disambiguations on the result (default `false`).
- * @param metadataReader the EXIF-reading seam; when `null` no capture metadata is read (default).
- * @param metadataPolicy how much capture metadata to read; [CaptureMetadataPolicy.NONE] (default) reads none.
- * @param telemetry where per-read [CameraFrameEvent]s go; defaults to the application's registered sink
- *   ([TelemetrySinkRegistry.current][TelemetrySinkRegistry]). Pass an explicit sink to override.
- * @param referenceTimeProvider supplies the reference instant for date-window parsing; override in tests.
+ * @param F the saved-image input type that [recognizer] reads, for example `android.net.Uri` or
+ *   `NSURL`.
+ * @param acknowledgement the required acknowledgement. It has no default.
+ * @param recognizer the OCR engine for saved images.
+ * @param mode how tolerant line detection is of OCR formatting noise. The default is
+ *   [ParsingMode.LENIENT], because saved-image OCR can put stray spaces in an MRZ line and
+ *   [ParsingMode.STRICT] then reports no MRZ.
+ * @param tolerant when `true`, [SavedImageScanResult.candidates] lists the reconstructions of
+ *   ambiguous characters (see [MrzCandidate]). The default is `false`.
+ * @param metadataReader reads the capture metadata. When `null`, none is read. The default is `null`.
+ * @param metadataPolicy how much capture metadata to read. The default is
+ *   [CaptureMetadataPolicy.NONE].
+ * @param telemetry where per-read [CameraFrameEvent]s go. The default is the registered sink
+ *   ([TelemetrySinkRegistry.current][TelemetrySinkRegistry]).
+ * @param referenceTimeProvider supplies the reference instant for date parsing. The default is the
+ *   system clock.
+ * @since 0.3.0
  */
 public class SavedImageMrzReader<F>(
     acknowledgement: SavedImageReadingAcknowledgement,
@@ -72,13 +57,17 @@ public class SavedImageMrzReader<F>(
         )
 
     /**
-     * Reads [image] once and returns the result. [SavedImageScanResult.scan] is the primary read; if
-     * [tolerant] is on, [SavedImageScanResult.candidates] also carries the surfaced disambiguations, and if a
-     * [metadataReader] is configured with a non-`NONE` [metadataPolicy], [SavedImageScanResult.captureMetadata]
-     * carries the image's EXIF. Never throws for OCR or parse problems — a failed OCR step becomes a
-     * [`CaptureError`][MrzScanResult.CaptureError], an unparseable candidate a [`Decoded`][MrzScanResult.Decoded]
-     * carrying the parser's failure, and an image with no MRZ a [`NoMrzFound`][MrzScanResult.NoMrzFound], all
-     * on [SavedImageScanResult.scan]. Coroutine cancellation still propagates.
+     * Reads [image] once and returns the result.
+     *
+     * [SavedImageScanResult.candidates] is filled only when [tolerant] is on.
+     * [SavedImageScanResult.captureMetadata] is filled only when a metadata reader is set and the
+     * policy is not [CaptureMetadataPolicy.NONE]. An OCR failure is a [MrzScanResult.CaptureError],
+     * an unparseable candidate is a [MrzScanResult.Decoded] holding the parser's failure, and an
+     * image with no MRZ is a [MrzScanResult.NoMrzFound]; none of these throw. Coroutine
+     * cancellation propagates, and so does an exception from the [CaptureMetadataReader].
+     *
+     * @param image the saved image to read.
+     * @return the scan outcome with any candidates and capture metadata.
      */
     public suspend fun read(image: F): SavedImageScanResult {
         val scan = analyzer.analyse(image)
@@ -100,7 +89,7 @@ public class SavedImageMrzReader<F>(
         return TolerantMrzMatcher(mode, referenceTimeProvider).candidates(recognizedText)
     }
 
-    /** Releases the OCR recognizer if it holds closeable resources (e.g. the bundled ML Kit recognizer). */
+    /** Closes the recognizer if it is [AutoCloseable]. */
     override fun close() {
         ownedRecognizer?.close()
     }

@@ -1,27 +1,26 @@
 package io.lightine.tessera.types.vocabulary
 
 /**
- * Coarse classification of a document, derived from its MRZ document type code. Exposed on
- * [`DocumentType.category`][io.lightine.tessera.mrz.recognition.DocumentType.category] (an exact
- * [`DocumentTypeCodeTable`][io.lightine.tessera.mrz.recognition.DocumentTypeCodeTable] match) and on
- * [`DocumentType.broadCategory`][io.lightine.tessera.mrz.recognition.DocumentType.broadCategory] (the
- * same lookup, widened with an ICAO reserved-leading-character fallback for codes the table does not
- * enumerate exactly).
+ * A coarse class of document, derived from the MRZ document type code.
  *
- * [`DocumentType.category`][io.lightine.tessera.mrz.recognition.DocumentType.category] returns `null`
- * when the document's raw type code is not in the SDK's lookup table — a deliberate starter set, not an
- * exhaustive enumeration of every code in use worldwide. See [OTHER] for documents whose code IS
- * recognized but whose category is none of the specific ones below.
+ * `DocumentType.category` is `null` when the code is not in the SDK's table.
+ * `DocumentType.broadCategory` also uses the first character of the code.
+ *
+ * @since 0.1.0
  */
 public enum class DocumentCategory {
+    /** A passport. */
     PASSPORT,
+
+    /** An identity card. */
     IDENTITY_CARD,
+
+    /** A residence permit. */
     RESIDENCE_PERMIT,
+
+    /** A visa. */
     VISA,
 
-    /**
-     * The document type is recognized in the lookup table but does not fit any of the
-     * other categories.
-     */
+    /** A recognized document type that fits none of the other categories. */
     OTHER,
 }

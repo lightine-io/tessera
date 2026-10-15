@@ -1,15 +1,11 @@
 # Tessera CODEOWNERS
 #
-# This file maps paths to the user(s) GitHub should request review from on
-# pull requests. Paired with the `main` branch protection rule "Require review
-# from Code Owners," only the listed owners' approvals satisfy the
-# required-approval gate.
+# Maps paths to the people GitHub asks for review on pull requests. Code-owner review is
+# not required today (branch protection: 0 approvals, code-owner review off), so this file
+# only routes review requests. Turn on "Require review from Code Owners" when a second
+# maintainer joins.
 #
-# Pattern matching follows the same rules as .gitignore. Later entries take
-# precedence over earlier ones.
-#
-# See:
-# https://docs.github.com/articles/about-code-owners
+# Pattern matching follows .gitignore rules; later entries win.
+# See https://docs.github.com/articles/about-code-owners
 
-# Default owner for everything in the repo
 * @askerasadov

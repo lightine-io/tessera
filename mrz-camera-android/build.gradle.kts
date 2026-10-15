@@ -71,7 +71,7 @@ kotlin {
                 // ML Kit text-recognition is the bundled-model variant — the Latin recognition model
                 // ships in the app, so OCR needs no runtime model download or network. (It still pulls
                 // the Play Services ML Kit libraries and Google's datatransport stack transitively; the
-                // SDK initializes none of it — see docs/reading-risks.md for that dependency surface.)
+                // SDK initializes none of it - see the KB page "What each reading method proves" for that dependency surface.)
                 implementation(libs.mlkit.text.recognition)
                 // camera-lifecycle supplies ProcessCameraProvider + bindToLifecycle for the owns-session
                 // scanner; coroutines-android supplies Dispatchers.Main (CameraX binds on the main thread).
@@ -96,7 +96,7 @@ kotlin {
 // --- ML Kit bundled-model guard (the project's issue tracker "CI and repository hardening", item 6) ---
 // ML Kit text-recognition must stay the BUNDLED model: the recognition model ships inside the app, so
 // OCR is fully offline with no Play Services model download — the privacy/offline posture a document
-// SDK needs (see the androidMain dependency comment above and docs/reading-risks.md).
+// SDK needs (see the androidMain dependency comment above).
 //
 // The discriminator is NOT the absence of the Play Services recognizer
 // (com.google.android.gms:play-services-mlkit-text-recognition): that is a TRANSITIVE dependency of the

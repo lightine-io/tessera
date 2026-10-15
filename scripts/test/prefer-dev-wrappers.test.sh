@@ -2,17 +2,17 @@
 # Regression tests for scripts/prefer-dev-wrappers.sh.
 #
 # Each case feeds a PreToolUse-shaped payload through the hook and asserts the
-# exit code: 0 = allowed, 2 = blocked. Run directly:
+# exit code: 0 = allowed, 2 = blocked. Run:
 #
-#   scripts/test-prefer-dev-wrappers.sh
+#   bash scripts/test/prefer-dev-wrappers.test.sh
 #
 # Exit 0 when every case passes; exit 1 with a per-case report otherwise.
-# The cases marked "regression" reproduce real incidents — keep them forever.
+# The cases marked "regression" reproduce real incidents - keep them forever.
 
 set -u
 
-HOOK="$(cd "$(dirname "$0")" && pwd)/prefer-dev-wrappers.sh"
-[ -x "$HOOK" ] || { echo "hook not found/executable: $HOOK"; exit 1; }
+HOOK="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../prefer-dev-wrappers.sh"
+[ -f "$HOOK" ] || { echo "hook not found: $HOOK"; exit 1; }
 
 pass=0
 fail=0
@@ -20,8 +20,8 @@ fail=0
 check() {
     # check <expected-exit: allow|block> <label> <command>
     local expect="$1" label="$2" cmd="$3" got rc
-    printf '{"tool_input":{"command":%s}}' "$(printf '%s' "$cmd" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')" \
-        | "$HOOK" >/dev/null 2>&1
+    printf '{"tool_input":{"command":%s}}' "$(printf '%s' "$cmd" | python3 -I -c 'import json,sys; print(json.dumps(sys.stdin.read()))')" \
+        | bash "$HOOK" >/dev/null 2>&1
     rc=$?
     case "$expect" in
         allow) [ "$rc" -eq 0 ] && got=ok || got=FAIL ;;
@@ -69,9 +69,9 @@ check block "raw-ok inside grep pattern does not disarm a real invocation" \
 
 # --- mentions in argument text are not invocations ------------------------------
 check allow "BRE alternation in grep pattern (regression 2026-07-11: false positive)" \
-    'grep -n -i "raw vendor\|raw tool\|sdkmanager\|xcodebuild\|simctl" .claude/known-pitfalls.md'
+    'grep -n -i "raw vendor\|raw tool\|sdkmanager\|xcodebuild\|simctl" .claude/rules/platform-work.md'
 check allow "ERE alternation in grep pattern" \
-    'grep -En "sdkmanager|avdmanager|emulator" docs/notes.md'
+    'grep -En "sdkmanager|avdmanager|emulator" notes/notes.txt'
 check allow "tool named in prose/PR body" \
     'gh pr create --body "replaces raw sdkmanager usage with the android cli"'
 check allow "tool named after semicolon in prose" \
@@ -81,7 +81,7 @@ check allow "grep FOR raw-ok in handoffs (no raw invocation at all)" \
 
 # --- documented accepted misses (nudge tradeoffs, not defects): keep visible ----
 # `cd x; sdkmanager` and `cmd| sdkmanager` are known misses; if a future edit
-# turns them into blocks, that is fine — flip the expectations consciously.
+# turns them into blocks, that is fine - flip the expectations consciously.
 check allow "known miss: semicolon separator" 'cd /tmp; sdkmanager --list'
 check allow "known miss: pipe with no space before" 'echo x| sdkmanager --list'
 

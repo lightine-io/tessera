@@ -3,25 +3,21 @@ package io.lightine.tessera.types.errors
 import io.lightine.tessera.types.vocabulary.MrzField
 
 /**
- * Warning: the document's [rawCode] (in either the issuing-state or nationality position,
- * disambiguated by [field]) is not present in
- * [`CountryCodeTable`][io.lightine.tessera.mrz.recognition.CountryCodeTable].
+ * Warning: an issuing state or nationality code is not in the SDK's country code table.
  *
- * Emitted by [`MrzValidator`][io.lightine.tessera.mrz.validation.MrzValidator]. The SDK's
- * country code table is deliberately a starter set — see
- * [`docs/features/lookup-tables.md`](https://lightine.youtrack.cloud/articles/TES-A-22);
- * tracked in the project's issue tracker. A warning rather than a validation failure per
- * [ADR-013](https://lightine.youtrack.cloud/articles/TES-A-44):
- * "this code isn't in our table" is not the same as "this code is invalid."
+ * Reported by the validator. A code missing from the table is not necessarily an invalid code.
  *
- * Strict consumers who want to treat unrecognized codes as disqualifying check
- * `warnings.isEmpty()` together with `validationFailures.isEmpty()`.
+ * @property field The field that holds the code, `ISSUING_STATE` or `NATIONALITY`.
+ * @property rawCode The three-character code as printed.
+ * @property position Zero-based index of the first code character across the lines joined with no separator.
+ * @since 0.1.0
  */
 public data class MrzUnknownCountryCode(
     val field: MrzField,
     val rawCode: String,
     val position: Int,
 ) : MrzWarning() {
+    /** English text for logs: the field, the code, and the position. */
     override val description: String
         get() = "Country code '$rawCode' for ${this.field} at position $position is not in the SDK's recognized lookup tables"
 }

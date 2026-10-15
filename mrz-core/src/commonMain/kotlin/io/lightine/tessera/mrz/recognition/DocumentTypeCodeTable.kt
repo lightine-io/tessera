@@ -3,29 +3,13 @@ package io.lightine.tessera.mrz.recognition
 import io.lightine.tessera.types.vocabulary.DocumentCategory
 
 /**
- * The SDK's recognized document type codes for MRZ document type fields.
+ * The document type codes the SDK recognizes: `P`, `V`, `I`, `AC`, and the two-character `P` codes.
  *
- * Includes the legacy single-character codes (`P`, `V`, `I`) and the current
- * two-character `P`-prefix codes per ICAO Doc 9303 Part 4 §4.4 ("Document Codes"),
- * plus the `AC` Crew Member Certificate code per Part 5 Appendix B for TD1 documents.
+ * The table holds `PP`, `PE`, `PD`, `PO`, `PR`, `PT`, `PS`, `PL`, and `PM`. It does not list
+ * issuer-specific TD1 and TD2 codes such as `IA`. The validator reports a code that is not in the
+ * table as an `MrzUnknownDocumentTypeCode` warning.
  *
- * Part 4 §4.4 specifies that **as of 1 January 2026, MRPs issued with a secondary
- * document code shall use the codes listed below**; from 1 January 2028 all MRPs
- * shall do so. This table covers every secondary code Part 4 §4.4 names.
- *
- * **Deliberate starter set on the non-`P` side.** TD1 / TD2 document codes per Parts
- * 5 / 6 are required to start with `A`, `C`, or `I` with the second character left to
- * the issuing state's discretion. This table ships only the unambiguously-defined
- * codes (`I`, `AC`) on that side; state-specific second characters are not
- * enumerable. Adding entries is a non-breaking change. See
- * [`docs/features/lookup-tables.md`](https://lightine.youtrack.cloud/articles/TES-A-22)
- * for the design and the project's issue tracker for tracking ("Document type code table
- * completeness").
- *
- * Codes not present in this table surface as
- * [`MrzUnknownDocumentTypeCode`][io.lightine.tessera.types.errors.MrzUnknownDocumentTypeCode]
- * warnings rather than validation failures, per
- * [ADR-013](https://lightine.youtrack.cloud/articles/TES-A-44).
+ * @since 0.1.0
  */
 public object DocumentTypeCodeTable {
     private val entries: List<DocumentTypeCodeEntry> =
@@ -118,12 +102,22 @@ public object DocumentTypeCodeTable {
 
     private val byCode: Map<String, DocumentTypeCodeEntry> = entries.associateBy { it.code }
 
-    /** Returns the entry for [code], or `null` if the code is not in the table. */
+    /**
+     * Returns the entry for a code.
+     *
+     * @param code The code to look up. The match is exact and case-sensitive.
+     * @return The entry, or `null` if the table has none.
+     */
     public fun lookup(code: String): DocumentTypeCodeEntry? = byCode[code]
 
-    /** Returns every entry currently in the table, in registration order. */
+    /** Returns every entry in the table, in table order. */
     public fun all(): List<DocumentTypeCodeEntry> = entries
 
-    /** Returns every entry in the table whose category matches [category]. */
+    /**
+     * Returns the entries of one category.
+     *
+     * @param category The category to select.
+     * @return The matching entries, in table order.
+     */
     public fun byCategory(category: DocumentCategory): List<DocumentTypeCodeEntry> = entries.filter { it.category == category }
 }
