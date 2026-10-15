@@ -17,7 +17,6 @@ Never trust a write's success reply: read the issue back. There is no local toke
 1. **Fields.** Run each query with the connector's `search_issues`. Each should return nothing.
    - `project: TES has: -Type`, `has: -Stage`, `has: -Area`, `has: -Platform`
    - `project: TES Stage: -Done has: -Release` (open issues need a release)
-   - `project: TES Stage: Done Effort: S, M, L` (effort is for open issues only)
    A query that returns nothing is suspect: run one positive control, such as
    `project: TES Area: UI`, and confirm it returns issues.
 2. **Outcome blocks.** `project: TES Stage: Done updated: {minus 14d} .. *`. For each, read it
