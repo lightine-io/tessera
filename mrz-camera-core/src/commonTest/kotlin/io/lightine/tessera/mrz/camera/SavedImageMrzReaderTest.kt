@@ -2,6 +2,8 @@ package io.lightine.tessera.mrz.camera
 
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.telemetry.NoOpTelemetrySink
+import io.lightine.tessera.telemetry.TelemetryEvent
+import io.lightine.tessera.telemetry.TelemetrySink
 import io.lightine.tessera.types.vocabulary.ReadMethod
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -54,6 +56,7 @@ class SavedImageMrzReaderTest {
         tolerant: Boolean = false,
         metadataReader: CaptureMetadataReader<FakeImage>? = null,
         metadataPolicy: CaptureMetadataPolicy = CaptureMetadataPolicy.NONE,
+        telemetry: TelemetrySink = NoOpTelemetrySink,
     ): SavedImageMrzReader<FakeImage> =
         SavedImageMrzReader(
             acknowledgement = SavedImageReadingAcknowledgement(),
@@ -62,7 +65,7 @@ class SavedImageMrzReaderTest {
             tolerant = tolerant,
             metadataReader = metadataReader,
             metadataPolicy = metadataPolicy,
-            telemetry = NoOpTelemetrySink,
+            telemetry = telemetry,
             referenceTimeProvider = { referenceTime },
         )
 
@@ -266,6 +269,28 @@ class SavedImageMrzReaderTest {
                     .read(FakeImage())
 
             assertNull(result.captureMetadata, "a non-NONE policy with no reader supplied still reads no metadata")
+        }
+
+    @Test
+    fun a_telemetry_sink_that_throws_does_not_reach_the_caller() =
+        runTest {
+            var calls = 0
+            val throwing =
+                object : TelemetrySink {
+                    override fun record(event: TelemetryEvent) {
+                        calls++
+                        throw IllegalStateException("hook boom")
+                    }
+                }
+
+            val read = reader(recognizerReturning(td3Line1, td3Line2), telemetry = throwing).read(FakeImage())
+            val failed = reader(recognizerThrowing(), telemetry = throwing).read(FakeImage())
+
+            val decoded = assertIs<MrzScanResult.Decoded>(read.scan)
+            assertIs<ParseResult.Success>(decoded.parse)
+            val captureError = assertIs<MrzScanResult.CaptureError>(failed.scan)
+            assertIs<CameraError.OcrFailed>(captureError.error, "an OCR failure, not a hook failure")
+            assertEquals(2, calls)
         }
 
     @Test
