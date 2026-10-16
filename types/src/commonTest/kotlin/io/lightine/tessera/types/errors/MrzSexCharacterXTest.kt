@@ -13,11 +13,11 @@ class MrzSexCharacterXTest {
     }
 
     @Test
-    fun description_names_position_and_X_and_VIZ_distinction() {
+    fun description_names_position_and_X_and_visual_zone_distinction() {
         val warning = MrzSexCharacterX(observed = 'X', position = 65)
         assertTrue("65" in warning.description)
         assertTrue("'X'" in warning.description)
-        assertTrue("VIZ" in warning.description)
+        assertTrue("visual zone" in warning.description)
     }
 
     @Test

@@ -17,10 +17,6 @@ public data class MrzSexCharacterX(
     /** English text for logs: the position and the `X` character. */
     override val description: String
         get() =
-            "Sex field at position $position contains 'X' (non-binary / unspecified). " +
-                "ICAO Doc 9303 2021 Eighth Edition lists the canonical MRZ sex characters as " +
-                "'M', 'F', '<' only — 'X' is for the VIZ per the spec's Notes p/f; observed " +
-                "real-world practice uses 'X' in the MRZ for some issuing states. Surfaced as " +
-                "a warning rather than a validation failure so consumers can decide whether " +
-                "to treat the deviation as disqualifying."
+            "Sex field at position $position contains 'X'. " +
+                "ICAO Doc 9303 lists 'M', 'F' and '<' as the MRZ sex characters and 'X' for the visual zone only."
 }
