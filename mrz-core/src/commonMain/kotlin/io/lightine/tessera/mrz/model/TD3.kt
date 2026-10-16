@@ -10,7 +10,8 @@ import io.lightine.tessera.types.vocabulary.MrzFormat
  * @property personalNumber Personal number as printed: line 2, characters 29-42.
  * @property personalNumberCheckDigit Its check digit as printed: line 2, character 43. The
  *   validator reports `<` here, with a personal number present, as a warning and not as a check
- *   digit mismatch.
+ *   digit mismatch. With an all-filler personal number, `<` and `0` are both allowed by ICAO
+ *   Doc 9303 Part 4, and the validator reports nothing for either.
  * @since 0.1.0
  */
 public data class TD3(

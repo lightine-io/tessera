@@ -5,6 +5,8 @@ import io.lightine.tessera.mrz.model.MrzCheckDigits
 import io.lightine.tessera.mrz.model.MrzDate
 import io.lightine.tessera.mrz.model.MrzDateInferenceMethod
 import io.lightine.tessera.mrz.model.TD3
+import io.lightine.tessera.mrz.parsing.MrzParser
+import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.mrz.recognition.CountryCode
 import io.lightine.tessera.mrz.recognition.DocumentType
 import io.lightine.tessera.types.errors.MrzBirthDateImplausiblyOld
@@ -286,6 +288,54 @@ class MrzValidatorTest {
             warning,
             "All-filler personal number should not trigger the deviation warning; got ${result.warnings}",
         )
+    }
+
+    // --- TD3 all-filler personal number: check digit `<` or `0` (TES-173) ---
+    //
+    // ICAO Doc 9303 Part 4 (8th ed., 2021), 4.2.2.2, lower line, position 43: "When the personal
+    // number field is not used and filler characters (<) are used in positions 29 to 42, the
+    // check digit may be zero or the filler character (<) at the option of the issuing State or
+    // organization." Lines below are the ICAO specimen with the personal number emptied and the
+    // composite digit recomputed.
+
+    private val specimen2021Line2Prefix = "L898902C36UTO7408122F1204159<<<<<<<<<<<<<<"
+    private val specimenReference = Instant.parse("2010-01-01T00:00:00Z")
+
+    private fun parseAllFillerSpecimen(checkAndComposite: String): ParseResult =
+        MrzParser.parse(
+            listOf(specimenLine1, specimen2021Line2Prefix + checkAndComposite),
+            referenceTime = specimenReference,
+        )
+
+    @Test
+    fun all_filler_personal_number_with_filler_check_digit_reports_nothing() {
+        val result = parseAllFillerSpecimen("<8")
+        val success = assertIs<ParseResult.Success>(result, "Expected Success; got $result")
+        assertTrue(success.metadata.validationFailures.isEmpty(), "Got ${success.metadata.validationFailures}")
+        assertTrue(success.metadata.warnings.isEmpty(), "Got ${success.metadata.warnings}")
+    }
+
+    @Test
+    fun all_filler_personal_number_with_zero_check_digit_reports_nothing() {
+        val result = parseAllFillerSpecimen("08")
+        val success = assertIs<ParseResult.Success>(result, "Expected Success; got $result")
+        assertTrue(success.metadata.validationFailures.isEmpty(), "Got ${success.metadata.validationFailures}")
+        assertTrue(success.metadata.warnings.isEmpty(), "Got ${success.metadata.warnings}")
+    }
+
+    @Test
+    fun all_filler_personal_number_with_wrong_check_digit_is_still_a_mismatch() {
+        // Composite '3' matches the line with '5' at position 43, so only the personal-number
+        // check digit is wrong.
+        val result = parseAllFillerSpecimen("53")
+        val partial = assertIs<ParseResult.PartialSuccess>(result, "Expected PartialSuccess; got $result")
+        val mismatch = partial.metadata.validationFailures.single()
+        assertIs<MrzCheckDigitMismatch>(mismatch)
+        assertEquals(MrzField.OPTIONAL_DATA, mismatch.field)
+        assertEquals('0', mismatch.expected)
+        assertEquals('5', mismatch.observed)
+        assertEquals(86, mismatch.position)
+        assertTrue(partial.metadata.warnings.none { it is MrzPersonalNumberCheckDigitFiller })
     }
 
     @Test
