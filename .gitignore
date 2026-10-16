@@ -132,3 +132,6 @@ node_modules/
 
 # iOS debug-bridge (idb) artifact directories — tool droppings, never content
 idb-*/
+
+# Claude Code work copies of this repo (git worktrees), never committed
+.claude/worktrees/
