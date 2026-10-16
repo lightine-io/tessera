@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import platform.AVFoundation.AVAuthorizationStatusAuthorized
@@ -63,7 +64,10 @@ import platform.Foundation.NSError
 import platform.Foundation.NSNotification
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSNumber
+import platform.Foundation.NSOperationQueue
 import platform.darwin.NSObject
+import platform.darwin.dispatch_async
+import platform.darwin.dispatch_get_main_queue
 import platform.darwin.dispatch_queue_create
 import kotlin.concurrent.AtomicReference
 import kotlin.concurrent.Volatile
@@ -86,6 +90,12 @@ import kotlin.time.TimeSource
  * the session; the session stays bound and capture resumes when the interruption ends. A
  * [CameraError.OcrFailed] covers one frame. Close the scanner to stop it and release the
  * recognizer.
+ *
+ * Threads: [results] and [previewSession] emit on the main thread, so a completion-handler collector
+ * can update UI directly. A Swift `async` collector runs on Swift's own executor and must still
+ * switch to the main actor before touching UI. Recognition (the [MrzTextRecognizer], parsing) and camera setup run on a background
+ * thread (`Dispatchers.Default`), never on the main thread. The main thread must be free to run
+ * its queue (an app's UI thread always is).
  *
  * @param recognizer the OCR engine. The default is [VisionMrzTextRecognizer]. The scanner closes
  *   a recognizer that is [AutoCloseable] when it is closed.
@@ -118,9 +128,10 @@ public class AVCaptureMrzScanner(
     // untouched.
     private val analysisInterval: Duration = 200.milliseconds
 
-    // Vision recognition is CPU-bound and runs on the collecting coroutine; Dispatchers.Default keeps it
-    // (and AVCaptureSession.startRunning, which can block) off the main thread. The capture delegate runs
-    // on its own serial dispatch queue, created per session below.
+    // Lifecycle scope. The analysis pipeline (Vision recognition, which is CPU-bound, and
+    // AVCaptureSession.startRunning, which can block) runs on Dispatchers.Default via flowOn in start();
+    // only the hand-off onto [results] runs on Dispatchers.Main (TES-200). The capture delegate runs on
+    // its own serial dispatch queue, created per session below.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     // Hot result stream, alive across start/stop. extraBufferCapacity + DROP_OLDEST means a slow collector
@@ -133,9 +144,11 @@ public class AVCaptureMrzScanner(
         )
 
     /**
-     * Results for analysed frames and capture errors. A slow collector misses the oldest pending
-     * results. The scanner calls the recognizer on `Dispatchers.Default`, so a custom
-     * [MrzTextRecognizer] runs there.
+     * Results for analysed frames and capture errors, delivered on the main thread.
+     *
+     * Results arrive on the main thread, in the order the frames were analysed; recognition runs on a
+     * background thread. A slow collector misses the oldest pending results. The scanner calls the
+     * recognizer on `Dispatchers.Default`, so a custom [MrzTextRecognizer] runs there.
      */
     override val results: Flow<MrzScanResult> = mutableResults.asSharedFlow()
 
@@ -156,7 +169,7 @@ public class AVCaptureMrzScanner(
     /**
      * The running [AVCaptureSession] to preview, or `null` when no preview is active.
      *
-     * It is set once the camera runs after [enablePreview] and [start], and returns to `null` when
+     * It changes on the main thread, so its values arrive there. It is set once the camera runs after [enablePreview] and [start], and returns to `null` when
      * the session ends.
      *
      * @since 0.5.0
@@ -189,14 +202,27 @@ public class AVCaptureMrzScanner(
 
     /** Starts the capture session and begins emitting on [results]. */
     override fun start() {
+        startWith(::cameraFrames)
+    }
+
+    // Main-thread delivery (TES-200). A Swift collector of a Kotlin Flow has no dispatcher of its own, so it
+    // runs on whichever thread resumes it: the thread that emits into [mutableResults] (Kotlin docs, "Completion
+    // handlers": https://kotlinlang.org/docs/native-arc-integration.html#completion-handlers). So the emit
+    // itself runs on Dispatchers.Main, while flowOn keeps the whole analysis pipeline (camera setup, frame
+    // channel, recognition, parsing) on Dispatchers.Default. flowOn hands values over through a FIFO channel,
+    // so result order is unchanged. Its buffer suspends rather than drops when the main thread is slow; the
+    // frame channel upstream already keeps only the newest frame, so the camera is never held up.
+    // `internal` (not private) only so the iOS test can feed synthetic frames: the Simulator has no camera.
+    internal fun startWith(frames: () -> Flow<CMSampleBufferRef>) {
         session.start {
-            scope.launch {
+            scope.launch(Dispatchers.Main) {
                 analyzer
                     .scan(
-                        frames = cameraFrames(),
+                        frames = frames(),
                         releaseFrame = ::releaseFrame,
                         captureErrorFor = ::cameraErrorFor,
-                    ).collect(mutableResults::emit)
+                    ).flowOn(Dispatchers.Default)
+                    .collect(mutableResults::emit)
             }
         }
     }
@@ -420,7 +446,12 @@ public class AVCaptureMrzScanner(
             // observation; do not decide a transient interruption ends the session).
             val center = NSNotificationCenter.defaultCenter
             val interruptionObserver =
-                center.addObserverForName(AVCaptureSessionWasInterruptedNotification, session, null) { notification ->
+                // Main queue: the CameraInUse result reaches [results] on the main thread, like every other result.
+                center.addObserverForName(
+                    AVCaptureSessionWasInterruptedNotification,
+                    session,
+                    NSOperationQueue.mainQueue,
+                ) { notification ->
                     if (isVideoDeviceInUse(notification)) {
                         mutableResults.tryEmit(
                             MrzScanResult.CaptureError(
@@ -448,7 +479,7 @@ public class AVCaptureMrzScanner(
             try {
                 session.startRunning()
                 // Publish the running session for an armed SwiftUI viewfinder to draw (headless default: null).
-                if (previewEnabled) mutablePreviewSession.value = session
+                if (previewEnabled) onMain { mutablePreviewSession.value = session }
                 emitAll(frames.receiveAsFlow())
             } finally {
                 // Identity-guarded clears (TES-133): stop() cancels without joining, so this finally can
@@ -458,7 +489,9 @@ public class AVCaptureMrzScanner(
                 // from being GC'd (the silent capture-stall mode documented on that field). Each field is
                 // cleared only if it still holds THIS session's instance.
                 if (activeDevice.value === device) activeDevice.value = null
-                if (mutablePreviewSession.value === session) mutablePreviewSession.value = null
+                // On the main queue, like the publish above: the queue is FIFO, so a restarted session's publish
+                // and this clear run in order, and the identity check sees the value as it is on main.
+                onMain { if (mutablePreviewSession.value === session) mutablePreviewSession.value = null }
                 center.removeObserver(interruptionObserver)
                 center.removeObserver(interruptionEndedObserver)
                 center.removeObserver(runtimeErrorObserver)
@@ -469,6 +502,13 @@ public class AVCaptureMrzScanner(
                 frames.close()
             }
         }
+
+    // Runs [block] on the main queue, so [previewSession] changes, and so its collectors resume, on the main
+    // thread (TES-200). Asynchronous: never blocks the background session thread, and safe in a finally on
+    // cancellation.
+    private fun onMain(block: () -> Unit) {
+        dispatch_async(dispatch_get_main_queue(), block)
+    }
 
     // CMSampleBuffer is a Core Foundation type; Kotlin/Native's ARC does not release it, so every buffer
     // this scanner retains is released here exactly once — as scan()'s releaseFrame after analysis, and as
