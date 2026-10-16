@@ -55,6 +55,13 @@ class CheckDigitTest {
         assertFailsWith<IllegalArgumentException> { computeCheckDigit("AB!") }
     }
 
+    // TES-198: a non-ASCII letter is outside the alphabet. The throw is declared with @Throws so
+    // Swift sees a throwing call instead of a crash.
+    @Test
+    fun rejects_non_ascii_letter() {
+        assertFailsWith<IllegalArgumentException> { computeCheckDigit("ä") }
+    }
+
     // ICAO Doc 9303 Part 3 Appendix A canonical specimens.
     // Independent of the Part 4 examples already covered above.
 
