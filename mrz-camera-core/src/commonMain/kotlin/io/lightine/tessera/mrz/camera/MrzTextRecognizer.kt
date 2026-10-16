@@ -14,8 +14,8 @@ public fun interface MrzTextRecognizer<in F> {
     /**
      * Runs OCR on [frame] and returns the recognized lines in reading order.
      *
-     * [CameraXMrzScanner] calls it on the main thread and [AVCaptureMrzScanner] on
-     * `Dispatchers.Default`; [MrzFrameAnalyzer.analyse] calls it on the caller's coroutine context.
+     * [CameraXMrzScanner] and [AVCaptureMrzScanner] call it on `Dispatchers.Default`, never on the
+     * main thread; [MrzFrameAnalyzer.analyse] calls it on the caller's coroutine context.
      *
      * @param frame the frame to read.
      * @return the recognized lines.
