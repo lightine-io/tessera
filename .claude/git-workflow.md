@@ -6,8 +6,9 @@ example) gets one branch and one PR at the end.
 
 ## Branch
 
-- `feature/`, `fix/`, `docs/`, or `chore/` plus a short description, off `origin/main`:
-  `git fetch origin && git checkout -b fix/check-digit-overflow origin/main`.
+- `feature/`, `fix/`, `docs/`, or `chore/` (the kind of change) plus the issue key, off
+  `origin/main`: `git fetch origin && git checkout -b fix/TES-198 origin/main`. Outside
+  contributors use the GitHub issue number: `fix/123`.
 - CI (`repo · rules`) fails any other name; Dependabot's branches are exempt.
 - A Claude Code worktree starts on `claude/<random>`: rename it before pushing
   (`git branch -m <new-name>`).

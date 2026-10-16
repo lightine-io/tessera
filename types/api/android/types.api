@@ -141,6 +141,26 @@ public final class io/lightine/tessera/types/errors/MrzGenerationFieldOverflow :
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/lightine/tessera/types/errors/MrzGenerationFieldTooShort : io/lightine/tessera/types/errors/MrzGenerationError {
+	public fun <init> (Lio/lightine/tessera/types/vocabulary/MrzFormat;Lio/lightine/tessera/types/vocabulary/MrzField;IILjava/lang/String;)V
+	public final fun component1 ()Lio/lightine/tessera/types/vocabulary/MrzFormat;
+	public final fun component2 ()Lio/lightine/tessera/types/vocabulary/MrzField;
+	public final fun component3 ()I
+	public final fun component4 ()I
+	public final fun component5 ()Ljava/lang/String;
+	public final fun copy (Lio/lightine/tessera/types/vocabulary/MrzFormat;Lio/lightine/tessera/types/vocabulary/MrzField;IILjava/lang/String;)Lio/lightine/tessera/types/errors/MrzGenerationFieldTooShort;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzGenerationFieldTooShort;Lio/lightine/tessera/types/vocabulary/MrzFormat;Lio/lightine/tessera/types/vocabulary/MrzField;IILjava/lang/String;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzGenerationFieldTooShort;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getExpectedLength ()I
+	public final fun getField ()Lio/lightine/tessera/types/vocabulary/MrzField;
+	public final fun getFormat ()Lio/lightine/tessera/types/vocabulary/MrzFormat;
+	public final fun getObservedLength ()I
+	public final fun getObservedValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class io/lightine/tessera/types/errors/MrzGenerationNumericInNameField : io/lightine/tessera/types/errors/MrzGenerationError {
 	public fun <init> (Lio/lightine/tessera/types/vocabulary/MrzFormat;Ljava/lang/String;Ljava/util/List;)V
 	public final fun component1 ()Lio/lightine/tessera/types/vocabulary/MrzFormat;
