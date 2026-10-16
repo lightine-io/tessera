@@ -12,8 +12,10 @@ import io.lightine.tessera.types.vocabulary.ReadMethod
 import io.lightine.tessera.types.vocabulary.Sex
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
@@ -306,6 +308,43 @@ class MrzFrameAnalyzerTest {
             analyzer.analyse(frame)
 
             assertSame(frame, received)
+        }
+
+    private class ThrowingSink(
+        private val failure: Throwable,
+    ) : TelemetrySink {
+        var calls = 0
+
+        override fun record(event: TelemetryEvent) {
+            calls++
+            throw failure
+        }
+    }
+
+    @Test
+    fun a_telemetry_sink_that_throws_does_not_change_the_result() =
+        runTest {
+            val sink = ThrowingSink(IllegalStateException("hook boom"))
+
+            val decoded = analyzer(recognizerReturning(textOf(td3Line1, td3Line2)), telemetry = sink).analyse(FakeFrame())
+            val noMrz = analyzer(recognizerReturning(textOf("PRINTED TEXT ONLY")), telemetry = sink).analyse(FakeFrame())
+            val ocrFailure = analyzer(MrzTextRecognizer { throw RuntimeException("boom") }, telemetry = sink).analyse(FakeFrame())
+
+            assertIs<ParseResult.Success>(assertIs<MrzScanResult.Decoded>(decoded).parse)
+            assertIs<MrzScanResult.NoMrzFound>(noMrz)
+            val captureError = assertIs<MrzScanResult.CaptureError>(ocrFailure)
+            assertIs<CameraError.OcrFailed>(captureError.error)
+            assertEquals(3, sink.calls, "the sink is still called for each frame")
+        }
+
+    @Test
+    fun a_telemetry_sink_that_throws_cancellation_is_not_swallowed() =
+        runTest {
+            val sink = ThrowingSink(CancellationException("cancelled"))
+
+            assertFailsWith<CancellationException> {
+                analyzer(recognizerReturning(textOf(td3Line1, td3Line2)), telemetry = sink).analyse(FakeFrame())
+            }
         }
 
     @Test

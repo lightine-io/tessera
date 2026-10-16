@@ -6,6 +6,8 @@ import androidx.camera.core.ImageProxy
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import io.lightine.tessera.telemetry.NoOpTelemetrySink
+import io.lightine.tessera.telemetry.TelemetryEvent
+import io.lightine.tessera.telemetry.TelemetrySink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.awaitCancellation
@@ -100,6 +102,25 @@ class CameraXMrzScannerThreadingTest {
     }
 
     @Test
+    fun a_telemetry_sink_that_throws_does_not_end_the_scan() {
+        val telemetryCalls = AtomicInteger(0)
+        val throwing =
+            object : TelemetrySink {
+                override fun record(event: TelemetryEvent) {
+                    telemetryCalls.incrementAndGet()
+                    throw IllegalStateException("hook boom")
+                }
+            }
+
+        val delivered =
+            scan(MrzTextRecognizer { RecognizedText(emptyList()) }, frameCount = FRAME_COUNT, telemetry = throwing)
+
+        assertEquals(FRAME_COUNT, delivered.size, "every frame still gives a result")
+        assertTrue(delivered.all { it.result is MrzScanResult.NoMrzFound }, "no result is a capture error")
+        assertEquals(FRAME_COUNT, telemetryCalls.get())
+    }
+
+    @Test
     fun every_frame_is_closed_once() {
         val frames = List(FRAME_COUNT) { CountingImageProxy() }
         scan(MrzTextRecognizer { RecognizedText(emptyList()) }, frames = frames)
@@ -166,6 +187,7 @@ class CameraXMrzScannerThreadingTest {
         recognizer: MrzTextRecognizer<ImageProxy>,
         frameCount: Int = FRAME_COUNT,
         frames: List<CountingImageProxy> = List(frameCount) { CountingImageProxy() },
+        telemetry: TelemetrySink = NoOpTelemetrySink,
     ): List<Delivery> {
         assertTrue(isMainThread(), "precondition: the test must run on the main thread")
         val scanner =
@@ -173,7 +195,7 @@ class CameraXMrzScannerThreadingTest {
                 appContext = RuntimeEnvironment.getApplication(),
                 lifecycleOwner = UnusedLifecycleOwner,
                 recognizer = recognizer,
-                telemetry = NoOpTelemetrySink,
+                telemetry = telemetry,
             )
         val collectorScope = CoroutineScope(Dispatchers.Unconfined)
         val delivered = CopyOnWriteArrayList<Delivery>()

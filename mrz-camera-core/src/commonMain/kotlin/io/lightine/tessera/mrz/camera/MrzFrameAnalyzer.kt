@@ -122,22 +122,30 @@ public class MrzFrameAnalyzer<F>(
         return if (confidences.isEmpty()) null else confidences.sum() / confidences.size
     }
 
+    // The one place a frame event is sent. The sink is the app's code, so an exception from it is dropped
+    // (reading continues, nothing is reported as a capture failure); cancellation still propagates (TES-175).
     private fun recordTelemetry(result: MrzScanResult) {
-        val outcome =
-            when (result) {
-                is MrzScanResult.Decoded -> CameraFrameOutcome.DECODED
-                is MrzScanResult.NoMrzFound -> CameraFrameOutcome.NO_MRZ_FOUND
-                is MrzScanResult.CaptureError -> CameraFrameOutcome.OCR_FAILED
-            }
-        telemetry.record(
-            CameraFrameEvent(
-                outcome = outcome,
-                recognizedLineCount = result.quality.recognizedLineCount,
-                mrzRegionFound = result.quality.mrzRegionFound,
-                ocrConfidence = result.quality.ocrConfidence,
-                detectedFormat = (result as? MrzScanResult.Decoded)?.let { formatOf(it.parse) },
-            ),
-        )
+        try {
+            val outcome =
+                when (result) {
+                    is MrzScanResult.Decoded -> CameraFrameOutcome.DECODED
+                    is MrzScanResult.NoMrzFound -> CameraFrameOutcome.NO_MRZ_FOUND
+                    is MrzScanResult.CaptureError -> CameraFrameOutcome.OCR_FAILED
+                }
+            telemetry.record(
+                CameraFrameEvent(
+                    outcome = outcome,
+                    recognizedLineCount = result.quality.recognizedLineCount,
+                    mrzRegionFound = result.quality.mrzRegionFound,
+                    ocrConfidence = result.quality.ocrConfidence,
+                    detectedFormat = (result as? MrzScanResult.Decoded)?.let { formatOf(it.parse) },
+                ),
+            )
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (ignored: Exception) {
+            // Dropped on purpose: a failing hook must not stop reading.
+        }
     }
 
     private fun formatOf(parse: ParseResult): MrzFormat? =
