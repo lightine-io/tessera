@@ -228,10 +228,35 @@ jobs:
           echo "${RESP}" | jq -e '.data.createCommitOnBranch.commit.oid' >/dev/null \
             || { echo "::error::createCommitOnBranch failed: ${RESP}"; exit 1; }
 
-          # PR is required by the ruleset (0 approvals) → open and self-merge (signed merge commit).
-          PR=$(gh pr create --repo "${REPO}" --base main --head "${BRANCH}" \
-                 --title "chore(release): Tessera ${TAG} XCFramework" \
-                 --body "Automated by lightine-io/tessera release ${TAG}. Updates binaryTarget url + checksum.")
+          # PR is required by the ruleset (0 approvals). Reuse our pin PR if a prior run left one open.
+          PR=$(gh pr list --repo "${REPO}" --state open --head "${BRANCH}" --json url --jq '.[0].url // empty')
+          if [ -z "${PR}" ]; then
+            PR=$(gh pr create --repo "${REPO}" --base main --head "${BRANCH}" \
+                   --title "chore(release): Tessera ${TAG} XCFramework" \
+                   --body "Automated by lightine-io/tessera release ${TAG}. Updates binaryTarget url + checksum.")
+          fi
+
+          # TES-218 check gate: never merge or tag a pin that breaks the Swift package. The pin PR's CI
+          # builds and tests TesseraUI against the NEW XCFramework (the pin URL is the asset uploaded
+          # above). Fail closed: no checks appearing, a failing check, or a timeout stops the job
+          # before the merge and the tag. The PR stays open; fix the cause and re-run (the guards
+          # above reuse the PR and reset the branch).
+          # Poll (macOS runners have no `timeout`; gh exits 0 = all passed, 8 = pending, 1 = failed;
+          # right after the PR opens it may report no checks yet, which also exits non-zero).
+          DEADLINE=$((SECONDS + 3000)); SEEN=""; RC=1
+          while [ "${SECONDS}" -lt "${DEADLINE}" ]; do
+            RC=0; OUT=$(gh pr checks "${PR}" --repo "${REPO}" 2>&1) || RC=$?
+            [ "${RC}" -eq 0 ] && break
+            case "${OUT}" in *"no checks reported"*) ;; *) SEEN=1 ;; esac
+            [ "${RC}" -eq 1 ] && [ -n "${SEEN}" ] && { echo "${OUT}"; break; }
+            # Never saw a check within 5 min: fail closed rather than merge unchecked.
+            [ -z "${SEEN}" ] && [ "${SECONDS}" -gt $((DEADLINE - 2700)) ] && { echo "${OUT}"; RC=1; break; }
+            sleep 30
+          done
+          if [ "${RC}" -ne 0 ]; then
+            echo "::error::${REPO} checks on ${PR} did not pass (failed, never reported, or timed out after 50 min). Not merging, not tagging ${TAG}. Fix tessera-swift, then re-run this job."
+            exit 1
+          fi
           gh pr merge "${PR}" --repo "${REPO}" --merge --delete-branch
 
           # Tag the merge commit (lightweight; verified via its signed anchor — satisfies the tag ruleset).

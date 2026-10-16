@@ -50,7 +50,15 @@ maintainer. Record the results as a comment on the release issue.
    left out of the tag (the 0.5.0 incident, TES-138).
    `gh pr list --repo lightine-io/tessera-swift --state open` must be empty. The workflow
    enforces this and fails the publish step otherwise (merge, then re-run the job).
-10. **KB and doc links.** `python3 -I scripts/kb-linkcheck.py --quiet --allow-internal`
+   The workflow also waits for the pin PR's checks in tessera-swift and stops before the
+   merge and the tag if any fails (TES-218); the next gate catches that before the tag.
+10. **tessera-swift builds against this release's framework.**
+    `scripts/test-swift-against-local-framework.sh` exits 0. It builds the XCFramework,
+    copies it into `../tessera-swift/.local-xcframework/`, and runs tessera-swift's tests
+    with `TESSERA_LOCAL_XCFRAMEWORK=1` on a simulator (pass the tessera-swift path and a
+    simulator name as arguments if the defaults do not fit). It takes several minutes and
+    restores any existing local framework on exit.
+11. **KB and doc links.** `python3 -I scripts/kb-linkcheck.py --quiet --allow-internal`
     exits 0. Drop `--allow-internal` once TES-169 and TES-178 are closed; then no public
     page may link into the internal KB.
 
