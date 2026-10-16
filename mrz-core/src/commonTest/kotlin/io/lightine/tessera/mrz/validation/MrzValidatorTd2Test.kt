@@ -7,10 +7,12 @@ import io.lightine.tessera.mrz.model.TD2
 import io.lightine.tessera.mrz.recognition.CountryCode
 import io.lightine.tessera.mrz.recognition.DocumentType
 import io.lightine.tessera.types.errors.MrzCheckDigitMismatch
+import io.lightine.tessera.types.errors.MrzInvalidLength
 import io.lightine.tessera.types.errors.MrzInvalidSexValue
 import io.lightine.tessera.types.errors.MrzUnknownCountryCode
 import io.lightine.tessera.types.errors.MrzValidationError
 import io.lightine.tessera.types.vocabulary.MrzField
+import io.lightine.tessera.types.vocabulary.MrzFormat
 import io.lightine.tessera.types.vocabulary.Sex
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -231,6 +233,25 @@ class MrzValidatorTd2Test {
         assertEquals('Q', invalid.observed)
         // TD2 sex position: line 1 index 20, global = 36 + 20 = 56
         assertEquals(56, invalid.position)
+    }
+
+    // --- Raw lines that do not fit the format (TES-203) ---
+
+    @Test
+    fun empty_raw_lines_report_MrzInvalidLength_with_TD2_shape_instead_of_throwing() {
+        val result = MrzValidator.validate(specimenTd2().copy(rawLines = emptyList()))
+        assertEquals(
+            MrzInvalidLength(
+                format = MrzFormat.TD2,
+                expectedLineCount = 2,
+                expectedLineLength = 36,
+                observedLineCount = 0,
+                observedLineLengths = emptyList(),
+            ),
+            result.structuralFailure,
+        )
+        assertTrue(result.validationFailures.isEmpty())
+        assertTrue(result.warnings.isEmpty())
     }
 
     private fun List<MrzValidationError>.firstOfField(field: MrzField): MrzCheckDigitMismatch =

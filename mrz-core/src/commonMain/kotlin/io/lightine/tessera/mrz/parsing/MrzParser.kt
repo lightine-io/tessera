@@ -455,7 +455,9 @@ public object MrzParser {
         }
     }
 
-    private fun validateLineShape(
+    // Internal, not private: MrzValidator.validate(document) runs the same two checks on a
+    // document's rawLines before reading field text from them (TES-203).
+    internal fun validateLineShape(
         input: List<String>,
         format: MrzFormat,
         expectedLineCount: Int,
@@ -477,7 +479,7 @@ public object MrzParser {
         }
     }
 
-    private fun validateAlphabet(
+    internal fun validateAlphabet(
         input: List<String>,
         lineLength: Int,
     ): MrzCharacterSetViolation? {

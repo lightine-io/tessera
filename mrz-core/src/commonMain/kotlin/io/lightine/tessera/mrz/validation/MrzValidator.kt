@@ -25,6 +25,7 @@ import io.lightine.tessera.types.errors.MrzExpiryDateImplausiblyFar
 import io.lightine.tessera.types.errors.MrzExpiryDatePast
 import io.lightine.tessera.types.errors.MrzInvalidSexValue
 import io.lightine.tessera.types.errors.MrzNameTruncated
+import io.lightine.tessera.types.errors.MrzParseError
 import io.lightine.tessera.types.errors.MrzPersonalNumberCheckDigitFiller
 import io.lightine.tessera.types.errors.MrzSexCharacterX
 import io.lightine.tessera.types.errors.MrzUnknownCountryCode
@@ -59,28 +60,56 @@ public object MrzValidator {
     /**
      * Validates a parsed document and returns its validation failures and warnings.
      *
-     * Reads the field text from `document.rawLines`, so the document must come from [MrzParser]
-     * or carry `rawLines`. Reads the printed check digits from `document.commonFields.checkDigits`.
-     * Reports [MrzExpiryDatePast] only when the expiry date is strictly earlier than the reference
-     * date, and [MrzExpiryDateImplausiblyFar] when it is more than 10 years after it. Both compare
-     * UTC dates.
+     * Reads the field text from `document.rawLines` and the printed check digits from
+     * `document.commonFields.checkDigits`. Reports [MrzExpiryDatePast] only when the expiry date is
+     * strictly earlier than the reference date, and [MrzExpiryDateImplausiblyFar] when it is more
+     * than 10 years after it. Both compare UTC dates.
+     *
+     * If `document.rawLines` cannot be read as the document's format, no check runs and
+     * `structuralFailure` says why: `MrzInvalidLength` when the line count or a line length does
+     * not fit the format (empty `rawLines` included), or `MrzCharacterSetViolation` for the first
+     * character outside `A`-`Z`, `0`-`9`, and `<`. A document from [MrzParser] always passes.
      *
      * @param document the document to check.
      * @param referenceTime the instant that sets the date checks. Defaults to the current time.
-     * @return the validation failures and warnings. `structuralFailure` is `null`.
-     * @throws IndexOutOfBoundsException if `document.rawLines` is empty.
+     * @return the validation failures and warnings, or the reason `rawLines` could not be read in
+     *   `structuralFailure`.
      */
     public fun validate(
         document: MrzDocument,
         referenceTime: Instant = Clock.System.now(),
-    ): ValidationResult =
-        when (document) {
+    ): ValidationResult {
+        rawLinesProblem(document)?.let { problem ->
+            return ValidationResult(validationFailures = emptyList(), warnings = emptyList(), structuralFailure = problem)
+        }
+        return when (document) {
             is TD3 -> validateTD3(document, referenceTime)
             is TD2 -> validateTD2(document, referenceTime)
             is MrvA -> validateMrvA(document, referenceTime)
             is MrvB -> validateMrvB(document, referenceTime)
             is TD1 -> validateTD1(document, referenceTime)
         }
+    }
+
+    // A hand-built document can carry rawLines that do not fit its format (TES-203). The checks
+    // below read field text from rawLines by position, so they cannot run on such lines; report
+    // why with the parser's own structural errors instead of throwing.
+    private fun rawLinesProblem(document: MrzDocument): MrzParseError? {
+        val spec =
+            when (document) {
+                is TD3 -> Td3FormatSpec
+                is TD2 -> Td2FormatSpec
+                is MrvA -> MrvAFormatSpec
+                is MrvB -> MrvBFormatSpec
+                is TD1 -> Td1FormatSpec
+            }
+        return MrzParser.validateLineShape(
+            input = document.rawLines,
+            format = document.format,
+            expectedLineCount = spec.lineCount,
+            expectedLineLength = spec.lineLength,
+        ) ?: MrzParser.validateAlphabet(document.rawLines, lineLength = spec.lineLength)
+    }
 
     /**
      * Parses an MRZ string, detecting the format, and returns its validation result.
