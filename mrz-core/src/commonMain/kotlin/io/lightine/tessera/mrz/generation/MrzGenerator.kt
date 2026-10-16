@@ -26,6 +26,7 @@ import io.lightine.tessera.mrz.transliteration.TransliterationProfile
 import io.lightine.tessera.mrz.transliteration.TransliterationResult
 import io.lightine.tessera.mrz.transliteration.transliterate
 import io.lightine.tessera.types.errors.MrzGenerationFieldOverflow
+import io.lightine.tessera.types.errors.MrzGenerationFieldTooShort
 import io.lightine.tessera.types.errors.MrzGenerationNumericInNameField
 import io.lightine.tessera.types.errors.MrzGenerationUnsupportedCharacters
 import io.lightine.tessera.types.vocabulary.MrzField
@@ -38,10 +39,11 @@ import kotlinx.datetime.LocalDate
 /**
  * Encodes an MRZ from a document or from field values, per ICAO Doc 9303.
  *
- * Reports `MrzGenerationFieldOverflow` when a value is longer than its field, and
- * `MrzGenerationUnsupportedCharacters` when a name, number, type, state, nationality, or optional-data
- * value has a character outside `A-Z`, `0-9`, and `<`. The field-value functions also report `MrzGenerationNumericInNameField` when an identifier
- * contains a digit. A failure holds the first problem found.
+ * Reports `MrzGenerationFieldOverflow` when a value is longer than its field,
+ * `MrzGenerationFieldTooShort` when a document's date part is shorter than 2 characters, and
+ * `MrzGenerationUnsupportedCharacters` when a name, number, type, state, nationality, optional-data, or
+ * date value has a character outside `A-Z`, `0-9`, and `<`. Reports `MrzGenerationNumericInNameField` when an
+ * identifier or the name field contains a digit. A failure holds the first problem found.
  *
  * @since 0.1.0
  */
@@ -50,15 +52,16 @@ public object MrzGenerator {
      * Encodes a document of any format as MRZ lines.
      *
      * Pads short fields with `<` and computes every check digit; the check digits stored in the
-     * document are not used. Checks the width and characters of the document type, issuing state,
-     * name field, document number, nationality, and optional data. Writes the date parts and
-     * `rawSex` as they are.
+     * document are not used. Checks that the name field has no digit, then the width and
+     * characters of the document type, issuing state, name field, document number, nationality,
+     * optional data, and each date part. A date part must be exactly 2 characters; a shorter one
+     * is never padded, because `<` in a date means "unknown". Writes `rawSex` as it is, unchecked.
+     * Applies no transliteration profile: the name field must already be in the MRZ alphabet.
      *
      * @param document the document to encode.
      * @return [GenerationResult.Success] with the MRZ lines, or [GenerationResult.Failure] with
-     *   [MrzGenerationFieldOverflow] or [MrzGenerationUnsupportedCharacters].
-     * @throws IllegalArgumentException if a date part has a character outside `A-Z`, `0-9`, and `<`;
-     *   the check digit cannot be computed. `rawSex` is never checked.
+     *   [MrzGenerationNumericInNameField], [MrzGenerationFieldOverflow],
+     *   [MrzGenerationFieldTooShort], or [MrzGenerationUnsupportedCharacters].
      */
     public fun generate(document: MrzDocument): GenerationResult =
         when (document) {
@@ -431,6 +434,7 @@ public object MrzGenerator {
     // ----------------------------------------------------------------
 
     private fun generateTd3(document: TD3): GenerationResult {
+        rejectIfNameFieldContainsDigits(MrzFormat.TD3, document.commonFields.rawNameField)?.let { return it }
         validateLength(
             MrzFormat.TD3,
             MrzField.DOCUMENT_TYPE,
@@ -477,6 +481,7 @@ public object MrzGenerator {
         )?.let { return it }
 
         validateCommonFieldChars(MrzFormat.TD3, document)?.let { return it }
+        validateDates(MrzFormat.TD3, document)?.let { return it }
         validateMrzAlphabet(MrzFormat.TD3, MrzField.OPTIONAL_DATA, document.personalNumber)?.let { return it }
 
         val docType =
@@ -493,10 +498,10 @@ public object MrzGenerator {
         val nationality =
             document.commonFields.nationality.rawCode
                 .padEnd(Td3FormatSpec.nationality.width, '<')
-        val dob = document.commonFields.dateOfBirth.run { rawYear + rawMonth + rawDay }
+        val dob = encodeDate(document.commonFields.dateOfBirth)
         val dobCheck = computeCheckDigit(dob)
         val sex = document.commonFields.rawSex.toString()
-        val doe = document.commonFields.dateOfExpiry.run { rawYear + rawMonth + rawDay }
+        val doe = encodeDate(document.commonFields.dateOfExpiry)
         val doeCheck = computeCheckDigit(doe)
         val personalNum = document.personalNumber.padEnd(Td3FormatSpec.personalNumber.width, '<')
         val personalNumCheck = computeCheckDigit(personalNum)
@@ -516,6 +521,7 @@ public object MrzGenerator {
     }
 
     private fun generateTd2(document: TD2): GenerationResult {
+        rejectIfNameFieldContainsDigits(MrzFormat.TD2, document.commonFields.rawNameField)?.let { return it }
         validateLength(
             MrzFormat.TD2,
             MrzField.DOCUMENT_TYPE,
@@ -557,6 +563,7 @@ public object MrzGenerator {
         validateLength(MrzFormat.TD2, MrzField.OPTIONAL_DATA, document.optionalData, Td2FormatSpec.optionalData.width)?.let { return it }
 
         validateCommonFieldChars(MrzFormat.TD2, document)?.let { return it }
+        validateDates(MrzFormat.TD2, document)?.let { return it }
         validateMrzAlphabet(MrzFormat.TD2, MrzField.OPTIONAL_DATA, document.optionalData)?.let { return it }
 
         val docType =
@@ -574,10 +581,10 @@ public object MrzGenerator {
         val nationality =
             document.commonFields.nationality.rawCode
                 .padEnd(Td2FormatSpec.nationality.width, '<')
-        val dob = document.commonFields.dateOfBirth.run { rawYear + rawMonth + rawDay }
+        val dob = encodeDate(document.commonFields.dateOfBirth)
         val dobCheck = computeCheckDigit(dob)
         val sex = document.commonFields.rawSex.toString()
-        val doe = document.commonFields.dateOfExpiry.run { rawYear + rawMonth + rawDay }
+        val doe = encodeDate(document.commonFields.dateOfExpiry)
         val doeCheck = computeCheckDigit(doe)
         val optionalData = document.optionalData.padEnd(Td2FormatSpec.optionalData.width, '<')
 
@@ -596,6 +603,7 @@ public object MrzGenerator {
     }
 
     private fun generateTd1(document: TD1): GenerationResult {
+        rejectIfNameFieldContainsDigits(MrzFormat.TD1, document.commonFields.rawNameField)?.let { return it }
         validateLength(
             MrzFormat.TD1,
             MrzField.DOCUMENT_TYPE,
@@ -638,6 +646,7 @@ public object MrzGenerator {
         )?.let { return it }
 
         validateCommonFieldChars(MrzFormat.TD1, document)?.let { return it }
+        validateDates(MrzFormat.TD1, document)?.let { return it }
         validateMrzAlphabet(MrzFormat.TD1, MrzField.OPTIONAL_DATA, document.optionalData1)?.let { return it }
         validateMrzAlphabet(MrzFormat.TD1, MrzField.OPTIONAL_DATA, document.optionalData2)?.let { return it }
 
@@ -654,10 +663,10 @@ public object MrzGenerator {
         val line1 = docType + state + docNum + docNumCheck + optionalData1
 
         // Line 2 prefix: dob(6) + dobCheck(1) + sex(1) + doe(6) + doeCheck(1) + nat(3) + optionalData2(11) = 29
-        val dob = document.commonFields.dateOfBirth.run { rawYear + rawMonth + rawDay }
+        val dob = encodeDate(document.commonFields.dateOfBirth)
         val dobCheck = computeCheckDigit(dob)
         val sex = document.commonFields.rawSex.toString()
-        val doe = document.commonFields.dateOfExpiry.run { rawYear + rawMonth + rawDay }
+        val doe = encodeDate(document.commonFields.dateOfExpiry)
         val doeCheck = computeCheckDigit(doe)
         val nationality =
             document.commonFields.nationality.rawCode
@@ -679,6 +688,7 @@ public object MrzGenerator {
     }
 
     private fun generateMrvA(document: MrvA): GenerationResult {
+        rejectIfNameFieldContainsDigits(MrzFormat.MRV_A, document.commonFields.rawNameField)?.let { return it }
         validateLength(
             MrzFormat.MRV_A,
             MrzField.DOCUMENT_TYPE,
@@ -717,6 +727,7 @@ public object MrzGenerator {
         validateLength(MrzFormat.MRV_A, MrzField.OPTIONAL_DATA, document.optionalData, MrvAFormatSpec.optionalData.width)?.let { return it }
 
         validateCommonFieldChars(MrzFormat.MRV_A, document)?.let { return it }
+        validateDates(MrzFormat.MRV_A, document)?.let { return it }
         validateMrzAlphabet(MrzFormat.MRV_A, MrzField.OPTIONAL_DATA, document.optionalData)?.let { return it }
 
         val docType =
@@ -734,10 +745,10 @@ public object MrzGenerator {
         val nationality =
             document.commonFields.nationality.rawCode
                 .padEnd(MrvAFormatSpec.nationality.width, '<')
-        val dob = document.commonFields.dateOfBirth.run { rawYear + rawMonth + rawDay }
+        val dob = encodeDate(document.commonFields.dateOfBirth)
         val dobCheck = computeCheckDigit(dob)
         val sex = document.commonFields.rawSex.toString()
-        val doe = document.commonFields.dateOfExpiry.run { rawYear + rawMonth + rawDay }
+        val doe = encodeDate(document.commonFields.dateOfExpiry)
         val doeCheck = computeCheckDigit(doe)
         val optionalData = document.optionalData.padEnd(MrvAFormatSpec.optionalData.width, '<')
 
@@ -751,6 +762,7 @@ public object MrzGenerator {
     }
 
     private fun generateMrvB(document: MrvB): GenerationResult {
+        rejectIfNameFieldContainsDigits(MrzFormat.MRV_B, document.commonFields.rawNameField)?.let { return it }
         validateLength(
             MrzFormat.MRV_B,
             MrzField.DOCUMENT_TYPE,
@@ -789,6 +801,7 @@ public object MrzGenerator {
         validateLength(MrzFormat.MRV_B, MrzField.OPTIONAL_DATA, document.optionalData, MrvBFormatSpec.optionalData.width)?.let { return it }
 
         validateCommonFieldChars(MrzFormat.MRV_B, document)?.let { return it }
+        validateDates(MrzFormat.MRV_B, document)?.let { return it }
         validateMrzAlphabet(MrzFormat.MRV_B, MrzField.OPTIONAL_DATA, document.optionalData)?.let { return it }
 
         val docType =
@@ -806,10 +819,10 @@ public object MrzGenerator {
         val nationality =
             document.commonFields.nationality.rawCode
                 .padEnd(MrvBFormatSpec.nationality.width, '<')
-        val dob = document.commonFields.dateOfBirth.run { rawYear + rawMonth + rawDay }
+        val dob = encodeDate(document.commonFields.dateOfBirth)
         val dobCheck = computeCheckDigit(dob)
         val sex = document.commonFields.rawSex.toString()
-        val doe = document.commonFields.dateOfExpiry.run { rawYear + rawMonth + rawDay }
+        val doe = encodeDate(document.commonFields.dateOfExpiry)
         val doeCheck = computeCheckDigit(doe)
         val optionalData = document.optionalData.padEnd(MrvBFormatSpec.optionalData.width, '<')
 
@@ -1069,6 +1082,50 @@ public object MrzGenerator {
         validateMrzAlphabet(format, MrzField.NATIONALITY, cf.nationality.rawCode)?.let { return it }
         return null
     }
+
+    // Each date part is exactly 2 characters wide. A longer part is an overflow and a shorter one
+    // is too short: it is never padded, because `<` in a date means "unknown" (ICAO Doc 9303), so
+    // padding would invent data. A character outside the MRZ alphabet is reported with its
+    // position in the 6-character date. Checked before `computeCheckDigit`, which throws on such
+    // characters, and before the line is assembled, so every line has its full length.
+    private fun validateDates(
+        format: MrzFormat,
+        document: MrzDocument,
+    ): GenerationResult.Failure? {
+        val cf = document.commonFields
+        validateDate(format, MrzField.DATE_OF_BIRTH, cf.dateOfBirth)?.let { return it }
+        validateDate(format, MrzField.DATE_OF_EXPIRY, cf.dateOfExpiry)?.let { return it }
+        return null
+    }
+
+    private fun validateDate(
+        format: MrzFormat,
+        field: MrzField,
+        date: MrzDate,
+    ): GenerationResult.Failure? {
+        for (part in listOf(date.rawYear, date.rawMonth, date.rawDay)) {
+            validateLength(format, field, part, DATE_PART_WIDTH)?.let { return it }
+            if (part.length < DATE_PART_WIDTH) {
+                return GenerationResult.Failure(
+                    error =
+                        MrzGenerationFieldTooShort(
+                            format = format,
+                            field = field,
+                            expectedLength = DATE_PART_WIDTH,
+                            observedLength = part.length,
+                            observedValue = part,
+                        ),
+                    metadata = emptyMetadata(),
+                )
+            }
+        }
+        return validateMrzAlphabet(format, field, encodeDate(date))
+    }
+
+    // Writes the date parts as they are; `validateDate` has already checked each is 2 characters.
+    private fun encodeDate(date: MrzDate): String = date.rawYear + date.rawMonth + date.rawDay
+
+    private const val DATE_PART_WIDTH: Int = 2
 
     // Pragmatic placeholder: `ReadMethod` was designed for parser results (which read data from
     // some source) but `GenerationResult` carries it too because `ResultMetadata` is shared.

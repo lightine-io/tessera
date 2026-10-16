@@ -274,6 +274,33 @@ final class io.lightine.tessera.types.errors/MrzGenerationFieldOverflow : io.lig
     final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationFieldOverflow.toString|toString(){}[0]
 }
 
+final class io.lightine.tessera.types.errors/MrzGenerationFieldTooShort : io.lightine.tessera.types.errors/MrzGenerationError { // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort|null[0]
+    constructor <init>(io.lightine.tessera.types.vocabulary/MrzFormat, io.lightine.tessera.types.vocabulary/MrzField, kotlin/Int, kotlin/Int, kotlin/String) // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.<init>|<init>(io.lightine.tessera.types.vocabulary.MrzFormat;io.lightine.tessera.types.vocabulary.MrzField;kotlin.Int;kotlin.Int;kotlin.String){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.description.<get-description>|<get-description>(){}[0]
+    final val expectedLength // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.expectedLength|{}expectedLength[0]
+        final fun <get-expectedLength>(): kotlin/Int // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.expectedLength.<get-expectedLength>|<get-expectedLength>(){}[0]
+    final val field // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.field|{}field[0]
+        final fun <get-field>(): io.lightine.tessera.types.vocabulary/MrzField // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.field.<get-field>|<get-field>(){}[0]
+    final val format // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.format|{}format[0]
+        final fun <get-format>(): io.lightine.tessera.types.vocabulary/MrzFormat // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.format.<get-format>|<get-format>(){}[0]
+    final val observedLength // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.observedLength|{}observedLength[0]
+        final fun <get-observedLength>(): kotlin/Int // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.observedLength.<get-observedLength>|<get-observedLength>(){}[0]
+    final val observedValue // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.observedValue|{}observedValue[0]
+        final fun <get-observedValue>(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.observedValue.<get-observedValue>|<get-observedValue>(){}[0]
+
+    final fun component1(): io.lightine.tessera.types.vocabulary/MrzFormat // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.component1|component1(){}[0]
+    final fun component2(): io.lightine.tessera.types.vocabulary/MrzField // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.component3|component3(){}[0]
+    final fun component4(): kotlin/Int // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.component4|component4(){}[0]
+    final fun component5(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.component5|component5(){}[0]
+    final fun copy(io.lightine.tessera.types.vocabulary/MrzFormat = ..., io.lightine.tessera.types.vocabulary/MrzField = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/String = ...): io.lightine.tessera.types.errors/MrzGenerationFieldTooShort // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.copy|copy(io.lightine.tessera.types.vocabulary.MrzFormat;io.lightine.tessera.types.vocabulary.MrzField;kotlin.Int;kotlin.Int;kotlin.String){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.toString|toString(){}[0]
+}
+
 final class io.lightine.tessera.types.errors/MrzGenerationNumericInNameField : io.lightine.tessera.types.errors/MrzGenerationError { // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField|null[0]
     constructor <init>(io.lightine.tessera.types.vocabulary/MrzFormat, kotlin/String, kotlin.collections/List<kotlin/Char>) // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField.<init>|<init>(io.lightine.tessera.types.vocabulary.MrzFormat;kotlin.String;kotlin.collections.List<kotlin.Char>){}[0]
 

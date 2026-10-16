@@ -6,10 +6,12 @@ import io.lightine.tessera.types.vocabulary.MrzFormat
  * Generation error: a primary or secondary identifier contains a digit.
  *
  * Reported by the generator methods that take a primary and secondary identifier,
- * before any transliteration profile runs. The generator never removes the digits.
+ * before any transliteration profile runs, and by `generate(document)` for the document's raw
+ * name field. The generator never removes the digits.
  *
  * @property format The format being generated.
- * @property observedValue The identifier as supplied, before transliteration.
+ * @property observedValue The identifier as supplied, before transliteration, or the raw name
+ *   field when the input was a document.
  * @property numericCharacters Each digit found, in order of appearance.
  * @since 0.1.0
  */
