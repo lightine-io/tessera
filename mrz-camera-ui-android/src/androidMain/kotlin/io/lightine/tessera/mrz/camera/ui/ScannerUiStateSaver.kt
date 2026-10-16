@@ -37,8 +37,9 @@ import kotlin.time.Instant
 //    TAKEN AT ENCODE TIME rather than a fresh restore-time clock, and restamps the read method the
 //    camera/photo/manual path actually used — see [decodeReview] for the full rationale.
 //
-// On top of the codec, [scannerUiStateSaver] re-validates every decoded state against the consumer's
-// CURRENT `enabledMethods` before letting it restore ([gateRestoredState]) — see that function's KDoc for
+// On top of the codec, [scannerUiStateSaver] re-validates every decoded state against the `enabledMethods`
+// the flow runs on (since TES-123, the set captured when the screen opened) before letting it restore
+// ([gateRestoredState]) — see that function's KDoc for
 // why a Saver that restored unconditionally would have regressed a guarantee `initialState` already gave a
 // FRESH flow.
 
@@ -251,10 +252,11 @@ internal fun gateRestoredState(
 
 /**
  * Builds the [Saver] `ScannerFlow` uses for its `uiState`, composing [decodeScannerUiState] (the pure codec)
- * with [gateRestoredState] (the config-aware restore gate, TES-102). Takes [enabledMethods] as a parameter —
- * rather than being a single top-level `val` the way the pre-gate Saver was — precisely so `ScannerFlow` can
- * build it fresh from the consumer's CURRENT [`MrzScannerConfig.enabledMethods`][MrzScannerConfig.enabledMethods]
- * at composition time; a stale, captured-once `enabledMethods` would defeat the whole point of the gate.
+ * with [gateRestoredState] (the config-aware restore gate, TES-102). Takes [enabledMethods] as a parameter so
+ * `ScannerFlow` builds it from the config it runs on. Since TES-123 that is the config captured when the
+ * screen opened ([rememberOpenedConfig]), which survives the same recreation, so the gate checks against the
+ * opening set. It still matters when that capture cannot be restored and falls back to the config passed at
+ * that moment: a restored state is then checked against that config, never trusted blindly.
  */
 internal fun scannerUiStateSaver(enabledMethods: Set<ScanMethod>): Saver<ScannerUiState, Any> =
     listSaver(
