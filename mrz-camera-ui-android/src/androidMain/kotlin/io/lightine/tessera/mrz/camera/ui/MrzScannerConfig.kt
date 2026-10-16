@@ -102,6 +102,8 @@ public class MrzScannerTheme internal constructor(
 /**
  * Options for [MrzScannerScreen]. Build it with the [MrzScannerConfig] function.
  *
+ * The configuration is read when the scanner opens; changes while it is open apply the next time it opens.
+ *
  * @property enabledMethods Reading methods the screen offers. Default: [ScanMethod.CAMERA] and
  *   [ScanMethod.MANUAL_ENTRY]. Add [ScanMethod.SAVED_IMAGE] to opt in to photo reading. The screen
  *   starts on the first present of camera, manual entry, saved image.

@@ -122,6 +122,8 @@ import kotlin.time.Duration.Companion.milliseconds
  * `tessera_scanner_grant_permission` and `tessera_scanner_permission_rationale` are in the module
  * but never read, so overriding them changes nothing.
  *
+ * The configuration is read when the scanner opens; changes while it is open apply the next time it opens.
+ *
  * The screen sends `mrz.camera.frame` events to the sink registered in `TelemetrySinkRegistry`; the
  * default sink drops them.
  *
@@ -133,9 +135,12 @@ public fun MrzScannerScreen(
     config: MrzScannerConfig,
     onResult: (MrzScannerResult) -> Unit,
 ) {
-    TesseraScannerTheme(theme = config.theme) {
+    // TES-123: fixed per presentation. Everything below reads only this captured copy, never `config`
+    // directly; see OpenedConfig.kt.
+    val openedConfig = rememberOpenedConfig(config)
+    TesseraScannerTheme(theme = openedConfig.theme) {
         Surface(modifier = Modifier.fillMaxSize().testTag(SCANNER_ROOT_TEST_TAG)) {
-            ScannerFlow(config = config, onResult = onResult)
+            ScannerFlow(config = openedConfig, onResult = onResult)
         }
     }
 }
@@ -219,13 +224,11 @@ private fun ScannerFlow(
     // TES-102: rememberSaveable(stateSaver = scannerUiStateSaver(...)) — not plain remember — so the whole
     // flow state survives a configuration change (rotation, font-scale, locale), which recreates the Activity
     // and used to silently reset the flow to its start screen. See ScannerUiStateSaver.kt for what each
-    // variant restores as. Built fresh from config.enabledMethods (rather than a single top-level Saver) so
-    // the restore gate inside it — gateRestoredState — re-validates a restored state against the CURRENT
-    // config: this restores the pre-fix guarantee that recreation re-derives the flow from the CURRENT
-    // enabledMethods (initialState already did this for a fresh flow; a naively-restoring Saver would have
-    // regressed it, letting a saved state resurrect a method the host has since disabled). A host that
-    // mutates enabledMethods MID-session, with no recreation in between, was never re-validated before this
-    // fix either and stays out of scope — nothing here re-checks a live, un-recreated composition.
+    // variant restores as. Built from config.enabledMethods so the restore gate inside it, gateRestoredState,
+    // only lets a restored state through when its method is enabled. Since TES-123 `config` here is the
+    // config captured when the screen opened (rememberOpenedConfig, which itself survives the recreation), so
+    // the gate checks against the same set the switcher, rescan and every other path use: one config for the
+    // whole presentation, and a config the host changes while the screen is open never reaches this flow.
     //
     // By deliberate contrast, the session-scoped helpers declared right below (decodeRouted, the consensus
     // tally, sawTextEver, struggleTimeoutElapsed) stay plain remember: they describe the LIVE camera session
