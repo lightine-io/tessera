@@ -7,11 +7,13 @@ import io.lightine.tessera.mrz.model.MrzDate
 import io.lightine.tessera.mrz.recognition.CountryCode
 import io.lightine.tessera.mrz.recognition.DocumentType
 import io.lightine.tessera.types.errors.MrzCheckDigitMismatch
+import io.lightine.tessera.types.errors.MrzInvalidLength
 import io.lightine.tessera.types.errors.MrzInvalidSexValue
 import io.lightine.tessera.types.errors.MrzUnknownCountryCode
 import io.lightine.tessera.types.errors.MrzUnknownDocumentTypeCode
 import io.lightine.tessera.types.errors.MrzValidationError
 import io.lightine.tessera.types.vocabulary.MrzField
+import io.lightine.tessera.types.vocabulary.MrzFormat
 import io.lightine.tessera.types.vocabulary.Sex
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -207,6 +209,25 @@ class MrzValidatorMrvBTest {
         assertTrue(warning != null, "Expected MrzUnknownDocumentTypeCode; got ${result.warnings}")
         assertEquals("ZZ", warning.rawCode)
         assertEquals(0, warning.position)
+    }
+
+    // --- Raw lines that do not fit the format (TES-203) ---
+
+    @Test
+    fun empty_raw_lines_report_MrzInvalidLength_with_MRV_B_shape_instead_of_throwing() {
+        val result = MrzValidator.validate(specimenMrvB().copy(rawLines = emptyList()))
+        assertEquals(
+            MrzInvalidLength(
+                format = MrzFormat.MRV_B,
+                expectedLineCount = 2,
+                expectedLineLength = 36,
+                observedLineCount = 0,
+                observedLineLengths = emptyList(),
+            ),
+            result.structuralFailure,
+        )
+        assertTrue(result.validationFailures.isEmpty())
+        assertTrue(result.warnings.isEmpty())
     }
 
     private fun List<MrzValidationError>.firstOfField(field: MrzField): MrzCheckDigitMismatch =

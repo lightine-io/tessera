@@ -8,10 +8,12 @@ import io.lightine.tessera.mrz.model.TD3
 import io.lightine.tessera.mrz.recognition.CountryCode
 import io.lightine.tessera.mrz.recognition.DocumentType
 import io.lightine.tessera.types.errors.MrzBirthDateImplausiblyOld
+import io.lightine.tessera.types.errors.MrzCharacterSetViolation
 import io.lightine.tessera.types.errors.MrzCheckDigitMismatch
 import io.lightine.tessera.types.errors.MrzDateNotInCalendar
 import io.lightine.tessera.types.errors.MrzExpiryDateImplausiblyFar
 import io.lightine.tessera.types.errors.MrzExpiryDatePast
+import io.lightine.tessera.types.errors.MrzInvalidLength
 import io.lightine.tessera.types.errors.MrzInvalidSexValue
 import io.lightine.tessera.types.errors.MrzNameTruncated
 import io.lightine.tessera.types.errors.MrzPersonalNumberCheckDigitFiller
@@ -19,6 +21,7 @@ import io.lightine.tessera.types.errors.MrzSexCharacterX
 import io.lightine.tessera.types.errors.MrzUnknownCountryCode
 import io.lightine.tessera.types.errors.MrzUnknownDocumentTypeCode
 import io.lightine.tessera.types.vocabulary.MrzField
+import io.lightine.tessera.types.vocabulary.MrzFormat
 import io.lightine.tessera.types.vocabulary.Sex
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
@@ -1051,4 +1054,58 @@ class MrzValidatorTest {
     }
 
     // TD1 validator coverage moved to MrzValidatorTd1Test once the TD1 parser slice landed.
+
+    // --- Raw lines that do not fit the format (TES-203) ---
+
+    @Test
+    fun empty_raw_lines_report_MrzInvalidLength_instead_of_throwing() {
+        val result = MrzValidator.validate(specimenTd3().copy(rawLines = emptyList()))
+        assertEquals(
+            MrzInvalidLength(
+                format = MrzFormat.TD3,
+                expectedLineCount = 2,
+                expectedLineLength = 44,
+                observedLineCount = 0,
+                observedLineLengths = emptyList(),
+            ),
+            result.structuralFailure,
+        )
+        assertTrue(result.validationFailures.isEmpty())
+        assertTrue(result.warnings.isEmpty())
+    }
+
+    @Test
+    fun wrong_raw_line_count_reports_MrzInvalidLength_with_observed_shape() {
+        val result = MrzValidator.validate(specimenTd3().copy(rawLines = listOf(specimenLine1)))
+        val error = assertIs<MrzInvalidLength>(result.structuralFailure)
+        assertEquals(1, error.observedLineCount)
+        assertEquals(listOf(44), error.observedLineLengths)
+        assertTrue(result.validationFailures.isEmpty())
+        assertTrue(result.warnings.isEmpty())
+    }
+
+    @Test
+    fun wrong_raw_line_length_reports_MrzInvalidLength_with_observed_shape() {
+        val shortLine2 = specimenLine2.dropLast(1)
+        val result = MrzValidator.validate(specimenTd3(line2 = shortLine2))
+        val error = assertIs<MrzInvalidLength>(result.structuralFailure)
+        assertEquals(2, error.observedLineCount)
+        assertEquals(listOf(44, 43), error.observedLineLengths)
+        assertTrue(result.validationFailures.isEmpty())
+        assertTrue(result.warnings.isEmpty())
+    }
+
+    @Test
+    fun raw_line_character_outside_alphabet_reports_MrzCharacterSetViolation_instead_of_throwing() {
+        val lowercaseLine2 = "l" + specimenLine2.drop(1)
+        val result = MrzValidator.validate(specimenTd3(line2 = lowercaseLine2))
+        assertEquals(MrzCharacterSetViolation(offendingCharacter = 'l', position = 44), result.structuralFailure)
+        assertTrue(result.validationFailures.isEmpty())
+        assertTrue(result.warnings.isEmpty())
+    }
+
+    @Test
+    fun specimen_with_fitting_raw_lines_has_no_structural_failure() {
+        assertNull(MrzValidator.validate(specimenTd3()).structuralFailure)
+    }
 }
