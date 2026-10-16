@@ -89,6 +89,10 @@ kotlin {
         // first enables it, so reference it by name.
         getByName("androidHostTest").dependencies {
             implementation(kotlin("test"))
+            // Test-only (TES-205): Robolectric gives the host test a real Android main thread (the main
+            // Looper behind Dispatchers.Main), so CameraXMrzScannerThreadingTest can prove results arrive
+            // on main and recognition runs off it. Same catalog entry mrz-camera-ui-android's host tests use.
+            implementation(libs.robolectric)
         }
     }
 }

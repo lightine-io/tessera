@@ -10,6 +10,7 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.suspendCancellableCoroutine
+import java.util.concurrent.Executor
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -30,8 +31,8 @@ public class MlKitMrzTextRecognizer(
     // so it reads just the machine-readable zone and not the rest of the document's printed text — which on a
     // real ID buried the MRZ among the page's prose and failed the decode (TES-86). Opt-in via
     // [restrictToMrzBand]; off by default so a headless consumer's full-frame reading is byte-for-byte
-    // unchanged. @Volatile because it may be set from any thread while [recognize] reads it on the analysis
-    // thread.
+    // unchanged. @Volatile because it may be set from any thread while [recognize] reads it on another (in
+    // CameraXMrzScanner, a Dispatchers.Default thread, TES-205).
     @Volatile private var bandRestricted: Boolean = false
 
     /**
@@ -152,10 +153,18 @@ public class MlKitMrzTextRecognizer(
 // Bridges an ML Kit Task<T> to a suspend call without depending on the Play-Services coroutines
 // integration (which would pull a Play-Services artifact the bundled model otherwise avoids).
 // Cancelling the coroutine cancels the awaiting continuation. `internal` so the saved-image recognizer
-// reuses the same bridge.
+// reuses the same bridge. ML Kit runs the work on its own threads. Listeners added without an executor
+// "will be called on the main application thread"
+// (https://developers.google.com/android/reference/com/google/android/gms/tasks/Task), so they are added
+// with a direct executor instead: they run on the thread that completes the task, and resuming the
+// continuation only hands control back to the caller's dispatcher (Dispatchers.Default in
+// CameraXMrzScanner, TES-205). ML Kit's completion never waits in the main thread's queue.
 internal suspend fun <T> Task<T>.await(): T =
     suspendCancellableCoroutine { continuation ->
-        addOnSuccessListener { result -> continuation.resume(result) }
-        addOnFailureListener { error -> continuation.resumeWithException(error) }
-        addOnCanceledListener { continuation.cancel() }
+        addOnSuccessListener(DirectExecutor) { result -> continuation.resume(result) }
+        addOnFailureListener(DirectExecutor) { error -> continuation.resumeWithException(error) }
+        addOnCanceledListener(DirectExecutor) { continuation.cancel() }
     }
+
+// Runs a task listener on the thread that completes the task. Each listener only resumes a continuation.
+private val DirectExecutor = Executor(Runnable::run)
