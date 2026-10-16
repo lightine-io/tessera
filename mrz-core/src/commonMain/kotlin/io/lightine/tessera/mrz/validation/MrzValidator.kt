@@ -259,24 +259,36 @@ public object MrzValidator {
         val rawPersonalNumber = Td3FormatSpec.personalNumber.extractFrom(rawLines)
         val personalNumberCheck = document.personalNumberCheckDigit
         val personalNumberHasContent = rawPersonalNumber.any { it != '<' }
-        if (personalNumberCheck == '<' && personalNumberHasContent) {
-            // Documented deviation: issuer left the check digit as filler while populating the
-            // personal number itself. Per Principle 1 and [ADR-013], not a failure — surfaced
-            // as a typed warning so consumers can decide whether to treat the deviation as
-            // disqualifying for their use case.
-            warnings +=
-                MrzPersonalNumberCheckDigitFiller(
-                    rawPersonalNumber = rawPersonalNumber,
+        when {
+            personalNumberCheck == '<' && personalNumberHasContent -> {
+                // Documented deviation: issuer left the check digit as filler while populating the
+                // personal number itself. Per Principle 1 and [ADR-013], not a failure: surfaced
+                // as a typed warning so consumers can decide whether to treat the deviation as
+                // disqualifying for their use case.
+                warnings +=
+                    MrzPersonalNumberCheckDigitFiller(
+                        rawPersonalNumber = rawPersonalNumber,
+                        position = Td3FormatSpec.globalPositionOf(Td3FormatSpec.personalNumberCheckDigit),
+                    )
+            }
+
+            personalNumberCheck == '<' -> {
+                // All-filler personal number with a filler check digit: conformant, nothing to report.
+                // ICAO Doc 9303 Part 4 (8th ed., 2021), 4.2.2.2, position 43: when positions 29 to 42
+                // are all filler, "the check digit may be zero or the filler character (<) at the
+                // option of the issuing State or organization". `0` is the computed value, so the
+                // mismatch check below already accepts it (TES-173).
+            }
+
+            else -> {
+                addCheckDigitFailureIfMismatch(
+                    into = failures,
+                    input = rawPersonalNumber,
+                    observed = personalNumberCheck,
+                    field = MrzField.OPTIONAL_DATA,
                     position = Td3FormatSpec.globalPositionOf(Td3FormatSpec.personalNumberCheckDigit),
                 )
-        } else {
-            addCheckDigitFailureIfMismatch(
-                into = failures,
-                input = rawPersonalNumber,
-                observed = personalNumberCheck,
-                field = MrzField.OPTIONAL_DATA,
-                position = Td3FormatSpec.globalPositionOf(Td3FormatSpec.personalNumberCheckDigit),
-            )
+            }
         }
 
         // TD3 always carries a composite check digit per ICAO Doc 9303 Part 4; the parser

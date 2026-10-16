@@ -4,7 +4,8 @@ package io.lightine.tessera.types.errors
  * Warning: a TD3 personal number has content, but its check digit is `<`.
  *
  * Reported by the validator. No [MrzCheckDigitMismatch] is reported for that check digit
- * in this case.
+ * in this case. When the personal number is all filler, ICAO Doc 9303 Part 4 allows `<` (or `0`)
+ * as its check digit, so the validator reports neither this warning nor a mismatch.
  *
  * @property rawPersonalNumber The personal number as printed.
  * @property position Zero-based index of the check digit across the lines joined with no separator.
