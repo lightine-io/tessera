@@ -18,71 +18,73 @@ import io.lightine.tessera.mrz.parsing.ParseResult
  * @throws IllegalArgumentException if [threshold] is less than 1.
  * @since 0.5.0
  */
-public class MrzDecodeConsensus(
-    public val threshold: Int = DEFAULT_THRESHOLD,
-) {
-    init {
-        require(threshold >= 1) { "threshold must be >= 1, was $threshold" }
-    }
-
-    // Votes per distinct reading, keyed on the parsed document (value-equal — a differing field, e.g. the
-    // name, is a different key). A LinkedHashMap keeps first-seen order, purely so behaviour is deterministic
-    // if two readings ever tie at the threshold on the same frame (they cannot: one frame casts one vote).
-    private val tally = LinkedHashMap<MrzDocument, Int>()
-
-    // Latched once a reading reaches the threshold, so a late duplicate frame re-offered before the caller's
-    // own guard trips still returns the settled reading rather than re-counting.
-    private var confirmed: MrzScanResult.Decoded? = null
-
-    /**
-     * Records one decoded frame and reports whether a reading has been agreed on.
-     *
-     * A [ParseResult.Failure] has no document, so it does not count and returns
-     * [ConsensusVerdict.Gathering] with the current lead. After a reading is confirmed, every call
-     * returns the same [ConsensusVerdict.Confirmed].
-     *
-     * @param decoded the decoded frame result.
-     * @return [ConsensusVerdict.Confirmed] once [threshold] frames agree, otherwise
-     *   [ConsensusVerdict.Gathering].
-     */
-    public fun offer(decoded: MrzScanResult.Decoded): ConsensusVerdict {
-        confirmed?.let { return ConsensusVerdict.Confirmed(it) }
-
-        val document =
-            decoded.parse.documentOrNull()
-                ?: return ConsensusVerdict.Gathering(agreement = leadCount(), threshold = threshold)
-
-        val count = (tally[document] ?: 0) + 1
-        tally[document] = count
-        return if (count >= threshold) {
-            confirmed = decoded
-            ConsensusVerdict.Confirmed(decoded)
-        } else {
-            ConsensusVerdict.Gathering(agreement = count, threshold = threshold)
-        }
-    }
-
-    /** Clears all votes and the confirmed reading. */
-    public fun reset() {
-        tally.clear()
-        confirmed = null
-    }
-
-    private fun leadCount(): Int = tally.values.maxOrNull() ?: 0
-
-    private fun ParseResult.documentOrNull(): MrzDocument? =
-        when (this) {
-            is ParseResult.Success -> document
-            is ParseResult.PartialSuccess -> document
-            is ParseResult.Failure -> null
+public class MrzDecodeConsensus
+    @Throws(IllegalArgumentException::class)
+    constructor(
+        public val threshold: Int = DEFAULT_THRESHOLD,
+    ) {
+        init {
+            require(threshold >= 1) { "threshold must be >= 1, was $threshold" }
         }
 
-    /** Constants for [MrzDecodeConsensus]. */
-    public companion object {
-        /** The default [threshold]: 2 frames. */
-        public const val DEFAULT_THRESHOLD: Int = 2
+        // Votes per distinct reading, keyed on the parsed document (value-equal — a differing field, e.g. the
+        // name, is a different key). A LinkedHashMap keeps first-seen order, purely so behaviour is deterministic
+        // if two readings ever tie at the threshold on the same frame (they cannot: one frame casts one vote).
+        private val tally = LinkedHashMap<MrzDocument, Int>()
+
+        // Latched once a reading reaches the threshold, so a late duplicate frame re-offered before the caller's
+        // own guard trips still returns the settled reading rather than re-counting.
+        private var confirmed: MrzScanResult.Decoded? = null
+
+        /**
+         * Records one decoded frame and reports whether a reading has been agreed on.
+         *
+         * A [ParseResult.Failure] has no document, so it does not count and returns
+         * [ConsensusVerdict.Gathering] with the current lead. After a reading is confirmed, every call
+         * returns the same [ConsensusVerdict.Confirmed].
+         *
+         * @param decoded the decoded frame result.
+         * @return [ConsensusVerdict.Confirmed] once [threshold] frames agree, otherwise
+         *   [ConsensusVerdict.Gathering].
+         */
+        public fun offer(decoded: MrzScanResult.Decoded): ConsensusVerdict {
+            confirmed?.let { return ConsensusVerdict.Confirmed(it) }
+
+            val document =
+                decoded.parse.documentOrNull()
+                    ?: return ConsensusVerdict.Gathering(agreement = leadCount(), threshold = threshold)
+
+            val count = (tally[document] ?: 0) + 1
+            tally[document] = count
+            return if (count >= threshold) {
+                confirmed = decoded
+                ConsensusVerdict.Confirmed(decoded)
+            } else {
+                ConsensusVerdict.Gathering(agreement = count, threshold = threshold)
+            }
+        }
+
+        /** Clears all votes and the confirmed reading. */
+        public fun reset() {
+            tally.clear()
+            confirmed = null
+        }
+
+        private fun leadCount(): Int = tally.values.maxOrNull() ?: 0
+
+        private fun ParseResult.documentOrNull(): MrzDocument? =
+            when (this) {
+                is ParseResult.Success -> document
+                is ParseResult.PartialSuccess -> document
+                is ParseResult.Failure -> null
+            }
+
+        /** Constants for [MrzDecodeConsensus]. */
+        public companion object {
+            /** The default [threshold]: 2 frames. */
+            public const val DEFAULT_THRESHOLD: Int = 2
+        }
     }
-}
 
 /**
  * The outcome of offering one decoded frame to a [MrzDecodeConsensus].

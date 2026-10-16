@@ -10,6 +10,7 @@ private val WEIGHTS = intArrayOf(7, 3, 1)
  *   7, 3, 1, modulo 10. Digits count as themselves, `A`-`Z` as 10-35, and `<` as 0.
  * @throws IllegalArgumentException if [input] has a character outside the MRZ alphabet.
  */
+@Throws(IllegalArgumentException::class)
 public fun computeCheckDigit(input: String): Char {
     var sum = 0
     for (index in input.indices) {
