@@ -252,7 +252,8 @@ internal fun gateRestoredState(
 
 /**
  * Builds the [Saver] `ScannerFlow` uses for its `uiState`, composing [decodeScannerUiState] (the pure codec)
- * with [gateRestoredState] (the config-aware restore gate, TES-102). Takes [enabledMethods] as a parameter so
+ * with [gateRestoredState] (the config-aware restore gate, TES-102). A state that is unreadable or rejected by
+ * the gate restores as [initialState] for [enabledMethods] (TES-222), never as null. Takes [enabledMethods] as a parameter so
  * `ScannerFlow` builds it from the config it runs on. Since TES-123 that is the config captured when the
  * screen opened ([rememberOpenedConfig]), which survives the same recreation, so the gate checks against the
  * opening set. It still matters when that capture cannot be restored and falls back to the config passed at
@@ -261,7 +262,12 @@ internal fun gateRestoredState(
 internal fun scannerUiStateSaver(enabledMethods: Set<ScanMethod>): Saver<ScannerUiState, Any> =
     listSaver(
         save = { state -> encodeScannerUiState(state) },
-        restore = { saved -> decodeScannerUiState(saved)?.let { gateRestoredState(it, enabledMethods) } },
+        // TES-222: never null. `rememberSaveable` does NOT fall back to its init lambda when restore returns
+        // null; it keeps the null inside the MutableState and the screen crashes on a non-null parameter. So a
+        // rejected or unreadable saved state is replaced here with the same first screen a fresh opening gets.
+        restore = { saved ->
+            decodeScannerUiState(saved)?.let { gateRestoredState(it, enabledMethods) } ?: initialState(enabledMethods)
+        },
     )
 
 // ---------------------------------------------------------------------------------------------------------
