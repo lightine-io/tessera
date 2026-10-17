@@ -41,6 +41,13 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
+# Xcode is pinned, not "whatever the image ships". The Kotlin Multiplatform compatibility table lists
+# Xcode 26.4 for Kotlin 2.4.20-2.4.21 (https://kotlinlang.org/docs/multiplatform/multiplatform-compatibility-guide.html);
+# macos-26 carries Xcode_26.4.1.app (https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md).
+# Bump it with the Kotlin version, in the dependency cadence.
+env:
+  XCODE_VERSION: "26.4.1"
+
 jobs:
   # Real release — only on a `v*` tag. Runs under the protected `release` environment: its required
   # reviewer is the manual go/no-go gate, and the signing + Sonatype secrets unlock only after that
@@ -48,13 +55,23 @@ jobs:
   release:
     name: release · publish
     if: github.event_name == 'push'
-    runs-on: macos-latest
+    runs-on: macos-26
     environment: release
     permissions:
       contents: write # create the GitHub Release and upload the XCFramework asset
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
+        run: |
+          XC="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [ ! -d "$XC" ]; then
+            echo "::error::$XC is missing on this runner image; no fallback to another Xcode."
+            exit 1
+          fi
+          sudo xcode-select -s "$XC"
+          xcodebuild -version
 
       - name: Set up JDK 21
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
@@ -63,7 +80,7 @@ jobs:
           java-version: '21'
 
       # The Android camera AAR (tessera-mrz-camera-android) publishes here, so the macOS runner needs
-      # the compileSdk platform. macos-latest ships the Android SDK; ensure android-37.0 is present.
+      # the compileSdk platform. macos-26 ships the Android SDK; ensure android-37.0 is present.
       - name: Ensure Android SDK platform 37
         run: |
           SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
@@ -269,10 +286,20 @@ jobs:
   dry-run:
     name: release · dry-run
     if: github.event_name == 'workflow_dispatch'
-    runs-on: macos-latest
+    runs-on: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
+        run: |
+          XC="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [ ! -d "$XC" ]; then
+            echo "::error::$XC is missing on this runner image; no fallback to another Xcode."
+            exit 1
+          fi
+          sudo xcode-select -s "$XC"
+          xcodebuild -version
 
       - name: Set up JDK 21
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1

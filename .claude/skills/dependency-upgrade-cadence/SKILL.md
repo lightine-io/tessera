@@ -41,6 +41,12 @@ Spotless and ktlint, runtime and test dependencies, settings plugins.
 - **Accepted risks.** Revisit every accepted-risk or deferred-dependency issue (for
   example the build-time Dependabot triage, the wrapper `distributionSha256Sum`, the
   `mrz-camera-android` ABI tooling): has upstream fixed it, or does the deferral hold?
+- **CI Xcode pin.** `XCODE_VERSION` in `.github/workflows/check.yml` and `release.yml`
+  here, and in tessera-swift's `.github/workflows/ci.yml`, with the `macos-26` runner
+  label: take the Xcode the Kotlin compatibility table lists for the new Kotlin, confirm
+  the runner-image list has that `Xcode_X.Y.Z.app` and an iOS simulator runtime with an
+  iPhone, bump all three together, and regenerate tessera-swift's
+  `api/TesseraUI.baseline.json` from CI (the API guard is Xcode-sensitive).
 - **Tech-stack index.** Every key in `libs.versions.toml` has its row in TES-A-23.
 - **CLAUDE.md health review (5 minutes).** Well under the 200-line cap; no rule crept
   back that belongs in a path rule, a skill, or a hook; every pointer-table link still
