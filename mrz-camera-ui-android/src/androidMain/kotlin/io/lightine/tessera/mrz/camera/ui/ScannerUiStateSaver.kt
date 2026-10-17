@@ -128,14 +128,9 @@ internal fun decodeScannerUiState(saved: List<Any?>): ScannerUiState? {
             //    resurrecting it would claim a wait that is not happening (unchanged reasoning from before
             //    TES-102's gate-review — see the file header).
             //  * struggling used to be restored (it reads as a latched "we've been trying a while" hint), but
-            //    that contradicts the TES-97 gate it exists to serve: the overlay is only honest to show once
-            //    OCR has actually returned text THIS session (`sawTextEver`) AND the struggle timeout has
-            //    elapsed THIS session (`struggleTimeoutElapsed`) — both plain, non-Saveable `remember` state in
-            //    `ScannerFlow`, which reset to false on every recreation along with the camera itself. A
-            //    restored `struggling = true` would show the "still looking / type it instead" hint over a
-            //    brand-new session that has analyzed exactly zero frames — worse than the plain framing guide
-            //    it would replace. The fresh session's own struggle timer and gates re-latch it honestly (and
-            //    quickly, if the document really is still hard to read) rather than resurrecting a stale claim.
+            //    the hint is driven by the struggle timer of the live camera session, which restarts with the
+            //    camera on every recreation. A restored `struggling = true` would show the hint over a brand-new
+            //    session that has not waited at all. The fresh session's own timer shows it again if needed.
             if (saved.size != 1) return null
             ScannerUiState.Scanning(struggling = false, gathering = false)
         }

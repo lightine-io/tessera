@@ -85,34 +85,33 @@ class CameraStatusScreenTest {
     fun ocr_failed_capture_error_is_a_transient_miss_and_stays_scanning() {
         val result = MrzScanResult.CaptureError(CameraError.OcrFailed("frame OCR miss"), quality)
         assertEquals(
-            CameraFlowEffect.StayScanning(sawText = false),
+            CameraFlowEffect.StayScanning,
             reduceCameraResult(result),
-            "OcrFailed is a transient per-frame miss — keep scanning, no state change; the fixture's quality " +
-                "carries no recognized text (an OCR-engine failure produces none)",
+            "OcrFailed is a transient per-frame miss — keep scanning, no state change",
         )
     }
 
     @Test
-    fun no_mrz_found_with_no_recognized_text_stays_scanning_without_saw_text() {
+    fun no_mrz_found_with_no_recognized_text_stays_scanning() {
         // Nothing at all in view this frame (TES-97) — quality.recognizedLineCount is 0.
         val result = MrzScanResult.NoMrzFound(RecognizedText(emptyList()), quality)
         assertEquals(
-            CameraFlowEffect.StayScanning(sawText = false),
+            CameraFlowEffect.StayScanning,
             reduceCameraResult(result),
-            "NoMrzFound is the normal per-frame churn — keep scanning; sawText is false when OCR saw no text",
+            "NoMrzFound is the normal per-frame churn — keep scanning",
         )
     }
 
     @Test
-    fun no_mrz_found_with_recognized_text_stays_scanning_and_saw_text() {
+    fun no_mrz_found_with_recognized_text_stays_scanning() {
         // Something IS in view this frame, it just did not form an MRZ shape (TES-97) —
         // quality.recognizedLineCount is non-zero.
         val recognized = RecognizedText(listOf(RecognizedLine("NOT AN MRZ LINE", 0.4f)))
         val result = MrzScanResult.NoMrzFound(recognized, quality.copy(recognizedLineCount = 1))
         assertEquals(
-            CameraFlowEffect.StayScanning(sawText = true),
+            CameraFlowEffect.StayScanning,
             reduceCameraResult(result),
-            "OCR returned text this frame — sawText must be true even though nothing parsed as an MRZ",
+            "text that did not parse as an MRZ is still a miss — keep scanning",
         )
     }
 
@@ -121,45 +120,34 @@ class CameraStatusScreenTest {
         // The screen's own permission gate owns the permission path before the stream starts; a
         // permission-denied capture error therefore drives no distinct flow effect here.
         val result = MrzScanResult.CaptureError(CameraError.PermissionDenied("not granted"), quality)
-        assertEquals(CameraFlowEffect.StayScanning(sawText = false), reduceCameraResult(result))
+        assertEquals(CameraFlowEffect.StayScanning, reduceCameraResult(result))
     }
 
     // ---------------------------------------------------------------------------------------------------------
-    // TES-97 — the struggle gate: Struggling is only reachable once OCR has returned text at least once.
+    // TES-151 — the struggle hint runs on the timer alone: no text has to have been seen.
     // ---------------------------------------------------------------------------------------------------------
 
     @Test
-    fun struggle_gate_stays_false_across_n_no_text_frames() {
-        var sawTextEver = false
-        repeat(5) {
-            val effect = reduceCameraResult(MrzScanResult.NoMrzFound(RecognizedText(emptyList()), quality))
-            assertTrue(effect is CameraFlowEffect.StayScanning && !effect.sawText)
-            sawTextEver = struggleGateAdvance(sawTextEver, effect)
-        }
-        assertFalse(sawTextEver, "no frame ever carried text — the gate must stay false (the plain framing guide stays)")
+    fun struggle_timeout_shows_the_hint_with_no_text_ever_seen() {
+        // A covered lens or an empty wall: every frame so far was a miss with no recognised text.
+        val effect = reduceCameraResult(MrzScanResult.NoMrzFound(RecognizedText(emptyList()), quality))
+        assertEquals(CameraFlowEffect.StayScanning, effect)
+        assertEquals(ScannerUiState.Scanning(struggling = true), struggleAfterTimeout(ScannerUiState.Scanning()))
     }
 
     @Test
-    fun struggle_gate_flips_true_once_any_frame_carries_unparseable_text() {
-        var sawTextEver = false
-        // A run of empty frames first (nothing in view yet)…
-        repeat(3) {
-            val effect = reduceCameraResult(MrzScanResult.NoMrzFound(RecognizedText(emptyList()), quality))
-            sawTextEver = struggleGateAdvance(sawTextEver, effect as CameraFlowEffect.StayScanning)
-        }
-        assertFalse(sawTextEver)
+    fun the_hint_is_off_before_the_timeout_fires() {
+        assertFalse(ScannerUiState.Scanning().struggling, "a fresh session starts without the hint")
+    }
 
-        // …then one frame with text that did not form an MRZ shape is enough to allow Struggling.
-        val withText = RecognizedText(listOf(RecognizedLine("SOMETHING", null)))
-        val qualifyingEffect =
-            reduceCameraResult(MrzScanResult.NoMrzFound(withText, quality.copy(recognizedLineCount = 1))) as CameraFlowEffect.StayScanning
-        sawTextEver = struggleGateAdvance(sawTextEver, qualifyingEffect)
-        assertTrue(sawTextEver, "one frame with unparseable text is enough to allow Struggling")
-
-        // The gate stays true even if later frames go back to seeing nothing (an OR-fold, not "the latest frame").
-        val laterEmpty = reduceCameraResult(MrzScanResult.NoMrzFound(RecognizedText(emptyList()), quality)) as CameraFlowEffect.StayScanning
-        sawTextEver = struggleGateAdvance(sawTextEver, laterEmpty)
-        assertTrue(sawTextEver, "the gate must not un-arm once text has been seen")
+    @Test
+    fun struggle_timeout_keeps_the_gathering_cue_and_leaves_other_states_alone() {
+        assertEquals(
+            ScannerUiState.Scanning(struggling = true, gathering = true),
+            struggleAfterTimeout(ScannerUiState.Scanning(gathering = true)),
+        )
+        val manual = ScannerUiState.ManualRaw(text = "")
+        assertEquals(manual, struggleAfterTimeout(manual))
     }
 
     // ---------------------------------------------------------------------------------------------------------
@@ -245,7 +233,7 @@ class CameraStatusScreenTest {
         }
 
         composeRule.onNodeWithTag(STRUGGLING_TEST_TAG).assertIsDisplayed()
-        composeRule.onNodeWithText("Can't read it yet. Try more light or move the document farther away.").assertIsDisplayed()
+        composeRule.onNodeWithText("Try more light, or move the document a little farther away.").assertIsDisplayed()
 
         composeRule.onNodeWithText("Enter details manually").performClick()
         assertEquals(1, manualEntryCalls, "\"Enter details manually\" routes to manual entry")

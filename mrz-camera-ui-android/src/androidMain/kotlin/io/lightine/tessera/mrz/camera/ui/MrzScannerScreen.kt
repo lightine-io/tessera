@@ -231,7 +231,7 @@ private fun ScannerFlow(
     // whole presentation, and a config the host changes while the screen is open never reaches this flow.
     //
     // By deliberate contrast, the session-scoped helpers declared right below (decodeRouted, the consensus
-    // tally, sawTextEver, struggleTimeoutElapsed) stay plain remember: they describe the LIVE camera session
+    // tally) stay plain remember: they describe the LIVE camera session
     // — a latch over a stream, a frame-agreement tally, per-session flags — which restarts fresh after a
     // recreation along with the camera itself, so persisting them would describe a session that no longer
     // exists.
@@ -264,18 +264,6 @@ private fun ScannerFlow(
     // round trip. rememberSaveable so it also survives rotation / process death, matching the rest of the
     // flow's persisted state.
     var manualDraft by rememberSaveable { mutableStateOf("") }
-
-    // TES-97: whether OCR has returned text for at least one frame during this scanning session — the gate for
-    // entering Struggling (something is in view but unparseable) rather than staying on the plain framing
-    // guide (nothing has been in view at all, so "try more light or move farther away" would be misleading).
-    // Plain (non-Compose) state, like lastDecodeAtMs, so updating it never triggers recomposition on its own;
-    // reset alongside decodeRouted / consensus whenever a fresh live session begins.
-    val sawTextEver = remember { booleanArrayOf(false) }
-
-    // TES-97: whether the configured struggle timeout has already elapsed for this session. Split from
-    // sawTextEver so a frame that only starts carrying text AFTER the timer already fired still flips the UI
-    // to Struggling the moment it arrives, rather than requiring text to have appeared before the timer.
-    val struggleTimeoutElapsed = remember { booleanArrayOf(false) }
 
     // A short confirming haptic when a live-camera read is accepted — the hands-free "it scanned" cue. Honours
     // the device's system haptic setting; opt-out via config.hapticFeedback. Camera path only (manual/saved
@@ -376,10 +364,6 @@ private fun ScannerFlow(
             // linger over an empty preview. The consensus tally is kept (a brief occlusion shouldn't lose
             // progress); it resets only on confirm / rescan / method switch.
             is CameraFlowEffect.StayScanning -> {
-                // TES-97: fold whether OCR has returned text at least once this session — the gate for whether
-                // the struggle timeout is allowed to show Struggling at all (see onStruggling below).
-                sawTextEver[0] = struggleGateAdvance(sawTextEver[0], effect)
-
                 val current = uiState
                 if (current is ScannerUiState.Scanning) {
                     var next = current
@@ -388,12 +372,6 @@ private fun ScannerFlow(
                     // left the frame stops producing decodes and clears within GATHERING_CUE_LINGER_MS.
                     if (next.gathering && SystemClock.elapsedRealtime() - lastDecodeAtMs[0] > GATHERING_CUE_LINGER_MS) {
                         next = next.copy(gathering = false)
-                    }
-                    // TES-97: the struggle timeout already elapsed, but nothing carried text until just now —
-                    // this qualifying frame arriving late still flips the UI to Struggling (rather than only
-                    // checking at the moment the timer itself fires, in onStruggling below).
-                    if (!next.struggling && struggleTimeoutElapsed[0] && sawTextEver[0]) {
-                        next = next.copy(struggling = true)
                     }
                     if (next != current) uiState = next
                 }
@@ -417,8 +395,6 @@ private fun ScannerFlow(
                 if (event == Lifecycle.Event.ON_RESUME && uiState is ScannerUiState.CameraInUse) {
                     decodeRouted = false
                     consensus.reset()
-                    sawTextEver[0] = false
-                    struggleTimeoutElapsed[0] = false
                     uiState = ScannerUiState.Scanning()
                 }
             }
@@ -518,8 +494,6 @@ private fun ScannerFlow(
     val onSelectMethod = { method: ScanMethod ->
         decodeRouted = false
         consensus.reset()
-        sawTextEver[0] = false
-        struggleTimeoutElapsed[0] = false
         uiState =
             when (method) {
                 ScanMethod.CAMERA -> ScannerUiState.Scanning()
@@ -537,8 +511,6 @@ private fun ScannerFlow(
     val returnToSource = { review: ScannerUiState.Review ->
         decodeRouted = false
         consensus.reset()
-        sawTextEver[0] = false
-        struggleTimeoutElapsed[0] = false
         when (review.source) {
             ScanMethod.CAMERA -> {
                 uiState = ScannerUiState.Scanning()
@@ -557,18 +529,10 @@ private fun ScannerFlow(
         }
     }
 
-    // TES-97: fired once, after the configured struggleTimeout elapses with no decode (the timer itself lives
-    // in CameraPreview, per scanning session). Only actually shows Struggling when OCR has seen text at least
-    // once (sawTextEver) — otherwise nothing has ever been in view, so "try more light or move the document
-    // farther away" would be misleading advice; the plain framing guide keeps showing instead, and a later
-    // qualifying frame (see the StayScanning branch above) can still flip it on retroactively.
-    val onStruggling = {
-        struggleTimeoutElapsed[0] = true
-        val current = uiState
-        if (current is ScannerUiState.Scanning && !current.struggling && sawTextEver[0]) {
-            uiState = current.copy(struggling = true)
-        }
-    }
+    // TES-151: fired once, after the configured struggleTimeout elapses with no decode (the timer itself lives
+    // in CameraPreview, per scanning session). The timer alone decides: the hint is a generic tip, not a claim
+    // about what the camera sees, so it shows whether or not OCR ever returned text.
+    val onStruggling = { uiState = struggleAfterTimeout(uiState) }
 
     // TES-92: the system Back key is owned inside the scanner rather than left to the platform default (which
     // would just finish the hosting Activity, an inconsistent escape compared to the top-bar ✕). The decision
@@ -594,8 +558,6 @@ private fun ScannerFlow(
             BackEffect.ReturnToCamera -> {
                 decodeRouted = false
                 consensus.reset()
-                sawTextEver[0] = false
-                struggleTimeoutElapsed[0] = false
                 uiState = ScannerUiState.Scanning()
             }
 
@@ -643,7 +605,7 @@ private fun ScannerFlow(
  * manual-entry draft in sync with every edit (TES-93); [onRescanFromReview] is the flow's shared
  * `returnToSource` decision, reused here for the Review screen's secondary action and in [ScannerFlow]'s
  * `BackHandler` (TES-92 / TES-96) so the two paths can never drift apart; [onStruggling] is the flow's
- * TES-97 struggle-gate decision, fired once the struggle timeout elapses.
+ * TES-151 struggle-timeout decision, fired once the struggle timeout elapses.
  */
 @Composable
 private fun ScannerBody(
@@ -921,16 +883,8 @@ internal sealed interface CameraFlowEffect {
     /** The camera cannot be started (terminal). Show the unavailable notice; no auto-recovery, no retry. */
     data object GoCameraUnavailable : CameraFlowEffect
 
-    /**
-     * A transient per-frame miss (`NoMrzFound` / `OcrFailed`) — keep scanning, no routing. [sawText] is TES-97's
-     * "did OCR return any text at all on this frame" signal (`quality.recognizedLineCount > 0`): `false` for a
-     * frame with nothing recognisable in view, `true` for a frame where OCR saw text that just did not form an
-     * MRZ shape. [ScannerFlow] folds this across the session ([struggleGateAdvance]) to decide whether the
-     * struggle timeout is allowed to show the Struggling overlay at all.
-     */
-    data class StayScanning(
-        val sawText: Boolean,
-    ) : CameraFlowEffect
+    /** A transient per-frame miss (`NoMrzFound` / `OcrFailed`) — keep scanning, no routing. */
+    data object StayScanning : CameraFlowEffect
 }
 
 /**
@@ -943,9 +897,7 @@ internal sealed interface CameraFlowEffect {
  *  * a `CaptureError` carrying [`CameraUnavailable`][CameraError.CameraUnavailable] →
  *    [CameraFlowEffect.GoCameraUnavailable] (terminal);
  *  * a `CaptureError` carrying [`OcrFailed`][CameraError.OcrFailed] (a transient per-frame OCR miss) and a
- *    [`NoMrzFound`][MrzScanResult.NoMrzFound] → [CameraFlowEffect.StayScanning], carrying whether this frame's
- *    [`ScanQuality.recognizedLineCount`][io.lightine.tessera.mrz.camera.ScanQuality.recognizedLineCount] was
- *    non-zero (TES-97 — "OCR saw text" vs "nothing in view at all").
+ *    [`NoMrzFound`][MrzScanResult.NoMrzFound] → [CameraFlowEffect.StayScanning].
  *
  * [`PermissionDenied`][CameraError.PermissionDenied] is not mapped to a distinct effect here: the screen's
  * own permission gate ([CameraCapture]) owns the permission path before the stream starts, so a
@@ -959,33 +911,27 @@ internal fun reduceCameraResult(result: MrzScanResult): CameraFlowEffect =
         }
 
         is MrzScanResult.NoMrzFound -> {
-            CameraFlowEffect.StayScanning(sawText = result.quality.recognizedLineCount > 0)
+            CameraFlowEffect.StayScanning
         }
 
         is MrzScanResult.CaptureError -> {
-            val sawText = result.quality.recognizedLineCount > 0
             when (result.error) {
                 is CameraError.CameraInUse -> CameraFlowEffect.GoCameraInUse
                 is CameraError.CameraUnavailable -> CameraFlowEffect.GoCameraUnavailable
-                is CameraError.OcrFailed -> CameraFlowEffect.StayScanning(sawText)
-                is CameraError.PermissionDenied -> CameraFlowEffect.StayScanning(sawText)
+                is CameraError.OcrFailed -> CameraFlowEffect.StayScanning
+                is CameraError.PermissionDenied -> CameraFlowEffect.StayScanning
             }
         }
     }
 
 /**
- * Folds one [CameraFlowEffect.StayScanning] into whether OCR has returned text at least once this scanning
- * session (TES-97) — an OR-fold: [sawTextEver] stays `true` once any frame carried text, regardless of later
- * text-free frames (a document that briefly leaves frame should not un-arm Struggling). This is the gate
- * [ScannerFlow] checks before showing the Struggling overlay: without it, a struggle timeout with nothing ever
- * in view would show "try more light or move the document farther away" — misleading advice when there was
- * never anything to read in the first place. Pure so the "ANY, not the latest frame" semantics is
- * host-testable without a timer or camera.
+ * The state after the struggle timeout fires (TES-151): a live [ScannerUiState.Scanning] session that is not
+ * already struggling turns the hint on; any other state is untouched. The timer alone decides: it does not
+ * depend on whether OCR returned any text, because the hint is a generic tip ("more light, or a little
+ * farther away"), not a claim about what the camera sees. Pure so the rule is host-testable without a timer.
  */
-internal fun struggleGateAdvance(
-    sawTextEver: Boolean,
-    effect: CameraFlowEffect.StayScanning,
-): Boolean = sawTextEver || effect.sawText
+internal fun struggleAfterTimeout(current: ScannerUiState): ScannerUiState =
+    if (current is ScannerUiState.Scanning && !current.struggling) current.copy(struggling = true) else current
 
 /**
  * Waits for the camera to become active — the first non-null element of [surfaceRequests] (the live-preview
@@ -1468,8 +1414,8 @@ private fun CameraPreview(
 }
 
 /**
- * The struggling hint overlaid on the live preview (mockup 02): a neutral advisory line ("still looking — try
- * more light or move farther away") and a "Type it instead" affordance into manual entry. Advisory only — it never
+ * The struggling hint overlaid on the live preview (mockup 02): a neutral advisory tip ("try more light, or move
+ * the document a little farther away") and a "Type it instead" affordance into manual entry. Advisory only — it never
  * states an error or a verdict, and the camera keeps scanning underneath (a decode arriving after the hint
  * still routes normally). [onManualEntry] switches to manual raw entry.
  *
