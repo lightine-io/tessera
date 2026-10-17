@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION") // MrzBirthDateImplausiblyOld is deprecated, never reported (TES-202)
+
 package io.lightine.tessera.mrz.validation
 
 import io.lightine.tessera.mrz.model.CommonFields
