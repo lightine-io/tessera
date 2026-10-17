@@ -1,6 +1,6 @@
 # Issue style
 
-How every issue on the `TES` board is written. Decided by Padre in TES-194 (2026-10-15).
+How every issue on the `TES` board is written. Decided in TES-194 (2026-10-15).
 The board check (`.claude/skills/board-check/`) verifies it. Old comments are never edited.
 
 ## Titles
@@ -58,7 +58,7 @@ Plain top, then `---`, then technical details. The top must make sense to someon
 **Done when:** The choice is written here and in the ADR.
 ---
 **Options:** each with one line of cost and benefit
-**Lean:** mine, and why. The call is Padre's.
+**Lean:** the recommended option, and why.
 **Consequences:** what gets easier, what gets harder
 ```
 
