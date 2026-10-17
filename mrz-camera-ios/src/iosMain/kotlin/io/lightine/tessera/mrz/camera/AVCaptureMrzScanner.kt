@@ -17,16 +17,17 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.consume
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import platform.AVFoundation.AVAuthorizationStatusAuthorized
 import platform.AVFoundation.AVCaptureConnection
@@ -211,15 +212,16 @@ public class AVCaptureMrzScanner(
     // itself runs on Dispatchers.Main, while flowOn keeps the whole analysis pipeline (camera setup, frame
     // channel, recognition, parsing) on Dispatchers.Default. flowOn hands values over through a FIFO channel,
     // so result order is unchanged. Its buffer suspends rather than drops when the main thread is slow; the
-    // frame channel upstream already keeps only the newest frame, so the camera is never held up.
-    // `internal` (not private) only so the iOS test can feed synthetic frames: the Simulator has no camera.
+    // frame channel upstream already keeps only the newest frame, so the camera is never held up. [frames]
+    // must release each frame after emitting it, as emitFrames does (TES-219). `internal` (not private) only
+    // so the iOS test can feed synthetic frames: the Simulator has no camera.
     internal fun startWith(frames: () -> Flow<CMSampleBufferRef>) {
         session.start {
             scope.launch(Dispatchers.Main) {
                 analyzer
                     .scan(
+                        // The frame flow releases each frame itself (see emitFrames), so scan() must not.
                         frames = frames(),
-                        releaseFrame = ::releaseFrame,
                         captureErrorFor = ::cameraErrorFor,
                     ).flowOn(Dispatchers.Default)
                     .collect(mutableResults::emit)
@@ -326,7 +328,7 @@ public class AVCaptureMrzScanner(
     // is thrown here and routed through scan()'s catch -> cameraErrorFor into a CameraError, exactly like
     // the rest of the capture-availability failures (ADR-020: surfaced as a sealed result, never thrown
     // out of the stream). Asynchronous failures (interruption / runtime error) close the channel with a
-    // cause, which receiveAsFlow rethrows into the same catch path.
+    // cause, which emitFrames rethrows into the same catch path.
     private fun cameraFrames(): Flow<CMSampleBufferRef> =
         flow {
             // All setup that can fail runs FIRST, before the frame channel or the capture delegate exist,
@@ -400,9 +402,9 @@ public class AVCaptureMrzScanner(
             // everything from startRunning onward is in a try/finally that releases them all.
 
             // capacity-1 + DROP_OLDEST: only the newest frame is kept; onUndeliveredElement releases a
-            // CMSampleBuffer dropped by overflow or by channel close/cancel — the retain/release
-            // counterpart of releaseFrame() for frames the analyzer DID take. Frames are CFRetain'd before
-            // the send, so every retained buffer leaves through exactly one of these two release points.
+            // CMSampleBuffer dropped by overflow or by channel close/cancel, and emitFrames releases every
+            // frame it takes from the channel. Frames are CFRetain'd before the send, so every retained
+            // buffer leaves through exactly one of these two release points (TES-219).
             val frames =
                 Channel<CMSampleBufferRef>(
                     capacity = 1,
@@ -480,7 +482,7 @@ public class AVCaptureMrzScanner(
                 session.startRunning()
                 // Publish the running session for an armed SwiftUI viewfinder to draw (headless default: null).
                 if (previewEnabled) onMain { mutablePreviewSession.value = session }
-                emitAll(frames.receiveAsFlow())
+                emitFrames(frames, ::releaseFrame)
             } finally {
                 // Identity-guarded clears (TES-133): stop() cancels without joining, so this finally can
                 // run AFTER a restarted session has already published its own device/preview/delegate.
@@ -511,8 +513,8 @@ public class AVCaptureMrzScanner(
     }
 
     // CMSampleBuffer is a Core Foundation type; Kotlin/Native's ARC does not release it, so every buffer
-    // this scanner retains is released here exactly once — as scan()'s releaseFrame after analysis, and as
-    // the frame channel's onUndeliveredElement for dropped/undelivered buffers.
+    // this scanner retains is released here exactly once: by emitFrames after analysis, and as the frame
+    // channel's onUndeliveredElement for dropped/undelivered buffers.
     private fun releaseFrame(frame: CMSampleBufferRef) {
         CFRelease(frame)
     }
@@ -582,3 +584,31 @@ internal class CameraPermissionException(
 internal class CameraUnavailableException(
     message: String,
 ) : Exception(message)
+
+// Emits every frame from [frames] until the channel closes, and releases each frame it takes exactly once
+// (TES-219, the iOS mirror of the Android scanner's frameStream from TES-205):
+//   - a frame it receives is released after `emit` returns or throws. Downstream operators run inside `emit`
+//     (scan()'s analysis is a plain map, with no buffer before it), so the frame stays valid for the whole
+//     analysis. Releasing here, not in scan()'s releaseFrame, also covers the frame that `emit` drops when the
+//     collector is already cancelled (the flow checks for cancellation before it calls the downstream), which
+//     `emitAll(receiveAsFlow())` leaked once per stop;
+//   - a frame it never receives (still buffered, or offered after the channel closed) is released by the
+//     channel's onUndeliveredElement, which must be [releaseFrame]. consume() cancels the channel on any exit,
+//     so a buffered frame is released the moment the stream stops.
+// The stream ends when the channel closes: normally, or with the cause it was closed with, which scan()
+// maps to a CaptureError (a CancellationException cause included, so the scan never waits forever).
+internal suspend fun <F> FlowCollector<F>.emitFrames(
+    frames: ReceiveChannel<F>,
+    releaseFrame: (F) -> Unit,
+) {
+    // No suspension point between taking a frame and the try.
+    frames.consume {
+        for (frame in this) {
+            try {
+                emit(frame)
+            } finally {
+                releaseFrame(frame)
+            }
+        }
+    }
+}

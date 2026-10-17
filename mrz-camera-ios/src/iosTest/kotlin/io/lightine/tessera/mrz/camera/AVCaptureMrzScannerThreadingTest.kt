@@ -85,8 +85,8 @@ class AVCaptureMrzScannerThreadingTest {
         assertEquals((1..frameCount).map { "FRAME$it" }, texts.map { it.lines.single().text })
     }
 
-    // Each frame is CFRetain'd before it is emitted: the scanner releases every frame it is handed, as it
-    // does for the camera's frames.
+    // Each frame is CFRetain'd before it is emitted and released after, as the camera's frame stream does
+    // (startWith's contract, TES-219).
     private fun framesOf(
         sample: CMSampleBufferRef,
         count: Int,
@@ -94,7 +94,11 @@ class AVCaptureMrzScannerThreadingTest {
         flow {
             repeat(count) {
                 CFRetain(sample)
-                emit(sample)
+                try {
+                    emit(sample)
+                } finally {
+                    CFRelease(sample)
+                }
             }
         }
 
