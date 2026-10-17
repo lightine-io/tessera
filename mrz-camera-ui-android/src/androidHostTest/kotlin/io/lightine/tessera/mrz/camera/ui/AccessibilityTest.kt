@@ -191,7 +191,7 @@ class AccessibilityTest {
 
         // The struggle hint overlays the preview via the struggle-timeout auto-transition (mockup 02) — Polite.
         composeRule
-            .onNode(hasText("Can't read it yet. Try more light or move the document farther away.") and isLiveRegion(LiveRegionMode.Polite))
+            .onNode(hasText("Try more light, or move the document a little farther away.") and isLiveRegion(LiveRegionMode.Polite))
             .assertIsDisplayed()
     }
 

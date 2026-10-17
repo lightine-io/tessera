@@ -94,9 +94,10 @@
     <string name="tessera_scanner_initializing_body">Getting the camera ready. This all runs on your device.</string>
 
     <!-- ============================ Struggling hint (mockup 02) ============================ -->
-    <!-- Shown over the live preview after a while with no successful read. Advisory only — it nudges the
-         user to improve the capture; it is never an error and never a verdict about the document (Principle 1). -->
-    <string name="tessera_scanner_struggling_hint">Can\'t read it yet. Try more light or move the document farther away.</string>
+    <!-- A tip shown over the live preview once the struggle timeout passes with no successful read. It runs on
+         a timer alone and makes no claim about what the camera sees (it shows for a covered lens too). Advisory
+         only: never an error and never a verdict about the document (Principle 1). -->
+    <string name="tessera_scanner_struggling_hint">Try more light, or move the document a little farther away.</string>
     <!-- The "type it instead" affordance on the struggling hint — the escape into manual entry. -->
     <string name="tessera_scanner_struggling_manual">Enter details manually</string>
 
