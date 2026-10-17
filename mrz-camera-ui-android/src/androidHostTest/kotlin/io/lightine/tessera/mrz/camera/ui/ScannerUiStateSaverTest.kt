@@ -470,6 +470,42 @@ class ScannerUiStateSaverTest {
     }
 
     @Test
+    fun a_restored_state_the_gate_rejects_starts_on_the_first_screen_through_remember_saveable() {
+        // TES-222: rememberSaveable keeps a null from restore instead of using its init lambda, which crashed
+        // the screen. The saver itself must hand back the initial state. Saved while manual entry is enabled,
+        // restored while only the camera is: the gate rejects the saved ManualRaw.
+        var enabled = setOf(ScanMethod.CAMERA, ScanMethod.MANUAL_ENTRY)
+        val restorationTester = StateRestorationTester(composeRule)
+        var current: ScannerUiState? = null
+
+        restorationTester.setContent {
+            val methods = enabled
+            current =
+                rememberSaveable(stateSaver = scannerUiStateSaver(methods)) {
+                    mutableStateOf(ScannerUiState.ManualRaw(text = "ABC123") as ScannerUiState)
+                }.value
+        }
+        assertEquals(ScannerUiState.ManualRaw(text = "ABC123"), current)
+
+        enabled = setOf(ScanMethod.CAMERA)
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        assertEquals(
+            initialState(setOf(ScanMethod.CAMERA)),
+            current,
+            "a rejected restored state must become the first screen, never null",
+        )
+    }
+
+    @Test
+    fun an_unreadable_saved_state_restores_as_the_first_screen_not_null() {
+        val methods = setOf(ScanMethod.CAMERA, ScanMethod.MANUAL_ENTRY)
+        val saver = scannerUiStateSaver(methods)
+        assertEquals(initialState(methods), saver.restore(listOf("no-such-tag")))
+        assertEquals(initialState(methods), saver.restore(emptyList<Any?>()))
+    }
+
+    @Test
     fun the_saver_survives_a_real_state_restoration_of_a_review_state() {
         // Unlike ManualRaw's flat String + Boolean payload, Review's payload carries the nested
         // ArrayList<String> / ArrayList<Float> shapes (rawLines, texts, confidences) through the REAL
