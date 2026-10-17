@@ -73,11 +73,19 @@ class AVCaptureMrzScannerFrameReleaseTest {
                 repeat(ITERATIONS) { iteration ->
                     val camera = FakeCamera(pixelBuffer, format)
                     scanner.startWith(camera::frames)
+                    // Stop only once the camera is streaming. startWith launches the session on the main
+                    // thread, so a stop() before that launch runs cancels a session that never collected
+                    // the frames, and the fake camera never starts or finishes (the CI flake, TES-219).
+                    val streaming = spinMainRunLoopUntil { camera.isStreaming }
+                    assertTrue(streaming, "iteration $iteration: the camera starts streaming (${camera.state})")
                     // Vary the stop point so it lands in different phases of the hand-off.
                     spinMainRunLoopFor(seconds = (iteration % 5) * 0.001)
                     scanner.stop()
+                    // Every release point runs before isFinished: emitFrames releases a taken frame before the
+                    // stream's finally, the channel releases a buffered frame when emitFrames cancels it, and
+                    // the capture thread releases a frame it could not send before it reports done.
                     val ended = spinMainRunLoopUntil { camera.isFinished }
-                    assertTrue(ended, "iteration $iteration: the stream ends after stop()")
+                    assertTrue(ended, "iteration $iteration: the stream ends after stop() (${camera.state})")
                     val counts = camera.produced.map { CFGetRetainCount(it).toInt() }
                     counts.forEachIndexed { index, count ->
                         if (count != 2) wrong += "iteration $iteration frame $index: retain count $count"
@@ -104,7 +112,12 @@ class AVCaptureMrzScannerFrameReleaseTest {
         private val captureThreadDone = AtomicInt(0)
         private val streamDone = AtomicInt(0)
 
+        private val captureStarted = AtomicInt(0)
+
+        val isStreaming: Boolean get() = captureStarted.value == 1
         val isFinished: Boolean get() = captureThreadDone.value == 1 && streamDone.value == 1
+        val state: String
+            get() = "capture started ${captureStarted.value}, capture done ${captureThreadDone.value}, stream done ${streamDone.value}"
 
         fun frames(): Flow<CMSampleBufferRef> =
             flow {
@@ -115,6 +128,7 @@ class AVCaptureMrzScannerFrameReleaseTest {
                         onUndeliveredElement = { CFRelease(it) },
                     )
                 dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(), 0u)) {
+                    captureStarted.value = 1
                     while (stopRequested.value == 0) {
                         val frame = newFrame()
                         // The test's own two references.
