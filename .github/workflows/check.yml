@@ -282,6 +282,7 @@ jobs:
           bash scripts/test/outward-content-scan.test.sh
           bash scripts/test/block-screenshot.test.sh
           bash scripts/test/prefer-dev-wrappers.test.sh
+          bash scripts/test/check-readme-version.test.sh
 
       - name: No real document data (MRZ guard)
         run: bash scripts/private-content-scan.sh --mrz-only
