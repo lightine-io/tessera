@@ -40,6 +40,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Calls that could crash the app on bad input now throw a Swift error instead** (the `Tessera` framework; Kotlin, JVM, and Android unchanged; [TES-198](https://lightine.youtrack.cloud/issue/TES-198)). These calls stop on bad input with an `IllegalArgumentException`. Swift could not catch it, so the whole app stopped. They are now `throws` in Swift, and the error can be caught with `do`/`catch`. What to change in calling code: put `try` in front of each call (or `try?` / `try!` where that fits).
   - `computeCheckDigit(input:)`: throws for a character outside `A`-`Z`, `0`-`9`, and `<`. Before: `let digit = computeCheckDigit(input: field)`. After: `let digit = try computeCheckDigit(input: field)`.
   - `MrzDecodeConsensus(threshold:)`: throws when `threshold` is below 1. A stored property set to a fixed, valid threshold can use `try!`.
+- **`MrzGenerator.generate` for a document has clear names in Swift** (the `Tessera` framework; Kotlin, JVM, and Android unchanged; [TES-197](https://lightine.youtrack.cloud/issue/TES-197)). The six `generate` calls that take a document all had the label `document`, so Swift got them as `generate(document:)`, `generate(document_:)`, and so on up to `generate(document_____:)`, and the number of underscores did not tell you the format. Each now has its own label. What to change in calling code: rename the call.
+  - `generate(document_____:)` (TD3) is now `generate(td3:)`.
+  - `generate(document____:)` (TD2) is now `generate(td2:)`.
+  - `generate(document___:)` (TD1) is now `generate(td1:)`.
+  - `generate(document:)` (MRV-A) is now `generate(mrvA:)`.
+  - `generate(document_:)` (MRV-B) is now `generate(mrvB:)`.
+  - `generate(document__:)` (any format) is now `generate(document:)`. A call to `generate(document:)` with an MRV-A visa still compiles and gives the same lines, because the new `generate(document:)` takes a document of any format.
+  The field-value calls (`generateTD3(documentType:...)` and the others) keep their names.
 
 ## [0.5.1] - 2026-09-13
 
