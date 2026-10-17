@@ -28,7 +28,7 @@ Never trust a write's success reply: read the issue back. There is no local toke
    or roles as actors, no opinion words in titles. For each name in `.claude/board-names.local`
    (gitignored, one per line, kept only on the maintainer's machine; skip this half when it is
    missing), `project: TES <name>` must return nothing. Scan titles for opinion words:
-   `project: TES summary: awkward, ugly, messy, bad, terrible, silly`. All should return nothing.
+   `project: TES summary: awkward, ugly, messy, bad, terrible, silly`. All should return nothing. Decision credit in comments and text: `project: TES "Decision (maintainer"` must return nothing.
 5. **Stages against GitHub.**
    - Open issues in `Review`: `gh pr list --state all --search "TES-<n>"` must show an open PR.
      A merged PR means the issue should be `Staging`, `Test`, or `Done`.

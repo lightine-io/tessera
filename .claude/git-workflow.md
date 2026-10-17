@@ -19,6 +19,9 @@ example) gets one branch and one PR at the end.
 - `CHANGELOG.md` entry under `[Unreleased]` (Keep a Changelog groups), or the
   `no-changelog` label when nothing ships. CI `changelog · entry present` checks for
   one or the other; the label also tells the board the issue is Done at merge.
+  The entry is for people who use the SDK: plain words, no issue ids (`TES-n`), and no links
+  to private issues or internal decision records. The issue id stays in the PR title and
+  the commit; links to public KB pages and to GitHub issues and PRs are fine.
 - AI sessions: the push hook runs `scripts/private-content-scan.sh` (the MRZ guard, plus
   the terms in your gitignored `.claude/private-content-terms.local`). It is silent on
   pass and loud on block. Manual pushes: run it yourself. A generic word that only
