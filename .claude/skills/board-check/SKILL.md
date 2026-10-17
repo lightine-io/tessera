@@ -24,11 +24,16 @@ Never trust a write's success reply: read the issue back. There is no local toke
 3. **Titles.** For the issues listed in steps 1 and 2, and any open issue created in the last
    14 days (`created: {minus 14d} .. *`): flag a title with backticks, `camelCase` words, file
    names, or issue numbers.
-4. **Stages against GitHub.**
+4. **Neutral wording.** The board records what was decided and why, never who: no personal names
+   or roles as actors, no opinion words in titles. `project: TES summary: Padre`,
+   `project: TES description: Padre` and the same for `Asker` must return nothing (comments: see
+   TES-226). Scan titles for opinion words:
+   `project: TES summary: awkward, ugly, messy, bad, terrible, silly`. All should return nothing.
+5. **Stages against GitHub.**
    - Open issues in `Review`: `gh pr list --state all --search "TES-<n>"` must show an open PR.
      A merged PR means the issue should be `Staging`, `Test`, or `Done`.
    - Issues in `Backlog` or `Develop` updated in the last 30 days: a merged PR naming the issue
      means the stage is stale.
    - `Staging` issues: if their work appears under a released CHANGELOG version, they are `Done`.
-5. **Report** one table: issue, problem, proposed fix. Apply fixes only with the maintainer's
+6. **Report** one table: issue, problem, proposed fix. Apply fixes only with the maintainer's
    go, then read each fixed issue back.
