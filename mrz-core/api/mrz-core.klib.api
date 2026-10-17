@@ -852,6 +852,7 @@ final object io.lightine.tessera.mrz.recognition/CountryCodeTable { // io.lighti
 
 final object io.lightine.tessera.mrz.recognition/DocumentTypeCodeTable { // io.lightine.tessera.mrz.recognition/DocumentTypeCodeTable|null[0]
     final fun all(): kotlin.collections/List<io.lightine.tessera.mrz.recognition/DocumentTypeCodeEntry> // io.lightine.tessera.mrz.recognition/DocumentTypeCodeTable.all|all(){}[0]
+    final fun broadCategory(kotlin/String): io.lightine.tessera.types.vocabulary/DocumentCategory? // io.lightine.tessera.mrz.recognition/DocumentTypeCodeTable.broadCategory|broadCategory(kotlin.String){}[0]
     final fun byCategory(io.lightine.tessera.types.vocabulary/DocumentCategory): kotlin.collections/List<io.lightine.tessera.mrz.recognition/DocumentTypeCodeEntry> // io.lightine.tessera.mrz.recognition/DocumentTypeCodeTable.byCategory|byCategory(io.lightine.tessera.types.vocabulary.DocumentCategory){}[0]
     final fun lookup(kotlin/String): io.lightine.tessera.mrz.recognition/DocumentTypeCodeEntry? // io.lightine.tessera.mrz.recognition/DocumentTypeCodeTable.lookup|lookup(kotlin.String){}[0]
 }

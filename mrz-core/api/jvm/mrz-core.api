@@ -594,6 +594,7 @@ public final class io/lightine/tessera/mrz/recognition/DocumentTypeCodeEntry {
 public final class io/lightine/tessera/mrz/recognition/DocumentTypeCodeTable {
 	public static final field INSTANCE Lio/lightine/tessera/mrz/recognition/DocumentTypeCodeTable;
 	public final fun all ()Ljava/util/List;
+	public final fun broadCategory (Ljava/lang/String;)Lio/lightine/tessera/types/vocabulary/DocumentCategory;
 	public final fun byCategory (Lio/lightine/tessera/types/vocabulary/DocumentCategory;)Ljava/util/List;
 	public final fun lookup (Ljava/lang/String;)Lio/lightine/tessera/mrz/recognition/DocumentTypeCodeEntry;
 }

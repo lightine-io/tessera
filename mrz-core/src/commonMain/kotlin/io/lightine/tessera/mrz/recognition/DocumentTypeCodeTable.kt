@@ -110,6 +110,19 @@ public object DocumentTypeCodeTable {
      */
     public fun lookup(code: String): DocumentTypeCodeEntry? = byCode[code]
 
+    /**
+     * Returns the broad category of a code: the same answer as [DocumentType.broadCategory].
+     *
+     * The category of the table entry if there is one, else the one implied by the first character of
+     * [code] (`P` gives passport, `I`, `A`, or `C` gives identity card, `V` gives visa, in either case).
+     * Use it where [DocumentType] is not visible, for example from Swift, where the value class has no name.
+     *
+     * @param code The code as printed. The table match is exact and case-sensitive.
+     * @return The category, or `null` if [code] is blank or has no recognized first character.
+     * @since 0.5.2
+     */
+    public fun broadCategory(code: String): DocumentCategory? = DocumentType(code).broadCategory
+
     /** Returns every entry in the table, in table order. */
     public fun all(): List<DocumentTypeCodeEntry> = entries
 
