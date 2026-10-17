@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Maven smoke test (TES-179, TES-204). Proves that a plain Maven project can import the
+  Tessera BOM, depend on the ROOT artifact tessera-mrz-core with no version, and compile
+  against it. Maven reads only POMs, never Gradle module metadata, so this is the check
+  that the root POM points at the -jvm artifact at compile scope.
+
+  CI (check.yml, publish-smoke job) publishes the SDK to the local Maven repository and runs:
+    mvn -B -f samples/maven-smoke/pom.xml compile -Dtessera.version=<version from gradle.properties>
+  tessera.version has no default on purpose: it must match the version just published.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.lightine.tessera.smoke</groupId>
+    <artifactId>maven-smoke</artifactId>
+    <version>0</version>
+    <packaging>jar</packaging>
+
+    <properties>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.lightine.tessera</groupId>
+                <artifactId>tessera-bom</artifactId>
+                <version>${tessera.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- The root artifact, no version: the BOM manages it. -->
+        <dependency>
+            <groupId>io.lightine.tessera</groupId>
+            <artifactId>tessera-mrz-core</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.14.1</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>
