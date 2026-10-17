@@ -62,4 +62,10 @@ maintainer. Record the results as a comment on the release issue.
     exits 0. Drop `--allow-internal` once TES-169 and TES-178 are closed; then no public
     page may link into the internal KB.
 
+12. **README install versions.** `scripts/check-readme-version.sh X.Y.Z ../tessera-swift`
+    exits 0. It fails, naming the file and the stale version, unless both READMEs'
+    install blocks (the Gradle BOM, the Maven version, the Swift `exact:`, the release
+    line) name the version being tagged. Update both READMEs first (the 0.5.1 incident,
+    TES-168); tessera-swift's README change must be merged before the tag (gate 9).
+
 **The maintainer pushes the tag. The session never does.**
