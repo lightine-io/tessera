@@ -135,3 +135,5 @@ idb-*/
 
 # Claude Code work copies of this repo (git worktrees), never committed
 .claude/worktrees/
+# Personal names the board check searches for (maintainer machine only, never committed)
+.claude/board-names.local

@@ -25,9 +25,9 @@ Never trust a write's success reply: read the issue back. There is no local toke
    14 days (`created: {minus 14d} .. *`): flag a title with backticks, `camelCase` words, file
    names, or issue numbers.
 4. **Neutral wording.** The board records what was decided and why, never who: no personal names
-   or roles as actors, no opinion words in titles. `project: TES summary: Padre`,
-   `project: TES description: Padre` and the same for `Asker` must return nothing (comments: see
-   TES-226). Scan titles for opinion words:
+   or roles as actors, no opinion words in titles. For each name in `.claude/board-names.local`
+   (gitignored, one per line, kept only on the maintainer's machine; skip this half when it is
+   missing), `project: TES <name>` must return nothing. Scan titles for opinion words:
    `project: TES summary: awkward, ugly, messy, bad, terrible, silly`. All should return nothing.
 5. **Stages against GitHub.**
    - Open issues in `Review`: `gh pr list --state all --search "TES-<n>"` must show an open PR.
