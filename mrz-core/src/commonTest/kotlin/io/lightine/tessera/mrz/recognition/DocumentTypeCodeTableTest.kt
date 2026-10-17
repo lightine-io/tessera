@@ -156,4 +156,31 @@ class DocumentTypeCodeTableTest {
         // Starter set still has no residence permit codes; this lock surfaces explicitly when the set is expanded.
         assertTrue(DocumentTypeCodeTable.byCategory(DocumentCategory.RESIDENCE_PERMIT).isEmpty())
     }
+
+    @Test
+    fun broad_category_agrees_with_document_type_for_every_table_code() {
+        for (entry in DocumentTypeCodeTable.all()) {
+            assertEquals(DocumentType(entry.code).broadCategory, DocumentTypeCodeTable.broadCategory(entry.code), entry.code)
+            assertEquals(entry.category, DocumentTypeCodeTable.broadCategory(entry.code), entry.code)
+        }
+    }
+
+    @Test
+    fun broad_category_agrees_with_document_type_for_unknown_empty_lowercase_and_filler_codes() {
+        val codes = listOf("", " ", "<", "<<", "IA", "AX", "CX", "VX", "PX", "XY", "p", "ia", "v", "pp", "ac", "Ac", "1P", "<P")
+        for (code in codes) {
+            assertEquals(DocumentType(code).broadCategory, DocumentTypeCodeTable.broadCategory(code), "code '$code'")
+        }
+    }
+
+    @Test
+    fun broad_category_gives_the_reserved_leading_character_answers() {
+        assertEquals(DocumentCategory.PASSPORT, DocumentTypeCodeTable.broadCategory("PX"))
+        assertEquals(DocumentCategory.IDENTITY_CARD, DocumentTypeCodeTable.broadCategory("IA"))
+        assertEquals(DocumentCategory.VISA, DocumentTypeCodeTable.broadCategory("vx"))
+        assertEquals(DocumentCategory.OTHER, DocumentTypeCodeTable.broadCategory("AC"))
+        assertNull(DocumentTypeCodeTable.broadCategory(""))
+        assertNull(DocumentTypeCodeTable.broadCategory("<<"))
+        assertNull(DocumentTypeCodeTable.broadCategory("XY"))
+    }
 }
