@@ -52,6 +52,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
+# Xcode is pinned, not "whatever the image ships". The Kotlin Multiplatform compatibility table lists
+# Xcode 26.4 for Kotlin 2.4.20-2.4.21 (https://kotlinlang.org/docs/multiplatform/multiplatform-compatibility-guide.html);
+# macos-26 carries Xcode_26.4.1.app (https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md).
+# Bump it with the Kotlin version, in the dependency cadence.
+env:
+  XCODE_VERSION: "26.4.1"
+
 jobs:
   check:
     name: build & test · JVM
@@ -142,10 +149,20 @@ jobs:
   # is valid, a missing klib is not.
   publish-smoke:
     name: publish · smoke (empty-module guard)
-    runs-on: macos-latest
+    runs-on: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
+        run: |
+          XC="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [ ! -d "$XC" ]; then
+            echo "::error::$XC is missing on this runner image; no fallback to another Xcode."
+            exit 1
+          fi
+          sudo xcode-select -s "$XC"
+          xcodebuild -version
 
       - name: Set up JDK 21
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
@@ -183,11 +200,21 @@ jobs:
   ios-compile:
     name: build & test · iOS
     # Apple targets can only be built on macOS (Kotlin/Native links against the Xcode toolchain);
-    # a Linux runner cannot build them at all. macos-latest ships a current Xcode, which Konan uses.
-    runs-on: macos-latest
+    # a Linux runner cannot build them at all. macos-26 with the Xcode pinned in XCODE_VERSION, which Konan uses.
+    runs-on: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
+        run: |
+          XC="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [ ! -d "$XC" ]; then
+            echo "::error::$XC is missing on this runner image; no fallback to another Xcode."
+            exit 1
+          fi
+          sudo xcode-select -s "$XC"
+          xcodebuild -version
 
       - name: Set up JDK 21
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
