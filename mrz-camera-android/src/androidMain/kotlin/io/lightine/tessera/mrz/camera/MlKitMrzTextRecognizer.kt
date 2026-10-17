@@ -9,8 +9,12 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.Executor
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -51,22 +55,27 @@ public class MlKitMrzTextRecognizer(
     /**
      * Runs ML Kit on [frame] and returns the recognized lines.
      *
-     * Returns no lines when the frame has no backing image. It does not close the frame.
+     * Returns no lines when the frame has no backing image. It does not close the frame. It returns, also
+     * when cancelled, only after ML Kit has stopped reading the frame, so the caller can close it right away.
      *
      * @param frame the CameraX frame to read.
      * @return the recognized lines.
      */
     override suspend fun recognize(frame: ImageProxy): RecognizedText {
-        val input =
+        val recognized =
             if (bandRestricted) {
-                // Crop to the MRZ band before OCR; null (no backing image) → nothing to recognize.
-                mrzBandInputImage(frame) ?: return RecognizedText(emptyList())
+                // Crop to the MRZ band before OCR; null (no backing image) → nothing to recognize. ML Kit reads
+                // a bitmap copy here, never the frame, so the caller may release the frame as soon as we return.
+                val input = mrzBandInputImage(frame) ?: return RecognizedText(emptyList())
+                recognizer.process(input).await()
             } else {
-                // Whole-frame reading (the released headless path, unchanged): ML Kit rotates via rotationDegrees.
+                // Whole-frame reading (the released headless path): ML Kit rotates via rotationDegrees. ML Kit
+                // reads the frame's own media.Image, so we return (also when cancelled) only after ML Kit is
+                // done with it: the caller closes the frame when we return (TES-220).
                 val mediaImage = frame.image ?: return RecognizedText(emptyList())
-                InputImage.fromMediaImage(mediaImage, frame.imageInfo.rotationDegrees)
+                val input = InputImage.fromMediaImage(mediaImage, frame.imageInfo.rotationDegrees)
+                recognizer.process(input).awaitWhileReadingInput()
             }
-        val recognized = recognizer.process(input).await()
         return RecognizedText(
             recognized.textBlocks
                 .flatMap { block -> block.lines }
@@ -165,6 +174,34 @@ internal suspend fun <T> Task<T>.await(): T =
         addOnFailureListener(DirectExecutor) { error -> continuation.resumeWithException(error) }
         addOnCanceledListener(DirectExecutor) { continuation.cancel() }
     }
+
+// Like [await], but when the caller is cancelled it still waits for the task to finish before rethrowing,
+// bounded by [maxWaitAfterCancelMillis]. For a task that reads a frame the caller releases once we return:
+// ML Kit's InputImage.fromMediaImage says "Please wait for the detector to finish processing this InputImage
+// before you close the underlying Image"
+// (https://developers.google.com/android/reference/com/google/mlkit/vision/common/InputImage), and ML Kit's
+// CameraX guide closes the ImageProxy in the Task's OnCompleteListener
+// (https://developers.google.com/ml-kit/vision/text-recognition/v2/android). Cancelling our wait does not
+// cancel the task, so without this a cancelled scan closed the frame while ML Kit could still be reading it
+// (TES-220). The wait suspends (it never blocks a thread), and it is bounded so a task that never completes
+// cannot hold the frame forever: past the bound the frame is released anyway, as before.
+internal suspend fun <T> Task<T>.awaitWhileReadingInput(maxWaitAfterCancelMillis: Long = MAX_WAIT_AFTER_CANCEL_MILLIS): T =
+    try {
+        await()
+    } catch (cancelled: CancellationException) {
+        withContext(NonCancellable) { withTimeoutOrNull(maxWaitAfterCancelMillis) { awaitCompletion() } }
+        throw cancelled
+    }
+
+// Suspends until the task completes in any way (success, failure, or cancelled). Ignores the result.
+private suspend fun Task<*>.awaitCompletion() {
+    if (isComplete) return
+    suspendCancellableCoroutine { continuation -> addOnCompleteListener(DirectExecutor) { continuation.resume(Unit) } }
+}
+
+// How long a cancelled recognition waits for ML Kit to let go of the frame. One OCR pass takes well under a
+// second on a phone, so this only cuts in when the task is stuck.
+internal const val MAX_WAIT_AFTER_CANCEL_MILLIS: Long = 2_000
 
 // Runs a task listener on the thread that completes the task. Each listener only resumes a continuation.
 private val DirectExecutor = Executor(Runnable::run)
