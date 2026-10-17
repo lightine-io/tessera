@@ -1,3 +1,6 @@
+// Swift names for the document overloads (TES-197). ObjCName is still experimental in Kotlin.
+@file:OptIn(kotlin.experimental.ExperimentalObjCName::class)
+
 package io.lightine.tessera.mrz.generation
 
 import io.lightine.tessera.mrz.checkdigit.computeCheckDigit
@@ -35,6 +38,7 @@ import io.lightine.tessera.types.vocabulary.ReadMethod
 import io.lightine.tessera.types.vocabulary.Sex
 import io.lightine.tessera.types.vocabulary.UnmappedCharacter
 import kotlinx.datetime.LocalDate
+import kotlin.native.ObjCName
 
 /**
  * Encodes an MRZ from a document or from field values, per ICAO Doc 9303.
@@ -58,12 +62,17 @@ public object MrzGenerator {
      * is never padded, because `<` in a date means "unknown". Writes `rawSex` as it is, unchecked.
      * Applies no transliteration profile: the name field must already be in the MRZ alphabet.
      *
+     * In Swift this is `generate(document:)`, and the overloads for one format are
+     * `generate(td3:)`, `generate(td2:)`, `generate(td1:)`, `generate(mrvA:)`, and `generate(mrvB:)`.
+     *
      * @param document the document to encode.
      * @return [GenerationResult.Success] with the MRZ lines, or [GenerationResult.Failure] with
      *   [MrzGenerationNumericInNameField], [MrzGenerationFieldOverflow],
      *   [MrzGenerationFieldTooShort], or [MrzGenerationUnsupportedCharacters].
      */
-    public fun generate(document: MrzDocument): GenerationResult =
+    public fun generate(
+        @ObjCName("document") document: MrzDocument,
+    ): GenerationResult =
         when (document) {
             is TD1 -> generate(document)
             is TD2 -> generate(document)
@@ -73,19 +82,29 @@ public object MrzGenerator {
         }
 
     /** Encodes a TD3 (passport) document as 2 MRZ lines. Reports as [generate] does. */
-    public fun generate(document: TD3): GenerationResult = generateTd3(document)
+    public fun generate(
+        @ObjCName("td3") document: TD3,
+    ): GenerationResult = generateTd3(document)
 
     /** Encodes a TD2 document as 2 MRZ lines. Reports as [generate] does. */
-    public fun generate(document: TD2): GenerationResult = generateTd2(document)
+    public fun generate(
+        @ObjCName("td2") document: TD2,
+    ): GenerationResult = generateTd2(document)
 
     /** Encodes a TD1 (identity card) document as 3 MRZ lines. Reports as [generate] does. */
-    public fun generate(document: TD1): GenerationResult = generateTd1(document)
+    public fun generate(
+        @ObjCName("td1") document: TD1,
+    ): GenerationResult = generateTd1(document)
 
     /** Encodes an MRV-A (Type-A visa) document as 2 MRZ lines. Reports as [generate] does. */
-    public fun generate(document: MrvA): GenerationResult = generateMrvA(document)
+    public fun generate(
+        @ObjCName("mrvA") document: MrvA,
+    ): GenerationResult = generateMrvA(document)
 
     /** Encodes an MRV-B (Type-B visa) document as 2 MRZ lines. Reports as [generate] does. */
-    public fun generate(document: MrvB): GenerationResult = generateMrvB(document)
+    public fun generate(
+        @ObjCName("mrvB") document: MrvB,
+    ): GenerationResult = generateMrvB(document)
 
     // ----------------------------------------------------------------
     // Primitive-input methods
