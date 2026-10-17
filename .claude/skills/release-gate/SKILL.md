@@ -35,7 +35,9 @@ maintainer. Record the results as a comment on the release issue.
    - The release's draft pages are ready to publish at the tag.
 4. **Empty-module guard.** `./gradlew publishToMavenLocal -Ptessera.skipSigning=true` is
    green locally, and every module that declares a target produces an artifact (CI
-   `publish · smoke` runs the same command; do not rely on memory of it).
+   `publish · smoke` runs the same command; do not rely on memory of it). The same
+   job's Maven smoke step (`samples/maven-smoke`: a plain Maven build imports the BOM
+   and compiles against the root `tessera-mrz-core`) is green on the release commit.
 5. **ABI baselines.** `checkKotlinAbi` is green against the committed dumps for every
    target (jvm, klib, and android under `api/android/`).
 6. **CHANGELOG roll.** `[Unreleased]` becomes `[X.Y.Z] - YYYY-MM-DD`, with a fresh

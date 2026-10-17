@@ -197,6 +197,18 @@ jobs:
       - name: Publish all modules to the local Maven repo (unsigned)
         run: ./gradlew publishToMavenLocal -Ptessera.skipSigning=true
 
+      # Maven smoke (TES-179, TES-204): a plain Maven project imports the BOM just published,
+      # depends on the ROOT tessera-mrz-core with no version, and compiles a Java class that
+      # calls MrzParser. Maven reads only POMs (never Gradle .module metadata), so this proves
+      # the root POM pulls the -jvm artifact in at compile scope. Runs here, after the full
+      # local publish, instead of in a second job that would publish everything again. Maven
+      # comes from the runner image (setup-java does not install it).
+      - name: Maven smoke - compile against the root artifact via the BOM
+        run: |
+          command -v mvn || { echo "::error::mvn is missing on this runner image."; exit 1; }
+          VERSION=$(sed -n 's/^version=//p' gradle.properties)
+          mvn -B -ntp -f samples/maven-smoke/pom.xml compile -Dtessera.version="$VERSION"
+
   ios-compile:
     name: build & test · iOS
     # Apple targets can only be built on macOS (Kotlin/Native links against the Xcode toolchain);

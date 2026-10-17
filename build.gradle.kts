@@ -2,6 +2,8 @@ import com.vanniktech.maven.publish.JavaPlatform
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import com.vanniktech.maven.publish.MavenPublishBaseExtension
+import groovy.util.Node
+import groovy.util.NodeList
 
 plugins {
     alias(libs.plugins.spotless)
@@ -105,6 +107,45 @@ subprojects {
                         sourcesJar = true,
                     ),
                 )
+            }
+
+            // Plain Maven users (TES-179). Maven reads only the POM, never the Gradle `.module`
+            // metadata, and the root (`kotlinMultiplatform`) POM that Kotlin writes lists its
+            // dependencies at runtime scope. A Maven project that depends on the root artifact
+            // (e.g. `tessera-mrz-core`) therefore cannot compile against it. We follow
+            // kotlinx.coroutines (`reconfigureMultiplatformPublication` in its buildSrc
+            // Publishing.kt): in the root POM only, replace the dependencies with one
+            // compile-scope dependency on this module's `-jvm` artifact. The `-jvm` POM already
+            // lists its own dependencies (other `-jvm` Tessera artifacts, kotlin-stdlib) at
+            // compile scope, so Maven gets the full JVM classpath. Gradle consumers read the
+            // `.module` file, which this does not touch. Modules without a JVM target (the
+            // Android-only camera modules) keep the root POM as Kotlin writes it.
+            extensions.configure<PublishingExtension> {
+                val mavenPublications = publications.withType<MavenPublication>()
+                mavenPublications.matching { it.name == "kotlinMultiplatform" }.configureEach {
+                    // Read at configuration-cache store time, after vanniktech set the
+                    // coordinates. Absent (null) when the module has no JVM target.
+                    val jvmCoordinates =
+                        provider {
+                            mavenPublications.findByName("jvm")?.let {
+                                listOf(it.groupId, it.artifactId, it.version)
+                            }
+                        }
+                    pom.withXml {
+                        val (jvmGroup, jvmArtifact, jvmVersion) = jvmCoordinates.orNull ?: return@withXml
+                        val root = asNode()
+                        val dependencies =
+                            (root.get("dependencies") as NodeList).firstOrNull() as Node?
+                                ?: root.appendNode("dependencies")
+                        dependencies.children().toList().forEach { dependencies.remove(it as Node) }
+                        dependencies.appendNode("dependency").apply {
+                            appendNode("groupId", jvmGroup)
+                            appendNode("artifactId", jvmArtifact)
+                            appendNode("version", jvmVersion)
+                            appendNode("scope", "compile")
+                        }
+                    }
+                }
             }
         }
 
