@@ -8,7 +8,7 @@
 
 ## Changelog
 
-- [ ] `CHANGELOG.md` entry under `[Unreleased]`, or the `no-changelog` label because nothing ships (say why here). CI checks for one or the other; the label also moves the board issue to Done at merge.
+- [ ] `CHANGELOG.md` entry under `[Unreleased]`, or the `no-changelog` label because nothing ships (say why here). CI checks for one or the other; the label also moves the board issue to Done at merge. The entry explains the change in plain words; no issue ids or private links (the issue id stays in the PR title and commit).
 
 ## Feature documentation
 

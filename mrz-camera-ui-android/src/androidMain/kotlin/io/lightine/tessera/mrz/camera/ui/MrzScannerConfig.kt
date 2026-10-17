@@ -112,8 +112,8 @@ public class MrzScannerTheme internal constructor(
  *   flash unit. Default `true`.
  * @property torchOnByDefault Starts with the torch on. Default `false`.
  * @property struggleTimeout Time on the live preview before the "still looking" hint can appear.
- *   Default 10 seconds, counted from when the camera becomes active. The hint appears only if the
- *   recognizer has returned text at least once; [Duration.INFINITE] never shows it.
+ *   Default 10 seconds, counted from when the camera becomes active. The hint shows when the time
+ *   is up, whatever the camera sees; [Duration.INFINITE] never shows it.
  * @property scanTimeout Deadline for the whole session, across every screen. When it passes, the
  *   screen reports [MrzScannerResult.Cancelled] with [DismissReason.TIMED_OUT]. Default
  *   [Duration.INFINITE] (no deadline). It counts only foreground time and pauses while the app is
