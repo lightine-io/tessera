@@ -144,7 +144,7 @@ internal fun manualObservationParts(text: String): List<ManualLengthNote> =
  *
  * @param state the in-progress input ([ScannerUiState.ManualRaw.text]).
  * @param onTextChange called with the new text on every edit.
- * @param onRead called when the user taps "Read this".
+ * @param onRead called when the user taps "Read".
  */
 @Composable
 internal fun ManualRawContent(

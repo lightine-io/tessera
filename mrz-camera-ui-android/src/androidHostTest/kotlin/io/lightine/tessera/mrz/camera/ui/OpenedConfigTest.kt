@@ -91,7 +91,7 @@ class OpenedConfigTest {
 
         composeRule.onNodeWithText("Manual").performClick()
         composeRule.onNodeWithTag(MANUAL_RAW_FIELD_TEST_TAG).performTextInput("$SPECIMEN_LINE_1\n$SPECIMEN_LINE_2")
-        composeRule.onNodeWithText("Read this").performScrollTo().performClick()
+        composeRule.onNodeWithText("Read").performScrollTo().performClick()
         composeRule.onNodeWithTag(REVIEW_TEST_TAG).assertIsDisplayed()
 
         // The app switches to INSTANT_RETURN and drops manual entry while the review is up.
@@ -110,7 +110,7 @@ class OpenedConfigTest {
         composeRule.onNodeWithText("Manual").assertIsDisplayed()
 
         // Reading again still uses the opening review mode (REVIEW), not the INSTANT_RETURN passed later.
-        composeRule.onNodeWithText("Read this").performScrollTo().performClick()
+        composeRule.onNodeWithText("Read").performScrollTo().performClick()
         composeRule.onNodeWithTag(REVIEW_TEST_TAG).assertIsDisplayed()
     }
 
@@ -172,7 +172,7 @@ class OpenedConfigTest {
 
         // The permission callback cannot outlive the recreation; the one passed now is used.
         composeRule.onNodeWithText("Camera").performClick()
-        composeRule.onNodeWithText("Grant access").performClick()
+        composeRule.onNodeWithText("Continue").performClick()
         assertEquals(0, openingRequests)
         assertEquals(1, currentRequests)
     }

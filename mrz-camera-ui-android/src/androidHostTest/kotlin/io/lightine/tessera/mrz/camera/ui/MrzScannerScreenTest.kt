@@ -71,7 +71,7 @@ class MrzScannerScreenTest {
     fun permission_grant_copy_resolves_from_string_resources() {
         // The displayed title comes from the overridable tessera_scanner_permission_grant_title resource;
         // seeing its exact text proves the module's res/ + R class resolve on the host (TES-46). The
-        // "Grant access" / "Enter details manually" resources are exercised by the interaction tests below.
+        // "Continue" / "Enter details manually" resources are exercised by the interaction tests below.
         composeRule.setContent {
             MrzScannerScreen(config = MrzScannerConfig(), onResult = {})
         }
@@ -89,7 +89,7 @@ class MrzScannerScreenTest {
             )
         }
 
-        composeRule.onNodeWithText("Grant access").performClick()
+        composeRule.onNodeWithText("Continue").performClick()
 
         assertEquals(1, requestCalls, "the host's onRequestPermission handles the request; the SDK never does")
     }
@@ -103,7 +103,7 @@ class MrzScannerScreenTest {
         }
 
         composeRule.onNodeWithTag(PERMISSION_GRANT_TEST_TAG).assertIsDisplayed()
-        composeRule.onNodeWithText("Grant access").assertDoesNotExist()
+        composeRule.onNodeWithText("Continue").assertDoesNotExist()
         composeRule.onNodeWithText("Enter details manually").assertIsDisplayed()
     }
 
@@ -313,7 +313,7 @@ class MrzScannerScreenTest {
         composeRule.onNodeWithTag(MANUAL_RAW_FIELD_TEST_TAG).performTextInput("$line1\n$line2")
         // Scroll the primary action into view before clicking — with the field focused (and imePadding
         // shrinking the scroll viewport), it can sit outside the current viewport.
-        composeRule.onNodeWithText("Read this").performScrollTo().performClick()
+        composeRule.onNodeWithText("Read").performScrollTo().performClick()
 
         // A valid typed MRZ lands on the review screen (default ReviewMode.REVIEW); its secondary action is
         // provenance-aware ("Edit entry" for manual, TES-96) — tapping it must return to manual entry

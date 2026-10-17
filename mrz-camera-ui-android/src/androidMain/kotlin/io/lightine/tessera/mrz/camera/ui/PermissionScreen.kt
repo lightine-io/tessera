@@ -95,7 +95,7 @@ internal fun permissionScreenState(
  * The adaptive camera-permission screen (mockups 04 / 04b). Renders one of two faces from [state]:
  *
  *  * [PermissionScreenState.NEEDS_GRANT] → mockup 04: title "Camera permission needed", the on-device
- *    privacy body, a primary "Grant access" that fires [onGrant] (which hands the request to the host) — but
+ *    privacy body, a primary "Continue" that fires [onGrant] (which hands the request to the host) — but
  *    ONLY when [hasRequestHandler] is true; if the host supplied no `onRequestPermission`, no dead Grant
  *    button is drawn, leaving just the rationale and the manual-entry escape.
  *  * [PermissionScreenState.PERMANENTLY_DENIED] → mockup 04b: title "Camera access is off", the Settings +

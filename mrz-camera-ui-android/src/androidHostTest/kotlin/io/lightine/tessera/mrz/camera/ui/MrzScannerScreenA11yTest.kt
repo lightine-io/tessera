@@ -48,7 +48,7 @@ class MrzScannerScreenA11yTest {
         // Each interactive control is announced as a Button and carries a non-empty label, so a screen
         // reader user can find and identify it. An unlabeled control, or one missing the Button role,
         // fails here. (The Grant-mode primary + the shared manual-entry escape.)
-        listOf("Grant access", "Enter details manually").forEach { label ->
+        listOf("Continue", "Enter details manually").forEach { label ->
             composeRule
                 .onNode(hasText(label) and hasClickAction())
                 .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))

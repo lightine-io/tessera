@@ -87,7 +87,7 @@ internal sealed interface ScannerUiState {
 
     /**
      * Manual entry of the MRZ lines as raw text (mockup 06). [text] is the in-progress input. [parseFailed] is
-     * set when a "Read this" attempt did not parse as any MRZ format — the screen then shows an inline note and
+     * set when a "Read" attempt did not parse as any MRZ format — the screen then shows an inline note and
      * keeps the typed text (rather than navigating to the camera-flavoured read-failed screen); it clears on the
      * next edit.
      */

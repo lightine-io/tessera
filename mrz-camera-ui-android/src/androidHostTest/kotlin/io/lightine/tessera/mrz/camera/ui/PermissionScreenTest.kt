@@ -117,7 +117,7 @@ class PermissionScreenTest {
         composeRule.onNodeWithTag(PERMISSION_GRANT_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithText("Camera permission needed").assertIsDisplayed()
 
-        composeRule.onNodeWithText("Grant access").performClick()
+        composeRule.onNodeWithText("Continue").performClick()
         assertEquals(1, grantCalls, "the Grant-mode primary fires onGrant (which hands the request to the host)")
         assertEquals(0, settingsCalls, "Grant mode never opens Settings")
     }
@@ -138,7 +138,7 @@ class PermissionScreenTest {
 
         composeRule.onNodeWithTag(PERMISSION_GRANT_TEST_TAG).assertIsDisplayed()
         // No handler → no dead Grant button; the manual-entry escape still stands.
-        composeRule.onNodeWithText("Grant access").assertDoesNotExist()
+        composeRule.onNodeWithText("Continue").assertDoesNotExist()
         composeRule.onNodeWithText("Enter details manually").assertIsDisplayed()
     }
 
