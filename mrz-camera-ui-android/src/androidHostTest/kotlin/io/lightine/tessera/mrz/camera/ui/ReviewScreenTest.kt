@@ -498,13 +498,13 @@ class ReviewScreenTest {
     }
 
     // ----------------------------------------------------------------------------------------------------
-    // TES-94: the resolved date renders wherever mrz-core resolved one; the raw, explicitly labeled form
-    // renders only where core genuinely could not resolve a century — never bare, ambiguous two-digit
-    // components. Uses the classic ICAO 9303 published TD3 specimen (also the MRZ explainer's illustration).
+    // TES-94 / TES-112: the resolved date renders wherever mrz-core resolved one; the printed parts (day
+    // first, two-digit year, as on the document's visual zone) render only where core genuinely could not
+    // resolve a century. Uses the classic ICAO 9303 published TD3 specimen (also the MRZ explainer's illustration).
     // ----------------------------------------------------------------------------------------------------
 
     @Test
-    fun an_expiry_core_cannot_resolve_a_century_for_renders_the_labeled_raw_form_while_birth_still_resolves() {
+    fun an_expiry_core_cannot_resolve_a_century_for_renders_the_printed_parts_day_first_while_birth_still_resolves() {
         val icaoLine1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
         val icaoLine2 = "L898902C36UTO7408122F1204159ZE184226B<<<<<10"
         // A reference time far enough past this specimen's printed expiry (12 → 20xx) that neither century
@@ -536,7 +536,8 @@ class ReviewScreenTest {
         }
 
         composeRule.onNodeWithText("1974-08-12").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("12-04-15 (year not resolved)").performScrollTo().assertIsDisplayed()
+        // TES-112: the printed parts, day first with the two-digit year, like the document's visual zone.
+        composeRule.onNodeWithText("15 04 12").performScrollTo().assertIsDisplayed()
     }
 
     // ----------------------------------------------------------------------------------------------------

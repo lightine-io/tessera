@@ -3,6 +3,7 @@
 
 package io.lightine.tessera.mrz.camera.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -24,6 +26,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -34,7 +38,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import io.lightine.tessera.mrz.camera.MrzScanResult
@@ -584,9 +587,59 @@ internal fun SummaryRow(row: FieldRow) {
 }
 
 /**
- * One MRZ / captured-OCR line: monospace, on its own horizontally-scrollable row so a long line is never
- * wrapped or truncated (transparency — the consumer sees exactly what was read). Reusable by any screen
- * that shows raw MRZ text (the review's raw-MRZ section, the read-failed captured text, manual raw entry).
+ * The fit ladder [MonoLine] walks, widest look first (TES-112). Mirrors iOS's `MonoLineFit.ladder` (TES-150):
+ * the line stays on one row at the largest text style that fits the column, steps down through smaller
+ * styles, and only when none fits (a large system font size on a phone) scrolls sideways with a visible
+ * indicator. Every rung shows the text verbatim: never wrapped, truncated, or changed.
+ */
+internal enum class MonoLineFit {
+    /** Monospaced `bodyMedium`, on one line: the normal look. */
+    BODY,
+
+    /** Monospaced `bodySmall`, on one line. */
+    SMALL,
+
+    /** Monospaced `labelSmall`, on one line: the smallest style before scrolling. */
+    SMALLEST,
+
+    /**
+     * Monospaced `bodyMedium` in a horizontal scroll with a visible indicator: the last resort. The only rung
+     * with a scroll affordance.
+     */
+    SCROLL,
+    ;
+
+    companion object {
+        /** Tried in order; [SCROLL] is last because it always fits (it scrolls). */
+        val ladder: List<MonoLineFit> = listOf(BODY, SMALL, SMALLEST, SCROLL)
+    }
+}
+
+/**
+ * The ladder decision, kept pure so it is unit-testable without rendering: the first rung of
+ * [MonoLineFit.ladder] whose one-line width ([lineWidthPx], the text measured at that rung's style) fits
+ * [availableWidthPx], else [MonoLineFit.SCROLL].
+ */
+internal fun monoLineFit(
+    availableWidthPx: Int,
+    lineWidthPx: (MonoLineFit) -> Int,
+): MonoLineFit =
+    MonoLineFit.ladder.firstOrNull { it != MonoLineFit.SCROLL && lineWidthPx(it) <= availableWidthPx }
+        ?: MonoLineFit.SCROLL
+
+/** The test tag of the [MonoLine] text at [fit], so a host test can see which rung was chosen. */
+internal fun monoLineTestTag(fit: MonoLineFit): String = "tessera_mono_line_${fit.name.lowercase()}"
+
+/** The height of the [MonoLine] scroll rung's indicator bar. */
+private val MonoLineIndicatorHeight = 3.dp
+
+/**
+ * One MRZ / captured-OCR line: monospace, shown whole on one row so a long line is never wrapped or truncated
+ * (transparency — the consumer sees exactly what was read). A 44-character TD3 line can be wider than a phone
+ * column, more so at a large system font size, so this measures the line at each [MonoLineFit.ladder] style
+ * with [rememberTextMeasurer] and shows the first that fits ([monoLineFit]); if none fits, the line scrolls
+ * sideways with a visible indicator bar under it, so clipping is never silent. Reusable by any screen that
+ * shows raw MRZ text (the review's raw-MRZ section, the read-failed captured text).
  *
  * Forced left-to-right regardless of the ambient locale (a hardware/system RTL setting, e.g. Arabic or
  * Hebrew): an MRZ is always printed left-to-right per ICAO 9303 — under RTL the layout direction would
@@ -596,18 +649,71 @@ internal fun SummaryRow(row: FieldRow) {
  */
 @Composable
 internal fun MonoLine(text: String) {
+    val typography = MaterialTheme.typography
+    val styles =
+        remember(typography) {
+            mapOf(
+                MonoLineFit.BODY to typography.bodyMedium,
+                MonoLineFit.SMALL to typography.bodySmall,
+                MonoLineFit.SMALLEST to typography.labelSmall,
+                MonoLineFit.SCROLL to typography.bodyMedium,
+            ).mapValues { (_, style) -> style.copy(fontFamily = FontFamily.Monospace) }
+        }
+    val measurer = rememberTextMeasurer()
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            fontFamily = FontFamily.Monospace,
-            maxLines = 1,
-            overflow = TextOverflow.Clip,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-        )
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            // Measured once per (text, styles, density) rather than on every recomposition; a font-size change
+            // brings a new density (its fontScale), so it re-measures.
+            val density = LocalDensity.current
+            val widths =
+                remember(text, styles, measurer, density) {
+                    styles.mapValues { (_, style) -> measurer.measure(text, style = style, maxLines = 1, softWrap = false).size.width }
+                }
+            val fit = monoLineFit(constraints.maxWidth) { widths.getValue(it) }
+            val style = styles.getValue(fit)
+            if (fit == MonoLineFit.SCROLL) {
+                val scrollState = rememberScrollState()
+                val indicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = text,
+                        style = style,
+                        maxLines = 1,
+                        softWrap = false,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(scrollState)
+                                .testTag(monoLineTestTag(fit)),
+                    )
+                    // Always drawn (not only while scrolling): the visible sign that the line continues.
+                    Canvas(modifier = Modifier.fillMaxWidth().height(MonoLineIndicatorHeight)) {
+                        val content = (scrollState.viewportSize + scrollState.maxValue).coerceAtLeast(1)
+                        val thumbWidth = size.width * scrollState.viewportSize / content
+                        val thumbStart =
+                            if (scrollState.maxValue == 0) {
+                                0f
+                            } else {
+                                (size.width - thumbWidth) * scrollState.value / scrollState.maxValue
+                            }
+                        drawRect(color = indicatorColor.copy(alpha = 0.2f), size = size)
+                        drawRect(
+                            color = indicatorColor,
+                            topLeft = Offset(thumbStart, 0f),
+                            size = Size(thumbWidth, size.height),
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = text,
+                    style = style,
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.fillMaxWidth().testTag(monoLineTestTag(fit)),
+                )
+            }
+        }
     }
 }
 
@@ -738,20 +844,27 @@ private fun secondaryActionLabel(readMethod: ReadMethod): String =
     )
 
 /**
- * The computed calendar date when mrz-core resolved one (`1969-08-06`), else the raw two-digit components
- * labeled explicitly as unresolved (`94-06-23 (year not resolved)`) — TES-94. mrz-core resolves a century via
- * a sliding plausibility window relative to the parse-time reference clock (see `MrzDate` / `MrzDateInferenceMethod`
- * in mrz-core); a date of birth almost always fits (any century up to ~130 years in the past), but an expiry
- * far outside its narrower window (10 years past / 50 years future of "now") — as any sufficiently old ICAO
- * test specimen or long-expired real document eventually will be — leaves `computedDate` null. This UI never
- * re-derives a century itself (that would duplicate mrz-core's inference and could disagree with it); it only
- * renders what core already resolved, and labels the fallback honestly rather than showing bare two-digit
- * components that could pass for a confident date (Principle 4).
+ * The computed calendar date when mrz-core resolved one (`1969-08-06`), else the raw two-digit components as
+ * printed, day first ([unresolvedDateText], `23 06 94`) — TES-94, TES-112. mrz-core resolves a century via a
+ * sliding plausibility window relative to the parse-time reference clock (see `MrzDate` /
+ * `MrzDateInferenceMethod` in mrz-core); a date of birth almost always fits (any century up to ~130 years in
+ * the past), but an expiry far outside its narrower window (10 years past / 50 years future of "now") — as any
+ * sufficiently old ICAO test specimen or long-expired real document eventually will be — leaves `computedDate`
+ * null. This UI never re-derives a century itself (that would duplicate mrz-core's inference and could
+ * disagree with it); it only renders what core already resolved. The fallback shows the parts in the
+ * day-month-year order of the document's visual zone (ICAO Doc 9303 Part 3) with the two-digit year as
+ * printed, so it reads as what is on the document rather than as a resolved calendar date (Principle 4).
  */
 @Composable
 private fun dateDisplay(date: MrzDate): String =
     date.computedDate?.toString()
-        ?: stringResource(R.string.tessera_scanner_date_unresolved_format, "${date.rawYear}-${date.rawMonth}-${date.rawDay}")
+        ?: stringResource(R.string.tessera_scanner_date_unresolved_format, unresolvedDateText(date))
+
+/**
+ * The raw date parts as printed, day first with the two-digit year: `23 06 94` (TES-112). Kept pure so the
+ * order is unit-testable without rendering.
+ */
+internal fun unresolvedDateText(date: MrzDate): String = "${date.rawDay} ${date.rawMonth} ${date.rawYear}"
 
 /**
  * Strips trailing MRZ filler (`<`) from a parsed field VALUE for display — the fillers are fixed-width padding,

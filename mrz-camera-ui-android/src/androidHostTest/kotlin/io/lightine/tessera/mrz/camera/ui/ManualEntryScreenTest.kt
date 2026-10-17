@@ -128,7 +128,7 @@ class ManualEntryScreenTest {
 
         // Nothing to read — the primary action is disabled, so an empty input can never be reported as a
         // malformed "couldn't read" (it is simply absent).
-        composeRule.onNodeWithText("Read this").assertIsNotEnabled()
+        composeRule.onNodeWithText("Read").assertIsNotEnabled()
     }
 
     @Test
@@ -244,7 +244,7 @@ class ManualEntryScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("Read this").performClick()
-        assertEquals(1, readCalls, "Read this must fire onRead")
+        composeRule.onNodeWithText("Read").performClick()
+        assertEquals(1, readCalls, "Read must fire onRead")
     }
 }
