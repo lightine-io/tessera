@@ -37,6 +37,11 @@ expect() { # expect <code> <label> <version>
 mkdir -p "$tmp/repo/scripts"; cp "$script" "$tmp/repo/scripts/"
 script="$tmp/repo/scripts/check-readme-version.sh"
 cp_main() { cp "$tmp/README.md" "$tmp/repo/README.md"; }
+write_meta() { # write_meta <version>: gradle.properties and llms.txt beside the README
+  printf 'kotlin.code.style=official\nversion=%s\n' "$1" >"$tmp/repo/gradle.properties"
+  printf '# Tessera\n\nCurrent release: %s. Maven group.\n' "$1" >"$tmp/repo/llms.txt"
+}
+write_meta 1.2.3
 
 write_main 1.2.3; write_swift 1.2.3; cp_main
 expect 0 "both current"          1.2.3
@@ -50,6 +55,12 @@ expect 1 "one stale spot"        1.2.3
 write_main 1.2.3; sed -i.bak '/exact:/d' "$tmp/README.md"; cp_main
 expect 1 "anchor missing"        1.2.3
 write_main 1.2.3; cp_main
+write_meta 1.2.2; expect 1 "stale build version"   1.2.3
+write_meta 1.2.3; sed -i.bak 's/^version=.*/version=1.2.2/' "$tmp/repo/gradle.properties"
+expect 1 "gradle.properties behind the tag" 1.2.3
+write_meta 1.2.3; sed -i.bak 's/Current release: 1.2.3/Current release: 1.2.2/' "$tmp/repo/llms.txt"
+expect 1 "stale llms.txt"        1.2.3
+write_meta 1.2.3; expect 0 "all current again" 1.2.3
 expect 2 "bad version argument"  latest
 
 if [ "$fail" -eq 0 ]; then echo "ALL PASS"; else echo "FAILURES ABOVE"; exit 1; fi

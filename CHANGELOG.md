@@ -10,9 +10,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-*(nothing yet: 0.5.2 is the latest release)*
+*(nothing yet: 0.5.3 is the latest release)*
+
+## [0.5.3] - 2026-10-18
+
+The same code as 0.5.2, released on every channel. 0.5.2 reached only the Swift package: its Maven Central publish was rejected because the build still carried version 0.5.1. Gradle and Maven projects get every 0.5.2 change below with this release; there is no 0.5.2 on Maven Central.
+
+- **A release stops when its tag and its build version differ** (release workflow and the release gate; no API change). The release workflow now checks the tag against `version=` in `gradle.properties` before it publishes anything, and the release gate's version check also covers `gradle.properties` and `llms.txt`.
 
 ## [0.5.2] - 2026-10-18
+
+Swift package only (tessera-swift `0.5.2`). On Maven Central these changes ship as 0.5.3.
+
 
 - **Read iOS camera scan results with `for await`** (`TesseraUI`, tessera-swift; additive public API). New `resultStream` on the iOS camera scanner gives its results as a Swift `AsyncStream`: in order, none dropped. A loop that runs on the main actor, such as a SwiftUI `.task`, receives each result there and can update the screen with no extra step. Cancelling the loop or breaking out of it ends the stream.
 - **Scanner screen: clearer button labels, raw MRZ lines that fit, and day-first dates** (`mrz-camera-ui-android`, and `TesseraUI` in tessera-swift with the same change; text and layout change, no API change). The manual-entry button now says "Read" (was "Read this"). The camera permission button now says "Continue" (was "Grant access"): the system permission prompt comes next, and a screen before it should not use words like "Allow" (Apple's Human Interface Guidelines). On the review screen each raw MRZ line stays on one row: it uses the largest text size that fits, steps down to smaller sizes, and only at very large font sizes scrolls sideways with a visible scroll bar. The text is never wrapped, cut or changed. A date whose century the SDK cannot work out now shows the printed parts day first, as on the document's visual zone: "23 06 94" (was "94-06-23 (year not resolved)"). The string keys stay the same (`tessera_scanner_manual_read`, `tessera_scanner_permission_grant_action`, `tessera_scanner_date_unresolved_format`), so an app that overrides them keeps its own text; the format value is now `%1$s` alone.

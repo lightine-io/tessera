@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Release gate: both READMEs' install instructions must name the version being tagged
-# (TES-168). Usage: scripts/check-readme-version.sh <version> [tessera-swift-dir]
+# Release gate: the build version (gradle.properties), llms.txt, and both READMEs' install
+# instructions must name the version being tagged (TES-168, TES-236). Usage: scripts/check-readme-version.sh <version> [tessera-swift-dir]
 # Each anchor below must appear in its README, and every version it names must equal
 # <version>. A missing anchor fails too, so a rewritten README cannot slip past silently.
 set -uo pipefail
@@ -12,6 +12,8 @@ if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?$ ]]; then
 fi
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 main_readme="$here/../README.md"
+gradle_props="$here/../gradle.properties"
+llms="$here/../llms.txt"
 swift_readme="${2:-../tessera-swift}/README.md"   # relative to the working directory
 V='[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z]+)*'
 fail=0
@@ -31,6 +33,8 @@ check() { # check <file> <label> <prefix ERE> <suffix ERE>
   done <<<"$found"
 }
 
+check "$gradle_props" 'the build version=' '^version=' '$'
+check "$llms" 'the "Current release:" line' '^Current release: ' '\.'
 check "$main_readme" 'the "Release X" line'          '^Release '                   '\.'
 check "$main_readme" 'the BOM coordinate'            'tessera-bom:'                '"'
 check "$main_readme" 'the Maven <version>'           '<version>'                   '</version>'
@@ -40,4 +44,4 @@ check "$swift_readme" 'the Xcode Exact Version rule' 'Exact Version\*\* `'      
 check "$swift_readme" 'the Package.swift exact:'     'exact: "'                    '"'
 check "$swift_readme" 'the release notes link'       'releases/tag/v'              '\)'
 
-if [ "$fail" -eq 0 ]; then echo "README versions all name $version"; else exit 1; fi
+if [ "$fail" -eq 0 ]; then echo "Release versions all name $version"; else exit 1; fi
