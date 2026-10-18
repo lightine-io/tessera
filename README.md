@@ -33,13 +33,13 @@ It is for developers adding document reading to apps or backends. Documentation:
 
 ## Install
 
-Release 0.5.1. Minimums: minSdk 23, iOS 18, Java 21. Modules: [Choose your pieces](https://lightine.youtrack.cloud/articles/TES-A-140).
+Release 0.5.2. Minimums: minSdk 23, iOS 18, Java 21. Modules: [Choose your pieces](https://lightine.youtrack.cloud/articles/TES-A-140).
 
 `build.gradle.kts` (the JVM needs only the first two lines):
 
 ```kotlin
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:0.5.1"))
+    implementation(platform("io.lightine.tessera:tessera-bom:0.5.2"))
     implementation("io.lightine.tessera:tessera-mrz-core")
     implementation("io.lightine.tessera:tessera-mrz-camera-android")
     implementation("io.lightine.tessera:tessera-mrz-camera-ui-android")
@@ -49,17 +49,29 @@ dependencies {
 `pom.xml` (JVM, Maven):
 
 ```xml
-<dependency>
-    <groupId>io.lightine.tessera</groupId>
-    <artifactId>tessera-mrz-core-jvm</artifactId>
-    <version>0.5.1</version>
-</dependency>
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>io.lightine.tessera</groupId>
+            <artifactId>tessera-bom</artifactId>
+            <version>0.5.2</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+<dependencies>
+    <dependency>
+        <groupId>io.lightine.tessera</groupId>
+        <artifactId>tessera-mrz-core</artifactId>
+    </dependency>
+</dependencies>
 ```
 
 `Package.swift` (iOS):
 
 ```swift
-.package(url: "https://github.com/lightine-io/tessera-swift", exact: "0.5.1"),
+.package(url: "https://github.com/lightine-io/tessera-swift", exact: "0.5.2"),
 .product(name: "Tessera", package: "tessera-swift"),
 .product(name: "TesseraUI", package: "tessera-swift"),
 ```
