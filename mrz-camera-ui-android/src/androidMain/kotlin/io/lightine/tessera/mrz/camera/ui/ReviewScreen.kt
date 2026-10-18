@@ -8,6 +8,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,6 +39,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import io.lightine.tessera.mrz.camera.MrzScanResult
@@ -348,29 +350,21 @@ internal fun ReviewContent(
     }
 
     val secondaryLabel = secondaryActionLabel(decoded.parse.metadata.readMethod)
-    Column(
-        modifier =
-            Modifier
-                .fillMaxHeight()
-                .contentMaxWidth()
-                .padding(24.dp)
-                .testTag(REVIEW_TEST_TAG),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.tessera_scanner_review_title),
-            style = MaterialTheme.typography.headlineSmall,
-            // The review screen is the decode-landing: it appears the moment an MRZ is read. Assertive so a
-            // screen reader announces the outcome ("MRZ read") on arrival — the result deserves attention.
-            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
-        )
-
-        // The summary + observations + disclosure scroll; the two action buttons stay pinned below so they
-        // are always reachable however long the observation list grows.
-        Column(
-            modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+    // The summary + observations + disclosure scroll; the two action buttons stay pinned below so they are
+    // always reachable however long the observation list grows (all of it scrolls on a short height, TES-231).
+    BodyWithActionsColumn(
+        testTag = REVIEW_TEST_TAG,
+        bodySpacing = 16.dp,
+        header = {
+            Text(
+                text = stringResource(R.string.tessera_scanner_review_title),
+                style = MaterialTheme.typography.headlineSmall,
+                // The review screen is the decode-landing: it appears the moment an MRZ is read. Assertive so a
+                // screen reader announces the outcome ("MRZ read") on arrival — the result deserves attention.
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
+            )
+        },
+        body = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 reviewSummaryRows(reviewDocument(decoded)).forEach { SummaryRow(it) }
             }
@@ -390,15 +384,16 @@ internal fun ReviewContent(
             TextButton(onClick = onToggleExpanded) {
                 Text(text = stringResource(R.string.tessera_scanner_review_show_all))
             }
-        }
-
-        Button(onClick = onUse, modifier = Modifier.fillMaxWidth()) {
-            Text(text = stringResource(R.string.tessera_scanner_review_use))
-        }
-        OutlinedButton(onClick = onRescan, modifier = Modifier.fillMaxWidth()) {
-            Text(text = secondaryLabel)
-        }
-    }
+        },
+        actions = {
+            Button(onClick = onUse, modifier = Modifier.fillMaxWidth()) {
+                Text(text = stringResource(R.string.tessera_scanner_review_use))
+            }
+            OutlinedButton(onClick = onRescan, modifier = Modifier.fillMaxWidth()) {
+                Text(text = secondaryLabel)
+            }
+        },
+    )
 }
 
 /**
@@ -421,24 +416,16 @@ private fun ReviewExpandedContent(
 ) {
     val document = reviewDocument(decoded)
     val secondaryLabel = secondaryActionLabel(decoded.parse.metadata.readMethod)
-    Column(
-        modifier =
-            Modifier
-                .fillMaxHeight()
-                .contentMaxWidth()
-                .padding(24.dp)
-                .testTag(REVIEW_EXPANDED_TEST_TAG),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.tessera_scanner_review_all_fields_title),
-            style = MaterialTheme.typography.headlineSmall,
-        )
-
-        Column(
-            modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+    BodyWithActionsColumn(
+        testTag = REVIEW_EXPANDED_TEST_TAG,
+        bodySpacing = 8.dp,
+        header = {
+            Text(
+                text = stringResource(R.string.tessera_scanner_review_all_fields_title),
+                style = MaterialTheme.typography.headlineSmall,
+            )
+        },
+        body = {
             reviewAllFieldRows(document).forEach { SummaryRow(it) }
 
             HorizontalDivider()
@@ -466,17 +453,18 @@ private fun ReviewExpandedContent(
             TextButton(onClick = onCollapse) {
                 Text(text = stringResource(R.string.tessera_scanner_review_show_less))
             }
-        }
-
-        Button(onClick = onUse, modifier = Modifier.fillMaxWidth()) {
-            Text(text = stringResource(R.string.tessera_scanner_review_use))
-        }
-        // Rescan / Try another photo / Edit entry, matching the collapsed view's provenance-aware label
-        // (TES-96 — the expanded view previously dropped this action entirely).
-        OutlinedButton(onClick = onRescan, modifier = Modifier.fillMaxWidth()) {
-            Text(text = secondaryLabel)
-        }
-    }
+        },
+        actions = {
+            Button(onClick = onUse, modifier = Modifier.fillMaxWidth()) {
+                Text(text = stringResource(R.string.tessera_scanner_review_use))
+            }
+            // Rescan / Try another photo / Edit entry, matching the collapsed view's provenance-aware label
+            // (TES-96 — the expanded view previously dropped this action entirely).
+            OutlinedButton(onClick = onRescan, modifier = Modifier.fillMaxWidth()) {
+                Text(text = secondaryLabel)
+            }
+        },
+    )
 }
 
 /**
@@ -493,46 +481,93 @@ internal fun ReadFailedContent(
     // user is never routed into a method that was deliberately disabled (mirrors the camera-status notices).
     showManualEntry: Boolean = true,
 ) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxHeight()
-                .contentMaxWidth()
-                .padding(24.dp)
-                .testTag(READ_FAILED_TEST_TAG),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.tessera_scanner_read_failed_title),
-            style = MaterialTheme.typography.headlineSmall,
-            // The read-failed screen is a decode-landing too (OCR text that didn't parse). Assertive so the
-            // outcome ("Couldn't read this MRZ") is announced on arrival — the user needs to know to retry.
-            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
-        )
-        Text(
-            text = stringResource(R.string.tessera_scanner_read_failed_body),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-
-        // The body + captured text scroll; the two actions stay pinned below and always reachable.
-        Column(
-            modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
+    // The body + captured text scroll; the two actions stay pinned below and always reachable.
+    BodyWithActionsColumn(
+        testTag = READ_FAILED_TEST_TAG,
+        bodySpacing = 4.dp,
+        header = {
+            Text(
+                text = stringResource(R.string.tessera_scanner_read_failed_title),
+                style = MaterialTheme.typography.headlineSmall,
+                // The read-failed screen is a decode-landing too (OCR text that didn't parse). Assertive so the
+                // outcome ("Couldn't read this MRZ") is announced on arrival — the user needs to know to retry.
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
+            )
+            Text(
+                text = stringResource(R.string.tessera_scanner_read_failed_body),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        body = {
             Text(
                 text = stringResource(R.string.tessera_scanner_read_failed_captured_header),
                 style = MaterialTheme.typography.titleSmall,
             )
             capturedText.lines.forEach { line -> MonoLine(line.text) }
-        }
-
-        Button(onClick = onTryAgain, modifier = Modifier.fillMaxWidth()) {
-            Text(text = stringResource(R.string.tessera_scanner_read_failed_try_again))
-        }
-        if (showManualEntry) {
-            OutlinedButton(onClick = onManualEntry, modifier = Modifier.fillMaxWidth()) {
-                Text(text = stringResource(R.string.tessera_scanner_read_failed_manual))
+        },
+        actions = {
+            Button(onClick = onTryAgain, modifier = Modifier.fillMaxWidth()) {
+                Text(text = stringResource(R.string.tessera_scanner_read_failed_try_again))
             }
+            if (showManualEntry) {
+                OutlinedButton(onClick = onManualEntry, modifier = Modifier.fillMaxWidth()) {
+                    Text(text = stringResource(R.string.tessera_scanner_read_failed_manual))
+                }
+            }
+        },
+    )
+}
+
+/**
+ * The available height below which [BodyWithActionsColumn] stops pinning its actions and scrolls everything
+ * as one column (TES-231). It is measured on the space the content actually gets (inside the scaffold's top
+ * bar and footer, about 180dp together), not the window, so Material's 480dp compact-height breakpoint does
+ * not apply directly. A phone in landscape has a window under 480dp, so its content area is at most about
+ * 330dp (a Pixel 9 leaves about 250dp); a small portrait phone (a 640dp window) still leaves about 460dp.
+ * 400dp sits between the two with room on both sides. It is also where pinning stops paying off: the pinned
+ * part alone (24dp padding top and bottom, a headline, the 16dp gaps, two 48dp-touch-target buttons) is about
+ * 220dp, so below 400dp the scrolling body would get under ~180dp, a few rows. A dp threshold does not grow
+ * with font scale.
+ */
+private val PinnedActionsMinHeight = 400.dp
+
+/**
+ * The shared layout of the review, expanded-review, and read-failed screens: a fixed [header], a scrolling
+ * [body], and the [actions] pinned below the body so they are always reachable. When the available height is
+ * under [PinnedActionsMinHeight] (a phone in landscape), pinning would leave the body almost no room, so the
+ * WHOLE column scrolls instead, with the actions at the end — the same as the iOS scanner in landscape
+ * (TES-231). Exactly one of the two columns scrolls: the body never scrolls inside a scrolling parent, and its
+ * `weight` is only used when the parent's height is bounded.
+ */
+@Composable
+private fun BodyWithActionsColumn(
+    testTag: String,
+    bodySpacing: Dp,
+    header: @Composable ColumnScope.() -> Unit,
+    body: @Composable ColumnScope.() -> Unit,
+    actions: @Composable ColumnScope.() -> Unit,
+) {
+    BoxWithConstraints(modifier = Modifier.fillMaxHeight().contentMaxWidth()) {
+        // An unbounded height (a scrolling host) cannot be "short"; the pinned layout then just wraps its content.
+        val scrollAll = constraints.hasBoundedHeight && maxHeight < PinnedActionsMinHeight
+        // One state, used by whichever column scrolls.
+        val scrollState = rememberScrollState()
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .then(if (scrollAll) Modifier.verticalScroll(scrollState) else Modifier.fillMaxHeight())
+                    .padding(24.dp)
+                    .testTag(testTag),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            header()
+            Column(
+                modifier = if (scrollAll) Modifier else Modifier.weight(1f, fill = false).verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(bodySpacing),
+                content = body,
+            )
+            actions()
         }
     }
 }

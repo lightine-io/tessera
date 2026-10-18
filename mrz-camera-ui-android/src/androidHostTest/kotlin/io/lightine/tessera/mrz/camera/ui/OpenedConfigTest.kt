@@ -103,8 +103,9 @@ class OpenedConfigTest {
         composeRule.waitForIdle()
 
         // "Edit entry" returns to manual entry, a method of the opening config, and the switcher there offers
-        // the same opening methods: no screen the switcher does not know about.
-        composeRule.onNodeWithText("Edit entry").performClick()
+        // the same opening methods: no screen the switcher does not know about. Scrolled to first: on the
+        // default short host window the whole review scrolls, with the actions at its end (TES-231).
+        composeRule.onNodeWithText("Edit entry").performScrollTo().performClick()
         composeRule.onNodeWithTag(MANUAL_RAW_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(SWITCHER_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithText("Manual").assertIsDisplayed()
