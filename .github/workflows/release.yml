@@ -63,6 +63,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # The tag must match the build version, or Central gets the wrong version and only the Swift
+      # package ships (TES-236). Runs before any publish.
+      - name: Tag matches the build version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          BUILD=$(sed -n 's/^version=//p' gradle.properties)
+          if [ "v${BUILD}" != "${TAG}" ]; then
+            echo "::error::Tag ${TAG} but gradle.properties says version=${BUILD}. Bump the version, then tag."
+            exit 1
+          fi
+          echo "Tag ${TAG} matches version=${BUILD}"
+
       - name: Select Xcode ${{ env.XCODE_VERSION }}
         run: |
           XC="/Applications/Xcode_${XCODE_VERSION}.app"

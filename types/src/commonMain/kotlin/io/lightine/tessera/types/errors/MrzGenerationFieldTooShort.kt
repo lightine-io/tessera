@@ -14,7 +14,7 @@ import io.lightine.tessera.types.vocabulary.MrzFormat
  * @property expectedLength Length the field needs, in characters.
  * @property observedLength Length of the supplied value, in characters.
  * @property observedValue The supplied value.
- * @since 0.5.2
+ * @since 0.5.3
  */
 public data class MrzGenerationFieldTooShort(
     val format: MrzFormat,
