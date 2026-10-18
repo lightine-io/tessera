@@ -7,7 +7,7 @@ set -uo pipefail
 
 version="${1:-}"
 if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?$ ]]; then
-  echo "usage: $0 <version, e.g. 0.5.2> [tessera-swift-dir]" >&2
+  echo "usage: $0 <version, e.g. 1.2.3> [tessera-swift-dir]" >&2
   exit 2
 fi
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

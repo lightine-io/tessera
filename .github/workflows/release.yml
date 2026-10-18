@@ -63,8 +63,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # The tag must match the build version, or Central gets the wrong version (TES-236: v0.5.2
-      # was tagged with version=0.5.1 and only the Swift package shipped). Runs before any publish.
+      # The tag must match the build version, or Central gets the wrong version and only the Swift
+      # package ships (TES-236). Runs before any publish.
       - name: Tag matches the build version
         run: |
           TAG="${GITHUB_REF_NAME}"
