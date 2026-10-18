@@ -119,7 +119,7 @@ public object DocumentTypeCodeTable {
      *
      * @param code The code as printed. The table match is exact and case-sensitive.
      * @return The category, or `null` if [code] is blank or has no recognized first character.
-     * @since 0.5.2
+     * @since 0.5.3
      */
     public fun broadCategory(code: String): DocumentCategory? = DocumentType(code).broadCategory
 

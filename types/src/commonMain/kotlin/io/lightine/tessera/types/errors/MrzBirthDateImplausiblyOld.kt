@@ -9,7 +9,7 @@ import kotlinx.datetime.LocalDate
  * either in the future or older than [thresholdYears] (130) at the reference date.
  *
  * Never reported: the MRZ year has two digits, and one of the two century candidates always gives
- * an age under 130 years (until the year 2130). Deprecated in 0.5.2 and removed at 1.0.
+ * an age under 130 years (until the year 2130). Deprecated in 0.5.3 and removed at 1.0.
  *
  * @property rawYear The two year digits as printed.
  * @property rawMonth The two month digits as printed.
