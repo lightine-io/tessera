@@ -98,6 +98,8 @@ Read each list in order. Where no tutorial is named, none exists.
 - [Branch on a parse result on iOS](https://lightine.youtrack.cloud/articles/TES-A-105)
 - [Choose the reading methods of the scanner screen on iOS](https://lightine.youtrack.cloud/articles/TES-A-106)
 - [Aim autofocus at the MRZ guide on iOS](https://lightine.youtrack.cloud/articles/TES-A-107)
+- [Generate MRZ text on iOS](https://lightine.youtrack.cloud/articles/TES-A-152)
+- [Get scan results with for await on iOS](https://lightine.youtrack.cloud/articles/TES-A-153)
 - [Hand the camera permission to your app from the iOS scanner screen](https://lightine.youtrack.cloud/articles/TES-A-108)
 - [Handle errors and warnings on iOS](https://lightine.youtrack.cloud/articles/TES-A-109)
 - [Install Tessera on iOS](https://lightine.youtrack.cloud/articles/TES-A-110)
