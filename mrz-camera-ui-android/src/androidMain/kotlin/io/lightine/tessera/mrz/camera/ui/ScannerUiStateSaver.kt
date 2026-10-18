@@ -55,7 +55,7 @@ private const val TAG_REVIEW = "Review"
 
 /**
  * Flattens [state] to a `List<Any?>` of Bundle-safe primitives (String, Boolean, Int, Float, Long, and nested
- * `ArrayList` of those) — the save half of [scannerUiStateSaver], pulled out as a pure function so the
+ * `ArrayList` of those) - the save half of [scannerUiStateSaver], pulled out as a pure function so the
  * encoding is host-unit-testable with no `Saver`, no Bundle, and no Compose runtime. The first element is
  * always a tag identifying the variant; [decodeScannerUiState] dispatches on it. See the file header for
  * which variants restore as something other than themselves.
@@ -111,11 +111,11 @@ internal fun encodeScannerUiState(state: ScannerUiState): List<Any?> =
 
 /**
  * Rebuilds a [ScannerUiState] from [saved] (as produced by [encodeScannerUiState]), or `null` when the
- * payload is unreadable — an unknown tag, the wrong arity for its tag, a value of the wrong type, or (for
+ * payload is unreadable - an unknown tag, the wrong arity for its tag, a value of the wrong type, or (for
  * [ScannerUiState.Review]) an enum name or raw-line set that no longer reconstructs a valid reading.
  * [scannerUiStateSaver] then falls back to `rememberSaveable`'s own init lambda on `null`, so a corrupt or
  * from-a-future-version payload degrades to "start the flow over" rather than crashing restoration. Note
- * that this function alone does NOT apply the config-aware gate ([gateRestoredState]) — [scannerUiStateSaver]
+ * that this function alone does NOT apply the config-aware gate ([gateRestoredState]) - [scannerUiStateSaver]
  * composes the two; call sites that want the gate applied (i.e. every real `rememberSaveable` restore) go
  * through the Saver, not this function directly.
  */
@@ -185,17 +185,17 @@ internal fun decodeScannerUiState(saved: List<Any?>): ScannerUiState? {
 }
 
 /**
- * Re-validates a decoded [state] against the CURRENT [enabledMethods] before letting it restore — TES-102's
+ * Re-validates a decoded [state] against the CURRENT [enabledMethods] before letting it restore - TES-102's
  * config-aware restore gate, applied by [scannerUiStateSaver] after [decodeScannerUiState].
  *
- * A `rememberSaveable` restore fires on EVERY Activity recreation (rotation, font-scale, locale) — the exact
+ * A `rememberSaveable` restore fires on EVERY Activity recreation (rotation, font-scale, locale) - the exact
  * same trigger [initialState] already re-derives a FRESH flow's start screen from. Before this gate, the
  * Saver restored the decoded state unconditionally, which regressed that guarantee: a host whose
  * `enabledMethods` can change between sessions (e.g. a compliance host drops
  * [`MANUAL_ENTRY`][ScanMethod.MANUAL_ENTRY]) would still have a saved [ScannerUiState.ManualRaw] resurrect
  * into a fully working entry screen on the very next rotation, because the Bundle remembers nothing about
- * which methods are still allowed. This function closes that gap: it returns `null` — the same "give up,
- * let the flow restart" signal a corrupt payload already produces in [decodeScannerUiState] — whenever
+ * which methods are still allowed. This function closes that gap: it returns `null` - the same "give up,
+ * let the flow restart" signal a corrupt payload already produces in [decodeScannerUiState] - whenever
  * [state]'s owning method is not in [enabledMethods], so `rememberSaveable`'s init lambda re-derives
  * [initialState] from the CURRENT config instead. It returns [state] unchanged otherwise.
  *
@@ -205,14 +205,14 @@ internal fun decodeScannerUiState(saved: List<Any?>): ScannerUiState? {
  *  * [`AwaitingSavedImagePick`][ScannerUiState.AwaitingSavedImagePick] /
  *    [`SavedImageEmpty`][ScannerUiState.SavedImageEmpty] / [`ReadFailed`][ScannerUiState.ReadFailed] →
  *    [`SAVED_IMAGE`][ScanMethod.SAVED_IMAGE] ([ScannerUiState.ReadFailed] is only ever reached from the
- *    saved-image flow — see `backEffect`'s KDoc in `MrzScannerScreen.kt`);
+ *    saved-image flow - see `backEffect`'s KDoc in `MrzScannerScreen.kt`);
  *  * [`ManualRaw`][ScannerUiState.ManualRaw] → [`MANUAL_ENTRY`][ScanMethod.MANUAL_ENTRY];
- *  * [`Review`][ScannerUiState.Review] → its own [`source`][ScannerUiState.Review.source] — a
+ *  * [`Review`][ScannerUiState.Review] → its own [`source`][ScannerUiState.Review.source] - a
  *    not-yet-accepted review whose producing method the host has since disabled restores as a fresh start on
  *    an allowed method rather than offering a "Rescan" into a method that no longer exists.
  *
  * [ScannerUiState.SavedImageAnalyzing] is included only for `when` exhaustiveness: [decodeScannerUiState]
- * never actually produces it (it decodes to [ScannerUiState.AwaitingSavedImagePick] — see the file header),
+ * never actually produces it (it decodes to [ScannerUiState.AwaitingSavedImagePick] - see the file header),
  * so this branch is unreachable in practice, not a case this function meaningfully decides.
  *
  * No special-casing an empty [enabledMethods]: every owning method then fails the `in` check and every state
@@ -275,7 +275,7 @@ internal fun scannerUiStateSaver(enabledMethods: Set<ScanMethod>): Saver<Scanner
 /**
  * Encodes a nullable confidence-like `Float?` as a Bundle-safe non-null `Float`: `null` becomes [Float.NaN].
  * Paired with [decodeNullableFloat]. Used for both [RecognizedLine.confidence] and [ScanQuality.ocrConfidence]
- * — both are documented as `[0, 1]` or `null`, so `NaN` can never collide with a genuine value.
+ * - both are documented as `[0, 1]` or `null`, so `NaN` can never collide with a genuine value.
  */
 private fun encodeNullableFloat(value: Float?): Float = value ?: Float.NaN
 
@@ -320,18 +320,18 @@ private fun asFloatListOrNull(list: List<*>): List<Float>? {
 
 /**
  * Encodes a [ScannerUiState.Review]. `decoded.parse` here is always [ParseResult.Success] or
- * [ParseResult.PartialSuccess] (a [ParseResult.Failure] never reaches [ScannerUiState.Review] — [routeDecode]
+ * [ParseResult.PartialSuccess] (a [ParseResult.Failure] never reaches [ScannerUiState.Review] - [routeDecode]
  * sends a failure to [ScannerUiState.ReadFailed] instead), so [MrzDocument.rawLines][io.lightine.tessera.mrz.model.MrzDocument.rawLines]
  * is always available in practice. The `Failure` branch below is defensive only: it encodes an empty raw-line
- * list, which [decodeReview] then fails to re-parse into anything but [ParseResult.Failure] — falling
+ * list, which [decodeReview] then fails to re-parse into anything but [ParseResult.Failure] - falling
  * through to the same "return null, let the flow restart" path a corrupt payload takes, rather than special-
  * casing an input shape that should be unreachable.
  *
  * Saved, alongside the raw lines: the recognized-text lines (parallel `texts` / `confidences` lists, the
  * same NaN-sentinel scheme [ReadFailed] uses), [ScanQuality]'s three fields (`ocrConfidence` via the same
  * sentinel), the parse's [`ReadMethod`][ReadMethod] by name, [ScannerUiState.Review.source] by name,
- * [ScannerUiState.Review.expanded], and — appended LAST, so every earlier index-based test and decode slot
- * is undisturbed — the wall-clock instant AT ENCODE TIME, in epoch milliseconds. See [decodeReview] for why
+ * [ScannerUiState.Review.expanded], and - appended LAST, so every earlier index-based test and decode slot
+ * is undisturbed - the wall-clock instant AT ENCODE TIME, in epoch milliseconds. See [decodeReview] for why
  * that instant (rather than a fresh restore-time clock) is what the re-parse is pinned to.
  */
 private fun encodeReview(state: ScannerUiState.Review): List<Any?> {
@@ -361,31 +361,31 @@ private fun encodeReview(state: ScannerUiState.Review): List<Any?> {
 
 /**
  * Rebuilds a [ScannerUiState.Review] from its saved payload by RE-PARSING the saved raw lines with
- * [MrzParser.parse] — parsing is pure and deterministic over lines that already parsed once (they reached
+ * [MrzParser.parse] - parsing is pure and deterministic over lines that already parsed once (they reached
  * [ScannerUiState.Review] in the first place), so replaying it reconstructs the identical
  * [`MrzDocument`][io.lightine.tessera.mrz.model.MrzDocument] without persisting the whole verdict (a far
  * heavier carrier than eleven primitives). Only [ResultMetadata.readMethod][io.lightine.tessera.mrz.parsing.ResultMetadata]
  * then needs restamping: the parser only ever sees strings, so it always reports `BACKEND_STRING_INPUT`, but
  * the saved payload remembers whether this reading actually came from the camera, a saved photo, or manual
- * entry — restamping is the identical move `mrz-core`'s `ManualMrzReader.withReadMethod` and
+ * entry - restamping is the identical move `mrz-core`'s `ManualMrzReader.withReadMethod` and
  * `mrz-camera-core`'s `MrzFrameAnalyzer.withProvenance` already make for the live paths: only the read method
  * changes, the parser's verdict (document, warnings, validation failures) is surfaced unchanged (Principle
- * 1). The rebuilt [MrzScanResult.Decoded] carries the SAVED [RecognizedText] and [ScanQuality] — not
- * synthesized ones — so what the user saw before the configuration change is exactly what they see after.
+ * 1). The rebuilt [MrzScanResult.Decoded] carries the SAVED [RecognizedText] and [ScanQuality] - not
+ * synthesized ones - so what the user saw before the configuration change is exactly what they see after.
  *
  * The re-parse's `referenceTime` is PINNED to the wall-clock instant [encodeReview] captured at encode time
  * (the saved payload's last slot), not a fresh `Clock.System.now()` at restore time. `referenceTime` feeds
- * both the date-window (century) inference AND — via [ResultMetadata.warnings] — computed observations like
+ * both the date-window (century) inference AND - via [ResultMetadata.warnings] - computed observations like
  * an expiry-past delta; re-parsing at a fresh restore-time clock could, across a long process-death restore,
  * report a warning that has silently changed shape from what the user was actually looking at (a passport a
  * few days from expiry could cross that boundary between review and restore, for instance). Pinning to the
  * encode-time clock reconstructs the review as-of (approximately) the last moment the user actually saw it.
- * The residual imprecision — encode-time versus the ORIGINAL parse-time, which `ResultMetadata` does not
- * carry forward for this codec to recover — is at most a few seconds within one live session, a far narrower
+ * The residual imprecision - encode-time versus the ORIGINAL parse-time, which `ResultMetadata` does not
+ * carry forward for this codec to recover - is at most a few seconds within one live session, a far narrower
  * window than the unbounded restore-time drift this replaces.
  *
  * Defensive at every step: an unreadable field, an enum name [ReadMethod] / [ScanMethod] no longer
- * recognizes, or (should the saved raw lines somehow fail to re-parse — see [encodeReview]'s `Failure`
+ * recognizes, or (should the saved raw lines somehow fail to re-parse - see [encodeReview]'s `Failure`
  * branch) a re-parse that comes back [ParseResult.Failure] all return `null`, so the flow falls back to its
  * initial state rather than showing a corrupted review.
  */

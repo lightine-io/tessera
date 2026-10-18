@@ -10,11 +10,11 @@ import kotlin.time.Instant
  * genuinely ambiguous OCR glyphs in a recognized MRZ and surfaces every distinct, structurally-parseable
  * reconstruction with its own parse verdict (see [MrzCandidate]; [ADR-023]).
  *
- * **v1 scope — character disambiguation only.** The matcher works on a window of lines that already matches a
- * known MRZ shape, found via [MrzLineDetection] — the SAME windowed extraction, MRZ-alphabet guard, and
+ * **v1 scope - character disambiguation only.** The matcher works on a window of lines that already matches a
+ * known MRZ shape, found via [MrzLineDetection] - the SAME windowed extraction, MRZ-alphabet guard, and
  * chevron-glyph recovery the strict analyse-frame core uses (shared, not restated, since TES-117), and then
- * varies its ambiguous glyphs. The harder half — **length-tolerant / collapsed-filler recovery** (ML Kit
- * collapses long `<` filler runs, so line 1 never reaches its nominal length — see TES-18) — is a deferred
+ * varies its ambiguous glyphs. The harder half - **length-tolerant / collapsed-filler recovery** (ML Kit
+ * collapses long `<` filler runs, so line 1 never reaches its nominal length - see TES-18) - is a deferred
  * refinement and is NOT attempted here: a frame whose lines do not reach a known shape yields no candidates,
  * exactly as strict yields no decode. The refinement is tracked separately.
  */

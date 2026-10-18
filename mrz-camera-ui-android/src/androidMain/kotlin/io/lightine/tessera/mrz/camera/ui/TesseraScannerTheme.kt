@@ -25,10 +25,10 @@ import androidx.compose.ui.platform.LocalContext
  * - **dark/light** from [MrzScannerTheme.darkMode] (auto follows the system);
  * - **base scheme** = Material You dynamic color when [opted in][MrzScannerTheme.useDynamicColor] on
  *   Android 12+, else the Material 3 baseline scheme;
- * - **brand accent** ([MrzScannerTheme.brandColor], packed ARGB) tints the scheme's primary when set — a
+ * - **brand accent** ([MrzScannerTheme.brandColor], packed ARGB) tints the scheme's primary when set - a
  *   tint, not a reskin (the rest of the palette stays the module's own). Because an arbitrary brand colour has
  *   no guaranteed contrast against a fixed foreground (a light tint under `onPrimary: Color.White` is
- *   illegible, and vice versa), [onPrimary] is derived from the tint's own relative luminance alongside it —
+ *   illegible, and vice versa), [onPrimary] is derived from the tint's own relative luminance alongside it -
  *   see the `brandColor` block below.
  */
 @Composable

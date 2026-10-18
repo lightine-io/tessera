@@ -10,12 +10,12 @@ package io.lightine.tessera.mrz.camera
  * ICAO width and the exact-width shape match downstream can never fire. Both were verified on real photos
  * (2026-08-09, TES-129/TES-130): a 30-char TD1 row arriving as 25 + 5, and filler rows arriving 22–24 of 30.
  *
- * **What the rescue does — selection, never invention.** Pass 1 locates rows that *look like* MRZ content
+ * **What the rescue does - selection, never invention.** Pass 1 locates rows that *look like* MRZ content
  * (charset-heavy, contains filler). Each candidate region is re-cropped tight and re-read (both Vision
- * levels — FAST reads chevrons more faithfully). From every read, the rescue keeps lines whose
+ * levels - FAST reads chevrons more faithfully). From every read, the rescue keeps lines whose
  * whitespace-stripped length exactly matches an ICAO MRZ width, and splits a read whose length is an exact
  * small multiple of one width (a tight MRZ block that Vision returned as one concatenated observation).
- * Every kept line is an actual OCR read, character for character — nothing is padded or guessed (the
+ * Every kept line is an actual OCR read, character for character - nothing is padded or guessed (the
  * TES-18 stance); the parser's check digits downstream remain the arbiter of every rescued line.
  */
 internal object VisionSavedImageRescue {
@@ -47,7 +47,7 @@ internal object VisionSavedImageRescue {
 
     /**
      * The lines rescued from one re-read of a candidate region: keeps exact-width reads, and splits a read
-     * whose stripped length is an exact multiple (2..[MAX_SPLIT_ROWS]) of one width — a tight MRZ block
+     * whose stripped length is an exact multiple (2..[MAX_SPLIT_ROWS]) of one width - a tight MRZ block
      * Vision sometimes returns as ONE concatenated observation (photo-verified: 90 = 3×30). Split chunks
      * preserve the read's own character order; nothing is added or dropped.
      */
@@ -65,13 +65,13 @@ internal object VisionSavedImageRescue {
     }
 
     /**
-     * Maps a candidate region — an oriented-space, bottom-left-origin normalized rect (Vision's
-     * `boundingBox` space, which pass 1 reported against the EXIF-oriented image) — into the RAW bitmap's
+     * Maps a candidate region - an oriented-space, bottom-left-origin normalized rect (Vision's
+     * `boundingBox` space, which pass 1 reported against the EXIF-oriented image) - into the RAW bitmap's
      * top-left-origin normalized space, undoing the EXIF [orientation]. Returns null for orientations the
      * rescue does not handle (the mirrored EXIF variants never produced by a camera); callers then skip
      * the second pass rather than crop the wrong region.
      *
-     * Handled: 1 (up), 3 (180°), 6 (raw is the displayed image rotated 90° CCW — the usual back-camera
+     * Handled: 1 (up), 3 (180°), 6 (raw is the displayed image rotated 90° CCW - the usual back-camera
      * portrait photo), 8 (the 90° CW counterpart).
      */
     internal fun rawCropRect(

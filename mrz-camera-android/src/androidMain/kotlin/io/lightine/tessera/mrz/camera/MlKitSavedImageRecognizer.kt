@@ -11,14 +11,14 @@ import kotlinx.coroutines.withContext
 
 /**
  * The Android saved-image [MrzTextRecognizer], backed by the same bundled-model ML Kit Text Recognition as
- * the camera path — it just reads a saved-image [Uri] instead of a camera frame. Obtained from the gated
+ * the camera path - it reads a saved-image [Uri] instead of a camera frame. Obtained from the gated
  * factory [mlKitSavedImageRecognizer]; the class is `internal` so the only way to get one is through that
  * factory, which requires the saved-image-reading acknowledgement (the public constructor cannot bypass it).
  *
  * It decodes the [Uri] with `InputImage.fromFilePath` (which reads the file and applies its EXIF orientation)
  * on [Dispatchers.IO], then runs ML Kit. A decode/read failure propagates as an exception, which
  * [MrzFrameAnalyzer] catches and surfaces as a typed [`CameraError.OcrFailed`][CameraError.OcrFailed] (the
- * OCR-seam contract — recognizers signal failure by throwing). Owns its ML Kit [TextRecognizer]; release via [close].
+ * OCR-seam contract - recognizers signal failure by throwing). Owns its ML Kit [TextRecognizer]; release via [close].
  */
 internal class MlKitSavedImageRecognizer(
     private val appContext: Context,

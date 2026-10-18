@@ -56,13 +56,13 @@ internal const val CAMERA_UNAVAILABLE_TEST_TAG: String = "tessera-mrz-camera-una
  * The camera-in-use screen (mockup 05). Shown when another app holds the camera. This is **recoverable**, but
  * not automatically: the notice replaces the live preview, so the scanner is torn down while it shows, and
  * CameraX does not retry the camera open on its own after this error. Recovery happens the next time the app
- * returns to the foreground — the flow's `ON_RESUME` observer re-mounts a fresh preview and tries again (see
+ * returns to the foreground - the flow's `ON_RESUME` observer re-mounts a fresh preview and tries again (see
  * [ScannerFlow]). There is therefore **no retry button** here (coming back to the screen already is the
- * retry) — only [onManualEntry] (when [showManualEntry]), the escape into manual entry for a user who would
+ * retry) - only [onManualEntry] (when [showManualEntry]), the escape into manual entry for a user who would
  * rather not wait. The status indicator states this in words; its pulse is decorative and never the sole
  * carrier of meaning (non-colour / non-motion a11y).
  *
- * @param showManualEntry whether the manual-entry action is offered — `false` when the consumer's
+ * @param showManualEntry whether the manual-entry action is offered - `false` when the consumer's
  *   `enabledMethods` excludes `MANUAL_ENTRY`. Defaults to `true`.
  */
 @Composable
@@ -109,10 +109,10 @@ internal fun CameraInUseContent(
 
 /**
  * The camera-unavailable screen (mockup 05b). Shown when the camera cannot be started for a non-recoverable
- * reason. This is **terminal**: there is no auto-recovery and no retry — the only forward path is
+ * reason. This is **terminal**: there is no auto-recovery and no retry - the only forward path is
  * [onManualEntry] (when [showManualEntry]), typing the details by hand.
  *
- * @param showManualEntry whether the manual-entry action is offered — `false` when the consumer's
+ * @param showManualEntry whether the manual-entry action is offered - `false` when the consumer's
  *   `enabledMethods` excludes `MANUAL_ENTRY`. Defaults to `true`.
  */
 @Composable
@@ -160,15 +160,15 @@ internal fun CameraUnavailableContent(
 /**
  * The status indicator on the camera-in-use screen: a pulsing dot beside a short status label
  * (`tessera_scanner_camera_reconnecting`). The label carries the meaning; the pulse is purely decorative (it
- * conveys nothing a screen reader or a reduced-motion user would miss — the status is stated in the text). The
+ * conveys nothing a screen reader or a reduced-motion user would miss - the status is stated in the text). The
  * dot is the literal bullet "●" whose alpha animates, so no drawing API or icon dependency is introduced.
  *
  * **A11y (TES-47).**
- *  * *Motion is never the sole signal.* The pulse is gated on [animationsEnabled] — with the user's
+ *  * *Motion is never the sole signal.* The pulse is gated on [animationsEnabled] - with the user's
  *    reduce-motion / "Remove animations" setting on, the dot renders static (full alpha) and only the text
  *    conveys the status. Meaning survives with motion off.
  *  * *The dot is not announced.* The bare bullet "●" is decorative, so it is removed from the semantics tree
- *    ([clearAndSetSemantics] with an empty block) — a screen reader would otherwise read a meaningless glyph.
+ *    ([clearAndSetSemantics] with an empty block) - a screen reader would otherwise read a meaningless glyph.
  *  * *The status is announced on arrival.* The camera-in-use screen appears via an auto-transition (the flow
  *    reducer flips to it when another app grabs the camera), so the status label is a **polite** [liveRegion]:
  *    a screen reader speaks it when it appears without the user having to move focus to it.

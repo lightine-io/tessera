@@ -57,13 +57,13 @@ internal const val AWAITING_SAVED_IMAGE_PICK_TEST_TAG: String = "tessera-mrz-awa
  * Where the flow starts, derived purely from the consumer's [enabledMethods]. Pure and Compose-free so every
  * combination is host-unit-testable off-device (mirrors [routeDecode]).
  *
- * Preference order — camera first (the default primary method), then manual entry (the always-available
+ * Preference order - camera first (the default primary method), then manual entry (the always-available
  * fallback), then saved image:
  *  * [`CAMERA`][ScanMethod.CAMERA] present → [ScannerUiState.Scanning];
  *  * else [`MANUAL_ENTRY`][ScanMethod.MANUAL_ENTRY] present → [ScannerUiState.ManualRaw];
  *  * else [`SAVED_IMAGE`][ScanMethod.SAVED_IMAGE] present → [ScannerUiState.AwaitingSavedImagePick] (the flow
  *    triggers the photo picker on entering it);
- *  * empty set → treated as camera (defensive — an empty [enabledMethods] is not a valid consumer config, but
+ *  * empty set → treated as camera (defensive - an empty [enabledMethods] is not a valid consumer config, but
  *    the UI must still show something rather than nothing).
  */
 internal fun initialState(enabledMethods: Set<ScanMethod>): ScannerUiState =
@@ -75,7 +75,7 @@ internal fun initialState(enabledMethods: Set<ScanMethod>): ScannerUiState =
     }
 
 /**
- * The reading methods the switcher offers, decided purely from [enabledMethods] — only the enabled ones, in
+ * The reading methods the switcher offers, decided purely from [enabledMethods] - only the enabled ones, in
  * the fixed display order camera, photo, type ([ScanMethod.CAMERA], [ScanMethod.SAVED_IMAGE],
  * [ScanMethod.MANUAL_ENTRY]). Pure and Compose-free so [MethodSwitcher]'s visibility rule is host-testable.
  */
@@ -83,7 +83,7 @@ internal fun switcherMethods(enabledMethods: Set<ScanMethod>): List<ScanMethod> 
     listOf(ScanMethod.CAMERA, ScanMethod.SAVED_IMAGE, ScanMethod.MANUAL_ENTRY).filter { it in enabledMethods }
 
 /**
- * Whether the current [ScannerUiState] is a capture / entry screen — the only screens the method switcher
+ * Whether the current [ScannerUiState] is a capture / entry screen - the only screens the method switcher
  * appears on. Those are the ones a user is actively *reading from* and might want to switch away from:
  * [`Scanning`][ScannerUiState.Scanning], [`ManualRaw`][ScannerUiState.ManualRaw], and the saved-image entry
  * points ([`AwaitingSavedImagePick`][ScannerUiState.AwaitingSavedImagePick] /
@@ -104,13 +104,13 @@ internal fun showsMethodSwitcher(state: ScannerUiState): Boolean =
 
 /**
  * The shared chrome (TES-71): a [Scaffold] with a [TopAppBar] whose leading ✕ fires [onClose] (the global
- * cancel, reachable on every screen), a stable title, and — on the capture / entry screens only, and only
- * when at least two methods are enabled — the [MethodSwitcher] beneath the bar. [content] renders in the
+ * cancel, reachable on every screen), a stable title, and - on the capture / entry screens only, and only
+ * when at least two methods are enabled - the [MethodSwitcher] beneath the bar. [content] renders in the
  * Scaffold body underneath, so each screen keeps its own scroll / pinned-button behaviour.
  *
  * @param enabledMethods the consumer's enabled reading methods; the switcher shows only these, and hides when
  *   fewer than two are enabled (nothing to switch between).
- * @param currentState the flow's current state — decides whether the switcher shows ([showsMethodSwitcher])
+ * @param currentState the flow's current state - decides whether the switcher shows ([showsMethodSwitcher])
  *   and which tab is highlighted.
  * @param onClose the global cancel (the flow reports `Cancelled(USER_DISMISSED)`).
  * @param onSelectMethod invoked with the tapped method when the user switches.
@@ -178,7 +178,7 @@ internal fun ScannerScaffold(
 /**
  * The "Powered by Tessera" attribution footer, shown once on every screen via the scaffold's bottom bar. A
  * quiet, theme-coloured line (so it adapts to light / dark / dynamic colour and never competes with the
- * content). Overridable like every `tessera_*` key — a consumer can set an empty string to remove it: this
+ * content). Overridable like every `tessera_*` key - a consumer can set an empty string to remove it: this
  * renders nothing at all when the resolved string [isBlank], so the Scaffold's bottomBar measures to zero
  * height and the opt-out actually reclaims the space (rather than leaving a blank, padded band).
  */
@@ -205,10 +205,10 @@ private fun PoweredByFooter() {
 /**
  * The scan-timeout countdown chip (TES-125): a small pill in the top bar showing the time left as `M:SS` while a
  * finite `scanTimeout` runs, present on every screen (the host set a session deadline, and the user should know
- * there is one and how long is left). A quiet theme-coloured surface — no `material-icons` dependency (the SDK
+ * there is one and how long is left). A quiet theme-coloured surface - no `material-icons` dependency (the SDK
  * avoids it, cf. the ✕ and the torch). The visible `M:SS` is locale-neutral digits; a spoken content description
- * gives screen readers the meaning. Deliberately NOT an assertive live region — a per-second announcement would
- * spam TalkBack — so it is read on focus, not shouted every tick.
+ * gives screen readers the meaning. Deliberately NOT an assertive live region - a per-second announcement would
+ * spam TalkBack - so it is read on focus, not shouted every tick.
  */
 @Composable
 private fun ScanCountdownChip(remaining: Duration) {
@@ -233,8 +233,8 @@ private fun ScanCountdownChip(remaining: Duration) {
 }
 
 /**
- * The segmented method switcher (TES-71): one chip per enabled reading method — Camera / Photo / Type, in the
- * order camera, photo, type — with the method matching [currentState] highlighted (selected). Tapping a chip
+ * The segmented method switcher (TES-71): one chip per enabled reading method - Camera / Photo / Type, in the
+ * order camera, photo, type - with the method matching [currentState] highlighted (selected). Tapping a chip
  * fires [onSelectMethod]. When fewer than two methods are enabled there is nothing to switch between, so the
  * whole row is hidden (renders nothing).
  *

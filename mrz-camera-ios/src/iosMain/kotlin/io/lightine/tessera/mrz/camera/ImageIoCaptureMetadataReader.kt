@@ -10,7 +10,7 @@ import platform.Foundation.NSNumber
 import platform.Foundation.NSURL
 
 /**
- * The iOS [CaptureMetadataReader] — reads a saved image's EXIF from its `CIImage.properties` dictionary
+ * The iOS [CaptureMetadataReader] - reads a saved image's EXIF from its `CIImage.properties` dictionary
  * (Apple's image-metadata dictionary, the same structure ImageIO's `CGImageSource` exposes), honoring the
  * [CaptureMetadataPolicy]. Obtained from the gated factory [imageIoCaptureMetadataReader]; the class is
  * `internal` so it is only reachable through that factory, which requires the acknowledgement.
@@ -21,7 +21,7 @@ import platform.Foundation.NSURL
  * or absent tags yield `null` fields, never an error.
  *
  * The metadata-assembly logic (dictionary navigation, GPS sign-from-reference, suppression) is the pure
- * [assembleCaptureMetadata] — unit-tested with synthetic property maps. This class is only the thin platform
+ * [assembleCaptureMetadata] - unit-tested with synthetic property maps. This class is only the thin platform
  * read: load the image's properties and hand them to that function.
  */
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)

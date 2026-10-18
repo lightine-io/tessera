@@ -14,15 +14,15 @@ import androidx.compose.ui.platform.LocalContext
 // and (in tests) how the live-region status text is asserted.
 
 /**
- * Whether the platform's animations are enabled — i.e. the user has NOT turned motion off (the
+ * Whether the platform's animations are enabled - i.e. the user has NOT turned motion off (the
  * "Remove animations" accessibility setting / a reduce-motion preference). Android does not expose a direct
  * "reduce motion" flag, so the established signal is the global [`ANIMATOR_DURATION_SCALE`][Settings.Global.ANIMATOR_DURATION_SCALE]:
  * the platform sets it to `0f` when animations are disabled. Read once per composition (the setting does not
  * change mid-screen in practice).
  *
- * Used to gate *decorative* motion only — the reconnect pulse (mockup 05). Meaning never depends on the
+ * Used to gate *decorative* motion only - the reconnect pulse (mockup 05). Meaning never depends on the
  * animation: the "Reconnecting…" text carries the recoverable status on its own, so when animations are off
- * the dot simply renders static rather than pulsing. Modern Compose animation primitives already honour this
+ * the dot renders static rather than pulsing. Modern Compose animation primitives already honour this
  * scale for finite/duration-based animations, but an [`infiniteRepeatable`][androidx.compose.animation.core.infiniteRepeatable]
  * pulse keeps running regardless, so it is gated explicitly here.
  */

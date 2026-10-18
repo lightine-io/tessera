@@ -24,16 +24,16 @@ import platform.ImageIO.CGImageSourceRef
 import platform.Vision.VNImageRequestHandler
 
 /**
- * The iOS saved-image [MrzTextRecognizer], backed by Apple Vision — the saved-image sibling of the camera
+ * The iOS saved-image [MrzTextRecognizer], backed by Apple Vision - the saved-image sibling of the camera
  * [VisionMrzTextRecognizer]. It runs the **same** Vision text-recognition pipeline the camera path uses
  * (`.accurate` recognition, **no** language correction so the MRZ characters are never altered, rows
  * reassembled top-to-bottom), plus a saved-image-only **two-pass MRZ rescue** ([VisionSavedImageRescue],
  * TES-130): the live camera reads a tight guide-band crop where Vision sees the MRZ large and whole, but a
- * full-page photo gives Vision the MRZ as a tiny strip — it splits rows and collapses `<` filler, so the
+ * full-page photo gives Vision the MRZ as a tiny strip - it splits rows and collapses `<` filler, so the
  * exact-width shape match downstream can never fire. The rescue re-crops the candidate MRZ rows located by
- * the first pass and re-reads each tight crop (both Vision recognition levels — FAST reads chevron filler
+ * the first pass and re-reads each tight crop (both Vision recognition levels - FAST reads chevron filler
  * more faithfully than accurate's language modelling), keeping only reads whose stripped length matches an
- * ICAO MRZ width. Selection among actual OCR reads, never invention — no character is padded or guessed,
+ * ICAO MRZ width. Selection among actual OCR reads, never invention - no character is padded or guessed,
  * and the parser's check digits remain the arbiter. Pass-1 rows are always appended after the rescued
  * lines, so a photo the first pass already read correctly is never made worse.
  *
@@ -42,7 +42,7 @@ import platform.Vision.VNImageRequestHandler
  * constructor cannot bypass it).
  *
  * iOS reads saved images from a file [NSURL] only in 0.3.0: the URL-based handler reads the file and applies
- * its EXIF orientation, whereas Vision's `NSData` initializer assumes an upright image — so an `NSData`
+ * its EXIF orientation, whereas Vision's `NSData` initializer assumes an upright image - so an `NSData`
  * overload is deferred ([ADR-023](https://lightine.youtrack.cloud/articles/TES-A-63)). The rescue's own
  * crops undo the EXIF orientation with pure rect math ([VisionSavedImageRescue.rawCropRect]) and hand each
  * crop to Vision with the file's orientation, so both passes read upright text. A Vision failure in pass 1

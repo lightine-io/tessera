@@ -36,8 +36,8 @@ public value class DocumentType(
 }
 
 /**
- * The [DocumentCategory] implied by just the first character of [rawCode], per ICAO Doc 9303 Part 4 §4.4
- * (`P`/`V`) and Parts 5/6 (`A`/`C`/`I`) — the same reserved-leading-character rule [DocumentTypeCodeTable]'s
+ * The [DocumentCategory] implied by only the first character of [rawCode], per ICAO Doc 9303 Part 4 §4.4
+ * (`P`/`V`) and Parts 5/6 (`A`/`C`/`I`) - the same reserved-leading-character rule [DocumentTypeCodeTable]'s
  * KDoc documents. `null` when [rawCode] is blank or its first character is not one of those. Case-insensitive.
  * Backs [DocumentType.broadCategory].
  */

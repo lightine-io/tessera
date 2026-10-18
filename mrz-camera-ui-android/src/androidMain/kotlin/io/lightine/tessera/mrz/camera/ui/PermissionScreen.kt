@@ -45,32 +45,32 @@ internal const val PERMISSION_GRANT_TEST_TAG: String = "tessera-mrz-permission-g
 internal const val PERMISSION_DENIED_TEST_TAG: String = "tessera-mrz-permission-denied"
 
 /**
- * Which face of the adaptive permission screen to show — the single decision the gate ([CameraCapture])
+ * Which face of the adaptive permission screen to show - the single decision the gate ([CameraCapture])
  * dispatches on. Derived purely by [permissionScreenState] from the three read-only signals the gate holds,
  * so the whole decision is host-unit-testable without a device or an Activity.
  */
 internal enum class PermissionScreenState {
-    /** The `CAMERA` permission is held — the gate shows the live preview, not this screen. */
+    /** The `CAMERA` permission is held - the gate shows the live preview, not this screen. */
     GRANTED,
 
-    /** The permission is not held and a request can still succeed (never asked, or denied once) — mockup 04. */
+    /** The permission is not held and a request can still succeed (never asked, or denied once) - mockup 04. */
     NEEDS_GRANT,
 
-    /** The permission is permanently denied ("don't ask again") — only the OS settings can grant it (mockup 04b). */
+    /** The permission is permanently denied ("don't ask again") - only the OS settings can grant it (mockup 04b). */
     PERMANENTLY_DENIED,
 }
 
 /**
  * The adaptive permission decision, decided purely from the three read-only signals the gate holds:
- *  * [granted] — `checkSelfPermission(CAMERA) == GRANTED` (already held → [PermissionScreenState.GRANTED]);
- *  * [hasAsked] — whether the host has been handed a request in this flow (the user tapped Grant at least
+ *  * [granted] - `checkSelfPermission(CAMERA) == GRANTED` (already held → [PermissionScreenState.GRANTED]);
+ *  * [hasAsked] - whether the host has been handed a request in this flow (the user tapped Grant at least
  *    once), tracked because [showRationale] alone cannot disambiguate never-asked from permanently-denied;
- *  * [showRationale] — `shouldShowRequestPermissionRationale(activity, CAMERA)`, which returns `false` BOTH
+ *  * [showRationale] - `shouldShowRequestPermissionRationale(activity, CAMERA)`, which returns `false` BOTH
  *    when the permission was never requested AND when it is permanently denied, and `true` only after a
  *    single denial. Verified against the current Android docs (2026-07-06).
  *
  * So once the host has been asked and the platform still won't show a rationale, the system will no longer
- * show the request dialog — that is [PermissionScreenState.PERMANENTLY_DENIED] (where "Grant" would be dead,
+ * show the request dialog - that is [PermissionScreenState.PERMANENTLY_DENIED] (where "Grant" would be dead,
  * so the screen offers "Open Settings" instead). Otherwise (never asked, or denied once with the rationale
  * still available) a request can still succeed → [PermissionScreenState.NEEDS_GRANT].
  *
@@ -95,9 +95,9 @@ internal fun permissionScreenState(
  * The adaptive camera-permission screen (mockups 04 / 04b). Renders one of two faces from [state]:
  *
  *  * [PermissionScreenState.NEEDS_GRANT] → mockup 04: title "Camera permission needed", the on-device
- *    privacy body, a primary "Continue" that fires [onGrant] (which hands the request to the host) — but
+ *    privacy body, a primary "Continue" that fires [onGrant] (which hands the request to the host) - but
  *    ONLY when [hasRequestHandler] is true; if the host supplied no `onRequestPermission`, no dead Grant
- *    button is drawn, leaving just the rationale and the manual-entry escape.
+ *    button is drawn, leaving only the rationale and the manual-entry escape.
  *  * [PermissionScreenState.PERMANENTLY_DENIED] → mockup 04b: title "Camera access is off", the Settings +
  *    privacy body, a primary "Open Settings" that fires [onOpenSettings] (the UI owns this navigation; it is
  *    always available in this mode).
@@ -108,9 +108,9 @@ internal fun permissionScreenState(
  *
  * `internal` (not `private`) so the two faces and their actions are host-tested through this entry point
  * directly (the same composable the gate dispatches), per the testing-layers rule. The screen only reads and
- * navigates — it never requests a permission (scope permission boundary).
+ * navigates - it never requests a permission (scope permission boundary).
  *
- * @param showManualEntry whether the manual-entry escape is offered — `false` when the consumer's
+ * @param showManualEntry whether the manual-entry escape is offered - `false` when the consumer's
  *   `enabledMethods` excludes `MANUAL_ENTRY`, so a camera-only config never dangles an escape into a screen
  *   the user cannot reach any other way. Defaults to `true`.
  */
@@ -158,9 +158,9 @@ internal fun PermissionContent(
 
 /**
  * The shared layout of both permission faces (mockups 04 / 04b): a centred icon-free title + body, a primary
- * action pinned at the bottom (omitted when [primaryLabel] is null — the no-handler Grant case), and the
+ * action pinned at the bottom (omitted when [primaryLabel] is null - the no-handler Grant case), and the
  * secondary "Enter details manually" escape beneath it. The two faces differ only in their [testTag], copy,
- * and which callback the primary action fires — everything structural is shared here.
+ * and which callback the primary action fires - everything structural is shared here.
  */
 @Composable
 private fun PermissionScaffold(

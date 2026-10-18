@@ -10,21 +10,21 @@ import io.lightine.tessera.mrz.formats.Td3FormatSpec
  * The line-detection core shared by [MrzFrameAnalyzer] (strict/lenient decode) and [TolerantMrzMatcher]
  * (candidate disambiguation): windowed extraction of a known ICAO MRZ shape out of a run of recognized-text
  * lines, plus the glyph recovery (case fold, chevron recovery) applied before the shape search. Kept in ONE
- * place, internal, so the two consumers cannot silently drift apart the way they did before TES-117 — the
+ * place, internal, so the two consumers cannot silently drift apart the way they did before TES-117 - the
  * matcher had kept an older run-based, chevron-blind detection after the analyzer was rewritten to window and
  * recover chevrons.
  */
 internal object MrzLineDetection {
     /**
-     * Finds a window of consecutive [normalizedLines] — already run through [normalizeLine] — that matches a
+     * Finds a window of consecutive [normalizedLines] - already run through [normalizeLine] - that matches a
      * known ICAO MRZ shape (TD1 3×30, TD2/MRV-B 2×36, TD3/MRV-A 2×44), and returns it as the candidate; null
      * when none matches. For each shape (lineCount L × lineWidth W) it slides a window of L consecutive lines
-     * and takes the first where every line is exactly W long. Windowing — rather than requiring a whole
-     * equal-length *run* to itself be the shape — tolerates the printed noise a live camera OCRs around the
+     * and takes the first where every line is exactly W long. Windowing - rather than requiring a whole
+     * equal-length *run* to itself be the shape - tolerates the printed noise a live camera OCRs around the
      * zone (place-of-birth, blood group, the legal paragraph, device-observed): a stray line of the same width
      * no longer inflates the run past L and breaks the match, and the shape is still found among longer output.
      * Width stays EXACT (never padded to fit) so every candidate is parseable and no data is inferred
-     * (Principle 1) — a frame where OCR genuinely dropped or split an MRZ line simply does not match. Larger
+     * (Principle 1) - a frame where OCR genuinely dropped or split an MRZ line does not match. Larger
      * shapes first (more lines => more specific) for a deterministic pick.
      */
     fun findMrzWindow(normalizedLines: List<String>): List<String>? {
@@ -41,9 +41,9 @@ internal object MrzLineDetection {
     /**
      * Case is folded to upper (the MRZ alphabet is uppercase-only), and out-of-alphabet chevron glyphs an OCR
      * engine emits for the filler `<` (e.g. ML Kit reads the chevron as `«`) are recovered to `<`. Both are
-     * glyph *recovery* — the source can only have been the one intended character, not a choice between two
-     * valid ones — so they hold in both modes; whitespace is forgiven only in [ParsingMode.LENIENT]. Callers
-     * are responsible for preserving the raw (un-normalized) text on their result (Principle 5) — this function
+     * glyph *recovery* - the source can only have been the one intended character, not a choice between two
+     * valid ones - so they hold in both modes; whitespace is forgiven only in [ParsingMode.LENIENT]. Callers
+     * are responsible for preserving the raw (un-normalized) text on their result (Principle 5) - this function
      * only ever produces the parse candidate.
      */
     fun normalizeLine(

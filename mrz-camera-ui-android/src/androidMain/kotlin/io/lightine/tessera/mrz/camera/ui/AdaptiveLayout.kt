@@ -35,19 +35,19 @@ import androidx.compose.ui.unit.dp
 internal val ContentMaxWidth: Dp = 480.dp
 
 /**
- * Caps a content column's width at [ContentMaxWidth] and centres it horizontally within its parent — the
+ * Caps a content column's width at [ContentMaxWidth] and centres it horizontally within its parent - the
  * adaptive-layout foundation for the single-pane scanner screens (TES-78).
  *
  * Applied to the **content** screens (review / expanded, read-failed, manual entry, the permission faces, the
  * saved-image empty / analyzing / await-pick prompts, the camera-status notices, and the camera-initializing
  * state) so their column stays a readable width on a tablet or unfolded foldable instead
  * of stretching its rows and full-width buttons edge-to-edge. The live camera viewfinder is deliberately NOT
- * capped — it stays full-bleed for immersive scanning; only its overlaid controls use this so they remain
+ * capped - it stays full-bleed for immersive scanning; only its overlaid controls use this so they remain
  * reachable and not stretched.
  *
  * The modifier chain is `fillMaxWidth().wrapContentWidth(CenterHorizontally).widthIn(max = ContentMaxWidth)`:
  * `fillMaxWidth` claims the parent's width, `wrapContentWidth` re-centres the (soon-to-be-narrower) content in
- * it, and `widthIn` caps the measured width. The order matters — the cap must come after the centring so the
+ * it, and `widthIn` caps the measured width. The order matters - the cap must come after the centring so the
  * centred region is the capped one. On any screen narrower than the cap this is a no-op (the content already
  * fills less than the max), so the phone layout is byte-for-byte the same; the cap only takes effect once the
  * available width exceeds [ContentMaxWidth].

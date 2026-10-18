@@ -48,7 +48,7 @@ internal val FlashlightOnIcon: ImageVector
             }.build()
             .also { flashOnCache = it }
 
-/** Flash OFF: the Material Symbols `flash_off` glyph — the same bolt with a diagonal strike-through. */
+/** Flash OFF: the Material Symbols `flash_off` glyph - the same bolt with a diagonal strike-through. */
 internal val FlashlightOffIcon: ImageVector
     get() =
         flashOffCache ?: ImageVector

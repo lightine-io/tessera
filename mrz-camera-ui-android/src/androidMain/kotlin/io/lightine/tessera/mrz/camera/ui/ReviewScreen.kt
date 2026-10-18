@@ -76,7 +76,7 @@ internal enum class ObservationTone {
     /** A recorded value agrees with what the SDK computes (rendered ✓, green). */
     MATCHES,
 
-    /** A recorded value disagrees with what the SDK computes (rendered ‼, amber). Not "wrong" — just stated. */
+    /** A recorded value disagrees with what the SDK computes (rendered ‼, amber). Not "wrong" - only stated. */
     MISMATCH,
 
     /** Neutral, informational (rendered ⓘ, muted): provenance, advisories, quality. */
@@ -84,7 +84,7 @@ internal enum class ObservationTone {
 }
 
 /**
- * One stated observation about a reading — a symbol, its text, and its tone. The meaning lives in [text]
+ * One stated observation about a reading - a symbol, its text, and its tone. The meaning lives in [text]
  * and in the tone's content-description prefix (see [ReviewObservationRow]), never in colour alone, so it
  * survives for a screen-reader user (non-colour a11y).
  */
@@ -106,8 +106,8 @@ internal data class FieldRow(
 )
 
 /**
- * The display value for the name row: "PRIMARY, SECONDARY" when there is a secondary identifier, or just
- * `primary` alone when it is blank — a mononym (the documented no-`<<` case, [`secondaryIdentifier`] parses
+ * The display value for the name row: "PRIMARY, SECONDARY" when there is a secondary identifier, or only
+ * `primary` alone when it is blank - a mononym (the documented no-`<<` case, [`secondaryIdentifier`] parses
  * to `""`) would otherwise render with a dangling trailing comma ("SURNAME, "). Display-only formatting;
  * the raw MRZ section still shows every character verbatim (Principle 5). Shared by [reviewSummaryRows] and
  * [reviewAllFieldRows] so the two mappers can never drift apart on this.
@@ -133,7 +133,7 @@ internal fun reviewSummaryRows(document: MrzDocument): List<FieldRow> {
     )
 }
 
-/** The full parsed field set shown in the expanded view (mockup 03c) — common fields plus format-specific extras. */
+/** The full parsed field set shown in the expanded view (mockup 03c) - common fields plus format-specific extras. */
 @Composable
 internal fun reviewAllFieldRows(document: MrzDocument): List<FieldRow> {
     val fields = document.commonFields
@@ -174,13 +174,13 @@ internal fun reviewAllFieldRows(document: MrzDocument): List<FieldRow> {
 }
 
 /**
- * The observation set for a decoded reading (mockups 03 / 03b) — the check-digit / expiry / advisory
+ * The observation set for a decoded reading (mockups 03 / 03b) - the check-digit / expiry / advisory
  * observations for its [`parse`][MrzScanResult.Decoded.parse] verdict (via [parseObservations]) plus a
  * **provenance** INFO line naming the read method (live camera / photo / manual). A parse failure carries no
  * document, so it yields no observations.
  *
- * The parse-derived part is factored out into [parseObservations] — a bare-[ParseResult] verdict with no
- * provenance to render — kept as its own pure step so this function stays a thin wrapper: the shared
+ * The parse-derived part is factored out into [parseObservations] - a bare-[ParseResult] verdict with no
+ * provenance to render - kept as its own pure step so this function stays a thin wrapper: the shared
  * check-digit / expiry verdict logic plus the one thing only a decoded reading has (provenance).
  */
 @Composable
@@ -203,33 +203,33 @@ internal fun reviewObservations(decoded: MrzScanResult.Decoded): List<Observatio
 }
 
 /**
- * The review **summary**'s observation set (TES-96) — a deliberately short list, not the full
+ * The review **summary**'s observation set (TES-96) - a deliberately short list, not the full
  * [reviewObservations]: only what needs the user's attention. A passing check (✓) or the expiry-well-formed
- * note is unsurprising and, on a fully clean read, would be the ONLY thing on the screen besides the fields —
- * noise that trains the user to stop reading. So the summary keeps just the MISMATCH (‼) rows, the
- * "some checks did not match" advisory, and the provenance line ("Read by …") — everything [ObservationTone.MATCHES]
- * is dropped. On a clean read (no mismatch) that leaves only provenance, which is exactly the "just fields +
+ * note is unsurprising and, on a fully clean read, would be the ONLY thing on the screen besides the fields -
+ * noise that trains the user to stop reading. So the summary keeps only the MISMATCH (‼) rows, the
+ * "some checks did not match" advisory, and the provenance line ("Read by …") - everything [ObservationTone.MATCHES]
+ * is dropped. On a clean read (no mismatch) that leaves only provenance, which is exactly the "only fields +
  * provenance" summary the redesign calls for. Every dropped row is still shown, unfiltered, in the expanded
- * view ([reviewObservations] directly) — nothing here is hidden, only deferred past a disclosure (Principle 5).
+ * view ([reviewObservations] directly) - nothing here is hidden, only deferred past a disclosure (Principle 5).
  */
 @Composable
 internal fun reviewSummaryObservations(decoded: MrzScanResult.Decoded): List<Observation> =
     reviewObservations(decoded).filter { it.tone != ObservationTone.MATCHES }
 
 /**
- * The observation set for a single parse verdict — the honest per-check reporting the review screen uses for
+ * The observation set for a single parse verdict - the honest per-check reporting the review screen uses for
  * a decoded reading. Derived purely from the [ParseResult] and its metadata; carries **no** provenance line
- * (the caller adds one where it has a read method — see [reviewObservations]).
+ * (the caller adds one where it has a read method - see [reviewObservations]).
  *
  * Logic, in order:
- * 1. **Check digits** — one observation per check digit that is present on the format (document number,
+ * 1. **Check digits** - one observation per check digit that is present on the format (document number,
  *    date of birth, date of expiry always; optional-data and composite only when their [MrzCheckDigits]
  *    value is non-null). A digit is a MISMATCH when `metadata.validationFailures` holds a
  *    [MrzCheckDigitMismatch] for its [MrzField]; otherwise it is a MATCH. The mismatch text states both the
- *    recorded and computed digits — neither is "the right one"; the consumer decides (Principle 1).
- * 2. **Expiry well-formed** — a MATCH observation only when the expiry components form a real calendar date
+ *    recorded and computed digits - neither is "the right one"; the consumer decides (Principle 1).
+ * 2. **Expiry well-formed** - a MATCH observation only when the expiry components form a real calendar date
  *    (`componentsFormCalendarDate == true`).
- * 3. **Advisory** — a single neutral INFO observation "some checks did not match — verify against the
+ * 3. **Advisory** - a single neutral INFO observation "some checks did not match - verify against the
  *    document" appended when any check-digit mismatch was reported.
  *
  * A [`ParseResult.Failure`][ParseResult.Failure] carries no parsed document, so it yields an empty list.
@@ -324,16 +324,16 @@ internal fun parseObservations(parse: ParseResult): List<Observation> {
 /**
  * The review screen (mockups 03 / 03b, and 03c when [expanded]). Shows the curated summary and the honest
  * observations for a decoded reading, with a disclosure into the full field set and raw MRZ. [onUse]
- * accepts the reading (returns `Confirmed`) — enabled on a mismatch too; [onRescan] discards it and goes
+ * accepts the reading (returns `Confirmed`) - enabled on a mismatch too; [onRescan] discards it and goes
  * back to the reading method that produced this review; [onToggleExpanded] flips the all-fields view.
  *
  * **Summary vs expanded (TES-96).** The collapsed summary is deliberately short: fields, only the
  * *mismatched* checks (plus the "some checks did not match" advisory when any exist) via
- * [reviewSummaryObservations], and the provenance line — a clean read shows no per-check rows at all, just
+ * [reviewSummaryObservations], and the provenance line - a clean read shows no per-check rows at all, only
  * fields and "Read by …". Every passing check (and the expiry-well-formed note) is not hidden, only deferred:
  * it appears, unfiltered, in the expanded view via [reviewObservations]. The secondary action's label tracks
- * how this reading was produced ([secondaryActionLabel]) — "Rescan" for the live camera, "Try another photo"
- * for a picked image, "Edit entry" for typed input — since "Rescan" reads oddly for a photo pick or a typed
+ * how this reading was produced ([secondaryActionLabel]) - "Rescan" for the live camera, "Try another photo"
+ * for a picked image, "Edit entry" for typed input - since "Rescan" reads oddly for a photo pick or a typed
  * MRZ.
  */
 @Composable
@@ -398,13 +398,13 @@ internal fun ReviewContent(
 
 /**
  * The expanded all-fields + raw-MRZ view (mockup 03c). Scrollable: the full parsed field set, the FULL
- * observation set (every ✓ and ‼ row, plus provenance — [reviewObservations], unfiltered, TES-96), and every
+ * observation set (every ✓ and ‼ row, plus provenance - [reviewObservations], unfiltered, TES-96), and every
  * raw MRZ line (monospace, horizontally scrollable, never wrapped or truncated). A "Show less ▴" collapse
- * control ([onCollapse], mirroring the summary's "Show all fields ▾") returns to the review summary — closing
+ * control ([onCollapse], mirroring the summary's "Show all fields ▾") returns to the review summary - closing
  * the earlier gap where the expanded view had no way back (TES-71). The pinned actions mirror the collapsed
- * view's — [onUse] and the provenance-aware [onRescan] — so Rescan / Try another photo / Edit entry stays
+ * view's - [onUse] and the provenance-aware [onRescan] - so Rescan / Try another photo / Edit entry stays
  * reachable here too (TES-96 closed the earlier gap where the expanded view dropped it entirely). The
- * scan-quality telemetry line (region / OCR confidence / recognized lines) is deliberately NOT shown here —
+ * scan-quality telemetry line (region / OCR confidence / recognized lines) is deliberately NOT shown here -
  * it is internal signal for the host via the result API, not user-facing copy (TES-96).
  */
 @Composable
@@ -469,7 +469,7 @@ private fun ReviewExpandedContent(
 
 /**
  * The "couldn't read this MRZ" screen (mockup 08). Shown when OCR produced text that did not parse as any
- * known MRZ format. States that honestly — never "invalid" — shows the captured text verbatim (garbles
+ * known MRZ format. States that honestly - never "invalid" - shows the captured text verbatim (garbles
  * preserved, monospace, per-line horizontal scroll), and offers a retry or a switch to manual entry.
  */
 @Composable
@@ -535,7 +535,7 @@ private val PinnedActionsMinHeight = 400.dp
  * The shared layout of the review, expanded-review, and read-failed screens: a fixed [header], a scrolling
  * [body], and the [actions] pinned below the body so they are always reachable. When the available height is
  * under [PinnedActionsMinHeight] (a phone in landscape), pinning would leave the body almost no room, so the
- * WHOLE column scrolls instead, with the actions at the end — the same as the iOS scanner in landscape
+ * WHOLE column scrolls instead, with the actions at the end - the same as the iOS scanner in landscape
  * (TES-231). Exactly one of the two columns scrolls: the body never scrolls inside a scrolling parent, and its
  * `weight` is only used when the parent's height is bounded.
  */
@@ -580,12 +580,12 @@ private fun BodyWithActionsColumn(
 private val SummaryRowSpacing = 16.dp
 
 /**
- * A key/value summary row: label on the start, monospace value on the end — normally one line
+ * A key/value summary row: label on the start, monospace value on the end - normally one line
  * (TES-95). At a large system font size (`fontScale`), a long label plus a long monospace value can no
  * longer both fit one line; measured naively that would squeeze the value into an unreadable sliver instead
  * of actually wrapping. This measures both texts' natural (unconstrained) widths with [rememberTextMeasurer]
  * and, only when they would not both fit side by side, falls back to stacking the value on its own full-width
- * line under the label — never a squeezed single line. On a phone at default font scale the two almost always
+ * line under the label - never a squeezed single line. On a phone at default font scale the two almost always
  * fit, so this is a no-op there; it only changes anything once the available width is actually exceeded.
  *
  * `internal` (not `private`): host-tested directly with a controlled width and font scale (the same
@@ -670,16 +670,16 @@ private val MonoLineIndicatorHeight = 3.dp
 
 /**
  * One MRZ / captured-OCR line: monospace, shown whole on one row so a long line is never wrapped or truncated
- * (transparency — the consumer sees exactly what was read). A 44-character TD3 line can be wider than a phone
+ * (transparency - the consumer sees exactly what was read). A 44-character TD3 line can be wider than a phone
  * column, more so at a large system font size, so this measures the line at each [MonoLineFit.ladder] style
  * with [rememberTextMeasurer] and shows the first that fits ([monoLineFit]); if none fits, the line scrolls
  * sideways with a visible indicator bar under it, so clipping is never silent. Reusable by any screen that
  * shows raw MRZ text (the review's raw-MRZ section, the read-failed captured text).
  *
  * Forced left-to-right regardless of the ambient locale (a hardware/system RTL setting, e.g. Arabic or
- * Hebrew): an MRZ is always printed left-to-right per ICAO 9303 — under RTL the layout direction would
+ * Hebrew): an MRZ is always printed left-to-right per ICAO 9303 - under RTL the layout direction would
  * otherwise mirror both the text order and which edge the horizontal scroll starts from, garbling a string
- * that must stay verbatim (Principle 5). [CompositionLocalProvider] scopes the override to just this line, so
+ * that must stay verbatim (Principle 5). [CompositionLocalProvider] scopes the override to only this line, so
  * the rest of the screen keeps the ambient direction.
  */
 @Composable
@@ -756,7 +756,7 @@ internal fun MonoLine(text: String) {
  * One observation line: its symbol and text, coloured by tone. The tone is carried non-visually two ways so
  * it never depends on colour alone (non-colour a11y): the literal ✓ / ‼ / ⓘ symbol is part of the text, and
  * the row merges its descendants into one semantics node whose [stateDescription] names the tone in words
- * (Match / Attention / Note) for a screen reader — merging (rather than clearing) keeps the observation's
+ * (Match / Attention / Note) for a screen reader - merging (rather than clearing) keeps the observation's
  * visible text findable in the semantics tree.
  *
  * `internal` (not `private`): the manual-entry screen ([ManualRawContent]) reuses this same row to render its
@@ -818,7 +818,7 @@ private fun reviewDocument(decoded: MrzScanResult.Decoded): MrzDocument =
  * [`DocumentType.broadCategory`][io.lightine.tessera.mrz.recognition.DocumentType.broadCategory] (TES-99),
  * which already widens the exact-match [`DocumentTypeCodeTable`][io.lightine.tessera.mrz.recognition.DocumentTypeCodeTable]
  * lookup with the ICAO reserved-leading-character fallback this screen used to keep as a private copy
- * (TES-98) — now a single source of truth in core. Raw code alone only when even the first letter is not
+ * (TES-98) - now a single source of truth in core. Raw code alone only when even the first letter is not
  * one ICAO reserves for a document category.
  */
 @Composable
@@ -858,10 +858,10 @@ private fun readMethodLabel(readMethod: ReadMethod): String =
 
 /**
  * The review screens' secondary-action label (TES-96): "Rescan" reads oddly for a reading that did not come
- * from the live camera — a picked photo isn't "scanned again", and typed text isn't either. Tracks the same
+ * from the live camera - a picked photo isn't "scanned again", and typed text isn't either. Tracks the same
  * provenance [readMethodLabel] states in the "Read by …" line, but with its own copy: "Rescan" for the live
  * camera, "Try another photo" for a picked image, "Edit entry" for typed input. The action's behaviour is
- * unchanged (it still routes back to whichever method produced this review) — only the label follows
+ * unchanged (it still routes back to whichever method produced this review) - only the label follows
  * provenance.
  */
 @Composable
@@ -880,11 +880,11 @@ private fun secondaryActionLabel(readMethod: ReadMethod): String =
 
 /**
  * The computed calendar date when mrz-core resolved one (`1969-08-06`), else the raw two-digit components as
- * printed, day first ([unresolvedDateText], `23 06 94`) — TES-94, TES-112. mrz-core resolves a century via a
+ * printed, day first ([unresolvedDateText], `23 06 94`) - TES-94, TES-112. mrz-core resolves a century via a
  * sliding plausibility window relative to the parse-time reference clock (see `MrzDate` /
  * `MrzDateInferenceMethod` in mrz-core); a date of birth almost always fits (any century up to ~130 years in
- * the past), but an expiry far outside its narrower window (10 years past / 50 years future of "now") — as any
- * sufficiently old ICAO test specimen or long-expired real document eventually will be — leaves `computedDate`
+ * the past), but an expiry far outside its narrower window (10 years past / 50 years future of "now") - as any
+ * sufficiently old ICAO test specimen or long-expired real document eventually will be - leaves `computedDate`
  * null. This UI never re-derives a century itself (that would duplicate mrz-core's inference and could
  * disagree with it); it only renders what core already resolved. The fallback shows the parts in the
  * day-month-year order of the document's visual zone (ICAO Doc 9303 Part 3) with the two-digit year as
@@ -902,7 +902,7 @@ private fun dateDisplay(date: MrzDate): String =
 internal fun unresolvedDateText(date: MrzDate): String = "${date.rawDay} ${date.rawMonth} ${date.rawYear}"
 
 /**
- * Strips trailing MRZ filler (`<`) from a parsed field VALUE for display — the fillers are fixed-width padding,
+ * Strips trailing MRZ filler (`<`) from a parsed field VALUE for display - the fillers are fixed-width padding,
  * not data, so `L898902C<` reads as `L898902C` (matching how the name is already shown). Display-only: the Raw
  * MRZ section still renders every character verbatim, so transparency is preserved (Principle 5).
  */
