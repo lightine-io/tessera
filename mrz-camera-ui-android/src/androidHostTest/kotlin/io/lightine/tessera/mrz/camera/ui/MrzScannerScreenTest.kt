@@ -319,7 +319,9 @@ class MrzScannerScreenTest {
         // provenance-aware ("Edit entry" for manual, TES-96) — tapping it must return to manual entry
         // PREFILLED with the lines that were actually submitted, not a blank field (TES-93).
         composeRule.onNodeWithTag(REVIEW_TEST_TAG).assertIsDisplayed()
-        composeRule.onNodeWithText("Edit entry").performClick()
+        // Scroll first: on Robolectric's default 470dp-tall window the scaffold leaves the review under the
+        // short-height threshold, so the whole review scrolls and the actions sit at its end (TES-231).
+        composeRule.onNodeWithText("Edit entry").performScrollTo().performClick()
 
         composeRule.onNodeWithTag(MANUAL_RAW_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(MANUAL_RAW_FIELD_TEST_TAG).assertTextContains(line1, substring = true)
