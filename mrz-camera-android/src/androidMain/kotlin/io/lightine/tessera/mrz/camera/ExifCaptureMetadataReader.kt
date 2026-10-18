@@ -8,7 +8,7 @@ import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * The Android [CaptureMetadataReader] — reads a saved image's EXIF via `androidx.exifinterface`, honoring the
+ * The Android [CaptureMetadataReader] - reads a saved image's EXIF via `androidx.exifinterface`, honoring the
  * [CaptureMetadataPolicy]. Obtained from the gated factory [exifCaptureMetadataReader]; the class is
  * `internal` so it is only reachable through that factory, which requires the saved-image-reading acknowledgement.
  *

@@ -67,12 +67,12 @@ internal const val MANUAL_RAW_FIELD_TEST_TAG: String = "tessera-mrz-manual-raw-f
 
 /**
  * TES-137: a hard ceiling on the manual-entry draft's length, in characters. A real MRZ is at most 3 lines of
- * 44 characters (132 chars) plus a little whitespace — 1024 is generously above that (well over 3×44) so a
+ * 44 characters (132 chars) plus a little whitespace - 1024 is generously above that (well over 3×44) so a
  * legitimate typed or pasted MRZ is never truncated, while a multi-MB paste is bounded before it reaches
  * [ScannerUiState.ManualRaw.text] and, from there, `rememberSaveable`'s Bundle (`ScannerUiStateSaver.kt`'s
  * `TAG_MANUAL_RAW` slot), which otherwise persists the draft verbatim and can approach the Binder's ~1MB
  * saved-state limit on rotation. Truncated, never rejected (reader, not oracle, Principle 1): the SDK bounds
- * storage, it does not judge or reformat what the user typed — a 1024-character MRZ draft is already nonsense
+ * storage, it does not judge or reformat what the user typed - a 1024-character MRZ draft is already nonsense
  * regardless of where the excess came from.
  */
 internal const val MANUAL_ENTRY_MAX_CHARS: Int = 1024
@@ -86,18 +86,18 @@ internal fun manualLinesOf(text: String): List<String> = text.split('\n').map { 
 
 /**
  * Assembles a [`MrzScanResult.Decoded`][MrzScanResult.Decoded] from the raw text a user typed, auto-detecting
- * the format from the split lines via [ManualMrzReader.read] (TES-100 — the format-hint chips that used to
+ * the format from the split lines via [ManualMrzReader.read] (TES-100 - the format-hint chips that used to
  * pick a specific reader are gone; auto-detection was already the default and is now the only path) and
  * wrapping the parser's verdict together with the typed lines as the recognized text. Pure and Compose-free
- * (no camera, no UI) so the whole text→Decoded assembly is host-unit-testable — the same seam [routeDecode]
+ * (no camera, no UI) so the whole text→Decoded assembly is host-unit-testable - the same seam [routeDecode]
  * uses to make the camera path's routing testable.
  *
  * [ManualMrzReader] stamps [`ReadMethod.MANUAL_ENTRY`][io.lightine.tessera.types.vocabulary.ReadMethod.MANUAL_ENTRY]
- * as provenance, so the resulting `Decoded` carries manual-entry provenance through unchanged — the review
+ * as provenance, so the resulting `Decoded` carries manual-entry provenance through unchanged - the review
  * screen then shows "Read by manual entry" with no extra wiring. A garbage or malformed input yields a
  * `Decoded` whose [`parse`][MrzScanResult.Decoded.parse] is a [`ParseResult.Failure`][ParseResult.Failure],
  * which routes to the read-failed screen exactly as a failed camera decode does (reader, not oracle: manual
- * entry adds no judgement of its own — it reports the parser's verdict verbatim).
+ * entry adds no judgement of its own - it reports the parser's verdict verbatim).
  */
 internal fun assembleManualDecoded(
     text: String,
@@ -118,7 +118,7 @@ internal fun assembleManualDecoded(
 }
 
 /**
- * One neutral length note for a typed line — [lineNumber] is [chars] characters long. Stated, not judged
+ * One neutral length note for a typed line - [lineNumber] is [chars] characters long. Stated, not judged
  * (reader, not oracle, Principle 1): there is no expected length to compare against since the format-hint
  * chips that used to fix one are gone (TES-100), so every line only ever gets its plain character count.
  */
@@ -128,8 +128,8 @@ internal data class ManualLengthNote(
 )
 
 /**
- * The live, neutral observations for the manual-entry screen — a character-count note per typed line
- * (TES-100: always the count, never a delta against an expected length — the format-hint chips that used to
+ * The live, neutral observations for the manual-entry screen - a character-count note per typed line
+ * (TES-100: always the count, never a delta against an expected length - the format-hint chips that used to
  * fix one are gone). Pure (Compose-free, resource-free) so the *content* of the observations is unit-testable
  * off-device; [ManualRawContent] resolves the [Observation.text] strings from these parts.
  */
@@ -139,7 +139,7 @@ internal fun manualObservationParts(text: String): List<ManualLengthNote> =
 /**
  * The manual raw-MRZ entry screen (mockup 06). The user types the 1–3 MRZ lines (newline-separated) into a
  * monospace field; live neutral observations state each line's character count; and the primary action hands
- * the typed text back through [onRead]. TES-100: no format-hint chip row and no "buttons are hints" note —
+ * the typed text back through [onRead]. TES-100: no format-hint chip row and no "buttons are hints" note -
  * reading always auto-detects the format.
  *
  * @param state the in-progress input ([ScannerUiState.ManualRaw.text]).
@@ -235,7 +235,7 @@ internal fun ManualRawContent(
 
 /**
  * The live observation list rendered on the manual-entry screen: each neutral character-count note from
- * [manualObservationParts] resolved to its `tessera_*` string. All [ObservationTone.INFO] — nothing here is a
+ * [manualObservationParts] resolved to its `tessera_*` string. All [ObservationTone.INFO] - nothing here is a
  * verdict (Principle 1).
  */
 @Composable

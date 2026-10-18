@@ -180,7 +180,7 @@ private const val GATHERING_CUE_LINGER_MS: Long = 600L
 
 /**
  * The space [MrzGuideOverlay]'s guidance region (framing hint / gathering / struggling) reserves at the
- * bottom of the live preview for the ALWAYS-pinned "What's the MRZ?" link below it (TES-95) — enough for that
+ * bottom of the live preview for the ALWAYS-pinned "What's the MRZ?" link below it (TES-95) - enough for that
  * link's own touch target plus a comfortable gap, so the guidance region's height cap ([MrzGuideOverlay])
  * never computes a height that would still let the two overlap.
  */
@@ -206,8 +206,8 @@ internal const val SAVED_IMAGE_EMPTY_TEST_TAG: String = "tessera-mrz-saved-image
  * The scanner's per-frame result stream drives the state continuously through the pure [reduceCameraResult]
  * reducer (applied in `onCameraResult` below): a decode routes on (guarded by a one-shot latch so a running
  * stream fires only once), a [`CameraInUse`][ScannerUiState.CameraInUse] notice replaces the live preview (the
- * scanner is torn down under it, see [CameraInUseContent]) and recovers only on the next `ON_RESUME` — not
- * from any later frame, since none are flowing — and a [`CameraUnavailable`][ScannerUiState.CameraUnavailable]
+ * scanner is torn down under it, see [CameraInUseContent]) and recovers only on the next `ON_RESUME` - not
+ * from any later frame, since none are flowing - and a [`CameraUnavailable`][ScannerUiState.CameraUnavailable]
  * notice is terminal. After the configured [`struggleTimeout`][MrzScannerConfig.struggleTimeout] with no
  * decode, the preview overlays a neutral "still looking / type it instead" hint (mockup 02). The
  * permission-mode states in [ScannerUiState] are handled inside [CameraCapture], not dispatched here.
@@ -598,7 +598,7 @@ private fun ScannerFlow(
 }
 
 /**
- * The per-state screen dispatch — the exhaustive `when` over [ScannerUiState], rendered inside the
+ * The per-state screen dispatch - the exhaustive `when` over [ScannerUiState], rendered inside the
  * [ScannerScaffold] body (so the shared top bar + method switcher sit above it, TES-71). Split out of
  * [ScannerFlow] purely so the flow function stays readable; it holds no state of its own, receiving the
  * flow's callbacks. [setState] mutates the flow's `uiState`; [onManualDraftChange] keeps the flow's hoisted
@@ -768,7 +768,7 @@ internal sealed interface DecodeRoute {
  * The routing decision for a decoded reading. A [`ParseResult.Failure`][ParseResult.Failure] routes to
  * [DecodeRoute.ShowReadFailed] regardless of mode; otherwise [ReviewMode.INSTANT_RETURN] routes to
  * [DecodeRoute.ReturnConfirmed] and [ReviewMode.REVIEW] to [DecodeRoute.ShowReview]. A `PartialSuccess`
- * (check-digit mismatch) is a non-failure and follows the same path as `Success` — the UI never treats a
+ * (check-digit mismatch) is a non-failure and follows the same path as `Success` - the UI never treats a
  * mismatch as a failure or diverts it (Principle 1).
  */
 internal fun routeDecode(
@@ -782,7 +782,7 @@ internal fun routeDecode(
     }
 
 /**
- * What the system Back key should do from the current [ScannerUiState] — the pure decision behind
+ * What the system Back key should do from the current [ScannerUiState] - the pure decision behind
  * [ScannerFlow]'s `BackHandler` (TES-92). Extracted Compose-free, mirroring [routeDecode] / [reduceCameraResult],
  * so the mapping is host-unit-testable without triggering a real back-press dispatcher.
  */
@@ -790,7 +790,7 @@ internal sealed interface BackEffect {
     /** Collapse the expanded all-fields review back to the summary (mirrors "Show less ▴"). */
     data object Collapse : BackEffect
 
-    /** Return to whichever method produced this (non-expanded) review — identical to its secondary action. */
+    /** Return to whichever method produced this (non-expanded) review - identical to its secondary action. */
     data class ReturnToSource(
         val review: ScannerUiState.Review,
     ) : BackEffect
@@ -801,7 +801,7 @@ internal sealed interface BackEffect {
     /** Return to the live camera (from a saved-image prompt reached by switching away from Camera). */
     data object ReturnToCamera : BackEffect
 
-    /** Nothing further to unwind to — cancel exactly like the top-bar ✕. */
+    /** Nothing further to unwind to - cancel exactly like the top-bar ✕. */
     data object Cancel : BackEffect
 }
 
@@ -814,10 +814,10 @@ internal sealed interface BackEffect {
  *    [BackEffect.ReenterSavedImagePick];
  *  * the saved-image prompts ([`AwaitingSavedImagePick`][ScannerUiState.AwaitingSavedImagePick] /
  *    [`SavedImageEmpty`][ScannerUiState.SavedImageEmpty]) → back to the live camera when it is enabled
- *    ([BackEffect.ReturnToCamera] — this is how a user who switched Camera→Photo gets back), otherwise
+ *    ([BackEffect.ReturnToCamera] - this is how a user who switched Camera→Photo gets back), otherwise
  *    [BackEffect.Cancel] (saved-image is the actual entry point here, so there is nowhere else to go);
- *  * every other state (the root capture screens — [`Scanning`][ScannerUiState.Scanning],
- *    [`ManualRaw`][ScannerUiState.ManualRaw] — and the notice / gate screens with no back target of their own)
+ *  * every other state (the root capture screens - [`Scanning`][ScannerUiState.Scanning],
+ *    [`ManualRaw`][ScannerUiState.ManualRaw] - and the notice / gate screens with no back target of their own)
  *    → [BackEffect.Cancel], identical to the top-bar ✕.
  */
 internal fun backEffect(
@@ -843,12 +843,12 @@ internal fun backEffect(
     }
 
 /**
- * The [DismissReason] a close (the top-bar ✕, or Back at the root — both run the same cancel) carries,
+ * The [DismissReason] a close (the top-bar ✕, or Back at the root - both run the same cancel) carries,
  * decided purely from what the user was looking at when they closed (TES-115): the terminal camera-error
  * screen → [DismissReason.CAMERA_UNAVAILABLE]; a permission face over the camera area (grant or
- * permanently-denied — [permissionFace] is non-null only while one is actually showing) →
- * [DismissReason.PERMISSION_DENIED]; anything else — including the recoverable in-use notice, which is not
- * terminal — → [DismissReason.USER_DISMISSED]. Reports what happened, decides nothing beyond it: whether an
+ * permanently-denied - [permissionFace] is non-null only while one is actually showing) →
+ * [DismissReason.PERMISSION_DENIED]; anything else - including the recoverable in-use notice, which is not
+ * terminal - → [DismissReason.USER_DISMISSED]. Reports what happened, decides nothing beyond it: whether an
  * unusable camera or an ungranted permission matters is the host's call.
  */
 internal fun dismissReasonFor(
@@ -862,7 +862,7 @@ internal fun dismissReasonFor(
     }
 
 /**
- * What one scanner result means for the flow state — the pure decision [reduceCameraResult] returns, applied
+ * What one scanner result means for the flow state - the pure decision [reduceCameraResult] returns, applied
  * by [ScannerFlow]'s `onCameraResult`. Extracted (Compose-free, camera-free) so the flow's reaction to the
  * per-frame result stream is host-unit-testable without a real CameraX device, mirroring how [routeDecode]
  * makes the decode routing testable.
@@ -874,7 +874,7 @@ internal sealed interface CameraFlowEffect {
     ) : CameraFlowEffect
 
     /**
-     * Another app holds the camera (recoverable). Show the in-use notice — which replaces the live preview, so
+     * Another app holds the camera (recoverable). Show the in-use notice - which replaces the live preview, so
      * the scanner is torn down under it; recovery is the flow's `ON_RESUME` observer re-mounting a fresh
      * preview, not anything this stream produces (there is no retry button).
      */
@@ -883,7 +883,7 @@ internal sealed interface CameraFlowEffect {
     /** The camera cannot be started (terminal). Show the unavailable notice; no auto-recovery, no retry. */
     data object GoCameraUnavailable : CameraFlowEffect
 
-    /** A transient per-frame miss (`NoMrzFound` / `OcrFailed`) — keep scanning, no routing. */
+    /** A transient per-frame miss (`NoMrzFound` / `OcrFailed`) - keep scanning, no routing. */
     data object StayScanning : CameraFlowEffect
 }
 
@@ -892,7 +892,7 @@ internal sealed interface CameraFlowEffect {
  * kind:
  *  * a [`Decoded`][MrzScanResult.Decoded] → [CameraFlowEffect.GoDecoded];
  *  * a [`CaptureError`][MrzScanResult.CaptureError] carrying [`CameraInUse`][CameraError.CameraInUse] →
- *    [CameraFlowEffect.GoCameraInUse] (recoverable — but only on the next `ON_RESUME`, not from this stream;
+ *    [CameraFlowEffect.GoCameraInUse] (recoverable - but only on the next `ON_RESUME`, not from this stream;
  *    no retry button);
  *  * a `CaptureError` carrying [`CameraUnavailable`][CameraError.CameraUnavailable] →
  *    [CameraFlowEffect.GoCameraUnavailable] (terminal);
@@ -901,7 +901,7 @@ internal sealed interface CameraFlowEffect {
  *
  * [`PermissionDenied`][CameraError.PermissionDenied] is not mapped to a distinct effect here: the screen's
  * own permission gate ([CameraCapture]) owns the permission path before the stream starts, so a
- * permission-denied capture error simply keeps scanning (the gate governs it). Pure and Compose-free so the
+ * permission-denied capture error keeps scanning (the gate governs it). Pure and Compose-free so the
  * whole mapping is unit-testable off-device.
  */
 internal fun reduceCameraResult(result: MrzScanResult): CameraFlowEffect =
@@ -934,16 +934,16 @@ internal fun struggleAfterTimeout(current: ScannerUiState): ScannerUiState =
     if (current is ScannerUiState.Scanning && !current.struggling) current.copy(struggling = true) else current
 
 /**
- * Waits for the camera to become active — the first non-null element of [surfaceRequests] (the live-preview
- * `SurfaceRequest`, published only once CameraX binds and opens the camera) — then waits [timeout] and invokes
+ * Waits for the camera to become active - the first non-null element of [surfaceRequests] (the live-preview
+ * `SurfaceRequest`, published only once CameraX binds and opens the camera) - then waits [timeout] and invokes
  * [onElapsed]. This is what makes the camera-scoped [`struggleTimeout`][MrzScannerConfig.struggleTimeout] measure
  * time the user spent *actively scanning* rather than time that includes camera boot: before this gate the
  * "still looking" hint could appear while the preview was still on the loading state. (The session-level
- * [`scanTimeout`][MrzScannerConfig.scanTimeout] deadline does NOT use this — it is not camera-scoped; see
+ * [`scanTimeout`][MrzScannerConfig.scanTimeout] deadline does NOT use this - it is not camera-scoped; see
  * [rememberScanDeadline].)
  *
  * A non-finite [timeout] ([Duration.INFINITE]) never arms. If the camera never becomes active the function
- * simply suspends at [first] — the loading state carries no struggle deadline of its own; the camera-status
+ * suspends at [first] - the loading state carries no struggle deadline of its own; the camera-status
  * notices (in-use / unavailable) own the not-opening paths, and the composition leaving cancels this. Generic
  * over the surface element type and Compose-free so the start-gating is host-testable with virtual time and no
  * real camera; the caller passes `scanner.surfaceRequest`.
@@ -970,12 +970,12 @@ internal const val COUNTDOWN_TEST_TAG: String = "tessera-mrz-countdown"
  * countdown chip, or `null` when [scanTimeout] is [`INFINITE`][Duration.INFINITE] (no deadline → no countdown),
  * and fires [onElapsed] once the deadline is reached.
  *
- * `scanTimeout` is the host's bound on the user's whole *session* (kiosk turnover, a timed onboarding step) —
- * not a camera-scanning limit — so this clock is deliberately NOT tied to the camera: it starts the moment the
+ * `scanTimeout` is the host's bound on the user's whole *session* (kiosk turnover, a timed onboarding step) -
+ * not a camera-scanning limit - so this clock is deliberately NOT tied to the camera: it starts the moment the
  * scanner is entered and runs across every screen (camera, manual, photo, review), method-agnostic. It advances
  * **only while the host is in the foreground** ([Lifecycle.State.RESUMED], via [repeatOnLifecycle]), so time
- * spent backgrounded, on the lock screen, or with the camera taken by another app — all of which drop the app
- * below `RESUMED` — is not counted, and the clock resumes from where it paused (TES-126). The accumulated active
+ * spent backgrounded, on the lock screen, or with the camera taken by another app - all of which drop the app
+ * below `RESUMED` - is not counted, and the clock resumes from where it paused (TES-126). The accumulated active
  * time (and the one-shot fired latch) are [rememberSaveable]-backed so the deadline survives a configuration
  * change (rotation / font-scale / locale), consistent with the flow-state restoration in [ScannerFlow] (TES-102).
  *
@@ -1024,9 +1024,9 @@ private fun rememberScanDeadline(
 }
 
 /**
- * Formats a countdown [Duration] as `M:SS` (minutes:seconds, seconds zero-padded) — the shape the scan-countdown
+ * Formats a countdown [Duration] as `M:SS` (minutes:seconds, seconds zero-padded) - the shape the scan-countdown
  * chip shows. Seconds are rounded **up** so the chip reads `0:01` through the final second and only shows `0:00`
- * at true expiry; a negative input (should not occur — the caller coerces at zero) clamps to `0:00`. Minutes are
+ * at true expiry; a negative input (should not occur - the caller coerces at zero) clamps to `0:00`. Minutes are
  * not capped at two digits (a multi-minute host `scanTimeout` renders e.g. `10:00`). Pure, so it is host-tested.
  */
 internal fun formatCountdown(remaining: Duration): String {
@@ -1041,21 +1041,21 @@ internal fun formatCountdown(remaining: Duration): String {
  * Reads whether `CAMERA` is held and re-reads it whenever the host returns to the foreground, so a grant made
  * outside this screen (via the host's request OR via the OS settings) takes effect without the consumer
  * re-launching it. When held, the live preview shows and every scanner result is surfaced through
- * [onCameraResult] (the flow reduces it); otherwise the adaptive [PermissionContent] shows — Grant mode while
+ * [onCameraResult] (the flow reduces it); otherwise the adaptive [PermissionContent] shows - Grant mode while
  * a request can still succeed, Settings mode once the permission is permanently denied.
  *
  * **Permission boundary (scope).** The SDK only ever *reads* the permission status
  * ([Context.checkSelfPermission] and [Activity.shouldShowRequestPermissionRationale], both read-only) and
  * *navigates* (opening the OS app-settings screen by Intent). It NEVER calls `requestPermissions` /
- * `ActivityResultContracts.RequestPermission` — the actual "ask" stays with the host through
+ * `ActivityResultContracts.RequestPermission` - the actual "ask" stays with the host through
  * [config.onRequestPermission][MrzScannerConfig.onRequestPermission].
  *
  * The mode is [permissionScreenState] applied to three read-only signals recomputed on `ON_RESUME`:
- *  * `granted` — [Context.hasCameraPermission];
- *  * `hasAsked` — [rememberSaveable] so it survives recreation; set true in the Grant action, right before
+ *  * `granted` - [Context.hasCameraPermission];
+ *  * `hasAsked` - [rememberSaveable] so it survives recreation; set true in the Grant action, right before
  *    the host request, because the platform's rationale signal alone cannot tell "never asked" apart from
  *    "permanently denied";
- *  * `showRationale` — [Activity.shouldShowRequestPermissionRationale], read only when an [Activity] is
+ *  * `showRationale` - [Activity.shouldShowRequestPermissionRationale], read only when an [Activity] is
  *    reachable ([findActivity]); with no Activity permanent denial cannot be detected, so the mode is forced
  *    to [PermissionScreenState.NEEDS_GRANT] rather than showing a dead "Open Settings".
  *
@@ -1065,7 +1065,7 @@ internal fun formatCountdown(remaining: Duration): String {
  * @param onCameraResult every scanner result off the stream, for the flow's continuous reducer.
  * @param onStruggling fired once the struggle timeout elapses with no decode (flips the flow to struggling).
  * @param onManualEntry the "type it instead" escape into manual entry.
- * @param showManualEntry whether that escape is offered at all — `false` when the consumer's
+ * @param showManualEntry whether that escape is offered at all - `false` when the consumer's
  *   [`enabledMethods`][MrzScannerConfig.enabledMethods] excludes [`MANUAL_ENTRY`][ScanMethod.MANUAL_ENTRY], so
  *   a camera-only config never routes the user into a screen they cannot reach any other way.
  * @param onPermissionFaceChange reports which permission face is currently showing (`null` when granted or
@@ -1189,7 +1189,7 @@ private fun Context.findActivity(): Activity? {
 
 /**
  * Opens this app's OS settings page (`ACTION_APPLICATION_DETAILS_SETTINGS`) so the user can turn Camera on
- * after a permanent denial. This is *navigation*, not a permission request — it stays within the permission
+ * after a permanent denial. This is *navigation*, not a permission request - it stays within the permission
  * boundary (the UI owns it). The `FLAG_ACTIVITY_NEW_TASK` lets it start from a non-Activity context safely.
  */
 private fun Context.openAppSettings() {
@@ -1205,32 +1205,32 @@ private fun Context.openAppSettings() {
  * The live preview. The scanner ([CameraXMrzScanner]) owns the camera session and lifecycle; this
  * composable only draws and observes. One scanner is tied to this composition with its opt-in preview
  * armed, run while the preview is shown, and closed when it leaves. Only the `SurfaceRequest` surface
- * handle is hoisted into Compose state — never an `ImageProxy`, frame, or decoded field held in state (the
+ * handle is hoisted into Compose state - never an `ImageProxy`, frame, or decoded field held in state (the
  * module's memory-hygiene commitment): a scanner result is handed straight to [onCameraResult] and not
  * retained here.
  *
  * The results collector consumes the scanner's per-frame [`results`][CameraXMrzScanner.results] flow **in
- * full**, forwarding every result to [onCameraResult] — the flow's pure [reduceCameraResult] reducer decides
+ * full**, forwarding every result to [onCameraResult] - the flow's pure [reduceCameraResult] reducer decides
  * what each one means (route a decode once, surface camera-in-use, surface camera-unavailable). The one-shot
  * decode latch lives in the flow, not here, so the collector stays a plain forwarder. A camera-in-use result
- * REPLACES this whole composable with [CameraInUseContent] (see `ScannerBody`), so this preview — and this
- * collector — stop running the instant that happens; recovery is the flow's `ON_RESUME` observer re-mounting
+ * REPLACES this whole composable with [CameraInUseContent] (see `ScannerBody`), so this preview - and this
+ * collector - stop running the instant that happens; recovery is the flow's `ON_RESUME` observer re-mounting
  * a fresh preview, not anything observed from here.
  *
- * The struggle timeout is a [LaunchedEffect] that — via [awaitCameraActiveThenTimeout] — waits for the camera
+ * The struggle timeout is a [LaunchedEffect] that - via [awaitCameraActiveThenTimeout] - waits for the camera
  * to go live, then waits [struggleTimeout] and fires [onStruggling]; it is keyed on the scanner so it starts
- * once per preview session, and the camera keeps running underneath — a later decode still routes normally, and
+ * once per preview session, and the camera keeps running underneath - a later decode still routes normally, and
  * the flow drops the hint on any progress. It starts when the camera goes active (the first preview surface),
  * not at composition, so the hint cannot appear while the preview is still loading. The config default is 10s
  * (finite); a non-finite value ([Duration.INFINITE]) means "never struggle", so the effect does not arm.
  *
- * This is a *camera-scoped* timer — the "still looking" hint only means anything over the live preview. The
+ * This is a *camera-scoped* timer - the "still looking" hint only means anything over the live preview. The
  * whole-session [`scanTimeout`][MrzScannerConfig.scanTimeout] give-up deadline is deliberately NOT here: it is
- * the host's bound on the user's whole session (across every screen, not just the camera), so it lives at the
+ * the host's bound on the user's whole session (across every screen, not only the camera), so it lives at the
  * flow level in [rememberScanDeadline] and this preview knows nothing about it.
  *
  * **Torch (TES-84).** When [showTorchButton] is set and the bound camera has a flash unit, a torch toggle
- * ([TorchButton]) overlays the live preview (mockup 01, top-end). The scanner owns the flash — the seam
+ * ([TorchButton]) overlays the live preview (mockup 01, top-end). The scanner owns the flash - the seam
  * ([CameraXMrzScanner.setTorchEnabled] / [CameraXMrzScanner.hasTorch]) drives it via CameraX's async
  * `enableTorch` (no rebind, so toggling never interrupts capture). [torchOnByDefault] is seeded before
  * [CameraXMrzScanner.start] so it takes effect the instant the camera binds; the torch clears when the
@@ -1415,7 +1415,7 @@ private fun CameraPreview(
 
 /**
  * The struggling hint overlaid on the live preview (mockup 02): a neutral advisory tip ("try more light, or move
- * the document a little farther away") and a "Type it instead" affordance into manual entry. Advisory only — it never
+ * the document a little farther away") and a "Type it instead" affordance into manual entry. Advisory only - it never
  * states an error or a verdict, and the camera keeps scanning underneath (a decode arriving after the hint
  * still routes normally). [onManualEntry] switches to manual raw entry.
  *
@@ -1423,7 +1423,7 @@ private fun CameraPreview(
  * Robolectric, so the hint's copy and its "Type it instead" affordance are host-tested through this entry
  * point directly (the same composable the flow overlays), per the testing-layers rule.
  *
- * @param showManualEntry whether the "Type it instead" affordance is offered — `false` when the consumer's
+ * @param showManualEntry whether the "Type it instead" affordance is offered - `false` when the consumer's
  *   `enabledMethods` excludes `MANUAL_ENTRY`, so a camera-only config never dangles an escape into a screen
  *   the user cannot reach any other way. Defaults to `true` (every existing caller keeps its prior behaviour).
  */
@@ -1460,12 +1460,12 @@ internal fun StrugglingHint(
 /**
  * The "hold steady" gathering cue overlaid on the live preview while the frame-agreement gate
  * ([`MrzDecodeConsensus`][io.lightine.tessera.mrz.camera.MrzDecodeConsensus]) confirms a read across several
- * frames. It gives the consensus wait visible feedback — a small activity indicator plus "Hold steady…" — so a
+ * frames. It gives the consensus wait visible feedback - a small activity indicator plus "Hold steady…" - so a
  * multi-frame confirmation reads as active progress rather than lag, and nudges the user to keep the document
- * still so the frames agree. Advisory only — it states no error and no verdict (Principle 1); the camera keeps
+ * still so the frames agree. Advisory only - it states no error and no verdict (Principle 1); the camera keeps
  * scanning underneath and a confirmed read routes on normally.
  *
- * `internal` (not `private`): host-tested through this entry point directly, like [StrugglingHint] — the live
+ * `internal` (not `private`): host-tested through this entry point directly, like [StrugglingHint] - the live
  * preview it overlays needs a real camera and cannot run under Robolectric.
  */
 @Composable
@@ -1490,25 +1490,25 @@ internal fun GatheringHint(modifier: Modifier = Modifier) {
 }
 
 /**
- * The torch (flashlight) toggle overlaid on the live preview (mockup 01, top-end) — [TES-84]. A compact
+ * The torch (flashlight) toggle overlaid on the live preview (mockup 01, top-end) - [TES-84]. A compact
  * circular control the user taps to turn the device flash on or off while scanning in low light. It carries
  * no trust meaning; it only helps the camera see (Principle 1 is untouched). Styled for legibility over the
- * live camera: a translucent-black pill when off, the theme accent when on — and now (TES-84) the icon itself
- * changes shape between the two states ([FlashlightOnIcon] / [FlashlightOffIcon]), not just the tint, so the
+ * live camera: a translucent-black pill when off, the theme accent when on - and now (TES-84) the icon itself
+ * changes shape between the two states ([FlashlightOnIcon] / [FlashlightOffIcon]), not only the tint, so the
  * on/off distinction never depends on colour alone even before semantics are read. Hand-rolled vectors rather
- * than a Material icon — this module does not depend on `material-icons` (the same reason the top-bar ✕ is a
+ * than a Material icon - this module does not depend on `material-icons` (the same reason the top-bar ✕ is a
  * glyph, see [ScannerScaffold]).
  *
  * **A11y (TES-47/TES-58/TES-84).** A [`Switch`][Role.Switch]-role [`toggleable`][toggleable] with an explicit
  * [`stateDescription`][androidx.compose.ui.semantics.stateDescription] ("On"/"Off"), so a screen reader
- * announces the state in those exact words on top of the Switch role's own announced toggled state — never
+ * announces the state in those exact words on top of the Switch role's own announced toggled state - never
  * carried by colour or icon shape alone. The control's name comes from the overridable `tessera_scanner_torch`
  * label; the icon is decorative ([clearAndSetSemantics]) so it is not separately announced.
  * [minimumInteractiveComponentSize] guarantees the ≥48dp touch target while the visible pill stays compact.
  *
  * `internal` (not `private`): the real torch wiring lives in [CameraPreview], which drives real CameraX and
  * cannot run under Robolectric, so the button's rendering, label, toggle semantics, and click are host-tested
- * through this entry point directly — the same testing-layers pattern as [StrugglingHint].
+ * through this entry point directly - the same testing-layers pattern as [StrugglingHint].
  *
  * @param torchOn whether the torch is currently on (drives the icon shape/tint and the toggle state).
  * @param onToggle fired when the user taps the control (the caller flips [torchOn] and drives the flash).
@@ -1555,19 +1555,19 @@ internal fun TorchButton(
 }
 
 /**
- * The MRZ framing guide overlaid on the live preview (mockup 01, TES-87) — the Android mirror of the iOS
+ * The MRZ framing guide overlaid on the live preview (mockup 01, TES-87) - the Android mirror of the iOS
  * `MrzGuideOverlay` (tessera-swift `6c2aecf`). A dashed rounded frame sits low in the view, where the
  * machine-readable zone lands on a document held upright, with a hint below it. Purely advisory: it never
- * gates capture, and the reader still isolates the MRZ from wherever it appears in frame — it only nudges
- * the user to frame the band for a cleaner, faster read (Principle 1 is untouched — this makes no trust
+ * gates capture, and the reader still isolates the MRZ from wherever it appears in frame - it only nudges
+ * the user to frame the band for a cleaner, faster read (Principle 1 is untouched - this makes no trust
  * judgement).
  *
- * **A11y (TES-47/TES-58).** The dashed frame is decorative ([clearAndSetSemantics] — a screen reader is not
+ * **A11y (TES-47/TES-58).** The dashed frame is decorative ([clearAndSetSemantics] - a screen reader is not
  * told about a drawn rectangle); the hint carries the meaning as a spoken label (tagged [GUIDE_HINT_TEST_TAG],
  * matching the iOS identifier). Copy is the overridable `tessera_scanner_camera_guide` string.
  *
  * `internal` (not `private`): the live-preview host it overlays needs a real camera and cannot run under
- * Robolectric, so the guide's frame and hint are host-tested through this entry point directly — the same
+ * Robolectric, so the guide's frame and hint are host-tested through this entry point directly - the same
  * testing-layers pattern as [StrugglingHint] / [TorchButton].
  */
 @Composable
@@ -1676,16 +1676,16 @@ internal fun MrzGuideOverlay(
 
 /**
  * The camera-initializing loading state (mockup 01b), shown by [CameraPreview] while the scanner has not yet
- * produced a preview surface — the camera and on-device text reader are still warming up. A centred loading
+ * produced a preview surface - the camera and on-device text reader are still warming up. A centred loading
  * indicator over a title and an on-device honesty sub-line, so the moment before the first frame is a clear
  * "starting up" state rather than a blank dark box that reads as frozen. It auto-swaps to the live viewfinder
- * the instant the surface arrives (there is no button and no timeout — the surface's arrival is the trigger).
+ * the instant the surface arrives (there is no button and no timeout - the surface's arrival is the trigger).
  *
  * **A11y (TES-47).** The state appears via an auto-transition (the screen mounts straight into it before the
- * surface exists), so the "Starting camera…" title is a **polite** live region — a screen reader announces it
+ * surface exists), so the "Starting camera…" title is a **polite** live region - a screen reader announces it
  * on arrival without the user moving focus. The spinner is decorative (the title carries the meaning), so it
  * is removed from the semantics tree; its own animation already honours the platform animation scale
- * (reduce-motion), needing no extra gating — mirroring [SavedImageAnalyzingContent].
+ * (reduce-motion), needing no extra gating - mirroring [SavedImageAnalyzingContent].
  *
  * `internal` (not `private`): the real null-surface trigger lives inside [CameraPreview], which drives real
  * CameraX and cannot run under Robolectric, so this content is host-tested through this entry point directly,

@@ -42,19 +42,19 @@ import io.lightine.tessera.mrz.camera.SavedImageScanResult
 // ---------------------------------------------------------------------------------------------------------
 
 /**
- * What a [SavedImageScanResult] means for the flow, decided purely from the result — the saved-image sibling
+ * What a [SavedImageScanResult] means for the flow, decided purely from the result - the saved-image sibling
  * of [DecodeRoute]. Extracted (Compose-free, camera-free) so the mapping is host-testable off-device.
  */
 internal sealed interface SavedImageOutcome {
     /**
-     * The primary read decoded an MRZ — route it exactly as a camera decode would, through [routeDecode] (so
+     * The primary read decoded an MRZ - route it exactly as a camera decode would, through [routeDecode] (so
      * a parse failure still shows the read-failed screen, a success goes to review, etc.).
      */
     data class SingleDecode(
         val decoded: MrzScanResult.Decoded,
     ) : SavedImageOutcome
 
-    /** No MRZ was found in the photo (or the capture step failed) — the empty screen (mockup 07b). */
+    /** No MRZ was found in the photo (or the capture step failed) - the empty screen (mockup 07b). */
     data object Empty : SavedImageOutcome
 }
 
@@ -66,7 +66,7 @@ internal sealed interface SavedImageOutcome {
  *    → [SavedImageOutcome.Empty].
  *
  * The reader is used in single-read mode (`tolerant = false`, see `MrzScannerScreen.readPickedImage`), so
- * [`SavedImageScanResult.candidates`][SavedImageScanResult.candidates] is always empty here — this mapping
+ * [`SavedImageScanResult.candidates`][SavedImageScanResult.candidates] is always empty here - this mapping
  * only ever sees the primary scan. Pure and Compose-free so it is unit-testable off-device.
  */
 internal fun mapSavedImageResult(result: SavedImageScanResult): SavedImageOutcome =
@@ -82,7 +82,7 @@ internal fun mapSavedImageResult(result: SavedImageScanResult): SavedImageOutcom
 /**
  * The await-saved-image-pick prompt (TES-71). Shown when the saved-image method is the entry point (only
  * [`SAVED_IMAGE`][ScanMethod.SAVED_IMAGE] is enabled, or the user tapped the Photo tab) and the picker was
- * dismissed with no photo — so the screen is never left blank. Neutral copy (a title + a prompt to choose a
+ * dismissed with no photo - so the screen is never left blank. Neutral copy (a title + a prompt to choose a
  * photo) and a single [onChoosePhoto] action that re-opens the picker; the on-device privacy fact is stated
  * once, globally, via the shared top bar's privacy notice (TES-88) rather than repeated here. Not a mockup
  * state of its own; the flow launches the picker on entering this state, and this content only shows if that
@@ -123,12 +123,12 @@ internal fun AwaitingSavedImagePickContent(onChoosePhoto: () -> Unit) {
 }
 
 /**
- * The "analyzing photo" screen (mockup 07c) — shown while the picked photo is being read on-device. A loading
+ * The "analyzing photo" screen (mockup 07c) - shown while the picked photo is being read on-device. A loading
  * indicator over a title and a neutral "Reading the document…" sub-text; the on-device privacy fact is stated
  * once, globally, via the shared top bar's privacy notice (TES-88) rather than repeated on this screen.
  *
  * **A11y (TES-47).** The screen appears via an auto-transition (entered the moment a photo is picked), so the
- * "Analyzing photo…" title is a **polite** live region — a screen reader announces it on arrival without the
+ * "Analyzing photo…" title is a **polite** live region - a screen reader announces it on arrival without the
  * user moving focus. The spinner is decorative (the title carries the meaning), so it is removed from the
  * semantics tree; its own animation already honours the platform animation scale (reduce-motion).
  */
@@ -159,19 +159,19 @@ internal fun SavedImageAnalyzingContent() {
 }
 
 /**
- * The "no MRZ found in this photo" screen (mockup 07b). Stated honestly — the MRZ *couldn't be located*, not
- * that the document is "invalid" — with a neutral hint about why (screens / low-contrast copies) and two
+ * The "no MRZ found in this photo" screen (mockup 07b). Stated honestly - the MRZ *couldn't be located*, not
+ * that the document is "invalid" - with a neutral hint about why (screens / low-contrast copies) and two
  * escapes: pick a different photo (primary) or type the details by hand (secondary, when [showManualEntry] →
  * [ScannerUiState.ManualRaw]). The on-device privacy fact is stated once, globally, via the shared top bar's
  * privacy notice (TES-88) rather than repeated on this screen.
  *
  * **A11y (TES-47).** This is a terminal outcome reached purely by auto-transition (a picked photo yielded no
- * MRZ) with no focus move, so the title is an **assertive** live region — a screen reader announces the
+ * MRZ) with no focus move, so the title is an **assertive** live region - a screen reader announces the
  * outcome on arrival, mirroring [ReadFailedContent] / [CameraUnavailableContent].
  *
  * @param onChooseDifferent re-launch the photo picker.
  * @param onManualEntry switch to manual raw-MRZ entry.
- * @param showManualEntry whether the manual-entry escape is offered — `false` when the consumer's
+ * @param showManualEntry whether the manual-entry escape is offered - `false` when the consumer's
  *   `enabledMethods` excludes `MANUAL_ENTRY`. Defaults to `true`.
  */
 @Composable

@@ -20,7 +20,7 @@ internal data class NameFields(
  *   trimmed field is the primary identifier and the secondary is empty (mononym case).
  * - Within each component, the single filler `<` is decoded as a space. This is the
  *   ICAO reverse-mapping. Apostrophes and hyphens (transliterated to `<` per ICAO)
- *   are lossy — the raw field is preserved on `CommonFields.rawNameField` per
+ *   are lossy - the raw field is preserved on `CommonFields.rawNameField` per
  *   Principle 5 so consumers can handle this themselves.
  * - Malformed input with multiple `<<` in the secondary is preserved verbatim: only
  *   the first `<<` splits, subsequent ones decode as double spaces in the secondary.

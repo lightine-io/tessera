@@ -145,7 +145,7 @@ internal fun MrzExplainerDialog(onDismiss: () -> Unit) {
 
 /**
  * A stylised document (a passport data page): a type label, a photo placeholder with a simple silhouette, a
- * couple of faint detail lines, and — highlighted — the MRZ band along the bottom. It conveys *where* the zone
+ * couple of faint detail lines, and - highlighted - the MRZ band along the bottom. It conveys *where* the zone
  * sits; [MrzZoomDetail] magnifies *what* it says. Drawn from theme colours so it adapts to light / dark.
  */
 @Composable
@@ -249,7 +249,7 @@ private fun MrzZoomDetail() {
  * The two specimen MRZ lines in a monospace panel. Used twice: small on the document ([DocumentGraphic]) and
  * magnified in the detail ([MrzZoomDetail]). When [framed] it is a self-contained highlighted band (the
  * on-document use); otherwise it renders bare inside an already-highlighted parent (the zoom detail). The lines
- * never wrap — they share a horizontal scroll so the fixed-width MRZ stays intact at any font scale.
+ * never wrap - they share a horizontal scroll so the fixed-width MRZ stays intact at any font scale.
  */
 @Composable
 private fun MrzBand(

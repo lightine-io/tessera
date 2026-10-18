@@ -41,7 +41,7 @@ internal const val PRIVACY_DIALOG_TEST_TAG: String = "tessera-mrz-privacy-dialog
 
 /**
  * The top-bar privacy affordance: a compact "ⓘ Privacy" button that opens the [PrivacyNoticeDialog]. Owns the
- * dialog's open/closed state locally (it is a self-contained disclosure — no flow state involved), so the
+ * dialog's open/closed state locally (it is a self-contained disclosure - no flow state involved), so the
  * scaffold can drop it into the [androidx.compose.material3.TopAppBar] `actions` slot with no plumbing.
  *
  * The ⓘ glyph is a plain text character (like the scaffold's ✕) so a single decorative mark does not pull in
@@ -74,7 +74,7 @@ internal fun PrivacyNoticeAction(modifier: Modifier = Modifier) {
 
 /**
  * The privacy notice itself: a plain-language dialog stating that the read happens on-device, nothing is
- * uploaded or stored, and the result is handed back to the host app. A single "Got it" dismiss — it informs,
+ * uploaded or stored, and the result is handed back to the host app. A single "Got it" dismiss - it informs,
  * it asks nothing. Split from [PrivacyNoticeAction] so it can be host-tested directly.
  */
 @Composable
