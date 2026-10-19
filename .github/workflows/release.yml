@@ -12,6 +12,8 @@
 # Channels:
 #   - JVM + Android → Maven Central, STAGED (automaticRelease=false, ADR-016): the workflow uploads a
 #     staged deployment; a maintainer clicks "release" in the Sonatype Central portal to go live.
+#     The publish step waits for Central's validation and fails if Central rejects the deployment
+#     (validateDeployment = VALIDATED in the root build.gradle.kts, TES-236).
 #   - iOS → SPM: the `Tessera` XCFramework is built, zipped, and attached to this repo's GitHub Release;
 #     iOS consumers get it via lightine-io/tessera-swift (ADR-019). The tessera-swift Package.swift
 #     (binaryTarget url + checksum) and its matching release tag are then updated AUTOMATICALLY by the

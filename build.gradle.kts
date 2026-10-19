@@ -1,3 +1,4 @@
+import com.vanniktech.maven.publish.DeploymentValidation
 import com.vanniktech.maven.publish.JavaPlatform
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.KotlinMultiplatform
@@ -42,7 +43,13 @@ subprojects {
             // but unpublished — a maintainer manually clicks "Publish" in the portal UI to release it
             // to Maven Central. Coordinates lock under ADR-007 only at that manual release, not at
             // upload, so a staged deployment can be dropped and redone freely.
-            publishToMavenCentral(automaticRelease = false)
+            // `VALIDATED` makes the build wait for Central's checks and fail when Central rejects
+            // the deployment (for example, a version that already exists); without it the release
+            // workflow finished green on a rejected upload (TES-236).
+            publishToMavenCentral(
+                automaticRelease = false,
+                validateDeployment = DeploymentValidation.VALIDATED,
+            )
 
             // Sign every published artifact (jar, sources, javadoc, pom, module, and the BOM
             // pom) with the maintainer's PGP key. Maven Central rejects non-snapshot releases
