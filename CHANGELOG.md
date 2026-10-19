@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-*(nothing yet: 0.5.3 is the latest release)*
+- **A release fails when Maven Central rejects it** (release workflow; no API change). The publish step now waits for Central's validation and stops with Central's error, for example when the version already exists. Before, the workflow finished green on a rejected upload, so only the Swift package shipped.
 
 ## [0.5.3] - 2026-10-18
 
