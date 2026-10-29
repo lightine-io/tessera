@@ -27,7 +27,7 @@
         ]
       },
       {
-        "matcher": "mcp__youtrack__(create|update|add|change|link|log|manage)_.*",
+        "matcher": "mcp__.+__(create_issue|create_draft_issue|update_issue|add_issue_comment|change_issue_assignee|link_issues|log_work|manage_issue_tags|create_article|update_article)",
         "hooks": [
           {
             "type": "command",

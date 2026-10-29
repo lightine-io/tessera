@@ -37,7 +37,7 @@ Full principles: [KB TES-A-5](https://lightine.youtrack.cloud/articles/TES-A-5).
 
 ## YouTrack (optional, never a dependency)
 
-Use it only when `mcp__youtrack__*` tools exist and `find_projects` returns project
+Use it only when YouTrack MCP tools exist (under any server name) and `find_projects` returns project
 `TES` on `lightine.youtrack.cloud`. Otherwise work through GitHub issues and PRs: that
 is expected, never a blocker, and not worth mentioning to a contributor. The token
 lives in local MCP config and is never committed.

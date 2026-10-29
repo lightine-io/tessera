@@ -25,6 +25,9 @@ expect 0 "clean gh text passes" '{"tool_name":"Bash","tool_input":{"command":"gh
 expect 0 "terms are fixed strings, not regex" '{"tool_name":"Bash","tool_input":{"command":"gh pr comment 1 --body \"axb\""}}'
 expect 2 "YouTrack article write with a term" '{"tool_name":"mcp__youtrack__update_article","tool_input":{"articleId":"TES-A-1","content":"Built for ExampleCorp"}}'
 expect 0 "clean YouTrack write passes" '{"tool_name":"mcp__youtrack__create_issue","tool_input":{"summary":"Fix parser"}}'
+expect 2 "connector-named YouTrack comment with a term" '{"tool_name":"mcp__fbfda312-140e-4aab-ba54-42fb756f4624__add_issue_comment","tool_input":{"issueId":"TES-1","text":"for ExampleCorp"}}'
+expect 0 "clean connector-named YouTrack write passes" '{"tool_name":"mcp__fbfda312-140e-4aab-ba54-42fb756f4624__update_issue","tool_input":{"issueId":"TES-1","summary":"Fix parser"}}'
+expect 0 "read tool is not scanned" '{"tool_name":"mcp__youtrack__get_issue","tool_input":{"issueId":"ExampleCorp"}}'
 expect 0 "malformed payload fails open" 'not json'
 
 rm "$tmp/.claude/private-content-terms.local"
