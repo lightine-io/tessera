@@ -7,7 +7,9 @@
 # reads the hook payload on stdin and scans:
 #   - Bash calls to a publishing `gh` command: the command text plus any file passed with
 #     --body-file, --notes-file, or -F;
-#   - mcp__youtrack__ write tools: every value in the tool input.
+#   - YouTrack write tools under any MCP server name (a local `youtrack` server or a
+#     connector such as `mcp__<uuid>__`): every value in the tool input. The tool list
+#     below must match the matcher in .claude/settings.json.
 # Terms come from the gitignored .claude/private-content-terms.local (the main checkout's
 # copy when running in a worktree). No terms file: nothing to scan, exit 0.
 # The same file serves lightine-io/tessera-swift (copy it there).
@@ -26,7 +28,7 @@ fi
 
 payload=$(cat)
 parsed=$(printf '%s' "$payload" | python3 -I -c '
-import json, sys
+import json, re, sys
 try:
     data = json.load(sys.stdin)
 except ValueError:
@@ -36,7 +38,7 @@ inp = data.get("tool_input", {}) or {}
 if tool == "Bash":
     print("bash")
     print(inp.get("command", ""))
-elif tool.startswith("mcp__youtrack__"):
+elif re.fullmatch(r"mcp__.+__(create_issue|create_draft_issue|update_issue|add_issue_comment|change_issue_assignee|link_issues|log_work|manage_issue_tags|create_article|update_article)", tool):
     print("youtrack")
     print(json.dumps(inp, ensure_ascii=False))
 ' 2>/dev/null || true)
