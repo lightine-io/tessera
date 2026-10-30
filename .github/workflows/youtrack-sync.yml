@@ -4,7 +4,7 @@
 #   PR merged, label `device-qa`          -> Stage Test     (device QA after merge)
 #   PR merged, label `no-changelog`       -> Stage Done     (no shipped artifact)
 #   PR merged, otherwise                  -> Stage Staging  (merged, awaiting release)
-#   Staging -> Done at the release tag stays with the release gate (a deliberate human step).
+#   release run succeeded on tag vX.Y.Z   -> every Staging card: Fixed in X.Y.Z, Stage Done
 #
 # Why `no-changelog` is the Done signal: the required `changelog · entry present` check
 # already forces every PR to either touch CHANGELOG.md or carry this label. CHANGELOG.md
@@ -25,6 +25,11 @@ name: youtrack sync
 on:
   pull_request:
     types: [opened, reopened, closed]
+  # The release workflow creates the GitHub Release with GITHUB_TOKEN, which starts no other
+  # workflow, so the trigger is the finished release run itself.
+  workflow_run:
+    workflows: [release]
+    types: [completed]
 
 permissions: {}
 
@@ -33,7 +38,7 @@ jobs:
     name: board · stage sync
     runs-on: ubuntu-latest
     # Same-repo PRs only: fork PRs carry no secrets and do not drive the board.
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Move the linked issue's Stage
         env:
@@ -69,3 +74,43 @@ jobs:
             echo "YouTrack returned $code; board not updated (soft-fail by design):"
             cat /tmp/yt-resp.json 2>/dev/null || true
           fi
+
+  mark-released:
+    name: board · mark released
+    runs-on: ubuntu-latest
+    # A successful release run started by a version tag push; head_branch is the tag name.
+    if: >-
+      github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.event == 'push' && startsWith(github.event.workflow_run.head_branch, 'v')
+    steps:
+      - name: Set Fixed in and move Staging cards to Done
+        env:
+          YOUTRACK_TOKEN: ${{ secrets.YOUTRACK_TOKEN }}
+          TAG: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          [ -n "$YOUTRACK_TOKEN" ] || { echo "No YOUTRACK_TOKEN secret; skipping."; exit 0; }
+          version="${TAG#v}"
+          api='https://lightine.youtrack.cloud/api'
+          yt() { curl -sS -H "Authorization: Bearer $YOUTRACK_TOKEN" -H 'Content-Type: application/json' -H 'Accept: application/json' "$@"; }
+          # Soft-fail from here on: the release has already shipped; the board is an enhancement.
+          bundle=$(yt "$api/admin/projects/TES/customFields?fields=field(name),bundle(id)" \
+            | jq -r '.[] | select(.field.name == "Fixed in") | .bundle.id' 2>/dev/null || true)
+          [ -n "$bundle" ] || { echo "Cannot read the Fixed in field; board not updated."; exit 0; }
+          if ! yt "$api/admin/customFieldSettings/bundles/version/$bundle/values?fields=name&\$top=500" \
+               | jq -e --arg v "$version" 'any(.[]; .name == $v)' >/dev/null 2>&1; then
+            yt -X POST "$api/admin/customFieldSettings/bundles/version/$bundle/values?fields=name" \
+              --data "{\"name\": \"$version\", \"released\": true, \"releaseDate\": $(date +%s)000}" >/dev/null \
+              || { echo "Cannot add version $version to Fixed in; board not updated."; exit 0; }
+          fi
+          issues=$(yt "$api/issues?query=project:%20TES%20Stage:%20Staging&fields=idReadable&\$top=200" \
+            | jq -r '.[].idReadable' 2>/dev/null || true)
+          [ -n "$issues" ] || { echo "No cards in Staging."; exit 0; }
+          for issue in $issues; do
+            code=$(yt -o /tmp/yt-resp.json -w '%{http_code}' -X POST "$api/issues/$issue?fields=idReadable" \
+              --data "{\"customFields\": [
+                {\"name\": \"Fixed in\", \"\$type\": \"SingleVersionIssueCustomField\", \"value\": {\"name\": \"$version\"}},
+                {\"name\": \"Stage\", \"\$type\": \"StateIssueCustomField\", \"value\": {\"name\": \"Done\"}}]}" \
+              || echo "000")
+            if [ "$code" = "200" ]; then echo "$issue: Fixed in $version, Done."
+            else echo "$issue: YouTrack returned $code (soft-fail):"; cat /tmp/yt-resp.json 2>/dev/null || true; fi
+          done

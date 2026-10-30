@@ -45,8 +45,9 @@ maintainer. Record the results as a comment on the release issue.
 7. **Dependabot.** `gh api repos/{owner}/{repo}/dependabot/alerts?state=open`: anything
    a shipped artifact can reach is triaged before the tag; build-only and test-only
    alerts get a recorded dismissal reason.
-8. **Board.** The release issue and everything in Staging move to Done at the tag.
-   Issues with the `device-qa` label have passed through Test.
+8. **Board.** Test is empty, or the owner accepts its open cards in writing on the release
+   issue. After the release run succeeds, CI (`youtrack-sync.yml`) sets "Fixed in" on every
+   card in Staging, the release issue included, and moves it to Done; check that it did.
 9. **tessera-swift is complete before the tag.** The release workflow tags tessera-swift
    at its `main` head right after merging the Package.swift pin, so an open PR there is
    left out of the tag (the 0.5.0 incident, TES-138).
