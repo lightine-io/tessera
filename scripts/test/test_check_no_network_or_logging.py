@@ -92,7 +92,7 @@ class Kotlin(unittest.TestCase):
                 self.assert_flagged(line, fragment)
 
     def test_every_main_source_set_is_scanned(self):
-        for sset in ("commonMain", "jvmMain", "androidMain", "iosMain", "appleMain", "nativeMain", "platformShared"):
+        for sset in ("commonMain", "jvmMain", "androidMain", "iosMain", "appleMain", "nativeMain"):
             with self.subTest(sset=sset):
                 self.assert_flagged("println(x)", "println", sset)
 

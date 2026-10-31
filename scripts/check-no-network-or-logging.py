@@ -6,7 +6,7 @@ Run from the repo root: `python3 -I scripts/check-no-network-or-logging.py [--ro
 Rule home: CLAUDE.md "Safety invariants". Runs in PR CI (`repo · rules`).
 
 Scans Kotlin main source sets only: every `*/src/*Main/**/*.kt` (commonMain, jvmMain, androidMain,
-iosMain, appleMain, nativeMain) and `*/src/platformShared/**/*.kt`. Test source sets, build
+iosMain, appleMain, nativeMain). Test source sets, build
 folders and samples/ are skipped. Comments and string literals are blanked first, so KDoc
 links and message text never trip it. --swift DIR also scans DIR/Sources/**/*.swift (the Swift
 package lives in a sibling repo; CI runs the Kotlin part only).
@@ -75,9 +75,9 @@ SWIFT_RULES = [(re.compile(p, re.M), r) for p, r in NETWORK + NETWORK_SWIFT + LO
 
 
 def is_main_kotlin(parts):
-    """True for .../src/<x>Main/... and .../src/platformShared/... (parts is the split path)."""
+    """True for .../src/<x>Main/... (parts is the split path)."""
     for i, part in enumerate(parts[:-2]):
-        if part == "src" and (parts[i + 1].endswith("Main") or parts[i + 1] == "platformShared"):
+        if part == "src" and parts[i + 1].endswith("Main"):
             return True
     return False
 

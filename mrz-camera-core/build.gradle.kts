@@ -36,8 +36,16 @@ kotlin {
     // ABI tracking — enforces the ADR-007 no-public-API-break promise: snapshots the public API under
     // api/ and fails `check` on an accidental break. Built-in Kotlin Gradle feature (no extra
     // dependency, bundled with Kotlin so it never blocks a Kotlin bump). Refresh: `./gradlew updateKotlinAbi`.
+    // Declarations marked @InternalTesseraApi (public only so Tessera's camera modules can share them, e.g.
+    // MrzRowRescue) are left out of the dumps: they are not consumer API and may change in any release.
     @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
-    abiValidation()
+    abiValidation {
+        filters {
+            exclude {
+                annotatedWith.add("io.lightine.tessera.mrz.camera.InternalTesseraApi")
+            }
+        }
+    }
 
     jvmToolchain(21)
 
@@ -82,10 +90,6 @@ kotlin {
             }
         }
         commonTest {
-            // The platform-shared rescue rules (MrzRowRescue) are compiled into mrz-camera-android and
-            // mrz-camera-ios, not into this module's main code; this test compilation also compiles them
-            // so their common tests run on every target here. See the file's KDoc for why.
-            kotlin.srcDir("src/platformShared/kotlin")
             dependencies {
                 implementation(kotlin("test"))
                 // runTest — exercises the suspend analyse()/scan() functions on the host with a mock
