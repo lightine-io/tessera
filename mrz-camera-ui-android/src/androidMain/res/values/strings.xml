@@ -39,7 +39,7 @@
          the label and the a11y name. -->
     <string name="tessera_scanner_privacy_action">Privacy</string>
     <string name="tessera_scanner_privacy_dialog_title">Your document stays on your device</string>
-    <string name="tessera_scanner_privacy_dialog_body">Tessera reads your document right here on your device. Nothing is uploaded or saved anywhere. What it reads is handed back to the app you are using, and that app decides what happens next.</string>
+    <string name="tessera_scanner_privacy_dialog_body">Tessera reads your document right here on your device. Your document is not uploaded or saved anywhere. What it reads is handed back to the app you are using, and that app decides what happens next.</string>
     <string name="tessera_scanner_privacy_dialog_dismiss">Got it</string>
 
     <!-- MRZ explainer (TES-89): a "What's the MRZ?" link on the camera screen that opens an illustrated
@@ -135,7 +135,7 @@
     <!-- Title shown while the camera permission is not yet held but can still be requested. -->
     <string name="tessera_scanner_permission_grant_title">Camera permission needed</string>
     <!-- Body: why the permission is needed, stated with the on-device privacy fact. -->
-    <string name="tessera_scanner_permission_grant_body">The scanner reads your document on this device - nothing is uploaded or stored.</string>
+    <string name="tessera_scanner_permission_grant_body">The scanner reads your document on this device - it is not uploaded or stored.</string>
     <!-- Primary action: hand the permission request to the host app (the SDK never requests it itself). Says
          "Continue", not "Allow" or "Grant": the system permission prompt comes next, and a screen shown before
          it must not use words that look like that prompt's own answer (Apple HIG, kept the same on both
@@ -146,7 +146,7 @@
     <!-- Title shown once the camera permission is permanently denied ("don't ask again"). -->
     <string name="tessera_scanner_permission_denied_title">Camera access is off</string>
     <!-- Body: how to re-enable via Settings, with the same on-device privacy fact. -->
-    <string name="tessera_scanner_permission_denied_body">Turn on Camera for this app in Settings to scan. Everything is read on your device - nothing is uploaded or stored.</string>
+    <string name="tessera_scanner_permission_denied_body">Turn on Camera for this app in Settings to scan. Everything is read on your device - your document is not uploaded or stored.</string>
     <!-- Primary action: open this app's OS settings page so the user can turn Camera on (navigation, not a
          permission request). -->
     <string name="tessera_scanner_permission_open_settings">Open Settings</string>
