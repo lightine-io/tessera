@@ -42,7 +42,7 @@ Spotless and ktlint, runtime and test dependencies, settings plugins.
 
 - **Accepted risks.** Revisit every accepted-risk or deferred-dependency issue (for
   example the build-time Dependabot triage, the wrapper `distributionSha256Sum`, the
-  `mrz-camera-android` ABI tooling): has upstream fixed it, or does the deferral hold?
+  `mrz-camera` ABI tooling): has upstream fixed it, or does the deferral hold?
 - **CI Xcode pin.** `XCODE_VERSION` in `.github/workflows/check.yml` and `release.yml`
   here, and in tessera-swift's `.github/workflows/ci.yml`, with the `macos-26` runner
   label: take the Xcode the Kotlin compatibility table lists for the new Kotlin, confirm

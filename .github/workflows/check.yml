@@ -8,10 +8,10 @@
 #   targets. `gradle check` excludes the Android target (which compiles via
 #   `assemble`/`compileAndroidMain`, not `check`) and the iOS targets (which need
 #   a macOS runner with Xcode - a Linux runner cannot build Apple targets at all).
-# - The `android-compile` job (added at 0.2.0's mrz-camera-android slice) compiles
+# - The `android-compile` job (added at 0.2.0's mrz-camera slice) compiles
 #   every module's Android target on a Linux runner with the Android SDK, so the
 #   ML Kit / CameraX code in androidMain is type-checked on CI. It also runs
-#   mrz-camera-android's androidHostTest unit tests (that module is Android-only, with
+#   mrz-camera's androidHostTest unit tests (that module is Android-only, with
 #   no jvm target to carry them in the `check` job). Still no emulator, no instrumented
 #   tests, no live camera (those run locally / on a device).
 # - The `ios-compile` job (added at 0.2.0's mrz-camera-ios slice) compiles every
@@ -117,11 +117,11 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
-      # Compiles every module's androidMain (the core modules and mrz-camera-android's ML Kit recognizer
+      # Compiles every module's androidMain (the core modules and mrz-camera's ML Kit recognizer
       # + CameraX scanner). Most host tests run in the `check` job via each module's jvm target;
-      # mrz-camera-android is Android-only (no jvm target), so its androidHostTest unit tests - the
+      # mrz-camera is Android-only (no jvm target), so its androidHostTest unit tests - the
       # CameraState recoverable/critical classification - run here, where the Android SDK is present.
-      # mrz-camera-ui-android is likewise Android-only (Jetpack Compose), so its androidHostTest suite
+      # mrz-camera-ui is likewise Android-only (Jetpack Compose), so its androidHostTest suite
       # (a config unit test plus a Robolectric-driven Compose render/callback smoke test) also runs here.
       # The four source-bearing common modules enable withHostTest{}, so their COMMON test suites also
       # execute against the Android target here (~600 tests on the JVM host with the Android variant):
@@ -129,11 +129,11 @@ jobs:
       # verifyMlKitBundledModel asserts ML Kit stays the bundled (offline) text-recognition model - it
       # resolves androidRuntimeClasspath, so it needs the Android SDK this job provides.
       # Still no emulator / instrumented / live-camera tests (those run locally on a device).
-      # The android-only public ABI (mrz-camera-android, mrz-camera-ui-android) is gated by the regular
+      # The android-only public ABI (mrz-camera, mrz-camera-ui) is gated by the regular
       # `checkKotlinAbi` inside the `check` job: since Kotlin 2.4.20 abiValidation dumps the AGP-KMP
       # android target (api/android/<module>.api), so no separate android ABI step runs here.
       - name: Compile Android targets, run Android host tests, verify ML Kit bundled model
-        run: ./gradlew compileAndroidMain :mrz-camera-android:testAndroidHostTest :mrz-camera-ui-android:testAndroidHostTest :types:testAndroidHostTest :mrz-core:testAndroidHostTest :telemetry:testAndroidHostTest :mrz-camera-core:testAndroidHostTest :mrz-camera-android:verifyMlKitBundledModel
+        run: ./gradlew compileAndroidMain :mrz-camera:testAndroidHostTest :mrz-camera-ui:testAndroidHostTest :types:testAndroidHostTest :mrz-core:testAndroidHostTest :telemetry:testAndroidHostTest :mrz-camera-core:testAndroidHostTest :mrz-camera:verifyMlKitBundledModel
 
   # Empty-module release guard (TES-43 pre-0.5.0 item; the v0.2.0 incident class, PR #154):
   # a module that DECLARES a Kotlin/Native target but produces no klib fails its

@@ -57,7 +57,7 @@ check allow "adb logcat"                'adb -s RFCXB052YYT logcat -d'
 check allow "adb pm grant"              'adb shell pm grant io.lightine.tessera.harness android.permission.CAMERA'
 check allow "adb shell input"           'adb shell input tap 540 1130'
 check allow "xcrun devicectl"           'xcrun devicectl device info details --device X'
-check allow "gradlew"                   './gradlew :mrz-camera-ui-android:testAndroidHostTest'
+check allow "gradlew"                   './gradlew :mrz-camera-ui:testAndroidHostTest'
 
 # --- override: trailing-comment form only --------------------------------------
 check allow "trailing raw-ok"           'xcodebuild build -scheme TesseraUI # raw-ok'

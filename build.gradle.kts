@@ -125,30 +125,36 @@ subprojects {
             // compile-scope dependency on this module's `-jvm` artifact. The `-jvm` POM already
             // lists its own dependencies (other `-jvm` Tessera artifacts, kotlin-stdlib) at
             // compile scope, so Maven gets the full JVM classpath. Gradle consumers read the
-            // `.module` file, which this does not touch. Modules without a JVM target (the
-            // Android-only camera modules) keep the root POM as Kotlin writes it.
+            // `.module` file, which this does not touch. A module without a JVM target (the
+            // Android-only camera modules, TES-267) points the root POM at its `-android` artifact
+            // instead, with `<type>aar</type>` so a POM reader fetches the AAR, not a missing jar.
             extensions.configure<PublishingExtension> {
                 val mavenPublications = publications.withType<MavenPublication>()
                 mavenPublications.matching { it.name == "kotlinMultiplatform" }.configureEach {
                     // Read at configuration-cache store time, after vanniktech set the
-                    // coordinates. Absent (null) when the module has no JVM target.
-                    val jvmCoordinates =
+                    // coordinates. The `-jvm` artifact when there is one, else the `-android` AAR;
+                    // absent (null) when the module has neither.
+                    val platformCoordinates =
                         provider {
                             mavenPublications.findByName("jvm")?.let {
-                                listOf(it.groupId, it.artifactId, it.version)
+                                listOf(it.groupId, it.artifactId, it.version, null)
+                            } ?: mavenPublications.findByName("android")?.let {
+                                listOf(it.groupId, it.artifactId, it.version, "aar")
                             }
                         }
                     pom.withXml {
-                        val (jvmGroup, jvmArtifact, jvmVersion) = jvmCoordinates.orNull ?: return@withXml
+                        val (platformGroup, platformArtifact, platformVersion, platformType) =
+                            platformCoordinates.orNull ?: return@withXml
                         val root = asNode()
                         val dependencies =
                             (root.get("dependencies") as NodeList).firstOrNull() as Node?
                                 ?: root.appendNode("dependencies")
                         dependencies.children().toList().forEach { dependencies.remove(it as Node) }
                         dependencies.appendNode("dependency").apply {
-                            appendNode("groupId", jvmGroup)
-                            appendNode("artifactId", jvmArtifact)
-                            appendNode("version", jvmVersion)
+                            appendNode("groupId", platformGroup)
+                            appendNode("artifactId", platformArtifact)
+                            appendNode("version", platformVersion)
+                            if (platformType != null) appendNode("type", platformType)
                             appendNode("scope", "compile")
                         }
                     }

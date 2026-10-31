@@ -12,14 +12,16 @@ plugins {
 // mrz-camera-core contract (ADR-021). Since the analyse-frame core, the scan() engine, and the
 // MrzCameraScanner interface now live in mrz-camera-core, this module is Android-only — it declares
 // no jvm() target (the host tests moved with the contract to mrz-camera-core, which runs them on the
-// JVM `check` runner). Published to Maven Central at the 0.2.0 release as `tessera-mrz-camera-android`
-// (ADR-016/ADR-021) — the Android distribution of the camera scanner (iOS ships via SPM, ADR-019).
+// JVM `check` runner). Published to Maven Central as `tessera-mrz-camera` (root) +
+// `tessera-mrz-camera-android` (the AAR) since TES-267; 0.2.0 to 0.5.x published it as
+// `tessera-mrz-camera-android` alone (ADR-016/ADR-021). The Android distribution of the camera
+// scanner (iOS ships via SPM, ADR-019).
 
 mavenPublishing {
-    coordinates(group.toString(), "tessera-mrz-camera-android", version.toString())
+    coordinates(group.toString(), "tessera-mrz-camera", version.toString())
 
     pom {
-        name.set("tessera-mrz-camera-android")
+        name.set("tessera-mrz-camera")
         description.set(
             "Android camera MRZ reading for the Tessera identity-document SDK: the CameraX " +
                 "owns-the-session scanner (CameraXMrzScanner) and the bundled-model ML Kit OCR seam, " +
@@ -40,7 +42,7 @@ kotlin {
 
     // ABI tracking (ADR-007). Since Kotlin 2.4.20 (KT-85950) abiValidation dumps the AGP-KMP `android {}`
     // target too, so this module's android-only public surface (CameraXMrzScanner, MlKitMrzTextRecognizer,
-    // the saved-image/EXIF factories) is baselined in api/android/mrz-camera-android.api and gated by
+    // the saved-image/EXIF factories) is baselined in api/android/mrz-camera.api and gated by
     // `checkKotlinAbi` like every other module. Refresh after an intended change: `./gradlew updateKotlinAbi`.
     @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
     abiValidation()
@@ -72,7 +74,7 @@ kotlin {
                 // CameraX camera-core supplies the ImageProxy frame type the Android recognizer reads and
                 // the SurfaceRequest type exposed on CameraXMrzScanner.surfaceRequest (the opt-in live-
                 // preview seam, 0.5.0) — a public return type, so camera-core is `api`, seen transitively
-                // by the viewfinder in mrz-camera-ui-android and any consumer that renders the preview.
+                // by the viewfinder in mrz-camera-ui and any consumer that renders the preview.
                 api(libs.androidx.camera.core)
                 // ML Kit text-recognition is the bundled-model variant — the Latin recognition model
                 // ships in the app, so OCR needs no runtime model download or network. (It still pulls
@@ -97,7 +99,7 @@ kotlin {
             implementation(kotlin("test"))
             // Test-only (TES-205): Robolectric gives the host test a real Android main thread (the main
             // Looper behind Dispatchers.Main), so CameraXMrzScannerThreadingTest can prove results arrive
-            // on main and recognition runs off it. Same catalog entry mrz-camera-ui-android's host tests use.
+            // on main and recognition runs off it. Same catalog entry mrz-camera-ui's host tests use.
             implementation(libs.robolectric)
         }
     }
