@@ -35,13 +35,13 @@ Tessera's own code makes no network calls and logs nothing. On Android, the text
 
 ## Install
 
-Release 0.5.3. Minimums: minSdk 23, iOS 18, Java 21. Modules: [Choose your pieces](https://lightine.youtrack.cloud/articles/TES-A-140).
+Release 0.6.0. Minimums: minSdk 23, iOS 18, Java 21. Modules: [Choose your pieces](https://lightine.youtrack.cloud/articles/TES-A-140).
 
 `build.gradle.kts` (the JVM needs only the first two lines):
 
 ```kotlin
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:0.5.3"))
+    implementation(platform("io.lightine.tessera:tessera-bom:0.6.0"))
     implementation("io.lightine.tessera:tessera-mrz-core")
     implementation("io.lightine.tessera:tessera-mrz-camera-android")
     implementation("io.lightine.tessera:tessera-mrz-camera-ui-android")
@@ -56,7 +56,7 @@ dependencies {
         <dependency>
             <groupId>io.lightine.tessera</groupId>
             <artifactId>tessera-bom</artifactId>
-            <version>0.5.3</version>
+            <version>0.6.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -73,7 +73,7 @@ dependencies {
 `Package.swift` (iOS):
 
 ```swift
-.package(url: "https://github.com/lightine-io/tessera-swift", exact: "0.5.3"),
+.package(url: "https://github.com/lightine-io/tessera-swift", exact: "0.6.0"),
 .product(name: "Tessera", package: "tessera-swift"),
 .product(name: "TesseraUI", package: "tessera-swift"),
 ```
