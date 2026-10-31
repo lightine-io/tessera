@@ -146,7 +146,7 @@ internal fun encodeScannerUiState(state: ScannerUiState): List<Any?> =
  * payload is unreadable - an unknown tag, or the wrong arity for its tag. A payload written by an app version
  * from before TES-240 (a Review / ReadFailed tag, or a ManualRaw carrying its text) is unreadable on
  * purpose: it decodes to `null`, so document data saved by an older version is never restored.
- * [scannerUiStateSaver] turns `null` into [initialState] (TES-222). Note that this function alone does NOT
+ * [scannerUiStateSaver] turns `null` into [initialState] (TES-222). This function alone does NOT
  * apply the config-aware gate ([gateRestoredState]) - [scannerUiStateSaver] composes the two.
  */
 internal fun decodeScannerUiState(saved: List<Any?>): ScannerUiState? {

@@ -90,6 +90,8 @@ jobs:
         run: |
           [ -n "$YOUTRACK_TOKEN" ] || { echo "No YOUTRACK_TOKEN secret; skipping."; exit 0; }
           version="${TAG#v}"
+          # The tag reaches the JSON bodies below, so accept only a plain release version.
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?$ ]] || { echo "Tag $TAG is not a release version; board not updated."; exit 0; }
           api='https://lightine.youtrack.cloud/api'
           yt() { curl -sS -H "Authorization: Bearer $YOUTRACK_TOKEN" -H 'Content-Type: application/json' -H 'Accept: application/json' "$@"; }
           # Soft-fail from here on: the release has already shipped; the board is an enhancement.

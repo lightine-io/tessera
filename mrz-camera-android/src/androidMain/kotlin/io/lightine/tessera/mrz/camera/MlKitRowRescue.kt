@@ -46,6 +46,9 @@ internal object MlKitRowRescue {
                 throw cancelled
             } catch (_: Exception) {
                 null
+            } catch (_: OutOfMemoryError) {
+                // A very large photo must not crash the host app: the rescue is optional, so fall back.
+                null
             } ?: return RecognizedText(firstPass)
         if (bitmap.width != imageWidth || bitmap.height != imageHeight) return RecognizedText(firstPass)
 
@@ -57,6 +60,8 @@ internal object MlKitRowRescue {
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (_: Exception) {
+                    emptyList()
+                } catch (_: OutOfMemoryError) {
                     emptyList()
                 }
             replacements[plan.row.map { boxedIndices[it] }] = kept
