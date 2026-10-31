@@ -1,6 +1,10 @@
+// Swift label for the line-list overloads (TES-224). ObjCName is still experimental in Kotlin.
+@file:OptIn(kotlin.experimental.ExperimentalObjCName::class)
+
 package io.lightine.tessera.mrz.parsing
 
 import io.lightine.tessera.types.vocabulary.ReadMethod
+import kotlin.native.ObjCName
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -34,7 +38,7 @@ public object ManualMrzReader {
      * @return The result of [MrzParser.parse], with the reading method set to `MANUAL_ENTRY`.
      */
     public fun read(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         referenceTime: Instant = Clock.System.now(),
     ): ParseResult = MrzParser.parse(input, referenceTime).withReadMethod(ReadMethod.MANUAL_ENTRY)
 
@@ -60,7 +64,7 @@ public object ManualMrzReader {
      * @return The result of [MrzParser.parseTD3], with the reading method set to `MANUAL_ENTRY`.
      */
     public fun readTD3(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         referenceTime: Instant = Clock.System.now(),
     ): ParseResult = MrzParser.parseTD3(input, referenceTime).withReadMethod(ReadMethod.MANUAL_ENTRY)
 
@@ -86,7 +90,7 @@ public object ManualMrzReader {
      * @return The result of [MrzParser.parseTD2], with the reading method set to `MANUAL_ENTRY`.
      */
     public fun readTD2(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         referenceTime: Instant = Clock.System.now(),
     ): ParseResult = MrzParser.parseTD2(input, referenceTime).withReadMethod(ReadMethod.MANUAL_ENTRY)
 
@@ -112,7 +116,7 @@ public object ManualMrzReader {
      * @return The result of [MrzParser.parseTD1], with the reading method set to `MANUAL_ENTRY`.
      */
     public fun readTD1(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         referenceTime: Instant = Clock.System.now(),
     ): ParseResult = MrzParser.parseTD1(input, referenceTime).withReadMethod(ReadMethod.MANUAL_ENTRY)
 
@@ -138,7 +142,7 @@ public object ManualMrzReader {
      * @return The result of [MrzParser.parseMRVA], with the reading method set to `MANUAL_ENTRY`.
      */
     public fun readMRVA(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         referenceTime: Instant = Clock.System.now(),
     ): ParseResult = MrzParser.parseMRVA(input, referenceTime).withReadMethod(ReadMethod.MANUAL_ENTRY)
 
@@ -164,7 +168,7 @@ public object ManualMrzReader {
      * @return The result of [MrzParser.parseMRVB], with the reading method set to `MANUAL_ENTRY`.
      */
     public fun readMRVB(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         referenceTime: Instant = Clock.System.now(),
     ): ParseResult = MrzParser.parseMRVB(input, referenceTime).withReadMethod(ReadMethod.MANUAL_ENTRY)
 }

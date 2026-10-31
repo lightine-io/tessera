@@ -1,3 +1,5 @@
+// Swift label for the line-list overloads (TES-224). ObjCName is still experimental in Kotlin.
+@file:OptIn(kotlin.experimental.ExperimentalObjCName::class)
 @file:Suppress("DEPRECATION") // MrzBirthDateImplausiblyOld is deprecated, never reported (TES-202)
 
 package io.lightine.tessera.mrz.validation
@@ -41,6 +43,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
+import kotlin.native.ObjCName
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -138,7 +141,7 @@ public object MrzValidator {
      * @return the validation failures and warnings, or the parse error in `structuralFailure`.
      */
     public fun validate(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         referenceTime: Instant = Clock.System.now(),
     ): ValidationResult = MrzParser.parse(input, referenceTime).toValidationResult()
 
@@ -170,7 +173,7 @@ public object MrzValidator {
      * @return the validation failures and warnings, or the parse error in `structuralFailure`.
      */
     public fun validate(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         format: MrzFormat,
         referenceTime: Instant = Clock.System.now(),
     ): ValidationResult = parseAs(format, input, referenceTime).toValidationResult()

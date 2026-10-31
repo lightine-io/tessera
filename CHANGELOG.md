@@ -15,6 +15,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **The Android scanner screen clears the reading when the user leaves it** (`mrz-camera-ui-android`; behaviour change, no API change). The screen keeps the read MRZ, the recognized text and the typed MRZ text in memory so they survive a rotation. When the screen leaves for good, for example an app that shows it only while scanning and then hides it, the screen now empties that memory at once. Before, the values stayed in memory until the system freed it. A rotation or another configuration change still keeps them.
 - **`computeCheckDigit` no longer puts the bad character in its exception message** (`mrz-core`; text change, no API change). The `IllegalArgumentException` for a character outside the MRZ alphabet now names its position instead of the character, so the message carries no document data, like error and warning texts since 0.6.0.
 - **The docs show how an app can stop the Android text recognition from using the network** (documentation; no code change). Google ML Kit uploads usage metrics to Google shortly after it runs (never images or text). An app that must make no network calls can remove the `INTERNET` permission in its own manifest; `SECURITY.md` shows how and what to check.
+
+### Swift
+
+- **The parse, read and validate calls that take a list of lines have clear names in Swift** (the `Tessera` framework; Kotlin, JVM, and Android unchanged). `MrzParser.parse`, `ManualMrzReader.read`, `MrzValidator.validate` and their format-specific variants each take either one string or a list of lines. In Swift both had the label `input`, so the list version got a generated name with an underscore, such as `parse(input:referenceTime_:)`. The list version now has the label `lines` and no underscore. What to change in calling code: rename the call. The string versions keep `input`.
+  - `parse(input:referenceTime_:)` is now `parse(lines:referenceTime:)`. The same for `parseTD1`, `parseTD2`, `parseTD3`, `parseMRVA` and `parseMRVB`.
+  - `read(input:referenceTime_:)` is now `read(lines:referenceTime:)`. The same for `readTD1`, `readTD2`, `readTD3`, `readMRVA` and `readMRVB`.
+  - `validate(input:referenceTime_:)` is now `validate(lines:referenceTime:)`, and `validate(input:format:referenceTime_:)` is now `validate(lines:format:referenceTime:)`.
+
 ## [0.6.0] - 2026-10-31
 
 - **The scanner screens no longer say that nothing is uploaded** (`mrz-camera-ui-android` and the iOS `TesseraUI`; text change, no key change). The privacy notice and the camera permission screens now say that the document is not uploaded or stored, which is exactly true: on Android the text recognition (Google ML Kit) sends usage metrics to Google, never the document. Apps that override these strings keep their own text.
