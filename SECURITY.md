@@ -38,7 +38,18 @@ These are targets, not guarantees. Tessera is a small project and timelines depe
 
 ## Scope
 
-Tessera reads and checks MRZ text: parsing, generation, validation, the data model, error taxonomy, lookup tables, transliteration profiles, and the telemetry contract. The core modules do no I/O. The camera modules (`mrz-camera-*`) read camera frames and saved images in memory to locate and read the MRZ, and the Android UI module adds the scanner screens and a system photo picker. Tessera's own code holds no network code, writes no files, stores nothing, and logs nothing. One dependency does use the network: on Android, the text recognition is Google ML Kit (bundled model). It reads images on the device and sends no images or recognized text, but it sends usage metrics to Google (device, app and performance data), may download updates, and adds the `INTERNET` permission to the app. Google documents no way to turn this off, so an app that uses the Android camera modules must declare it, for example in Google Play's Data safety section ([ML Kit data disclosure](https://developers.google.com/ml-kit/android-data-disclosure)). The core modules make no network calls; on iOS, recognition uses Apple's on-device Vision framework.
+Tessera reads and checks MRZ text: parsing, generation, validation, the data model, error taxonomy, lookup tables, transliteration profiles, and the telemetry contract. The core modules do no I/O. The camera modules (`mrz-camera-*`) read camera frames and saved images in memory to locate and read the MRZ, and the Android UI module adds the scanner screens and a system photo picker. Tessera's own code holds no network code, writes no files, stores nothing, and logs nothing. One dependency does use the network: on Android, the text recognition is Google ML Kit (bundled model). It reads images on the device and sends no images or recognized text, but it uploads usage metrics to Google (device, app and performance data) shortly after it runs, may download updates, and adds the `INTERNET` permission to the app. Google documents no way to turn this off, so an app that uses the Android camera modules must declare it, for example in Google Play's Data safety section ([ML Kit data disclosure](https://developers.google.com/ml-kit/android-data-disclosure)).
+
+An app that must make no network calls at all can remove the permission in its own manifest. In our tests text recognition kept working and the upload failed quietly, but Google does not document this, so check it again after each ML Kit update:
+
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+</manifest>
+```
+
+This removes the permission for the whole app, so use it only if nothing else in the app needs the network. Tessera plans its own offline text recognition as the Android default after 1.0. The core modules make no network calls; on iOS, recognition uses Apple's on-device Vision framework.
 
 Reports concerning the following are in scope:
 

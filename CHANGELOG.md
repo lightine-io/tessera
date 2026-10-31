@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- **The docs show how an app can stop the Android text recognition from using the network** (documentation; no code change). Google ML Kit uploads usage metrics to Google shortly after it runs (never images or text). An app that must make no network calls can remove the `INTERNET` permission in its own manifest; `SECURITY.md` shows how and what to check.
 ## [0.6.0] - 2026-10-31
 
 - **The scanner screens no longer say that nothing is uploaded** (`mrz-camera-ui-android` and the iOS `TesseraUI`; text change, no key change). The privacy notice and the camera permission screens now say that the document is not uploaded or stored, which is exactly true: on Android the text recognition (Google ML Kit) sends usage metrics to Google, never the document. Apps that override these strings keep their own text.
