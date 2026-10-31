@@ -2,46 +2,41 @@ package io.lightine.tessera.mrz.camera.ui
 
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
-import io.lightine.tessera.mrz.camera.MrzScanResult
-import io.lightine.tessera.mrz.camera.RecognizedLine
-import io.lightine.tessera.mrz.camera.RecognizedText
-import io.lightine.tessera.mrz.camera.ScanQuality
-import io.lightine.tessera.mrz.parsing.MrzParser
-import io.lightine.tessera.mrz.parsing.ParseResult
-import io.lightine.tessera.types.vocabulary.ReadMethod
-import kotlin.time.Clock
-import kotlin.time.Instant
 
-// TES-102: the flow's uiState used to live in plain `remember { mutableStateOf(...) }`
-// (MrzScannerScreen.ScannerFlow) — every configuration change (rotation, font-scale, locale) recreates the
-// Activity and, with nothing but `remember`, discards the whole flow: a user mid-review or mid-manual-entry
-// on a config change was silently bounced back to the start screen. This file is the `rememberSaveable`
-// Saver that fixes it, split into a pure, Compose-free codec (encodeScannerUiState / decodeScannerUiState —
-// host-unit-testable with no Bundle, no Activity, no rotation) plus the thin Saver ([scannerUiStateSaver])
-// built from it. Bundles only hold a fixed set of primitive-ish types, so every variant is flattened to a
-// `List<Any?>` of String / Boolean / Int / Float / Long / nested ArrayList<String|Float> — never the rich
-// domain objects themselves.
+// TES-240: document data stays in memory only. The flow's full uiState (and the manual-entry draft) lives in
+// a `retain`ed holder (ScannerFlowState.kt), which survives a configuration change (rotation, font-scale,
+// locale) in memory and is gone after process death. This file is the OTHER half: the `rememberSaveable`
+// Saver behind the process-death fallback, and it saves NO document data. Saved instance state leaves the
+// app's process (the system keeps the Bundle and hands it back after the process is killed in the
+// background), so anything put there has left the app's memory. A state that carries document data - the
+// typed MRZ text, the recognized OCR lines, a parsed reading - is reduced first, by [withoutDocumentData], to
+// the data-free screen the reader starts that method on, and only that is encoded. Same outcome as the iOS
+// screen (tessera-swift `ScannerModel`), which keeps everything in memory.
 //
-// Not every variant restores itself unchanged (reader, not oracle still holds — restoration never alters
-// what the SDK reported, but it CAN honestly decline to resurrect a session-bound in-flight state):
-//  * Scanning ALWAYS restores with both overlays false, never as whatever it was showing before the
-//    recreation — see [decodeScannerUiState]'s TAG_SCANNING branch for why `struggling` is not honest to
-//    resurrect either, alongside `gathering`.
-//  * SavedImageAnalyzing restores as AwaitingSavedImagePick — the analysis coroutine
+// TES-102 history: before TES-240 this codec saved every variant verbatim (Review's raw lines and
+// recognized text, ReadFailed's lines, ManualRaw's text) so the flow survived a configuration change. The
+// configuration change is now the retained holder's job; this codec only ever has to describe "where to
+// start again" after process death. It stays a pure, Compose-free codec (encodeScannerUiState /
+// decodeScannerUiState - host-unit-testable with no Bundle, no Activity) plus the thin Saver
+// ([scannerUiStateSaver]) built from it. Every encoded value is a Bundle-safe String / Boolean.
+//
+// What each variant restores as after process death:
+//  * Scanning ALWAYS restores with both overlays false (see [settleAfterRecreation] - neither overlay
+//    describes the fresh camera session a recreation starts).
+//  * SavedImageAnalyzing restores as AwaitingSavedImagePick - the analysis coroutine
 //    (`rememberCoroutineScope`) that would deliver a result died with the composition, so a restored
-//    "Analyzing…" screen would spin forever with nothing left to finish it; AwaitingSavedImagePick's own
-//    LaunchedEffect honestly re-launches the picker instead (guarded, in `ScannerFlow`, by a saveable latch
-//    so a bare restore does not silently re-fire that picker with no new user gesture — see
-//    `savedImagePickAutoLaunched` there).
-//  * Review re-parses its saved raw lines via MrzParser (pure and deterministic), pinned to the CLOCK READING
-//    TAKEN AT ENCODE TIME rather than a fresh restore-time clock, and restamps the read method the
-//    camera/photo/manual path actually used — see [decodeReview] for the full rationale.
+//    "Analyzing..." screen would spin forever; AwaitingSavedImagePick's own LaunchedEffect re-offers the
+//    picker instead (see `savedImagePickAutoLaunched` in `ScannerFlow`).
+//  * ManualRaw restores as an EMPTY ManualRaw (TES-240: the typed text is document data).
+//  * ReadFailed restores as AwaitingSavedImagePick (TES-240: its recognized lines are document data; it is
+//    only ever reached from the saved-image flow, so the reader picks a photo again).
+//  * Review restores as the start screen of its own source method (TES-240: camera -> Scanning, photo ->
+//    AwaitingSavedImagePick, manual -> an empty ManualRaw), so the reader scans or types again.
+//  * CameraInUse, CameraUnavailable, AwaitingSavedImagePick and SavedImageEmpty restore as themselves.
 //
 // On top of the codec, [scannerUiStateSaver] re-validates every decoded state against the `enabledMethods`
 // the flow runs on (since TES-123, the set captured when the screen opened) before letting it restore
-// ([gateRestoredState]) — see that function's KDoc for
-// why a Saver that restored unconditionally would have regressed a guarantee `initialState` already gave a
-// FRESH flow.
+// ([gateRestoredState]), and never restores null (TES-222).
 
 private const val TAG_SCANNING = "Scanning"
 private const val TAG_CAMERA_IN_USE = "CameraInUse"
@@ -50,137 +45,131 @@ private const val TAG_AWAITING_SAVED_IMAGE_PICK = "AwaitingSavedImagePick"
 private const val TAG_SAVED_IMAGE_ANALYZING = "SavedImageAnalyzing"
 private const val TAG_SAVED_IMAGE_EMPTY = "SavedImageEmpty"
 private const val TAG_MANUAL_RAW = "ManualRaw"
-private const val TAG_READ_FAILED = "ReadFailed"
-private const val TAG_REVIEW = "Review"
 
 /**
- * Flattens [state] to a `List<Any?>` of Bundle-safe primitives (String, Boolean, Int, Float, Long, and nested
- * `ArrayList` of those) - the save half of [scannerUiStateSaver], pulled out as a pure function so the
- * encoding is host-unit-testable with no `Saver`, no Bundle, and no Compose runtime. The first element is
- * always a tag identifying the variant; [decodeScannerUiState] dispatches on it. See the file header for
- * which variants restore as something other than themselves.
+ * The screen a reader starts [method] on, holding no document data: camera -> [ScannerUiState.Scanning],
+ * photo -> [ScannerUiState.AwaitingSavedImagePick], manual -> an empty [ScannerUiState.ManualRaw]. The same
+ * targets the method switcher picks (`onSelectMethod` in `ScannerFlow`), minus the in-memory manual draft.
+ */
+internal fun startScreenFor(method: ScanMethod): ScannerUiState =
+    when (method) {
+        ScanMethod.CAMERA -> ScannerUiState.Scanning()
+        ScanMethod.SAVED_IMAGE -> ScannerUiState.AwaitingSavedImagePick
+        ScanMethod.MANUAL_ENTRY -> ScannerUiState.ManualRaw()
+    }
+
+/**
+ * TES-240: [state] with every piece of document data removed - the form the process-death fallback may
+ * hold and save. A variant that carries document data becomes the start screen of the method it belongs to,
+ * so the reader scans or types again: [ScannerUiState.ManualRaw] loses its typed text (and the `parseFailed`
+ * flag that described that text), [ScannerUiState.ReadFailed] (saved-image only) becomes
+ * [ScannerUiState.AwaitingSavedImagePick], and [ScannerUiState.Review] becomes [startScreenFor] its
+ * [`source`][ScannerUiState.Review.source]. Every other variant holds no document data and is returned
+ * unchanged. Pure, so the "nothing saved carries document data" rule is host-testable.
+ */
+internal fun withoutDocumentData(state: ScannerUiState): ScannerUiState =
+    when (state) {
+        is ScannerUiState.ManualRaw -> ScannerUiState.ManualRaw()
+
+        is ScannerUiState.ReadFailed -> ScannerUiState.AwaitingSavedImagePick
+
+        is ScannerUiState.Review -> startScreenFor(state.source)
+
+        is ScannerUiState.Scanning,
+        ScannerUiState.CameraInUse,
+        ScannerUiState.CameraUnavailable,
+        ScannerUiState.AwaitingSavedImagePick,
+        ScannerUiState.SavedImageAnalyzing,
+        ScannerUiState.SavedImageEmpty,
+        -> state
+    }
+
+/**
+ * What a state becomes when the composition that showed it is rebuilt - on BOTH paths: the retained
+ * in-memory state after a configuration change (ScannerFlowState.kt), and the decoded state after process
+ * death ([decodeScannerUiState]). Only session-bound parts change:
+ *  * [ScannerUiState.Scanning] drops both overlays. `gathering` describes the frame-agreement consensus over
+ *    the (now-dead) camera stream, and `struggling` is driven by the struggle timer of the live camera
+ *    session, which restarts with the camera on every recreation; showing either over a brand-new session
+ *    would claim something that is not happening. The fresh session's own gates show them again if needed.
+ *  * [ScannerUiState.SavedImageAnalyzing] becomes [ScannerUiState.AwaitingSavedImagePick]: the analysis
+ *    coroutine died with the old composition, so nothing would ever finish the "Analyzing..." screen.
+ *
+ * Everything else, document data included, is returned unchanged (reader, not oracle: a recreation never
+ * alters what the SDK reported).
+ */
+internal fun settleAfterRecreation(state: ScannerUiState): ScannerUiState =
+    when (state) {
+        is ScannerUiState.Scanning -> ScannerUiState.Scanning(struggling = false, gathering = false)
+        ScannerUiState.SavedImageAnalyzing -> ScannerUiState.AwaitingSavedImagePick
+        else -> state
+    }
+
+/**
+ * Flattens [state] to a `List<Any?>` of Bundle-safe values (only a String tag) - the save half of
+ * [scannerUiStateSaver], pulled out as a pure function so the encoding is host-unit-testable with no
+ * `Saver`, no Bundle, and no Compose runtime. TES-240: [state] is first reduced by [withoutDocumentData], so
+ * no payload ever carries typed text, recognized lines or a reading; a Review or ReadFailed is encoded as the
+ * start screen it reduces to. The first element is always a tag identifying the variant;
+ * [decodeScannerUiState] dispatches on it.
  */
 internal fun encodeScannerUiState(state: ScannerUiState): List<Any?> =
-    when (state) {
-        // Neither struggling nor gathering is encoded — Scanning always restores with both false
-        // (decodeScannerUiState's TAG_SCANNING branch), so there is nothing worth spending a slot on for
-        // either flag.
-        is ScannerUiState.Scanning -> {
-            listOf(TAG_SCANNING)
-        }
+    when (val dataFree = withoutDocumentData(state)) {
+        // Neither struggling nor gathering is encoded - Scanning always restores with both false
+        // ([settleAfterRecreation]), so there is nothing worth spending a slot on for either flag.
+        is ScannerUiState.Scanning -> listOf(TAG_SCANNING)
 
-        ScannerUiState.CameraInUse -> {
-            listOf(TAG_CAMERA_IN_USE)
-        }
+        ScannerUiState.CameraInUse -> listOf(TAG_CAMERA_IN_USE)
 
-        ScannerUiState.CameraUnavailable -> {
-            listOf(TAG_CAMERA_UNAVAILABLE)
-        }
+        ScannerUiState.CameraUnavailable -> listOf(TAG_CAMERA_UNAVAILABLE)
 
-        ScannerUiState.AwaitingSavedImagePick -> {
-            listOf(TAG_AWAITING_SAVED_IMAGE_PICK)
-        }
+        ScannerUiState.AwaitingSavedImagePick -> listOf(TAG_AWAITING_SAVED_IMAGE_PICK)
 
         // Tagged distinctly from AwaitingSavedImagePick (rather than reusing its tag at encode time) so the
         // substitution is visible and documented at the decode site, not silently folded in here.
-        ScannerUiState.SavedImageAnalyzing -> {
-            listOf(TAG_SAVED_IMAGE_ANALYZING)
-        }
+        ScannerUiState.SavedImageAnalyzing -> listOf(TAG_SAVED_IMAGE_ANALYZING)
 
-        ScannerUiState.SavedImageEmpty -> {
-            listOf(TAG_SAVED_IMAGE_EMPTY)
-        }
+        ScannerUiState.SavedImageEmpty -> listOf(TAG_SAVED_IMAGE_EMPTY)
 
-        is ScannerUiState.ManualRaw -> {
-            // TES-137: defensive second truncation at the Bundle boundary itself, in case a caller ever
-            // constructs ScannerUiState.ManualRaw with an over-length text bypassing ManualRawContent's own
-            // onValueChange cap (MANUAL_ENTRY_MAX_CHARS) — this is the last line of defence before the draft
-            // hits `rememberSaveable`'s Bundle and the Binder's ~1MB saved-state limit.
-            listOf(TAG_MANUAL_RAW, state.text.take(MANUAL_ENTRY_MAX_CHARS), state.parseFailed)
-        }
+        // TES-240: the tag alone. The typed text never reaches the Bundle (withoutDocumentData emptied it).
+        is ScannerUiState.ManualRaw -> listOf(TAG_MANUAL_RAW)
 
-        is ScannerUiState.ReadFailed -> {
-            val (texts, confidences) = encodeRecognizedText(state.capturedText)
-            listOf(TAG_READ_FAILED, texts, confidences)
-        }
+        // Unreachable: withoutDocumentData never returns these. Encoded as the same start screens it maps them
+        // to, so the `when` stays exhaustive without a throw.
+        is ScannerUiState.ReadFailed -> listOf(TAG_AWAITING_SAVED_IMAGE_PICK)
 
-        is ScannerUiState.Review -> {
-            encodeReview(state)
-        }
+        is ScannerUiState.Review -> encodeScannerUiState(startScreenFor(dataFree.source))
     }
 
 /**
  * Rebuilds a [ScannerUiState] from [saved] (as produced by [encodeScannerUiState]), or `null` when the
- * payload is unreadable - an unknown tag, the wrong arity for its tag, a value of the wrong type, or (for
- * [ScannerUiState.Review]) an enum name or raw-line set that no longer reconstructs a valid reading.
- * [scannerUiStateSaver] then falls back to `rememberSaveable`'s own init lambda on `null`, so a corrupt or
- * from-a-future-version payload degrades to "start the flow over" rather than crashing restoration. Note
- * that this function alone does NOT apply the config-aware gate ([gateRestoredState]) - [scannerUiStateSaver]
- * composes the two; call sites that want the gate applied (i.e. every real `rememberSaveable` restore) go
- * through the Saver, not this function directly.
+ * payload is unreadable - an unknown tag, or the wrong arity for its tag. A payload written by an app version
+ * from before TES-240 (a Review / ReadFailed tag, or a ManualRaw carrying its text) is unreadable on
+ * purpose: it decodes to `null`, so document data saved by an older version is never restored.
+ * [scannerUiStateSaver] turns `null` into [initialState] (TES-222). Note that this function alone does NOT
+ * apply the config-aware gate ([gateRestoredState]) - [scannerUiStateSaver] composes the two.
  */
 internal fun decodeScannerUiState(saved: List<Any?>): ScannerUiState? {
     val tag = saved.getOrNull(0) as? String ?: return null
+    if (saved.size != 1) return null
     return when (tag) {
-        TAG_SCANNING -> {
-            // Both overlays restore false, never whatever they were before the recreation:
-            //  * gathering describes the frame-agreement consensus live over the (now-dead) camera stream, so
-            //    resurrecting it would claim a wait that is not happening (unchanged reasoning from before
-            //    TES-102's gate-review — see the file header).
-            //  * struggling used to be restored (it reads as a latched "we've been trying a while" hint), but
-            //    the hint is driven by the struggle timer of the live camera session, which restarts with the
-            //    camera on every recreation. A restored `struggling = true` would show the hint over a brand-new
-            //    session that has not waited at all. The fresh session's own timer shows it again if needed.
-            if (saved.size != 1) return null
-            ScannerUiState.Scanning(struggling = false, gathering = false)
-        }
+        TAG_SCANNING -> settleAfterRecreation(ScannerUiState.Scanning())
 
-        TAG_CAMERA_IN_USE -> {
-            ScannerUiState.CameraInUse.takeIf { saved.size == 1 }
-        }
+        TAG_CAMERA_IN_USE -> ScannerUiState.CameraInUse
 
-        TAG_CAMERA_UNAVAILABLE -> {
-            ScannerUiState.CameraUnavailable.takeIf { saved.size == 1 }
-        }
+        TAG_CAMERA_UNAVAILABLE -> ScannerUiState.CameraUnavailable
 
-        TAG_AWAITING_SAVED_IMAGE_PICK -> {
-            ScannerUiState.AwaitingSavedImagePick.takeIf { saved.size == 1 }
-        }
+        TAG_AWAITING_SAVED_IMAGE_PICK -> ScannerUiState.AwaitingSavedImagePick
 
         // The substitution: an in-flight analysis has no coroutine left to finish it, so restore the honest
         // re-offer instead of a screen that would spin forever (see the file header).
-        TAG_SAVED_IMAGE_ANALYZING -> {
-            ScannerUiState.AwaitingSavedImagePick.takeIf { saved.size == 1 }
-        }
+        TAG_SAVED_IMAGE_ANALYZING -> settleAfterRecreation(ScannerUiState.SavedImageAnalyzing)
 
-        TAG_SAVED_IMAGE_EMPTY -> {
-            ScannerUiState.SavedImageEmpty.takeIf { saved.size == 1 }
-        }
+        TAG_SAVED_IMAGE_EMPTY -> ScannerUiState.SavedImageEmpty
 
-        TAG_MANUAL_RAW -> {
-            if (saved.size != 3) return null
-            // TES-137: truncate again on restore — a payload from a pre-cap app version, or a Bundle a host
-            // constructed directly, could still carry an over-length draft; restoring must not resurrect one.
-            val text = (saved[1] as? String)?.take(MANUAL_ENTRY_MAX_CHARS) ?: return null
-            val parseFailed = saved[2] as? Boolean ?: return null
-            ScannerUiState.ManualRaw(text = text, parseFailed = parseFailed)
-        }
+        TAG_MANUAL_RAW -> ScannerUiState.ManualRaw()
 
-        TAG_READ_FAILED -> {
-            if (saved.size != 3) return null
-            val texts = (saved[1] as? List<*>)?.let(::asStringListOrNull) ?: return null
-            val confidences = (saved[2] as? List<*>)?.let(::asFloatListOrNull) ?: return null
-            val capturedText = decodeRecognizedText(texts, confidences) ?: return null
-            ScannerUiState.ReadFailed(capturedText = capturedText)
-        }
-
-        TAG_REVIEW -> {
-            decodeReview(saved)
-        }
-
-        else -> {
-            null
-        }
+        else -> null
     }
 }
 
@@ -211,9 +200,11 @@ internal fun decodeScannerUiState(saved: List<Any?>): ScannerUiState? {
  *    not-yet-accepted review whose producing method the host has since disabled restores as a fresh start on
  *    an allowed method rather than offering a "Rescan" into a method that no longer exists.
  *
- * [ScannerUiState.SavedImageAnalyzing] is included only for `when` exhaustiveness: [decodeScannerUiState]
- * never actually produces it (it decodes to [ScannerUiState.AwaitingSavedImagePick] - see the file header),
- * so this branch is unreachable in practice, not a case this function meaningfully decides.
+ * TES-240: the decoded state now only seeds the flow after process death. On a configuration change the
+ * retained in-memory state wins (ScannerFlowState.kt) and this gate's result is not used: that state was
+ * produced in this same presentation, under the same opening config. [ScannerUiState.SavedImageAnalyzing],
+ * [ScannerUiState.ReadFailed] and [ScannerUiState.Review] are included only for `when` exhaustiveness and as
+ * a pure owning-method table: [decodeScannerUiState] never produces any of them (see the file header).
  *
  * No special-casing an empty [enabledMethods]: every owning method then fails the `in` check and every state
  * gates to `null` uniformly. [initialState]'s own defensive "empty set → camera" fallback already owns that
@@ -239,14 +230,14 @@ internal fun gateRestoredState(
 
             is ScannerUiState.Review -> state.source
 
-            // Unreachable — see the KDoc above.
+            // Never decoded - see the KDoc above.
             ScannerUiState.SavedImageAnalyzing -> ScanMethod.SAVED_IMAGE
         }
     return state.takeIf { owningMethod in enabledMethods }
 }
 
 /**
- * Builds the [Saver] `ScannerFlow` uses for its `uiState`, composing [decodeScannerUiState] (the pure codec)
+ * Builds the [Saver] behind the flow's process-death fallback (`rememberScannerFlowState`, TES-240), composing [decodeScannerUiState] (the pure codec)
  * with [gateRestoredState] (the config-aware restore gate, TES-102). A state that is unreadable or rejected by
  * the gate restores as [initialState] for [enabledMethods] (TES-222), never as null. Takes [enabledMethods] as a parameter so
  * `ScannerFlow` builds it from the config it runs on. Since TES-123 that is the config captured when the
@@ -264,172 +255,3 @@ internal fun scannerUiStateSaver(enabledMethods: Set<ScanMethod>): Saver<Scanner
             decodeScannerUiState(saved)?.let { gateRestoredState(it, enabledMethods) } ?: initialState(enabledMethods)
         },
     )
-
-// ---------------------------------------------------------------------------------------------------------
-// RecognizedText / RecognizedLine — shared by ReadFailed and Review. Bundles cannot hold a null inside a
-// float list, so a missing per-line confidence (RecognizedLine.confidence == null) is encoded as NaN and
-// decoded back to null via [encodeNullableFloat] / [decodeNullableFloat] — NaN is never a genuine confidence
-// (ScanQuality / RecognizedLine document confidence as [0, 1]), so it is an unambiguous sentinel.
-// ---------------------------------------------------------------------------------------------------------
-
-/**
- * Encodes a nullable confidence-like `Float?` as a Bundle-safe non-null `Float`: `null` becomes [Float.NaN].
- * Paired with [decodeNullableFloat]. Used for both [RecognizedLine.confidence] and [ScanQuality.ocrConfidence]
- * - both are documented as `[0, 1]` or `null`, so `NaN` can never collide with a genuine value.
- */
-private fun encodeNullableFloat(value: Float?): Float = value ?: Float.NaN
-
-/** The decode half of [encodeNullableFloat]: `NaN` decodes back to `null`, any other value passes through. */
-private fun decodeNullableFloat(value: Float): Float? = value.takeUnless(Float::isNaN)
-
-private fun encodeRecognizedText(text: RecognizedText): Pair<ArrayList<String>, ArrayList<Float>> {
-    val texts = ArrayList<String>(text.lines.size)
-    val confidences = ArrayList<Float>(text.lines.size)
-    for (line in text.lines) {
-        texts.add(line.text)
-        confidences.add(encodeNullableFloat(line.confidence))
-    }
-    return texts to confidences
-}
-
-private fun decodeRecognizedText(
-    texts: List<String>,
-    confidences: List<Float>,
-): RecognizedText? {
-    if (texts.size != confidences.size) return null
-    val lines =
-        texts.indices.map { i ->
-            RecognizedLine(text = texts[i], confidence = decodeNullableFloat(confidences[i]))
-        }
-    return RecognizedText(lines)
-}
-
-private fun asStringListOrNull(list: List<*>): List<String>? {
-    val typed = list.filterIsInstance<String>()
-    return typed.takeIf { it.size == list.size }
-}
-
-private fun asFloatListOrNull(list: List<*>): List<Float>? {
-    val typed = list.filterIsInstance<Float>()
-    return typed.takeIf { it.size == list.size }
-}
-
-// ---------------------------------------------------------------------------------------------------------
-// Review — the one variant whose restore does real reconstruction rather than a straight rebuild.
-// ---------------------------------------------------------------------------------------------------------
-
-/**
- * Encodes a [ScannerUiState.Review]. `decoded.parse` here is always [ParseResult.Success] or
- * [ParseResult.PartialSuccess] (a [ParseResult.Failure] never reaches [ScannerUiState.Review] - [routeDecode]
- * sends a failure to [ScannerUiState.ReadFailed] instead), so [MrzDocument.rawLines][io.lightine.tessera.mrz.model.MrzDocument.rawLines]
- * is always available in practice. The `Failure` branch below is defensive only: it encodes an empty raw-line
- * list, which [decodeReview] then fails to re-parse into anything but [ParseResult.Failure] - falling
- * through to the same "return null, let the flow restart" path a corrupt payload takes, rather than special-
- * casing an input shape that should be unreachable.
- *
- * Saved, alongside the raw lines: the recognized-text lines (parallel `texts` / `confidences` lists, the
- * same NaN-sentinel scheme [ReadFailed] uses), [ScanQuality]'s three fields (`ocrConfidence` via the same
- * sentinel), the parse's [`ReadMethod`][ReadMethod] by name, [ScannerUiState.Review.source] by name,
- * [ScannerUiState.Review.expanded], and - appended LAST, so every earlier index-based test and decode slot
- * is undisturbed - the wall-clock instant AT ENCODE TIME, in epoch milliseconds. See [decodeReview] for why
- * that instant (rather than a fresh restore-time clock) is what the re-parse is pinned to.
- */
-private fun encodeReview(state: ScannerUiState.Review): List<Any?> {
-    val decoded = state.decoded
-    val rawLines =
-        when (val parse = decoded.parse) {
-            is ParseResult.Success -> parse.document.rawLines
-            is ParseResult.PartialSuccess -> parse.document.rawLines
-            is ParseResult.Failure -> emptyList()
-        }
-    val (texts, confidences) = encodeRecognizedText(decoded.recognizedText)
-    val quality = decoded.quality
-    return listOf(
-        TAG_REVIEW,
-        ArrayList(rawLines),
-        texts,
-        confidences,
-        quality.mrzRegionFound,
-        encodeNullableFloat(quality.ocrConfidence),
-        quality.recognizedLineCount,
-        decoded.parse.metadata.readMethod.name,
-        state.source.name,
-        state.expanded,
-        Clock.System.now().toEpochMilliseconds(),
-    )
-}
-
-/**
- * Rebuilds a [ScannerUiState.Review] from its saved payload by RE-PARSING the saved raw lines with
- * [MrzParser.parse] - parsing is pure and deterministic over lines that already parsed once (they reached
- * [ScannerUiState.Review] in the first place), so replaying it reconstructs the identical
- * [`MrzDocument`][io.lightine.tessera.mrz.model.MrzDocument] without persisting the whole verdict (a far
- * heavier carrier than eleven primitives). Only [ResultMetadata.readMethod][io.lightine.tessera.mrz.parsing.ResultMetadata]
- * then needs restamping: the parser only ever sees strings, so it always reports `BACKEND_STRING_INPUT`, but
- * the saved payload remembers whether this reading actually came from the camera, a saved photo, or manual
- * entry - restamping is the identical move `mrz-core`'s `ManualMrzReader.withReadMethod` and
- * `mrz-camera-core`'s `MrzFrameAnalyzer.withProvenance` already make for the live paths: only the read method
- * changes, the parser's verdict (document, warnings, validation failures) is surfaced unchanged (Principle
- * 1). The rebuilt [MrzScanResult.Decoded] carries the SAVED [RecognizedText] and [ScanQuality] - not
- * synthesized ones - so what the user saw before the configuration change is exactly what they see after.
- *
- * The re-parse's `referenceTime` is PINNED to the wall-clock instant [encodeReview] captured at encode time
- * (the saved payload's last slot), not a fresh `Clock.System.now()` at restore time. `referenceTime` feeds
- * both the date-window (century) inference AND - via [ResultMetadata.warnings] - computed observations like
- * an expiry-past delta; re-parsing at a fresh restore-time clock could, across a long process-death restore,
- * report a warning that has silently changed shape from what the user was actually looking at (a passport a
- * few days from expiry could cross that boundary between review and restore, for instance). Pinning to the
- * encode-time clock reconstructs the review as-of (approximately) the last moment the user actually saw it.
- * The residual imprecision - encode-time versus the ORIGINAL parse-time, which `ResultMetadata` does not
- * carry forward for this codec to recover - is at most a few seconds within one live session, a far narrower
- * window than the unbounded restore-time drift this replaces.
- *
- * Defensive at every step: an unreadable field, an enum name [ReadMethod] / [ScanMethod] no longer
- * recognizes, or (should the saved raw lines somehow fail to re-parse - see [encodeReview]'s `Failure`
- * branch) a re-parse that comes back [ParseResult.Failure] all return `null`, so the flow falls back to its
- * initial state rather than showing a corrupted review.
- */
-private fun decodeReview(saved: List<Any?>): ScannerUiState.Review? {
-    if (saved.size != 11) return null
-    val rawLines = (saved[1] as? List<*>)?.let(::asStringListOrNull) ?: return null
-    val texts = (saved[2] as? List<*>)?.let(::asStringListOrNull) ?: return null
-    val confidences = (saved[3] as? List<*>)?.let(::asFloatListOrNull) ?: return null
-    val mrzRegionFound = saved[4] as? Boolean ?: return null
-    val ocrConfidenceRaw = saved[5] as? Float ?: return null
-    val recognizedLineCount = saved[6] as? Int ?: return null
-    val readMethodName = saved[7] as? String ?: return null
-    val sourceName = saved[8] as? String ?: return null
-    val expanded = saved[9] as? Boolean ?: return null
-    val referenceTimeMillis = saved[10] as? Long ?: return null
-
-    val recognizedText = decodeRecognizedText(texts, confidences) ?: return null
-    val readMethod = ReadMethod.entries.find { it.name == readMethodName } ?: return null
-    val source = ScanMethod.entries.find { it.name == sourceName } ?: return null
-    val referenceTime = Instant.fromEpochMilliseconds(referenceTimeMillis)
-
-    val reparsed = MrzParser.parse(rawLines, referenceTime)
-    // Hoisted once, from `metadata` on ParseResult's sealed BASE (every variant carries it — no cast
-    // needed) — rather than re-deriving `reparsed.metadata.copy(readMethod = readMethod)` independently in
-    // each success-shaped branch below, the way the pre-cleanup version did.
-    val stamped = reparsed.metadata.copy(readMethod = readMethod)
-    val restamped =
-        when (reparsed) {
-            is ParseResult.Success -> reparsed.copy(metadata = stamped)
-
-            is ParseResult.PartialSuccess -> reparsed.copy(metadata = stamped)
-
-            // Should be unreachable for lines that already parsed once (see encodeReview's KDoc) —
-            // defensive only. Falling back to null (rather than e.g. ReadFailed) keeps this codec's contract
-            // simple: it only ever produces a Review or nothing.
-            is ParseResult.Failure -> return null
-        }
-
-    val quality =
-        ScanQuality(
-            mrzRegionFound = mrzRegionFound,
-            ocrConfidence = decodeNullableFloat(ocrConfidenceRaw),
-            recognizedLineCount = recognizedLineCount,
-        )
-    val decoded = MrzScanResult.Decoded(parse = restamped, recognizedText = recognizedText, quality = quality)
-    return ScannerUiState.Review(decoded = decoded, source = source, expanded = expanded)
-}

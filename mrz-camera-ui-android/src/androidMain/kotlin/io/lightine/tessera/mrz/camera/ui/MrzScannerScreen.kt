@@ -221,23 +221,24 @@ private fun ScannerFlow(
     // else manual entry, else saved image; empty → camera defensively) rather than always camera, so a
     // consumer who disabled camera lands on a working entry point (TES-71).
     //
-    // TES-102: rememberSaveable(stateSaver = scannerUiStateSaver(...)) — not plain remember — so the whole
-    // flow state survives a configuration change (rotation, font-scale, locale), which recreates the Activity
-    // and used to silently reset the flow to its start screen. See ScannerUiStateSaver.kt for what each
-    // variant restores as. Built from config.enabledMethods so the restore gate inside it, gateRestoredState,
+    // TES-240: the flow state survives a configuration change (rotation, font-scale, locale) IN MEMORY only -
+    // a retained holder, never saved instance state - so document data (a reading under review, recognized
+    // lines, typed text) never leaves the app's memory. After process death the flow comes back on the start
+    // screen of the method in use, from a saved form that holds no document data. See ScannerFlowState.kt
+    // (the two layers) and ScannerUiStateSaver.kt (what each variant comes back as). TES-102 first made this
+    // state survive a configuration change, through saved instance state; TES-240 moved the document data out
+    // of it. The saved fallback is built from config.enabledMethods so its restore gate, gateRestoredState,
     // only lets a restored state through when its method is enabled. Since TES-123 `config` here is the
-    // config captured when the screen opened (rememberOpenedConfig, which itself survives the recreation), so
-    // the gate checks against the same set the switcher, rescan and every other path use: one config for the
-    // whole presentation, and a config the host changes while the screen is open never reaches this flow.
+    // config captured when the screen opened (rememberOpenedConfig, which itself survives the recreation):
+    // one config for the whole presentation.
     //
     // By deliberate contrast, the session-scoped helpers declared right below (decodeRouted, the consensus
     // tally) stay plain remember: they describe the LIVE camera session
     // — a latch over a stream, a frame-agreement tally, per-session flags — which restarts fresh after a
     // recreation along with the camera itself, so persisting them would describe a session that no longer
     // exists.
-    var uiState: ScannerUiState by rememberSaveable(
-        stateSaver = scannerUiStateSaver(config.enabledMethods),
-    ) { mutableStateOf(initialState(config.enabledMethods)) }
+    val flowState = rememberScannerFlowState(config.enabledMethods)
+    var uiState: ScannerUiState by flowState::uiState
 
     // A one-shot latch: once a decode has routed on (to review / read-failed / straight back), later decoded
     // frames from the still-running stream must not re-fire. Kept as flow state (not inside the collector) so
@@ -261,9 +262,9 @@ private fun ScannerFlow(
     // TES-93: the in-progress manual-entry text, hoisted here (survives the flow's lifetime) rather than
     // living only inside ScannerUiState.ManualRaw — which onSelectMethod / rescan used to rebuild from scratch
     // (an empty ManualRaw()), silently discarding whatever the user had typed on a Manual→other→Manual
-    // round trip. rememberSaveable so it also survives rotation / process death, matching the rest of the
-    // flow's persisted state.
-    var manualDraft by rememberSaveable { mutableStateOf("") }
+    // round trip. TES-240: typed text is document data, so it lives in the same retained in-memory holder as
+    // the flow state - it survives a configuration change, never process death (it was rememberSaveable).
+    var manualDraft: String by flowState::manualDraft
 
     // A short confirming haptic when a live-camera read is accepted — the hands-free "it scanned" cue. Honours
     // the device's system haptic setting; opt-out via config.hapticFeedback. Camera path only (manual/saved

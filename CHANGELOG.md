@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- **The Android scanner screen keeps document data in memory only** (`mrz-camera-ui-android`; behaviour change, no API change). The read MRZ, the recognized text and the typed MRZ text are no longer put in the saved state that Android keeps outside the app. They still survive a rotation or another configuration change. When the system ends the app in the background and the user comes back, the scanner opens on the start screen of the method in use (camera, photo, or typing) and the user scans or types again. Before, the screen brought back the reading and the typed text. The iOS screen already worked this way.
 - **A release fails when Maven Central rejects it** (release workflow; no API change). The publish step now waits for Central's validation and stops with Central's error, for example when the version already exists. Before, the workflow finished green on a rejected upload, so only the Swift package shipped.
 
 ## [0.5.3] - 2026-10-18
