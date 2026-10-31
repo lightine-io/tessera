@@ -102,4 +102,12 @@ class CheckDigitTest {
         val compositeInput = "HA672242<6" + "5802254" + "9601086<<<<<<<"
         assertEquals('8', computeCheckDigit(compositeInput))
     }
+
+    @Test
+    fun error_message_names_the_position_but_not_the_character() {
+        val error = assertFailsWith<IllegalArgumentException> { computeCheckDigit("AB\u0416C") }
+        val message = error.message.orEmpty()
+        kotlin.test.assertTrue(message.contains("position 2"), message)
+        kotlin.test.assertFalse(message.contains("\u0416"), message)
+    }
 }
