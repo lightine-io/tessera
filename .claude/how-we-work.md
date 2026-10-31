@@ -1,7 +1,7 @@
 # How we work on Tessera
 
 The rules for day-to-day work. Short on purpose: what to do, not why.
-The why (the Kanban Method, built step by step) is on the board issue TES-215. Where the two differ, this guide wins.
+The why: [ADR-028](https://lightine.youtrack.cloud/articles/TES-A-154) (internal KB). Where the two differ, this guide wins and the record is amended.
 In use since 2026-10-31; the rollout continues under TES-215.
 
 ## Roles
@@ -101,7 +101,7 @@ A Decision item (class Standard) leaves Next when a worker takes it. In Develop:
 
 ## Vulnerabilities
 
-Follow SECURITY.md. Reports arrive as private GitHub advisories. Acknowledge within 5 business days; assess and set the severity within 10 business days; fix a medium or higher issue within 60 days. The owner confirms a report. Until a fix ships, the details stay in the private advisory; the card on the board carries no exploit detail and nothing goes to a public GitHub issue. The fix itself is Expedite.
+Follow [SECURITY.md](../SECURITY.md): it holds the reporting channel and the response times we promise. Our internal target, not a promise to reporters: fix a medium or higher issue within 60 days. The owner confirms a report. Until a fix ships, the details stay in the private advisory; the card on the board carries no exploit detail and nothing goes to a public GitHub issue. The fix itself is Expedite.
 
 Dependency alerts (Dependabot) are read at the Kanban meeting. An alert in a shipped dependency becomes a Fixed Date card due 60 days after the alert; one in a build-only or test-only dependency is Intangible, or dismissed with a recorded reason.
 
