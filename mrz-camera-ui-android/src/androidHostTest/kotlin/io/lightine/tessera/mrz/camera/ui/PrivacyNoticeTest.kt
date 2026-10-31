@@ -56,7 +56,7 @@ class PrivacyNoticeTest {
         // The honest boundary: reads on-device, keeps nothing, hands the result back to the host app.
         composeRule
             .onNodeWithText(
-                "Tessera reads your document right here on your device. Nothing is uploaded or saved anywhere. " +
+                "Tessera reads your document right here on your device. Your document is not uploaded or saved anywhere. " +
                     "What it reads is handed back to the app you are using, and that app decides what happens next.",
             ).assertIsDisplayed()
     }
