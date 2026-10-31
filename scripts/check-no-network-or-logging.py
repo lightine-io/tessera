@@ -39,6 +39,8 @@ NETWORK = [
     (r"\bretrofit2?\b", "network API (retrofit)"),
     (r"\bHttps?URLConnection\b", "network API (HttpURLConnection)"),
     (r"\.openConnection\s*\(", "network API (URL.openConnection)"),
+    (r"\.openStream\s*\(", "network API (URL.openStream)"),
+    (r"\bURL\s*\([^)]*\)\s*\.read(?:Text|Bytes)\s*\(", "network API (URL.readText / readBytes)"),
     (r"\b(?:Server|Datagram|SSL)?Socket\b", "network API (Socket)"),
     (r"\bNS(?:Mutable)?URL(?:Session|Connection|Request)\w*", "network API (NSURLSession / NSURLConnection / NSURLRequest)"),
     (r"\bplatform\.Network\b", "network API (platform.Network)"),
@@ -59,6 +61,9 @@ LOGGING = [
     (r"\bjava\.util\.logging\b", "logging (java.util.logging)"),
     (r"\borg\.slf4j\b", "logging (org.slf4j)"),
     (r"\bTimber\b", "logging (Timber)"),
+    (r"\bco\.touchlab\.kermit\b|\bKermit\b", "logging (Kermit)"),
+    (r"\bio\.github\.aakira\.napier\b|\bNapier\b", "logging (Napier)"),
+    (r"\bKotlinLogging\b|\bio\.github\.oshai\b|\bmu\.KotlinLogging\b", "logging (kotlin-logging)"),
 ]
 LOGGING_SWIFT = [
     (r"\bos_log\b", "logging (os_log)"),

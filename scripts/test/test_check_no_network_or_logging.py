@@ -81,6 +81,11 @@ class Kotlin(unittest.TestCase):
             ("import java.util.logging.Logger", "java.util.logging"),
             ("import org.slf4j.LoggerFactory", "slf4j"),
             ("Timber.d(x)", "Timber"),
+            ("val s = url.openStream()", "openStream"),
+            ("val t = URL(u).readText()", "readText"),
+            ("Kermit.d { x }", "Kermit"),
+            ("Napier.d(x)", "Napier"),
+            ("private val log = KotlinLogging.logger {}", "kotlin-logging"),
         ]
         for line, fragment in cases:
             with self.subTest(line=line):
