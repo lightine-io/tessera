@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-31
+
 - **The scanner screens no longer say that nothing is uploaded** (`mrz-camera-ui-android` and the iOS `TesseraUI`; text change, no key change). The privacy notice and the camera permission screens now say that the document is not uploaded or stored, which is exactly true: on Android the text recognition (Google ML Kit) sends usage metrics to Google, never the document. Apps that override these strings keep their own text.
 - **Generating from a document now rejects a bad sex value, and can convert the name with a profile; new error `MrzGenerationInvalidSexValue`** (`mrz-core`, `types`; additive public API and a behaviour change). `MrzGenerator.generate(document)` and the overloads for one format used to write `rawSex` as it was, so any character reached the MRZ. Now a sex value other than `M`, `F` or `<` returns `GenerationResult.Failure` with the new `MrzGenerationInvalidSexValue` (format and the character). This includes `X`: ICAO Doc 9303 allows `X` only in the visual zone, not in the MRZ. Reading is unchanged: the parser still keeps `X` and the validator still reports it as `MrzSexCharacterX`. New overloads `generate(document, transliteration)`, one for any document and one for each format, run a name conversion profile over the raw name field before the usual checks, the same way the field-value functions do, and put the conversion in the result's transliteration details. In Swift they are `generate(document:transliteration:)`, `generate(td3:transliteration:)` and so on. Pass a profile only for a name in its source script, never for a document read from an MRZ: a profile can also change MRZ letters (the `AZE` profile writes `ZH` for `J`). Nothing else changes: the one-argument overloads still apply no profile, and the field-value functions are as before. Code with an exhaustive `when` over `MrzGenerationError` needs a branch for the new type.
 - **The docs now say what the Android text recognition sends to Google** (documentation; no code change). Tessera's own code makes no network calls and logs nothing. On Android, text recognition is Google ML Kit: it sends no images and no recognized text, but it sends usage metrics to Google, may download updates, and adds the `INTERNET` permission to the app, and Google documents no way to turn this off. An app that uses the Android camera modules should declare this, for example in Google Play's Data safety section. See `SECURITY.md`.
@@ -643,7 +645,9 @@ These are documented commitments that are explicitly *not* in this `[Unreleased]
 - iOS targets, Android targets (waiting on Xcode install / 0.2.0 platform I/O work)
 - Platform I/O modules (`mrz-camera-*`, `emrtd-nfc-*`, `mrz-camera-ui-*`)
 
-[Unreleased]: https://github.com/lightine-io/tessera/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/lightine-io/tessera/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/lightine-io/tessera/releases/tag/v0.6.0
+[0.5.3]: https://github.com/lightine-io/tessera/releases/tag/v0.5.3
 [0.5.1]: https://github.com/lightine-io/tessera/releases/tag/v0.5.1
 [0.5.0]: https://github.com/lightine-io/tessera/releases/tag/v0.5.0
 [0.4.0]: https://github.com/lightine-io/tessera/releases/tag/v0.4.0
