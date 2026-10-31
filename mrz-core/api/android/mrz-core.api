@@ -189,11 +189,17 @@ public final class io/lightine/tessera/mrz/generation/GenerationResult$Success :
 public final class io/lightine/tessera/mrz/generation/MrzGenerator {
 	public static final field INSTANCE Lio/lightine/tessera/mrz/generation/MrzGenerator;
 	public final fun generate (Lio/lightine/tessera/mrz/model/MrvA;)Lio/lightine/tessera/mrz/generation/GenerationResult;
+	public final fun generate (Lio/lightine/tessera/mrz/model/MrvA;Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;)Lio/lightine/tessera/mrz/generation/GenerationResult;
 	public final fun generate (Lio/lightine/tessera/mrz/model/MrvB;)Lio/lightine/tessera/mrz/generation/GenerationResult;
+	public final fun generate (Lio/lightine/tessera/mrz/model/MrvB;Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;)Lio/lightine/tessera/mrz/generation/GenerationResult;
 	public final fun generate (Lio/lightine/tessera/mrz/model/MrzDocument;)Lio/lightine/tessera/mrz/generation/GenerationResult;
+	public final fun generate (Lio/lightine/tessera/mrz/model/MrzDocument;Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;)Lio/lightine/tessera/mrz/generation/GenerationResult;
 	public final fun generate (Lio/lightine/tessera/mrz/model/TD1;)Lio/lightine/tessera/mrz/generation/GenerationResult;
+	public final fun generate (Lio/lightine/tessera/mrz/model/TD1;Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;)Lio/lightine/tessera/mrz/generation/GenerationResult;
 	public final fun generate (Lio/lightine/tessera/mrz/model/TD2;)Lio/lightine/tessera/mrz/generation/GenerationResult;
+	public final fun generate (Lio/lightine/tessera/mrz/model/TD2;Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;)Lio/lightine/tessera/mrz/generation/GenerationResult;
 	public final fun generate (Lio/lightine/tessera/mrz/model/TD3;)Lio/lightine/tessera/mrz/generation/GenerationResult;
+	public final fun generate (Lio/lightine/tessera/mrz/model/TD3;Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;)Lio/lightine/tessera/mrz/generation/GenerationResult;
 	public final fun generateMrvA (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlinx/datetime/LocalDate;Lio/lightine/tessera/types/vocabulary/Sex;Lkotlinx/datetime/LocalDate;Ljava/lang/String;Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;)Lio/lightine/tessera/mrz/generation/GenerationResult;
 	public static synthetic fun generateMrvA$default (Lio/lightine/tessera/mrz/generation/MrzGenerator;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlinx/datetime/LocalDate;Lio/lightine/tessera/types/vocabulary/Sex;Lkotlinx/datetime/LocalDate;Ljava/lang/String;Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;ILjava/lang/Object;)Lio/lightine/tessera/mrz/generation/GenerationResult;
 	public final fun generateMrvB (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlinx/datetime/LocalDate;Lio/lightine/tessera/types/vocabulary/Sex;Lkotlinx/datetime/LocalDate;Ljava/lang/String;Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;)Lio/lightine/tessera/mrz/generation/GenerationResult;

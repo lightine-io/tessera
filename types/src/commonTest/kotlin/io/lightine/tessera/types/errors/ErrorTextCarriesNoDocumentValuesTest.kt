@@ -56,6 +56,7 @@ class ErrorTextCarriesNoDocumentValuesTest {
             MrzInvalidLength(MrzFormat.TD3, 2, 44, 2, listOf(44, 40)),
             MrzGenerationFieldOverflow(MrzFormat.TD3, MrzField.NAME_FIELD, 39, 45, text),
             MrzGenerationFieldTooShort(MrzFormat.TD3, MrzField.DATE_OF_BIRTH, 6, 5, text),
+            MrzGenerationInvalidSexValue(MrzFormat.TD3, sentinelChar),
             MrzGenerationNumericInNameField(MrzFormat.TD3, text, listOf(sentinelDigit)),
             MrzGenerationUnsupportedCharacters(
                 MrzFormat.TD3,
@@ -123,6 +124,7 @@ class ErrorTextCarriesNoDocumentValuesTest {
             is MrzInvalidLength,
             is MrzGenerationFieldOverflow,
             is MrzGenerationFieldTooShort,
+            is MrzGenerationInvalidSexValue,
             is MrzGenerationNumericInNameField,
             is MrzGenerationUnsupportedCharacters,
             -> true

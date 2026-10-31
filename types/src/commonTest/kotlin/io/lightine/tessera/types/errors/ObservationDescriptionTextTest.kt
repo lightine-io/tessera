@@ -45,6 +45,7 @@ class ObservationDescriptionTextTest {
             MrzInvalidLength(MrzFormat.TD3, 2, 44, 2, listOf(44, 40)),
             MrzGenerationFieldOverflow(MrzFormat.TD3, MrzField.DOCUMENT_NUMBER, 9, 10, "1234567890"),
             MrzGenerationFieldTooShort(MrzFormat.TD3, MrzField.DATE_OF_BIRTH, 6, 5, "00010"),
+            MrzGenerationInvalidSexValue(MrzFormat.TD3, 'A'),
             MrzGenerationNumericInNameField(MrzFormat.TD3, "J0HN", listOf('0')),
             MrzGenerationUnsupportedCharacters(
                 MrzFormat.TD3,
@@ -100,6 +101,7 @@ class ObservationDescriptionTextTest {
             is MrzInvalidLength,
             is MrzGenerationFieldOverflow,
             is MrzGenerationFieldTooShort,
+            is MrzGenerationInvalidSexValue,
             is MrzGenerationNumericInNameField,
             is MrzGenerationUnsupportedCharacters,
             -> true

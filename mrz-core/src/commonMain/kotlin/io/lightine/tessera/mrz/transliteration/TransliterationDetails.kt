@@ -3,14 +3,15 @@ package io.lightine.tessera.mrz.transliteration
 import io.lightine.tessera.types.vocabulary.MrzField
 
 /**
- * The transliteration a generator applied, one entry per name identifier.
+ * The transliteration a generator applied.
  *
  * The generator sets it on [io.lightine.tessera.mrz.parsing.ResultMetadata.transliterationDetails]
  * when you pass a profile.
  *
  * @property profileIdentifier Identifier of the profile that ran.
- * @property transliteratedFields One entry for each non-empty primary or secondary identifier
- *   passed through the profile.
+ * @property transliteratedFields The values passed through the profile. From field values: one
+ *   entry for each non-empty primary or secondary identifier. From a document: one entry for the
+ *   whole raw name field, when it is not empty.
  * @since 0.1.0
  */
 public data class TransliterationDetails(

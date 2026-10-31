@@ -301,6 +301,24 @@ final class io.lightine.tessera.types.errors/MrzGenerationFieldTooShort : io.lig
     final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationFieldTooShort.toString|toString(){}[0]
 }
 
+final class io.lightine.tessera.types.errors/MrzGenerationInvalidSexValue : io.lightine.tessera.types.errors/MrzGenerationError { // io.lightine.tessera.types.errors/MrzGenerationInvalidSexValue|null[0]
+    constructor <init>(io.lightine.tessera.types.vocabulary/MrzFormat, kotlin/Char) // io.lightine.tessera.types.errors/MrzGenerationInvalidSexValue.<init>|<init>(io.lightine.tessera.types.vocabulary.MrzFormat;kotlin.Char){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzGenerationInvalidSexValue.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationInvalidSexValue.description.<get-description>|<get-description>(){}[0]
+    final val format // io.lightine.tessera.types.errors/MrzGenerationInvalidSexValue.format|{}format[0]
+        final fun <get-format>(): io.lightine.tessera.types.vocabulary/MrzFormat // io.lightine.tessera.types.errors/MrzGenerationInvalidSexValue.format.<get-format>|<get-format>(){}[0]
+    final val observed // io.lightine.tessera.types.errors/MrzGenerationInvalidSexValue.observed|{}observed[0]
+        final fun <get-observed>(): kotlin/Char // io.lightine.tessera.types.errors/MrzGenerationInvalidSexValue.observed.<get-observed>|<get-observed>(){}[0]
+
+    final fun component1(): io.lightine.tessera.types.vocabulary/MrzFormat // io.lightine.tessera.types.errors/MrzGenerationInvalidSexValue.component1|component1(){}[0]
+    final fun component2(): kotlin/Char // io.lightine.tessera.types.errors/MrzGenerationInvalidSexValue.component2|component2(){}[0]
+    final fun copy(io.lightine.tessera.types.vocabulary/MrzFormat = ..., kotlin/Char = ...): io.lightine.tessera.types.errors/MrzGenerationInvalidSexValue // io.lightine.tessera.types.errors/MrzGenerationInvalidSexValue.copy|copy(io.lightine.tessera.types.vocabulary.MrzFormat;kotlin.Char){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzGenerationInvalidSexValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzGenerationInvalidSexValue.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzGenerationInvalidSexValue.toString|toString(){}[0]
+}
+
 final class io.lightine.tessera.types.errors/MrzGenerationNumericInNameField : io.lightine.tessera.types.errors/MrzGenerationError { // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField|null[0]
     constructor <init>(io.lightine.tessera.types.vocabulary/MrzFormat, kotlin/String, kotlin.collections/List<kotlin/Char>) // io.lightine.tessera.types.errors/MrzGenerationNumericInNameField.<init>|<init>(io.lightine.tessera.types.vocabulary.MrzFormat;kotlin.String;kotlin.collections.List<kotlin.Char>){}[0]
 
