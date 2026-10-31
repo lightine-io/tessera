@@ -22,8 +22,8 @@
 #   runs are local/manual; the Simulator has no camera.
 # - JS / Wasm targets are activated per release; none is active today.
 # - The `repo-rules` job holds the cheap repository checks (hook and script tests, the MRZ
-#   guard, documentation pointers and style, links, branch name, the types-module rule, the
-#   CLAUDE.md size cap). It is a required check.
+#   guard, no network or logging calls in main sources, documentation pointers and style,
+#   links, branch name, the types-module rule, the CLAUDE.md size cap). It is a required check.
 # - JDK 21 to match each module's jvmToolchain(21); the Gradle daemon is pinned to
 #   JDK 17 (gradle/gradle-daemon-jvm.properties, foojay-provisioned).
 # - Gradle 9.8.1 via the project's wrapper (gradle/wrapper/gradle-wrapper.properties).
@@ -288,6 +288,7 @@ jobs:
       - name: Hook and script tests
         run: |
           python3 -I scripts/test/test_check_docs.py
+          python3 -I scripts/test/test_check_no_network_or_logging.py
           bash scripts/test/session-banner.test.sh
           bash scripts/test/stop-handoff-check.test.sh
           bash scripts/test/private-content-scan.test.sh
@@ -298,6 +299,9 @@ jobs:
 
       - name: No real document data (MRZ guard)
         run: bash scripts/private-content-scan.sh --mrz-only
+
+      - name: No network or logging calls in main sources
+        run: python3 -I scripts/check-no-network-or-logging.py
 
       - name: Documentation pointers and style
         run: |

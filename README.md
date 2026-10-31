@@ -31,6 +31,8 @@ It is for developers adding document reading to apps or backends. Documentation:
 | Ready-made scanner screen | n/a | ✓ | ✓ |
 | Diagnostic events | ✓ | ✓ | ◐ |
 
+Tessera's own code makes no network calls and logs nothing. On Android, the text recognition (Google ML Kit) sends usage metrics to Google, never images or text; see [SECURITY.md](SECURITY.md#scope).
+
 ## Install
 
 Release 0.5.3. Minimums: minSdk 23, iOS 18, Java 21. Modules: [Choose your pieces](https://lightine.youtrack.cloud/articles/TES-A-140).
