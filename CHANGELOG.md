@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- **The Android scanner screen clears the reading when the user leaves it** (`mrz-camera-ui-android`; behaviour change, no API change). The screen keeps the read MRZ, the recognized text and the typed MRZ text in memory so they survive a rotation. When the screen leaves for good, for example an app that shows it only while scanning and then hides it, the screen now empties that memory at once. Before, the values stayed in memory until the system freed it. A rotation or another configuration change still keeps them.
 - **The docs show how an app can stop the Android text recognition from using the network** (documentation; no code change). Google ML Kit uploads usage metrics to Google shortly after it runs (never images or text). An app that must make no network calls can remove the `INTERNET` permission in its own manifest; `SECURITY.md` shows how and what to check.
 ## [0.6.0] - 2026-10-31
 
