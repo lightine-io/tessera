@@ -1,7 +1,10 @@
 package io.lightine.tessera.mrz.camera.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.retain.LocalRetainedValuesStoreProvider
 import androidx.compose.runtime.retain.ManagedRetainedValuesStore
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import io.lightine.tessera.mrz.camera.RecognizedLine
@@ -13,11 +16,15 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 /**
  * Host-side test for [rememberScannerFlowState] (TES-240): document data survives a configuration change in
- * memory and does NOT survive process death.
+ * memory and does NOT survive process death. TES-277: when the scanner leaves composition for good, the
+ * retained holder is retired and clears its document data.
  *
  * Both are emulated with [StateRestorationTester], which disposes the content and composes it again with the
  * saved instance state restored. The test provides its own [ManagedRetainedValuesStore] (the store the
@@ -179,5 +186,100 @@ class ScannerFlowStateTest {
         tester.processDeath()
 
         assertEquals(ScannerUiState.SavedImageEmpty, flow().uiState)
+    }
+
+    @Test
+    fun a_configuration_change_does_not_retire_the_holder() {
+        val store = newStore()
+        val tester = StateRestorationTester(composeRule)
+        val flow = tester.compose(store)
+        val memory = flow().memory
+        composeRule.runOnIdle { flow().uiState = review(ScanMethod.CAMERA) }
+
+        tester.configurationChange(store)
+
+        assertSame(memory, flow().memory, "the same holder comes back")
+        assertFalse(memory.isRetired)
+    }
+
+    // The Android case while the Activity is resumed: the host's store stays in composition, so it does not
+    // retain the scanner's values when the scanner leaves (`if (showScanner) MrzScannerScreen(...)`).
+    @Test
+    fun leaving_for_good_retires_the_holder_and_clears_its_document_data() {
+        val store = newStore().apply { enableRetainingExitedValues() }
+        var showScanner by mutableStateOf(true)
+        var holder: ScannerFlowState? = null
+        composeRule.setContent {
+            LocalRetainedValuesStoreProvider(store) {
+                if (showScanner) holder = rememberScannerFlowState(allMethods)
+            }
+        }
+        val flow = checkNotNull(holder)
+        composeRule.runOnIdle {
+            flow.uiState = review(ScanMethod.MANUAL_ENTRY)
+            flow.manualDraft = specimen
+        }
+
+        composeRule.runOnIdle { showScanner = false }
+        composeRule.waitForIdle()
+
+        val memory = flow.memory
+        assertTrue(memory.isRetired, "the store is in composition, so it does not keep the exited holder")
+        assertNull(memory.lastState, "the reading is dropped")
+        assertEquals("", memory.manualDraft.value, "the typed text is dropped")
+    }
+
+    // The Android case while the Activity is stopped: the store keeps exited values for a possible
+    // recreation; when it stops retaining (the frame after onResume) without the scanner coming back, the
+    // holder is retired then.
+    @Test
+    fun a_holder_kept_for_a_recreation_that_never_comes_is_cleared_when_the_store_stops_retaining() {
+        val store = newStore().apply { enableRetainingExitedValues() }
+        var showScanner by mutableStateOf(true)
+        var holder: ScannerFlowState? = null
+        composeRule.setContent {
+            if (showScanner) {
+                LocalRetainedValuesStoreProvider(store) { holder = rememberScannerFlowState(allMethods) }
+            }
+        }
+        val flow = checkNotNull(holder)
+        composeRule.runOnIdle {
+            flow.uiState = readFailed
+            flow.manualDraft = specimen
+        }
+
+        composeRule.runOnIdle { showScanner = false }
+        composeRule.waitForIdle()
+        val memory = flow.memory
+        assertFalse(memory.isRetired, "a retaining store keeps the exited holder")
+        assertEquals(readFailed, memory.lastState)
+
+        composeRule.runOnIdle { store.disableRetainingExitedValues() }
+
+        assertTrue(memory.isRetired)
+        assertNull(memory.lastState)
+        assertEquals("", memory.manualDraft.value)
+    }
+
+    @Test
+    fun disposing_the_store_clears_a_kept_holder() {
+        val store = newStore().apply { enableRetainingExitedValues() }
+        var showScanner by mutableStateOf(true)
+        var holder: ScannerFlowState? = null
+        composeRule.setContent {
+            if (showScanner) {
+                LocalRetainedValuesStoreProvider(store) { holder = rememberScannerFlowState(allMethods) }
+            }
+        }
+        val flow = checkNotNull(holder)
+        composeRule.runOnIdle { flow.uiState = review(ScanMethod.CAMERA) }
+        composeRule.runOnIdle { showScanner = false }
+        composeRule.waitForIdle()
+
+        // The ViewModel behind the Android store disposes it when its owner is cleared.
+        composeRule.runOnIdle { store.dispose() }
+
+        assertTrue(flow.memory.isRetired)
+        assertNull(flow.memory.lastState)
     }
 }

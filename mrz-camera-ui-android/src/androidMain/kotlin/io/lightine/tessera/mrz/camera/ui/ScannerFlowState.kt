@@ -5,6 +5,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.retain.RetainObserver
 import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.Snapshot
@@ -25,18 +26,49 @@ import androidx.compose.runtime.snapshots.Snapshot
 // If the host gives no retaining store (a ComposeView with no ViewModelStoreOwner), `retain` behaves like
 // `remember`: a configuration change then also falls back to the saved, data-free state - never a crash and
 // never a blank screen.
+//
+// TES-277: when the scanner leaves composition for good (not a configuration change), `retain` retires the
+// holder: the host's store keeps an exited value only while it is retaining (on Android, from the Activity's
+// onStop to the frame after onResume, or while the host's own store is set to retain); otherwise the value
+// is retired at once, and a value kept but not taken back is retired when the store stops retaining or is
+// disposed. Retiring only drops the store's reference, so the holder clears its own document data then
+// ([ScannerFlowMemory.onRetired]) instead of leaving it for the garbage collector.
 
 /**
  * The part of the flow that lives across a configuration change in memory only (TES-240). Created by
  * `retain`, so it holds nothing tied to a composition or an Activity (no Context, View or Lifecycle): only
  * the last flow state and the manual-entry draft.
+ *
+ * When `retain` retires it (the scanner left for good) or drops it unused, it clears both (TES-277), so the
+ * last reading and the typed text do not stay referenced after the user has left the scanner. A
+ * configuration change re-enters the same instance without retiring it, so the data survives that.
  */
-internal class ScannerFlowMemory {
+internal class ScannerFlowMemory : RetainObserver {
     /** The flow state last set in this presentation, or `null` before the first composition seeded it. */
     var lastState: ScannerUiState? = null
 
     /** TES-93's hoisted manual-entry draft: typed document data, so it is retained, never saved. */
     val manualDraft: MutableState<String> = mutableStateOf("")
+
+    /** Whether `retain` has retired or dropped this holder; it is never used again after that. */
+    var isRetired: Boolean = false
+        private set
+
+    override fun onRetained() = Unit
+
+    override fun onEnteredComposition() = Unit
+
+    override fun onExitedComposition() = Unit
+
+    override fun onRetired() = clear()
+
+    override fun onUnused() = clear()
+
+    private fun clear() {
+        isRetired = true
+        lastState = null
+        manualDraft.value = ""
+    }
 }
 
 /**
@@ -47,7 +79,7 @@ internal class ScannerFlowMemory {
 @Stable
 internal class ScannerFlowState(
     private val current: MutableState<ScannerUiState>,
-    private val memory: ScannerFlowMemory,
+    internal val memory: ScannerFlowMemory,
     private val saved: MutableState<ScannerUiState>,
 ) {
     var uiState: ScannerUiState
