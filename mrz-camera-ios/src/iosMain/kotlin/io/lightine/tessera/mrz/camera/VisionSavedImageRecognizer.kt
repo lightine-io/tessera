@@ -68,7 +68,7 @@ internal class VisionSavedImageRecognizer(
                 val rows = VisionMrzTextRecognizer.groupRows(fragments)
                 val passOneLines = rows.map(VisionMrzTextRecognizer::joinRow)
 
-                val candidates = rows.filter { row -> VisionSavedImageRescue.isMrzCandidate(strippedText(row)) }
+                val candidates = rows.filter { row -> MrzRowRescue.isMrzCandidate(strippedText(row)) }
                 if (candidates.isEmpty()) return@autoreleasepool RecognizedText(passOneLines)
 
                 // Rescued lines lead (top-to-bottom, the analyzer's consecutive-window order), pass-1 rows
@@ -141,7 +141,7 @@ internal class VisionSavedImageRecognizer(
                         }
                     for (line in VisionMrzTextRecognizer.groupRows(fragments).map(VisionMrzTextRecognizer::joinRow)) {
                         val stripped = line.text.filterNot(Char::isWhitespace)
-                        for (text in VisionSavedImageRescue.rescuedLines(stripped)) {
+                        for (text in MrzRowRescue.rescuedLines(stripped)) {
                             if (seen.add(text)) rescued.add(RecognizedLine(text = text, confidence = line.confidence))
                         }
                     }

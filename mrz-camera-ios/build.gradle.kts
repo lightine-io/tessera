@@ -64,6 +64,11 @@ kotlin {
                 api(project(":mrz-camera-core"))
             }
         }
+        iosMain {
+            // The short-row rescue rules shared with mrz-camera-android (one internal source file, kept in
+            // mrz-camera-core/src/platformShared and tested there; see MrzRowRescue's KDoc).
+            kotlin.srcDir(rootProject.file("mrz-camera-core/src/platformShared/kotlin"))
+        }
         // The tests are iOS-only (they drive Apple Vision on the Simulator), so the test framework
         // dependency goes on iosTest rather than commonTest — this module has no common test sources,
         // and configuring commonTest while leaving it empty trips an "unused source set" warning.

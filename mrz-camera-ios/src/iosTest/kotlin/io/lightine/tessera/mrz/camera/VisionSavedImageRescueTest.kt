@@ -3,60 +3,14 @@ package io.lightine.tessera.mrz.camera
 import io.lightine.tessera.mrz.camera.VisionSavedImageRescue.NormalizedRect
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * Host tests (Simulator, no live camera) for [VisionSavedImageRescue] — the pure half of the saved-image
- * two-pass MRZ rescue (TES-130): candidate detection, exact-width selection with over-merged-block
- * splitting, and the EXIF-undoing crop-rect math. All fixture text is synthetic.
+ * two-pass MRZ rescue (TES-130): the EXIF-undoing crop-rect math, padding, and row regions. All fixture text is synthetic.
  */
 class VisionSavedImageRescueTest {
-    // --- isMrzCandidate ---
-
-    @Test
-    fun mrz_shaped_rows_qualify_and_viz_text_does_not() {
-        assertTrue(VisionSavedImageRescue.isMrzCandidate("ABCDEFGHI<KLMNOPQRSTUVWXYZ0123"))
-        // Chevron-free text (a VIZ name line) never qualifies, whatever its charset.
-        assertFalse(VisionSavedImageRescue.isMrzCandidate("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123"))
-        // Lowercase-heavy text fails the charset fraction.
-        assertFalse(VisionSavedImageRescue.isMrzCandidate("abcdefghijklmnopqrst<uvwxyz012"))
-        // Short runs (a date, a document number) are below the candidacy floor.
-        assertFalse(VisionSavedImageRescue.isMrzCandidate("AB<12"))
-    }
-
-    // --- rescuedLines ---
-
-    @Test
-    fun exact_width_reads_are_kept_for_every_icao_width() {
-        for (width in listOf(30, 36, 44)) {
-            val line = "A".repeat(width)
-            assertEquals(listOf(line), VisionSavedImageRescue.rescuedLines(line), "width $width")
-        }
-    }
-
-    @Test
-    fun an_over_merged_block_splits_into_its_rows_in_read_order() {
-        // Photo-verified: a tight TD1 block sometimes returns as ONE 90-char observation (3×30).
-        val block = "A".repeat(30) + "B".repeat(30) + "C".repeat(30)
-        assertEquals(
-            listOf("A".repeat(30), "B".repeat(30), "C".repeat(30)),
-            VisionSavedImageRescue.rescuedLines(block),
-        )
-        // 2×44 — a TD3 pair merged into one read.
-        val td3 = "D".repeat(44) + "E".repeat(44)
-        assertEquals(listOf("D".repeat(44), "E".repeat(44)), VisionSavedImageRescue.rescuedLines(td3))
-    }
-
-    @Test
-    fun non_matching_lengths_rescue_nothing() {
-        assertEquals(emptyList(), VisionSavedImageRescue.rescuedLines("A".repeat(24)), "short read")
-        assertEquals(emptyList(), VisionSavedImageRescue.rescuedLines("A".repeat(31)), "off by one")
-        // 4×30 would be deeper than any ICAO shape — noise, not an MRZ block.
-        assertEquals(emptyList(), VisionSavedImageRescue.rescuedLines("A".repeat(120)), "too many rows")
-        assertEquals(emptyList(), VisionSavedImageRescue.rescuedLines(""), "empty")
-    }
+    // isMrzCandidate / rescuedLines are shared with Android and tested in mrz-camera-core (MrzRowRescueTest).
 
     // --- rawCropRect (oriented bottom-left normalized -> raw top-left normalized) ---
 

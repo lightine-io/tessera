@@ -74,8 +74,9 @@ internal object MrzLineDetection {
     // ML Kit reads the chevron as `«`). None are part of the MRZ alphabet (A-Z, 0-9, `<`), so mapping them to
     // `<` recovers the only glyph they can be — like folding case to upper, not choosing between two valid
     // characters (reader-not-oracle holds: no data is inferred, the raw OCR text is preserved on every result).
-    // Deliberately narrow — only unambiguous chevron look-alikes, never an in-alphabet character.
-    private val MRZ_CHEVRON_GLYPHS: Set<Char> = setOf('«', '»', '‹', '›', '＜', '＞', '〈', '〉', '⟨', '⟩')
+    // Deliberately narrow — only unambiguous chevron look-alikes, never an in-alphabet character. Mirrored in
+    // MrzRowRescue.CHEVRON_GLYPHS (platform-shared source); a commonTest keeps the two equal.
+    internal val MRZ_CHEVRON_GLYPHS: Set<Char> = setOf('«', '»', '‹', '›', '＜', '＞', '〈', '〉', '⟨', '⟩')
 
     // The distinct ICAO line shapes, sourced from mrz-core's format specs rather than restated as magic
     // numbers: TD1 3×30, TD2/MRV-B 2×36, TD3/MRV-A 2×44. Ordered by line count descending so the window search

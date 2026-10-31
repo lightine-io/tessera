@@ -62,20 +62,30 @@ public class MlKitMrzTextRecognizer(
      * @return the recognized lines.
      */
     override suspend fun recognize(frame: ImageProxy): RecognizedText {
-        val recognized =
-            if (bandRestricted) {
-                // Crop to the MRZ band before OCR; null (no backing image) → nothing to recognize. ML Kit reads
-                // a bitmap copy here, never the frame, so the caller may release the frame as soon as we return.
-                val input = mrzBandInputImage(frame) ?: return RecognizedText(emptyList())
-                recognizer.process(input).await()
-            } else {
-                // Whole-frame reading (the released headless path): ML Kit rotates via rotationDegrees. ML Kit
-                // reads the frame's own media.Image, so we return (also when cancelled) only after ML Kit is
-                // done with it: the caller closes the frame when we return (TES-220).
-                val mediaImage = frame.image ?: return RecognizedText(emptyList())
-                val input = InputImage.fromMediaImage(mediaImage, frame.imageInfo.rotationDegrees)
-                recognizer.process(input).awaitWhileReadingInput()
-            }
+        if (bandRestricted) {
+            // Crop to the MRZ band before OCR; null (no backing image) → nothing to recognize. ML Kit reads
+            // a bitmap copy here, never the frame, so the caller may release the frame as soon as we return.
+            val band = mrzBandBitmap(frame) ?: return RecognizedText(emptyList())
+            val recognized = recognizer.process(InputImage.fromBitmap(band, 0)).await()
+            // The short-row rescue (MlKitRowRescue): when ML Kit collapsed the filler of one MRZ row while
+            // its neighbour read at exact width, the short row is read once more from the same band bitmap,
+            // across the neighbour's width. At most one extra ML Kit call, and only on such frames.
+            return MlKitRowRescue.recognizedText(
+                recognizer = recognizer,
+                lines = recognized.textBlocks.flatMap { block -> block.lines },
+                imageWidth = band.width,
+                imageHeight = band.height,
+                maxRereads = MAX_LIVE_REREADS,
+                image = { band },
+            )
+        }
+        // Whole-frame reading (the released headless path): ML Kit rotates via rotationDegrees. ML Kit
+        // reads the frame's own media.Image, so we return (also when cancelled) only after ML Kit is
+        // done with it: the caller closes the frame when we return (TES-220). No rescue here: it would need
+        // a bitmap copy of every frame, and the headless reading stays as it was.
+        val mediaImage = frame.image ?: return RecognizedText(emptyList())
+        val input = InputImage.fromMediaImage(mediaImage, frame.imageInfo.rotationDegrees)
+        val recognized = recognizer.process(input).awaitWhileReadingInput()
         return RecognizedText(
             recognized.textBlocks
                 .flatMap { block -> block.lines }
@@ -83,14 +93,14 @@ public class MlKitMrzTextRecognizer(
         )
     }
 
-    // Builds an InputImage of just the MRZ band. ML Kit has no region-of-interest, so the frame is cropped
+    // Builds a bitmap of just the MRZ band. ML Kit has no region-of-interest, so the frame is cropped
     // here: toBitmap() yields the frame in *sensor* orientation, which is rotated upright (honouring
     // rotationDegrees) so "the bottom of the document" is the bottom of the bitmap, then the bottom band is
-    // cropped and passed with rotation 0 (already upright). Returns null when the producer already released
+    // cropped; it is read with rotation 0 (already upright). Returns null when the producer already released
     // the backing image (nothing to recognize). The intermediate bitmaps are per-frame and short-lived (ML
     // Kit copies the band's pixels), so they are left to GC rather than eagerly recycled — the frame is
     // throttled + KEEP_ONLY_LATEST, matching the module's no-frame-held-in-state hygiene.
-    private fun mrzBandInputImage(frame: ImageProxy): InputImage? {
+    private fun mrzBandBitmap(frame: ImageProxy): Bitmap? {
         if (frame.image == null) return null
         val full = frame.toBitmap()
         // Honour the crop rect CameraX put on the frame. With a ViewPort (UseCaseGroup), that rect is the
@@ -115,8 +125,7 @@ public class MlKitMrzTextRecognizer(
                 )
             }
         val (top, height) = mrzBandRect(upright.height)
-        val band = Bitmap.createBitmap(upright, 0, top, upright.width, height)
-        return InputImage.fromBitmap(band, 0)
+        return Bitmap.createBitmap(upright, 0, top, upright.width, height)
     }
 
     // Crops [bitmap] to [rect], clamped to the bitmap's bounds so an out-of-range rect can never crash (a
@@ -149,6 +158,9 @@ public class MlKitMrzTextRecognizer(
         // match failed on ~half the frames. Tightened toward the guide box so OCR sees essentially just the
         // three MRZ lines, which is what actually stabilises detection.
         internal const val MRZ_BAND_HEIGHT_FRACTION: Float = 0.18f
+
+        // The live path's cost cap for the short-row rescue: at most this many extra ML Kit calls per frame.
+        internal const val MAX_LIVE_REREADS: Int = 1
 
         // The centred band as (top, height) in pixels for a frame [frameHeight] tall. Pure, so the band math
         // is host-testable without a device (the crop itself needs a real frame and is device-verified).

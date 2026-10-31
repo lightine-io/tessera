@@ -57,6 +57,9 @@ kotlin {
 
     sourceSets {
         androidMain {
+            // The short-row rescue rules shared with mrz-camera-ios (one internal source file, kept in
+            // mrz-camera-core/src/platformShared and tested there; see MrzRowRescue's KDoc).
+            kotlin.srcDir(rootProject.file("mrz-camera-core/src/platformShared/kotlin"))
             dependencies {
                 // The platform-agnostic contract: CameraXMrzScanner implements MrzCameraScanner and
                 // MlKitMrzTextRecognizer implements MrzTextRecognizer<ImageProxy>, both from
