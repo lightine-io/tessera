@@ -36,7 +36,7 @@ pinned, never the number) · Added (release) · Docs-verified (today).
 - Android: the Android CLI (`android sdk`, `avd`, `emulator`, `run`, `layout`), and
   `adb` for text (`logcat`, `pm grant`, `input`).
 - iOS: the Xcode MCP (`BuildProject`, diagnostics, run). Confirm its tools exist before
-  iOS work; if they are missing, tell Padre (the server likely needs a restart).
+  iOS work; if they are missing, tell the owner (the server likely needs a restart).
   `xcrun devicectl` for the device console.
 - Builds and tests: `./gradlew`.
 

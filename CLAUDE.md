@@ -44,15 +44,16 @@ lives in local MCP config and is never committed.
 
 ## The Work Loop
 
-1. **Orient** from the injected banner (latest handoff, git branch and working tree,
-   open Dependabot alerts). Trust source truth (`git log`, `gh`, the board) over any
-   derived note.
-2. **One focus issue at a time.** Work hangs on an issue: YouTrack `TES` in Develop
-   when available, otherwise a GitHub issue. No issue: write one first.
-3. **Capture, don't chase.** Anything discovered mid-work (bug, idea, decision, doc
-   gap, a correction from Padre) becomes an issue NOW, written per
-   [`.claude/issue-style.md`](.claude/issue-style.md): a plain title, a plain top
-   (Problem · Why it matters · Done when), then the details. Then back to the focus issue.
+The board, its columns and limits, classes of service, roles, and what to do during
+work: [`.claude/how-we-work.md`](.claude/how-we-work.md). Where this file and the guide
+differ on process, the guide wins; the safety invariants above always hold.
+
+1. **Kanban meeting first.** After the banner, run the meeting in the guide. Trust
+   source truth (`git log`, `gh`, the board) over any derived note.
+2. **Work the card in your Develop slot**, pulled from Next in the guide's order, never
+   from Options. Without YouTrack, work hangs on a GitHub issue.
+3. **Capture, don't chase.** A finding becomes one line in New, or a blocker per the
+   guide ("During work"); cards follow [`.claude/issue-style.md`](.claude/issue-style.md).
 4. **Done = merged.** Branch off `origin/main` (`feature/`, `fix/`, `docs/`, `chore/`;
    CI checks the name). Tests and docs ship with the feature: the PR template's
    checklist, placed per [`.claude/rules/documentation.md`](.claude/rules/documentation.md).
@@ -78,14 +79,14 @@ lives in local MCP config and is never committed.
    Padre's call: his project, his decisions. Surface reuse and future-scope
    opportunities when you see them (now, defer, or park); silence is the only failure.
 5. **Delegation.** The lead plans, briefs, reviews, and verifies; execution may be
-   split across helpers. Up to 5 helpers at once per focus issue are pre-approved;
-   workflows and anything outside the focus issue ask first. Verification, git and PR
+   split across helpers. Up to 5 helpers at once per Develop card are pre-approved;
+   workflows and anything outside that card ask first. Verification, git and PR
    mechanics, release steps, and anything touching secrets stay with the lead.
 6. **Plain and brief.** Short answers, simple words. User-facing copy: plain language,
    hyphens not em-dashes, no jargon.
-7. **Corrections are system defects.** When Padre corrects the process, capture it
-   (loop step 3) and fix the *system*: hook it, structure it, or consciously accept
-   it; a prose rule is the last resort and costs a line from this file.
+7. **Corrections are system defects.** A correction to the process goes to New as a
+   process improvement and binds once it is in the guide. Fix the *system*: hook it,
+   structure it, or consciously accept it; a prose rule is the last resort.
 
 ## Drivers
 
@@ -103,7 +104,7 @@ If a prescribed driver is absent, surface it; never silently fall back.
 |---|---|
 | What exists; API + feature docs; decisions | [`CHANGELOG.md`](CHANGELOG.md) · [public docs TES-A-16](https://lightine.youtrack.cloud/articles/TES-A-16) · [ADRs TES-A-17](https://lightine.youtrack.cloud/articles/TES-A-17) (internal) |
 | Principles · what ships where · architecture · testing · conventions · versioning | KB [TES-A-5](https://lightine.youtrack.cloud/articles/TES-A-5) · [TES-A-139](https://lightine.youtrack.cloud/articles/TES-A-139) · [TES-A-9](https://lightine.youtrack.cloud/articles/TES-A-9) · [TES-A-15](https://lightine.youtrack.cloud/articles/TES-A-15) · [TES-A-20](https://lightine.youtrack.cloud/articles/TES-A-20) · [TES-A-8](https://lightine.youtrack.cloud/articles/TES-A-8) |
-| Work items, backlog, why | YouTrack board `TES`. Stages: Backlog · Develop · Review (PR open) · Test (merged with the `device-qa` label, device QA; when QA passes the maintainer moves it to Staging, or to Done if it carries `no-changelog`) · Staging (merged with a CHANGELOG entry, awaiting release) · Done (released, or merged with the `no-changelog` label). `youtrack-sync.yml` sets Review, Test, Staging, the `no-changelog` Done, and after a release "Fixed in" plus Done for every Staging card |
+| Work items; how we work (board, limits, classes, roles, releases, reviews) | YouTrack board `TES` · [`.claude/how-we-work.md`](.claude/how-we-work.md). `youtrack-sync.yml` moves cards when a PR opens or merges and after a release |
 | Where content goes; what a feature PR carries | [`.claude/rules/documentation.md`](.claude/rules/documentation.md) (public docs live in the public KB, not the repo; the repo-root `llms.txt` links them) · [PR template](.github/pull_request_template.md) |
 | Engineering rules by area (load on touch) | [`.claude/rules/`](.claude/rules/): API design, types module, platform work, documentation |
 | Writing issues; checking the board | [`.claude/issue-style.md`](.claude/issue-style.md) · [`.claude/skills/board-check/SKILL.md`](.claude/skills/board-check/SKILL.md) |

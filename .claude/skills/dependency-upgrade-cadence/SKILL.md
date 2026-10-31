@@ -12,14 +12,16 @@ that tooling never goes years stale, rarely enough that patch releases are not c
 ## When
 
 April 1 and October 1. `.github/workflows/cadence-reminder.yml` opens the checkpoint
-issue (label `dependency-cadence`) on the day; the work hangs on that issue. Within two
-weeks of the date is fine.
+issue (label `dependency-cadence`) on the day; the work hangs on that issue. It is a Fixed
+Date card: its due date is two weeks after the checkpoint.
 
 ## What to bump
 
 Dependabot opens no version-update PRs for Gradle (`open-pull-requests-limit: 0`,
-TES-148): this cadence is the only scheduled version pass. Security updates are separate
-and arrive at once; a shipped dependency with a fixed advisory is upgraded immediately.
+TES-148): this cadence is the only scheduled version pass. Security alerts are separate,
+read at the Kanban meeting (guide section "Vulnerabilities"): an alert in a shipped
+dependency becomes a Fixed Date card due 60 days after the alert; an alert in a build-only
+or test-only dependency is an Intangible card, or is dismissed with a recorded reason.
 
 Everything with a pinned version in `gradle/libs.versions.toml`,
 `gradle/wrapper/gradle-wrapper.properties`, `settings.gradle.kts`, and the
