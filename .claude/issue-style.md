@@ -121,6 +121,8 @@ Type (built in): Feature, Improvement, Bug, Decision, Upkeep, Documentation, Pro
 
 **Fixed in**: the release version. CI sets it at the release; never by hand.
 
+**Committed** and **Delivered**: when the card first entered Next or Develop, and when it first reached Done. A YouTrack workflow sets them; never by hand. Lead time is Delivered minus Committed.
+
 **Assignee**: the worker.
 
 **Area** (optional, one value):

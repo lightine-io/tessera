@@ -36,7 +36,7 @@ WIP limits are first guesses; change them at a review. Blocked cards still count
 
 ## The card
 
-Type, service (SDK, vulnerability response, questions and bug reports, contributions), class of service, goal, platform, assignee, area (optional); a due date for Fixed Date items; the `blocked` tag with the reason in a comment; a "depends on" link when it waits for other work; a failure-demand flag when the work exists only because earlier work was wrong or incomplete; "Fixed in" (set by CI). The board shows how many days each card has been in its column.
+Type, service (SDK, vulnerability response, questions and bug reports, contributions), class of service, goal, platform, assignee, area (optional); a due date for Fixed Date items; the `blocked` tag with the reason in a comment; a "depends on" link when it waits for other work; a failure-demand flag when the work exists only because earlier work was wrong or incomplete; "Fixed in" (set by CI); "Committed" and "Delivered", the dates a card first entered Next or Develop and first reached Done (set by a YouTrack workflow, never by hand). The board shows how many days each card has been in its column.
 
 ## Start of every session (Kanban meeting)
 
@@ -109,7 +109,7 @@ Dependency alerts (Dependabot) are read at the Kanban meeting. An alert in a shi
 
 | Review | When | Covers |
 |---|---|---|
-| Service delivery review and retrospective | After every release | The flow: lead time from Next to Done, items delivered, WIP, blocked and aging items, and the blocked reasons counted by kind; the fitness thresholds (design, step 1); the health indicators, counted from the board: share of PRs that are process work (30% or less), share of new issues that are failure demand (20% or less), stage changes recorded on the day (90% or more), owner corrections per session from the card comments (0 to 1); what to change in these rules. It ends with one concrete action to improve the flow, written in New |
+| Service delivery review and retrospective | After every release | The flow: lead time from Next to Done (Delivered minus Committed), items delivered, WIP, blocked and aging items, and the blocked reasons counted by kind; the fitness thresholds (design, step 1); the health indicators, counted from the board: share of PRs that are process work (30% or less), share of new issues that are failure demand (20% or less), stage changes recorded on the day (90% or more), owner corrections per session from the card comments (0 to 1); what to change in these rules. It ends with one concrete action to improve the flow, written in New |
 | Strategy review | When a goal is reached | The next goal; the Fixed Date cards for the coming months |
 
 ## Changing these rules
