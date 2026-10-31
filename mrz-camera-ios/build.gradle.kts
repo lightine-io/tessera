@@ -44,6 +44,16 @@ kotlin {
             // Static linkage is the simpler, sign-free shape for an SPM binaryTarget (no embedded
             // dynamic framework to code-sign in the consumer app).
             isStatic = true
+            // The framework's Info.plist, from the project version rather than Kotlin/Native's defaults
+            // (1.0 / 1 / the Gradle-derived bundle id). The plist version is for tooling; the Swift package
+            // is what consumers pin. Apple wants up to three dot-separated integers, so a pre-release
+            // suffix in `version` would need trimming here.
+            binaryOption("bundleId", "io.lightine.tessera")
+            binaryOption("bundleShortVersionString", project.version.toString())
+            binaryOption("bundleVersion", project.version.toString())
+            // iOS 18 is the minimum (the Swift package already requires it). Kotlin/Native has no DSL for it:
+            // the override sets the deployment target the framework is linked for, and so MinimumOSVersion.
+            freeCompilerArgs += "-Xoverride-konan-properties=osVersionMin.ios_arm64=18.0;osVersionMin.ios_simulator_arm64=18.0"
             // Export each module whose public types appear in the umbrella's Swift-facing surface, so
             // they show in the framework's generated Obj-C/Swift headers rather than as opaque handles:
             // the camera contract (mrz-camera-core), the parser/result types (mrz-core), the shared
