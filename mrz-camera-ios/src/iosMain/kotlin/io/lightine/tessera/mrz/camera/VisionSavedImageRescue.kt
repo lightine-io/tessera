@@ -19,50 +19,9 @@ package io.lightine.tessera.mrz.camera
  * TES-18 stance); the parser's check digits downstream remain the arbiter of every rescued line.
  */
 internal object VisionSavedImageRescue {
-    // ICAO Doc 9303 fixed MRZ line widths: TD1 (3×30), TD2/MRV-B (2×36), TD3/MRV-A (2×44). Deliberately
-    // duplicated from mrz-core's internal shape table — these are stable spec constants, and the module
-    // boundary keeps core's internals private.
-    internal val MRZ_LINE_WIDTHS: List<Int> = listOf(30, 36, 44)
-
-    // How many concatenated rows a single over-merged read may be split into — the deepest ICAO shape has
-    // 3 lines, so a longer multiple is noise, not an MRZ block.
-    private const val MAX_SPLIT_ROWS: Int = 3
-
-    // A row qualifies as an MRZ candidate when at least this fraction of its characters are MRZ-alphabet
-    // (A–Z, 0–9, `<`) — real MRZ rows are 100% but OCR noise bleeds a little — and it contains at least one
-    // filler chevron (every MRZ line format has filler somewhere; VIZ text lines have none).
-    private const val MRZ_CHARSET_FRACTION: Double = 0.8
-
-    // Minimum stripped length for candidacy — shorter runs (dates, document numbers in the VIZ) match the
-    // charset but are not MRZ rows; the shortest real MRZ artefact worth re-cropping is well above this.
-    private const val MIN_CANDIDATE_LENGTH: Int = 10
-
-    /** Whether a pass-1 row's joined, whitespace-stripped text marks it as a candidate MRZ row. */
-    internal fun isMrzCandidate(stripped: String): Boolean {
-        if (stripped.length < MIN_CANDIDATE_LENGTH) return false
-        if ('<' !in stripped) return false
-        val mrzChars = stripped.count { it in 'A'..'Z' || it in '0'..'9' || it == '<' }
-        return mrzChars.toDouble() / stripped.length >= MRZ_CHARSET_FRACTION
-    }
-
-    /**
-     * The lines rescued from one re-read of a candidate region: keeps exact-width reads, and splits a read
-     * whose stripped length is an exact multiple (2..[MAX_SPLIT_ROWS]) of one width - a tight MRZ block
-     * Vision sometimes returns as ONE concatenated observation (photo-verified: 90 = 3×30). Split chunks
-     * preserve the read's own character order; nothing is added or dropped.
-     */
-    internal fun rescuedLines(stripped: String): List<String> {
-        for (width in MRZ_LINE_WIDTHS) {
-            if (stripped.length == width) return listOf(stripped)
-        }
-        for (width in MRZ_LINE_WIDTHS) {
-            if (stripped.length % width == 0) {
-                val rows = stripped.length / width
-                if (rows in 2..MAX_SPLIT_ROWS) return stripped.chunked(width)
-            }
-        }
-        return emptyList()
-    }
+    // Candidate detection and the exact-width keep rule are shared with the Android recognizer:
+    // [MrzRowRescue.isMrzCandidate] and [MrzRowRescue.rescuedLines]. This object keeps the Vision-specific
+    // geometry (bottom-left normalized rects, EXIF orientation).
 
     /**
      * Maps a candidate region - an oriented-space, bottom-left-origin normalized rect (Vision's

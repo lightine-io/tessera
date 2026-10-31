@@ -1,7 +1,12 @@
 package io.lightine.tessera.mrz.camera
 
+import android.content.ContentResolver
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
+import androidx.exifinterface.media.ExifInterface
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
@@ -29,16 +34,53 @@ internal class MlKitSavedImageRecognizer(
         // fromFilePath does blocking file I/O + decode, so keep it off the caller's dispatcher.
         val input = withContext(Dispatchers.IO) { InputImage.fromFilePath(appContext, frame) }
         val recognized = recognizer.process(input).await()
-        return RecognizedText(
-            recognized.textBlocks
-                .flatMap { block -> block.lines }
-                .map { line -> RecognizedLine(text = line.text, confidence = line.confidence) },
+        // The short-row rescue (MlKitRowRescue): a short MRZ row next to an exact-width row is read again
+        // across that row's width. The image is decoded a second time only when a re-read is planned (ML Kit
+        // keeps its own decoded bitmap private); its upright size must equal the first pass's, or the
+        // rescue is skipped.
+        return MlKitRowRescue.recognizedText(
+            recognizer = recognizer,
+            lines = recognized.textBlocks.flatMap { block -> block.lines },
+            imageWidth = input.width,
+            imageHeight = input.height,
+            maxRereads = Int.MAX_VALUE,
+            image = { withContext(Dispatchers.IO) { decodeUpright(appContext.contentResolver, frame) } },
         )
     }
 
     /** Releases the underlying ML Kit recognizer. */
     override fun close() {
         recognizer.close()
+    }
+}
+
+// Decodes [uri] the way ML Kit's InputImage.fromFilePath does: the full image, turned upright by its EXIF
+// orientation (read for content and file URIs only, as ML Kit does). Null when it cannot be decoded.
+private fun decodeUpright(
+    resolver: ContentResolver,
+    uri: Uri,
+): Bitmap? {
+    val raw = resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) } ?: return null
+    val exif =
+        if (uri.scheme == ContentResolver.SCHEME_CONTENT || uri.scheme == ContentResolver.SCHEME_FILE) {
+            resolver.openInputStream(uri)?.use { ExifInterface(it) }
+        } else {
+            null
+        }
+    val matrix = uprightMatrix(exif?.rotationDegrees ?: 0, exif?.isFlipped ?: false) ?: return raw
+    return Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, matrix, true)
+}
+
+// The matrix that turns a raw image upright: mirror first when the EXIF orientation is flipped, then rotate.
+// Null when the image is already upright.
+private fun uprightMatrix(
+    rotationDegrees: Int,
+    flipped: Boolean,
+): Matrix? {
+    if (rotationDegrees == 0 && !flipped) return null
+    return Matrix().apply {
+        if (flipped) postScale(-1f, 1f)
+        postRotate(rotationDegrees.toFloat())
     }
 }
 

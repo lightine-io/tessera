@@ -82,6 +82,10 @@ kotlin {
             }
         }
         commonTest {
+            // The platform-shared rescue rules (MrzRowRescue) are compiled into mrz-camera-android and
+            // mrz-camera-ios, not into this module's main code; this test compilation also compiles them
+            // so their common tests run on every target here. See the file's KDoc for why.
+            kotlin.srcDir("src/platformShared/kotlin")
             dependencies {
                 implementation(kotlin("test"))
                 // runTest — exercises the suspend analyse()/scan() functions on the host with a mock
