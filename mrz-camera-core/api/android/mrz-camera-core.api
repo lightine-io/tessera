@@ -191,6 +191,9 @@ public final class io/lightine/tessera/mrz/camera/GeoLocation {
 	public fun toString ()Ljava/lang/String;
 }
 
+public abstract interface annotation class io/lightine/tessera/mrz/camera/InternalTesseraApi : java/lang/annotation/Annotation {
+}
+
 public abstract interface class io/lightine/tessera/mrz/camera/MrzCameraScanner {
 	public abstract fun getResults ()Lkotlinx/coroutines/flow/Flow;
 	public abstract fun start ()V

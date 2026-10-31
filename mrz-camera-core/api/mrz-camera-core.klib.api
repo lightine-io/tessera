@@ -6,6 +6,10 @@
 // - Show declarations: true
 
 // Library unique name: <io.lightine.tessera:mrz-camera-core>
+open annotation class io.lightine.tessera.mrz.camera/InternalTesseraApi : kotlin/Annotation { // io.lightine.tessera.mrz.camera/InternalTesseraApi|null[0]
+    constructor <init>() // io.lightine.tessera.mrz.camera/InternalTesseraApi.<init>|<init>(){}[0]
+}
+
 final enum class io.lightine.tessera.mrz.camera/CameraFrameOutcome : kotlin/Enum<io.lightine.tessera.mrz.camera/CameraFrameOutcome> { // io.lightine.tessera.mrz.camera/CameraFrameOutcome|null[0]
     enum entry DECODED // io.lightine.tessera.mrz.camera/CameraFrameOutcome.DECODED|null[0]
     enum entry NO_MRZ_FOUND // io.lightine.tessera.mrz.camera/CameraFrameOutcome.NO_MRZ_FOUND|null[0]

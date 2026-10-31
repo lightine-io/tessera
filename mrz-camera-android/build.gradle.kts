@@ -32,6 +32,12 @@ mavenPublishing {
 kotlin {
     explicitApi()
 
+    // Opts in to mrz-camera-core's @InternalTesseraApi: declarations public only so Tessera's camera modules
+    // can share them (the short-row rescue rules, MrzRowRescue). Not consumer API; consumers never opt in.
+    compilerOptions {
+        optIn.add("io.lightine.tessera.mrz.camera.InternalTesseraApi")
+    }
+
     // ABI tracking (ADR-007). Since Kotlin 2.4.20 (KT-85950) abiValidation dumps the AGP-KMP `android {}`
     // target too, so this module's android-only public surface (CameraXMrzScanner, MlKitMrzTextRecognizer,
     // the saved-image/EXIF factories) is baselined in api/android/mrz-camera-android.api and gated by
@@ -57,9 +63,6 @@ kotlin {
 
     sourceSets {
         androidMain {
-            // The short-row rescue rules shared with mrz-camera-ios (one internal source file, kept in
-            // mrz-camera-core/src/platformShared and tested there; see MrzRowRescue's KDoc).
-            kotlin.srcDir(rootProject.file("mrz-camera-core/src/platformShared/kotlin"))
             dependencies {
                 // The platform-agnostic contract: CameraXMrzScanner implements MrzCameraScanner and
                 // MlKitMrzTextRecognizer implements MrzTextRecognizer<ImageProxy>, both from

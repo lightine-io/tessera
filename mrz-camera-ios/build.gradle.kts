@@ -17,6 +17,12 @@ plugins {
 kotlin {
     explicitApi()
 
+    // Opts in to mrz-camera-core's @InternalTesseraApi: declarations public only so Tessera's camera modules
+    // can share them (the short-row rescue rules, MrzRowRescue). Not consumer API; consumers never opt in.
+    compilerOptions {
+        optIn.add("io.lightine.tessera.mrz.camera.InternalTesseraApi")
+    }
+
     // ABI tracking — enforces the ADR-007 no-public-API-break promise: snapshots the public API under
     // api/ and fails `check` on an accidental break. Built-in Kotlin Gradle feature (no extra
     // dependency, bundled with Kotlin so it never blocks a Kotlin bump). Refresh: `./gradlew updateKotlinAbi`.
@@ -63,11 +69,6 @@ kotlin {
                 // / telemetry / coroutines in turn).
                 api(project(":mrz-camera-core"))
             }
-        }
-        iosMain {
-            // The short-row rescue rules shared with mrz-camera-android (one internal source file, kept in
-            // mrz-camera-core/src/platformShared and tested there; see MrzRowRescue's KDoc).
-            kotlin.srcDir(rootProject.file("mrz-camera-core/src/platformShared/kotlin"))
         }
         // The tests are iOS-only (they drive Apple Vision on the Simulator), so the test framework
         // dependency goes on iosTest rather than commonTest — this module has no common test sources,

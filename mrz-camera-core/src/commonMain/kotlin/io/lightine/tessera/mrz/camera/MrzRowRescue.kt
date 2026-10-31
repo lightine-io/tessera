@@ -8,11 +8,10 @@ import io.lightine.tessera.mrz.formats.Td3FormatSpec
 import kotlin.math.ceil
 
 /**
- * The pure rules both platform recognizers use to read a short MRZ row again. One source file, compiled
- * into each platform module (mrz-camera-android's androidMain and mrz-camera-ios's iosMain) and into this
- * module's commonTest, so both platforms follow ONE rule while the code stays `internal` (no public API,
- * no ABI change). It is NOT part of mrz-camera-core's own main compilation: compiling it there too would
- * put the same class in two Android artifacts. It may use only public types of its dependencies.
+ * The pure rules both platform recognizers use to read a short MRZ row again (mrz-camera-android's ML Kit
+ * recognizer and mrz-camera-ios's Vision saved-image recognizer), kept here so both platforms follow ONE
+ * rule and it is tested once, in this module's commonTest. It is public only so those modules can call it,
+ * and marked [InternalTesseraApi]: not consumer API, left out of the ABI dumps, hidden from Swift.
  *
  * **The problem.** OCR engines collapse long runs of the `<` filler, so an MRZ row comes back shorter than
  * its fixed ICAO width and the exact-width shape match downstream never fires. Typical case: TD3 line 1
@@ -24,7 +23,8 @@ import kotlin.math.ceil
  * Nothing is padded, guessed, or corrected: every kept line is a string the recognizer actually produced,
  * and the parser's check digits remain the judge of it.
  */
-internal object MrzRowRescue {
+@InternalTesseraApi
+public object MrzRowRescue {
     /** ICAO Doc 9303 MRZ line widths (30, 36, 44), from mrz-core's public format specs, ascending. */
     internal val MRZ_LINE_WIDTHS: List<Int> =
         listOf(Td1FormatSpec, Td2FormatSpec, Td3FormatSpec, MrvAFormatSpec, MrvBFormatSpec)
@@ -60,15 +60,8 @@ internal object MrzRowRescue {
     // The scaled crop's longest side is capped so a large photo cannot make a huge bitmap.
     internal const val MAX_SCALED_SIDE_PX: Double = 4096.0
 
-    /**
-     * Out-of-alphabet chevron glyphs an OCR engine emits for the filler `<` (ML Kit reads it as `«`), each
-     * standing for exactly one `<`. Must equal `MrzLineDetection.MRZ_CHEVRON_GLYPHS` in mrz-camera-core (a
-     * commonTest asserts it): this file cannot see that module's internals.
-     */
-    internal val CHEVRON_GLYPHS: Set<Char> = setOf('«', '»', '‹', '›', '＜', '＞', '〈', '〉', '⟨', '⟩')
-
     /** Whether a row's joined, whitespace-stripped text marks it as a candidate MRZ row. */
-    internal fun isMrzCandidate(stripped: String): Boolean {
+    public fun isMrzCandidate(stripped: String): Boolean {
         if (stripped.length < MIN_CANDIDATE_LENGTH) return false
         if ('<' !in stripped) return false
         val mrzChars = stripped.count(::isMrzChar)
@@ -80,7 +73,7 @@ internal object MrzRowRescue {
      * exact multiple (2..[MAX_SPLIT_ROWS]) of one width is split into its rows in the read's own order.
      * Anything else yields nothing. Nothing is added or dropped inside a kept read.
      */
-    internal fun rescuedLines(stripped: String): List<String> {
+    public fun rescuedLines(stripped: String): List<String> {
         for (width in MRZ_LINE_WIDTHS) {
             if (stripped.length == width) return listOf(stripped)
         }
@@ -97,15 +90,8 @@ internal object MrzRowRescue {
     internal fun recoverGlyphs(stripped: String): String =
         stripped
             .uppercase()
-            .map {
-                if (it in
-                    CHEVRON_GLYPHS
-                ) {
-                    '<'
-                } else {
-                    it
-                }
-            }.joinToString("")
+            .map { if (it in MrzLineDetection.MRZ_CHEVRON_GLYPHS) '<' else it }
+            .joinToString("")
 
     /** Whether [stripped] is an exact-width MRZ line: an ICAO width and only MRZ characters after glyph recovery. */
     internal fun isExactMrzLine(stripped: String): Boolean {
@@ -122,31 +108,39 @@ internal object MrzRowRescue {
     private fun isMrzChar(c: Char): Boolean = c in 'A'..'Z' || c in '0'..'9' || c == '<'
 
     /** An axis-aligned rectangle, top-left origin, in whatever pixel space the caller documents. */
-    internal data class Box(
-        val left: Double,
-        val top: Double,
-        val right: Double,
-        val bottom: Double,
+    @InternalTesseraApi
+    public data class Box(
+        public val left: Double,
+        public val top: Double,
+        public val right: Double,
+        public val bottom: Double,
     ) {
-        val width: Double get() = right - left
-        val height: Double get() = bottom - top
-        val centerY: Double get() = (top + bottom) / 2.0
+        /** The box's horizontal extent. */
+        public val width: Double get() = right - left
 
-        fun union(other: Box): Box =
+        /** The box's vertical extent. */
+        public val height: Double get() = bottom - top
+
+        /** The vertical centre of the box. */
+        public val centerY: Double get() = (top + bottom) / 2.0
+
+        /** The smallest box that holds both this box and [other]. */
+        public fun union(other: Box): Box =
             Box(minOf(left, other.left), minOf(top, other.top), maxOf(right, other.right), maxOf(bottom, other.bottom))
 
         /** Whether this box and [other] overlap vertically by at least half the smaller height. */
-        fun sharesRowWith(other: Box): Boolean {
+        public fun sharesRowWith(other: Box): Boolean {
             val overlap = minOf(bottom, other.bottom) - maxOf(top, other.top)
             return overlap > 0.0 && overlap >= 0.5 * minOf(height, other.height)
         }
     }
 
     /** One recognized line with its box, as the recognizer reported it. */
-    internal data class BoxedLine(
-        val text: String,
-        val confidence: Float?,
-        val box: Box,
+    @InternalTesseraApi
+    public data class BoxedLine(
+        public val text: String,
+        public val confidence: Float?,
+        public val box: Box,
     )
 
     /**
@@ -177,11 +171,12 @@ internal object MrzRowRescue {
      * One planned re-read: the short [row] (indices into the recognized lines), its fragments' union
      * [rowBox], the [crop] to read again (same pixel space), and the [width] of the exact neighbour.
      */
-    internal data class RereadPlan(
-        val row: List<Int>,
-        val rowBox: Box,
-        val crop: Box,
-        val width: Int,
+    @InternalTesseraApi
+    public data class RereadPlan(
+        public val row: List<Int>,
+        public val rowBox: Box,
+        public val crop: Box,
+        public val width: Int,
     )
 
     /**
@@ -191,7 +186,7 @@ internal object MrzRowRescue {
      * [VERTICAL_PAD_FRACTION] of its height above and below, clamped to the image. A row already of exact
      * width is never planned: re-reading it can only make it worse.
      */
-    internal fun planRereads(
+    public fun planRereads(
         lines: List<BoxedLine>,
         imageWidth: Double,
         imageHeight: Double,
@@ -227,7 +222,7 @@ internal object MrzRowRescue {
      * [MIN_CHARACTER_PX], at least [DEFAULT_SCALE], at most [MAX_SCALE], and lowered (to no less than 1) so
      * the scaled crop's longest side stays within [MAX_SCALED_SIDE_PX].
      */
-    internal fun rereadScale(
+    public fun rereadScale(
         rowHeight: Double,
         cropLongestSide: Double,
     ): Int {
@@ -238,7 +233,7 @@ internal object MrzRowRescue {
     }
 
     /** Maps a box from a re-read crop (scaled by [scale], cut at [crop]'s corner) back to the image's space. */
-    internal fun fromCropSpace(
+    public fun fromCropSpace(
         box: Box,
         crop: Box,
         scale: Int,
@@ -257,7 +252,7 @@ internal object MrzRowRescue {
      * [rescuedLines], and only lines of the neighbour's width are kept. Confidence is the lowest of the
      * row's fragments.
      */
-    internal fun keptLines(
+    public fun keptLines(
         reread: List<BoxedLine>,
         plan: RereadPlan,
     ): List<RecognizedLine> {
@@ -278,7 +273,7 @@ internal object MrzRowRescue {
      * first fragment was, its other fragments are dropped, every other item stays as it was. A row with no
      * replacement (or an empty one) is left untouched.
      */
-    internal fun <T> splice(
+    public fun <T> splice(
         original: List<T>,
         replacements: Map<List<Int>, List<T>>,
     ): List<T> {

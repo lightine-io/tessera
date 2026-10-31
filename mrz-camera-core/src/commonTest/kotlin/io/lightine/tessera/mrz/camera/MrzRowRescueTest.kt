@@ -12,6 +12,7 @@ import kotlin.test.assertTrue
  * Fixture text is the ICAO Doc 9303 Utopia TD3 specimen (as in [MrzFrameAnalyzerTest]); a short line is made
  * by collapsing its filler run, the way the OCR engines do.
  */
+@OptIn(InternalTesseraApi::class)
 class MrzRowRescueTest {
     private val td3Line1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
     private val td3Line2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
@@ -44,11 +45,6 @@ class MrzRowRescueTest {
     @Test
     fun widths_are_the_icao_line_widths() {
         assertEquals(listOf(30, 36, 44), MrzRowRescue.MRZ_LINE_WIDTHS)
-    }
-
-    @Test
-    fun chevron_glyphs_match_the_line_detection_set() {
-        assertEquals(MrzLineDetection.MRZ_CHEVRON_GLYPHS, MrzRowRescue.CHEVRON_GLYPHS)
     }
 
     // --- isMrzCandidate (moved from the iOS rescue tests) ---
