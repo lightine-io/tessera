@@ -13,7 +13,10 @@ public data class MrzUnknownDocumentTypeCode(
     val rawCode: String,
     val position: Int,
 ) : MrzWarning() {
-    /** English text for logs: the code and its position. */
+    /** English text for logs: the position. It never contains the code; that is in [rawCode]. */
     override val description: String
-        get() = "Document type code '$rawCode' at position $position is not in the SDK's recognized lookup tables"
+        get() = "Document type code at position $position is not in the SDK's recognized lookup tables"
+
+    /** `MrzUnknownDocumentTypeCode: ` followed by [description], so logs carry no document values. */
+    override fun toString(): String = "MrzUnknownDocumentTypeCode: $description"
 }

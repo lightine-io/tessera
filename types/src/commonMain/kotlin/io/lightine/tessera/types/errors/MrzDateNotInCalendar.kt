@@ -22,9 +22,11 @@ public data class MrzDateNotInCalendar(
     val rawDay: String,
     val position: Int,
 ) : MrzValidationError() {
-    /** English text for logs: the field, the position, and the raw date parts. */
+    /** English text for logs: the field and the position. It never contains the date parts; they are in the properties. */
     override val description: String
         get() =
-            "Date in ${this.field} at position $position is not a real calendar date: " +
-                "rawYear='$rawYear', rawMonth='$rawMonth', rawDay='$rawDay'"
+            "Date in ${this.field} at position $position is not a real calendar date"
+
+    /** `MrzDateNotInCalendar: ` followed by [description], so logs carry no document values. */
+    override fun toString(): String = "MrzDateNotInCalendar: $description"
 }

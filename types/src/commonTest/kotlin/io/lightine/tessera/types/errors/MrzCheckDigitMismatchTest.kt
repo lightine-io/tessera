@@ -22,7 +22,7 @@ class MrzCheckDigitMismatchTest {
     }
 
     @Test
-    fun description_names_field_expected_observed_and_position() {
+    fun description_names_field_and_position_but_not_the_digits() {
         val error =
             MrzCheckDigitMismatch(
                 field = MrzField.DATE_OF_EXPIRY,
@@ -30,11 +30,8 @@ class MrzCheckDigitMismatchTest {
                 observed = '5',
                 position = 71,
             )
-        val description = error.description
-        assertTrue("DATE_OF_EXPIRY" in description, "Description should name the field; got '$description'")
-        assertTrue("'6'" in description, "Description should mention expected; got '$description'")
-        assertTrue("'5'" in description, "Description should mention observed; got '$description'")
-        assertTrue("71" in description, "Description should mention position; got '$description'")
+        assertEquals("Check digit for DATE_OF_EXPIRY at position 71 does not match", error.description)
+        assertEquals("MrzCheckDigitMismatch: ${error.description}", error.toString())
     }
 
     @Test

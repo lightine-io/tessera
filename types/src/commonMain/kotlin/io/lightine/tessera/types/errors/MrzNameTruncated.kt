@@ -16,4 +16,7 @@ public data class MrzNameTruncated(
     /** English text for logs: the position and the missing trailing filler. */
     override val description: String
         get() = "Name field at position $position fills the available width with no trailing filler, indicating ICAO Doc 9303 truncation"
+
+    /** `MrzNameTruncated: ` followed by [description], so logs carry no document values. */
+    override fun toString(): String = "MrzNameTruncated: $description"
 }

@@ -16,7 +16,10 @@ public data class MrzExpiryDatePast(
     val expiryDate: LocalDate,
     val referenceDate: LocalDate,
 ) : MrzWarning() {
-    /** English text for logs: the expiry date and the reference date. */
+    /** English text for logs. It never contains dates; they are in [expiryDate] and [referenceDate]. */
     override val description: String
-        get() = "Document expiry date $expiryDate is before reference date $referenceDate"
+        get() = "Document expiry date is before the reference date"
+
+    /** `MrzExpiryDatePast: ` followed by [description], so logs carry no document values. */
+    override fun toString(): String = "MrzExpiryDatePast: $description"
 }

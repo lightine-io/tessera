@@ -23,9 +23,12 @@ public data class MrzGenerationFieldTooShort(
     val observedLength: Int,
     val observedValue: String,
 ) : MrzGenerationError() {
-    /** English text for logs: the format, the field, both lengths, and the value. */
+    /** English text for logs: the format, the field, and both lengths. It never contains the value; that is in [observedValue]. */
     override val description: String
         get() =
             "Format $format field ${this.field} expected exactly $expectedLength characters; " +
-                "observed $observedLength characters: \"$observedValue\""
+                "observed $observedLength characters"
+
+    /** `MrzGenerationFieldTooShort: ` followed by [description], so logs carry no document values. */
+    override fun toString(): String = "MrzGenerationFieldTooShort: $description"
 }
