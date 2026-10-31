@@ -27,4 +27,7 @@ public data class MrzInvalidLength(
         get() =
             "Format $format expected $expectedLineCount lines of $expectedLineLength characters; " +
                 "observed $observedLineCount lines with lengths $observedLineLengths"
+
+    /** `MrzInvalidLength: ` followed by [description], so logs carry no document values. */
+    override fun toString(): String = "MrzInvalidLength: $description"
 }

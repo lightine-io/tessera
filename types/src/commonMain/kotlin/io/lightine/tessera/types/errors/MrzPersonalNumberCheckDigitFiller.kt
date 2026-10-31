@@ -15,9 +15,12 @@ public data class MrzPersonalNumberCheckDigitFiller(
     val rawPersonalNumber: String,
     val position: Int,
 ) : MrzWarning() {
-    /** English text for logs: the filler check digit and the personal number. */
+    /** English text for logs: the filler check digit. It never contains the personal number; that is in [rawPersonalNumber]. */
     override val description: String
         get() =
             "TD3 personal number check digit is the filler character '<' but the personal number itself contains " +
-                "non-filler content: \"$rawPersonalNumber\""
+                "non-filler content"
+
+    /** `MrzPersonalNumberCheckDigitFiller: ` followed by [description], so logs carry no document values. */
+    override fun toString(): String = "MrzPersonalNumberCheckDigitFiller: $description"
 }

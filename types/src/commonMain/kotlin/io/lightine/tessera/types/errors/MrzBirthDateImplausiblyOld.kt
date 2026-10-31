@@ -29,10 +29,11 @@ public data class MrzBirthDateImplausiblyOld(
     val referenceDate: LocalDate,
     val thresholdYears: Int,
 ) : MrzWarning() {
-    /** English text for logs: the raw date parts, the age limit, and the reference date. */
+    /** English text for logs: the age limit. It never contains document values; they are in the properties. */
     override val description: String
         get() =
-            "Document birth date components (year='$rawYear', month='$rawMonth', day='$rawDay') " +
-                "imply an age greater than $thresholdYears years at every candidate century " +
-                "relative to reference date $referenceDate"
+            "Document birth date implies an age greater than $thresholdYears years at every candidate century"
+
+    /** `MrzBirthDateImplausiblyOld: ` followed by [description], so logs carry no document values. */
+    override fun toString(): String = "MrzBirthDateImplausiblyOld: $description"
 }

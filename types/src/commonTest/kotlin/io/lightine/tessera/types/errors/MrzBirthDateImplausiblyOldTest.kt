@@ -5,6 +5,7 @@ package io.lightine.tessera.types.errors
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class MrzBirthDateImplausiblyOldTest {
@@ -26,7 +27,7 @@ class MrzBirthDateImplausiblyOldTest {
     }
 
     @Test
-    fun description_names_components_reference_and_threshold() {
+    fun description_names_threshold_but_not_components_or_reference() {
         val warning =
             MrzBirthDateImplausiblyOld(
                 rawYear = "00",
@@ -36,11 +37,9 @@ class MrzBirthDateImplausiblyOldTest {
                 thresholdYears = 130,
             )
         val description = warning.description
-        assertTrue("00" in description, "Description should mention rawYear; got '$description'")
-        assertTrue("06" in description, "Description should mention rawMonth; got '$description'")
-        assertTrue("15" in description, "Description should mention rawDay; got '$description'")
-        assertTrue("2200-01-01" in description, "Description should mention reference date; got '$description'")
         assertTrue("130" in description, "Description should mention threshold; got '$description'")
+        assertFalse("2200" in description, "Description must not carry the reference date; got '$description'")
+        assertEquals("MrzBirthDateImplausiblyOld: $description", warning.toString())
     }
 
     @Test

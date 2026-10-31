@@ -22,11 +22,14 @@ public data class MrzGenerationUnsupportedCharacters(
     val unmappedCharacters: List<UnmappedCharacter>,
     val observedValue: String,
 ) : MrzGenerationError() {
-    /** English text for logs: the format, the field, the characters, and the value. */
+    /** English text for logs: the format, the field, and the positions. It never contains the characters or the value; they are in the properties. */
     override val description: String
         get() {
-            val chars = unmappedCharacters.joinToString(", ") { "'${it.character}' at position ${it.position}" }
+            val positions = unmappedCharacters.joinToString(", ") { "${it.position}" }
             return "Format $format field ${this.field} contains characters outside the MRZ alphabet " +
-                "and no transliteration profile resolved them: $chars (observed value: \"$observedValue\")"
+                "and no transliteration profile resolved them, at positions $positions"
         }
+
+    /** `MrzGenerationUnsupportedCharacters: ` followed by [description], so logs carry no document values. */
+    override fun toString(): String = "MrzGenerationUnsupportedCharacters: $description"
 }

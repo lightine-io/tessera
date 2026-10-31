@@ -3,6 +3,7 @@ package io.lightine.tessera.types.errors
 import io.lightine.tessera.types.vocabulary.MrzFormat
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class MrzGenerationNumericInNameFieldTest {
@@ -20,7 +21,7 @@ class MrzGenerationNumericInNameFieldTest {
     }
 
     @Test
-    fun description_names_format_digits_and_observed_value() {
+    fun description_names_format_and_rule_but_not_value_or_digits() {
         val error =
             MrzGenerationNumericInNameField(
                 format = MrzFormat.TD3,
@@ -28,24 +29,10 @@ class MrzGenerationNumericInNameFieldTest {
                 numericCharacters = listOf('4'),
             )
         assertTrue("TD3" in error.description)
-        assertTrue("'4'" in error.description)
-        assertTrue("ANNA M4RIA" in error.description)
-        assertTrue("§4.6" in error.description || "4.6" in error.description)
-    }
-
-    @Test
-    fun description_lists_distinct_digits_when_multiple_present() {
-        val error =
-            MrzGenerationNumericInNameField(
-                format = MrzFormat.TD1,
-                observedValue = "1A2B1",
-                numericCharacters = listOf('1', '2', '1'),
-            )
-        // Distinct digits — '1' should appear once, not twice.
-        val firstQuoteAtOne = error.description.indexOf("'1'")
-        val secondQuoteAtOne = error.description.indexOf("'1'", firstQuoteAtOne + 1)
-        assertTrue(secondQuoteAtOne == -1, "Description should list distinct digits; got '${error.description}'")
-        assertTrue("'2'" in error.description)
+        assertTrue("4.6" in error.description)
+        assertFalse("ANNA M4RIA" in error.description)
+        assertFalse("'4'" in error.description)
+        assertEquals("MrzGenerationNumericInNameField: ${error.description}", error.toString())
     }
 
     @Test

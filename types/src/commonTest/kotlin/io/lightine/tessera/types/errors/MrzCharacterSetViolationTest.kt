@@ -2,6 +2,7 @@ package io.lightine.tessera.types.errors
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
@@ -14,10 +15,11 @@ class MrzCharacterSetViolationTest {
     }
 
     @Test
-    fun description_names_the_offending_character_and_position() {
-        val violation = MrzCharacterSetViolation(offendingCharacter = ' ', position = 12)
-        assertTrue("' '" in violation.description, "Description should quote the offending character; got '${violation.description}'")
+    fun description_names_the_position_but_not_the_offending_character() {
+        val violation = MrzCharacterSetViolation(offendingCharacter = '#', position = 12)
         assertTrue("12" in violation.description, "Description should name the position; got '${violation.description}'")
+        assertFalse('#' in violation.description, "Description must not carry the character; got '${violation.description}'")
+        assertEquals("MrzCharacterSetViolation: ${violation.description}", violation.toString())
     }
 
     @Test

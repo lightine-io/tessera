@@ -24,7 +24,7 @@ class MrzDateNotInCalendarTest {
     }
 
     @Test
-    fun description_mentions_field_position_and_raw_components() {
+    fun description_mentions_field_and_position_but_not_raw_components() {
         val error =
             MrzDateNotInCalendar(
                 field = MrzField.DATE_OF_EXPIRY,
@@ -33,12 +33,11 @@ class MrzDateNotInCalendarTest {
                 rawDay = "01",
                 position = 65,
             )
-        val description = error.description
-        assertTrue("DATE_OF_EXPIRY" in description, "Description should name the field; got '$description'")
-        assertTrue("65" in description, "Description should mention position; got '$description'")
-        assertTrue("'30'" in description, "Description should quote rawYear; got '$description'")
-        assertTrue("'13'" in description, "Description should quote rawMonth; got '$description'")
-        assertTrue("'01'" in description, "Description should quote rawDay; got '$description'")
+        assertEquals(
+            "Date in DATE_OF_EXPIRY at position 65 is not a real calendar date",
+            error.description,
+        )
+        assertEquals("MrzDateNotInCalendar: ${error.description}", error.toString())
     }
 
     @Test

@@ -18,12 +18,13 @@ class MrzGenerationFieldTooShortTest {
     }
 
     @Test
-    fun description_names_format_field_lengths_and_value() {
-        val error = MrzGenerationFieldTooShort(MrzFormat.TD1, MrzField.DATE_OF_EXPIRY, 2, 0, "")
-        assertTrue("TD1" in error.description)
-        assertTrue("DATE_OF_EXPIRY" in error.description)
-        assertTrue("exactly 2" in error.description)
-        assertTrue("observed 0" in error.description)
+    fun description_names_format_field_and_lengths_but_not_value() {
+        val error = MrzGenerationFieldTooShort(MrzFormat.TD1, MrzField.DATE_OF_EXPIRY, 2, 1, "7")
+        assertEquals(
+            "Format TD1 field DATE_OF_EXPIRY expected exactly 2 characters; observed 1 characters",
+            error.description,
+        )
+        assertEquals("MrzGenerationFieldTooShort: ${error.description}", error.toString())
     }
 
     @Test

@@ -18,7 +18,10 @@ public data class MrzExpiryDateImplausiblyFar(
     val referenceDate: LocalDate,
     val thresholdYears: Int,
 ) : MrzWarning() {
-    /** English text for logs: the expiry date, the limit, and the reference date. */
+    /** English text for logs: the limit. It never contains dates; they are in the properties. */
     override val description: String
-        get() = "Document expiry date $expiryDate is more than $thresholdYears years after reference date $referenceDate"
+        get() = "Document expiry date is more than $thresholdYears years after the reference date"
+
+    /** `MrzExpiryDateImplausiblyFar: ` followed by [description], so logs carry no document values. */
+    override fun toString(): String = "MrzExpiryDateImplausiblyFar: $description"
 }

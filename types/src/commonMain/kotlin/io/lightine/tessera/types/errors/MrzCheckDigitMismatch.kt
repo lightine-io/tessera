@@ -20,7 +20,10 @@ public data class MrzCheckDigitMismatch(
     val observed: Char,
     val position: Int,
 ) : MrzValidationError() {
-    /** English text for logs: the field, the position, and both digits. */
+    /** English text for logs: the field and the position. It never contains the digits; they are in [expected] and [observed]. */
     override val description: String
-        get() = "Check digit for ${this.field} at position $position: expected '$expected', observed '$observed'"
+        get() = "Check digit for ${this.field} at position $position does not match"
+
+    /** `MrzCheckDigitMismatch: ` followed by [description], so logs carry no document values. */
+    override fun toString(): String = "MrzCheckDigitMismatch: $description"
 }

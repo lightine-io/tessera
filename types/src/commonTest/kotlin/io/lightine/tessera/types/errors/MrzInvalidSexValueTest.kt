@@ -2,6 +2,7 @@ package io.lightine.tessera.types.errors
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class MrzInvalidSexValueTest {
@@ -17,11 +18,11 @@ class MrzInvalidSexValueTest {
     }
 
     @Test
-    fun description_names_observed_character_and_position() {
+    fun description_names_position_and_not_the_character() {
         val error = MrzInvalidSexValue(observed = '*', position = 64)
-        val description = error.description
-        assertTrue("'*'" in description, "Description should mention observed character; got '$description'")
-        assertTrue("64" in description, "Description should mention position; got '$description'")
+        assertTrue("64" in error.description, "Description should mention position; got '${error.description}'")
+        assertFalse('*' in error.description, "Description must not carry the character; got '${error.description}'")
+        assertEquals("MrzInvalidSexValue: ${error.description}", error.toString())
     }
 
     @Test

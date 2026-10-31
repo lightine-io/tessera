@@ -20,12 +20,12 @@ public data class MrzGenerationNumericInNameField(
     val observedValue: String,
     val numericCharacters: List<Char>,
 ) : MrzGenerationError() {
-    /** English text for logs: the format, the distinct digits, and the value. */
+    /** English text for logs: the format and the rule. It never contains the value or the digits; they are in the properties. */
     override val description: String
-        get() {
-            val distinct = numericCharacters.distinct().joinToString(", ") { "'$it'" }
-            return "Format $format name field contains numeric character(s) $distinct " +
-                "(ICAO Doc 9303 Part 3 §4.6 forbids numeric characters in MRZ name fields). " +
-                "Observed value: \"$observedValue\""
-        }
+        get() =
+            "Format $format name field contains numeric characters " +
+                "(ICAO Doc 9303 Part 3 §4.6 forbids numeric characters in MRZ name fields)"
+
+    /** `MrzGenerationNumericInNameField: ` followed by [description], so logs carry no document values. */
+    override fun toString(): String = "MrzGenerationNumericInNameField: $description"
 }

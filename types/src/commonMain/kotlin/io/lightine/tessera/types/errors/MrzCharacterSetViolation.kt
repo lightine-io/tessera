@@ -14,7 +14,10 @@ public data class MrzCharacterSetViolation(
     val offendingCharacter: Char,
     val position: Int,
 ) : MrzParseError() {
-    /** English text for logs: the character and its position. */
+    /** English text for logs: the position. It never contains the character; that is in [offendingCharacter]. */
     override val description: String
-        get() = "Character '$offendingCharacter' at position $position is outside the MRZ alphabet (A-Z, 0-9, <)"
+        get() = "Character at position $position is outside the MRZ alphabet (A-Z, 0-9, <)"
+
+    /** `MrzCharacterSetViolation: ` followed by [description], so logs carry no document values. */
+    override fun toString(): String = "MrzCharacterSetViolation: $description"
 }

@@ -20,17 +20,18 @@ class MrzExpiryDateImplausiblyFarTest {
     }
 
     @Test
-    fun description_names_dates_and_threshold() {
+    fun description_names_threshold_but_not_dates() {
         val warning =
             MrzExpiryDateImplausiblyFar(
                 expiryDate = LocalDate(2040, 1, 1),
                 referenceDate = LocalDate(2026, 5, 4),
                 thresholdYears = 10,
             )
-        val description = warning.description
-        assertTrue("2040-01-01" in description, "Description should mention expiry date; got '$description'")
-        assertTrue("2026-05-04" in description, "Description should mention reference date; got '$description'")
-        assertTrue("10" in description, "Description should mention threshold; got '$description'")
+        assertEquals(
+            "Document expiry date is more than 10 years after the reference date",
+            warning.description,
+        )
+        assertEquals("MrzExpiryDateImplausiblyFar: ${warning.description}", warning.toString())
     }
 
     @Test

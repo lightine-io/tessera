@@ -14,9 +14,12 @@ public data class MrzInvalidSexValue(
     val observed: Char,
     val position: Int,
 ) : MrzValidationError() {
-    /** English text for logs: the position, the character, and the accepted set. */
+    /** English text for logs: the position and the accepted set. It never contains the character; that is in [observed]. */
     override val description: String
         get() =
-            "Sex field at position $position contains '$observed'; accepted values are " +
+            "Sex field at position $position contains an unaccepted value; accepted values are " +
                 "'M', 'F', '<', or 'X' (X surfaces as MrzSexCharacterX warning rather than this failure)"
+
+    /** `MrzInvalidSexValue: ` followed by [description], so logs carry no document values. */
+    override fun toString(): String = "MrzInvalidSexValue: $description"
 }

@@ -17,7 +17,10 @@ public data class MrzUnknownCountryCode(
     val rawCode: String,
     val position: Int,
 ) : MrzWarning() {
-    /** English text for logs: the field, the code, and the position. */
+    /** English text for logs: the field and the position. It never contains the code; that is in [rawCode]. */
     override val description: String
-        get() = "Country code '$rawCode' for ${this.field} at position $position is not in the SDK's recognized lookup tables"
+        get() = "Country code for ${this.field} at position $position is not in the SDK's recognized lookup tables"
+
+    /** `MrzUnknownCountryCode: ` followed by [description], so logs carry no document values. */
+    override fun toString(): String = "MrzUnknownCountryCode: $description"
 }
