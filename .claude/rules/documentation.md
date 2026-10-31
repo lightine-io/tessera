@@ -75,6 +75,6 @@ Tick each item or say why it does not apply.
 - Release gate: `check-docs.py code-docs` (every public declaration documented),
   `style --kdoc`, and `shelf <folder>` (every ✓ in the capability matrix has its how-to;
   the repo-root `llms.txt` lists every consumer tutorial and how-to by title). `shelf`
-  reads a local folder, never the network: the maintainer's vault `kb-public/new/` or an
+  reads a local folder, never the network: a fresh
   export of the public KB. It runs at the release gate only, because the pages are not in
   the repo and a PR cannot change them.

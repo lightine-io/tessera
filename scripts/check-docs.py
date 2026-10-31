@@ -14,9 +14,8 @@ Commands and where they run:
                    (release gate until the code-docs pass reaches zero).
   code-docs        Release gate. Every public Kotlin declaration in a main source set
                    has a doc comment. --swift DIR adds a Swift package's Sources/.
-  shelf DIR        Release gate. DIR is a local folder holding the public pages (the
-                   vault's kb-public/new/ at release time, or an export of the public KB
-                   arranged the same way). Every check mark in the capability matrix links
+  shelf DIR        Release gate. DIR is a local folder holding the public pages (a fresh
+                   export of the public KB, one file per page in the shelf folders). Every check mark in the capability matrix links
                    a how-to page for that platform. The repo-root llms.txt lists every
                    consumer tutorial and how-to by its exact title, with a KB article URL.
                    Reads local files only: no network, so CI never depends on YouTrack.

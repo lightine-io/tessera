@@ -29,8 +29,8 @@ maintainer. Record the results as a comment on the release card.
    - `python3 -I scripts/check-docs.py code-docs --swift ../tessera-swift` exits 0.
    - `python3 -I scripts/check-docs.py style --kdoc --swift ../tessera-swift` exits 0.
    - `python3 -I scripts/check-docs.py shelf <folder>` exits 0. The folder holds the
-     release's public pages: the vault's `kb-public/new/`, or an export of the public KB
-     arranged the same way. The check reads local files only; the repo-root `llms.txt`
+     release's public pages: a fresh export of the public KB, one file per page in the
+     shelf folders. The check reads local files only; the repo-root `llms.txt`
      must list every consumer tutorial and how-to by title.
    - Scope against reality: everything `[Unreleased]` and the release's pages claim
      exists and is tested. Implement the gap or narrow the claim; never tag before they
