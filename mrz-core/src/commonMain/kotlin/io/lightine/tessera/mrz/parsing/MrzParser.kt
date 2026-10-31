@@ -1,3 +1,6 @@
+// Swift label for the line-list overloads (TES-224). ObjCName is still experimental in Kotlin.
+@file:OptIn(kotlin.experimental.ExperimentalObjCName::class)
+
 package io.lightine.tessera.mrz.parsing
 
 import io.lightine.tessera.mrz.formats.MrvAFormatSpec
@@ -25,6 +28,7 @@ import io.lightine.tessera.types.errors.MrzInvalidLength
 import io.lightine.tessera.types.vocabulary.MrzFormat
 import io.lightine.tessera.types.vocabulary.ReadMethod
 import io.lightine.tessera.types.vocabulary.Sex
+import kotlin.native.ObjCName
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -77,7 +81,7 @@ public object MrzParser {
      * @return the parse result, as for [parse] with a string.
      */
     public fun parse(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         referenceTime: Instant = Clock.System.now(),
     ): ParseResult {
         val detected = detectFormat(input)
@@ -184,7 +188,7 @@ public object MrzParser {
      * @return the parse result, as for [parseTD3] with a string.
      */
     public fun parseTD3(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         referenceTime: Instant = Clock.System.now(),
     ): ParseResult {
         val emptyMetadata =
@@ -240,7 +244,7 @@ public object MrzParser {
      * @return the parse result, as for [parseTD2] with a string.
      */
     public fun parseTD2(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         referenceTime: Instant = Clock.System.now(),
     ): ParseResult {
         val emptyMetadata =
@@ -297,7 +301,7 @@ public object MrzParser {
      * @return the parse result, as for [parseMRVA] with a string.
      */
     public fun parseMRVA(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         referenceTime: Instant = Clock.System.now(),
     ): ParseResult {
         val emptyMetadata =
@@ -354,7 +358,7 @@ public object MrzParser {
      * @return the parse result, as for [parseMRVB] with a string.
      */
     public fun parseMRVB(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         referenceTime: Instant = Clock.System.now(),
     ): ParseResult {
         val emptyMetadata =
@@ -410,7 +414,7 @@ public object MrzParser {
      * @return the parse result, as for [parseTD1] with a string.
      */
     public fun parseTD1(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         referenceTime: Instant = Clock.System.now(),
     ): ParseResult {
         val emptyMetadata =
@@ -458,7 +462,7 @@ public object MrzParser {
     // Internal, not private: MrzValidator.validate(document) runs the same two checks on a
     // document's rawLines before reading field text from them (TES-203).
     internal fun validateLineShape(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         format: MrzFormat,
         expectedLineCount: Int,
         expectedLineLength: Int,
@@ -480,7 +484,7 @@ public object MrzParser {
     }
 
     internal fun validateAlphabet(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         lineLength: Int,
     ): MrzCharacterSetViolation? {
         for ((lineIndex, line) in input.withIndex()) {
@@ -497,7 +501,7 @@ public object MrzParser {
     }
 
     private fun sliceTd3Fields(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         referenceTime: Instant,
     ): TD3 {
         val documentTypeCode = Td3FormatSpec.documentType.extractFrom(input).trimEnd('<')
@@ -576,7 +580,7 @@ public object MrzParser {
     }
 
     private fun sliceTd2Fields(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         referenceTime: Instant,
     ): TD2 {
         val documentTypeCode = Td2FormatSpec.documentType.extractFrom(input).trimEnd('<')
@@ -655,7 +659,7 @@ public object MrzParser {
     }
 
     private fun sliceMrvAFields(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         referenceTime: Instant,
     ): MrvA {
         val documentTypeCode = MrvAFormatSpec.documentType.extractFrom(input).trimEnd('<')
@@ -734,7 +738,7 @@ public object MrzParser {
     }
 
     private fun sliceMrvBFields(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         referenceTime: Instant,
     ): MrvB {
         val documentTypeCode = MrvBFormatSpec.documentType.extractFrom(input).trimEnd('<')
@@ -812,7 +816,7 @@ public object MrzParser {
     }
 
     private fun sliceTd1Fields(
-        input: List<String>,
+        @ObjCName("lines") input: List<String>,
         referenceTime: Instant,
     ): TD1 {
         val documentTypeCode = Td1FormatSpec.documentType.extractFrom(input).trimEnd('<')
