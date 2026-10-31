@@ -104,6 +104,10 @@ kotlin {
                 // own compilation needs the Compose runtime on its classpath. The rest of Compose is an
                 // internal implementation detail of the screens.
                 api(libs.androidx.compose.runtime)
+                // runtime-retain supplies `retain`: the scanner flow keeps document data (a reading under
+                // review, recognized lines, typed text) in memory across a configuration change and never in
+                // saved instance state. `implementation` — an internal detail; compose-ui already brings it.
+                implementation(libs.androidx.compose.retain)
                 implementation(libs.androidx.compose.ui)
                 implementation(libs.androidx.compose.foundation)
                 implementation(libs.androidx.compose.material3)

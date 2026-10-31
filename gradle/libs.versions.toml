@@ -62,6 +62,10 @@ androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", vers
 # foundation / material3 are internal implementation detail (`implementation`). The live camera preview
 # uses androidx-camera-compose (above) fed by the scanner's SurfaceRequest seam.
 androidx-compose-runtime = { module = "androidx.compose.runtime:runtime", version.ref = "androidx-compose" }
+# runtime-retain supplies `retain`, which keeps the scanner screen's document data in memory across a
+# configuration change without saving it (never into saved instance state). Already on the classpath through
+# compose-ui at the same shared version; declared because the module calls it directly.
+androidx-compose-retain = { module = "androidx.compose.runtime:runtime-retain", version.ref = "androidx-compose" }
 androidx-compose-ui = { module = "androidx.compose.ui:ui", version.ref = "androidx-compose" }
 androidx-compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "androidx-compose" }
 androidx-compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "androidx-compose-material3" }
