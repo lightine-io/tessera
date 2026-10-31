@@ -207,10 +207,9 @@ class MrzGeneratorTd3Test {
 
     @Test
     fun sex_is_emitted_verbatim_from_raw_sex_character() {
-        for (rawSex in listOf('M', 'F', '<', 'X', 'Q')) {
-            // 'Q' is invalid per the validator, but the generator emits raw chars verbatim.
-            // Strict-conformance checks for the sex char would belong to a separate generator
-            // input-validation slice (current slice: validate widths only).
+        // Only 'M', 'F', and '<' are accepted; any other character fails (see
+        // MrzGeneratorDocumentInputValidationTest).
+        for (rawSex in listOf('M', 'F', '<')) {
             val td3 = specimenTd3()
             val withSex =
                 td3.copy(

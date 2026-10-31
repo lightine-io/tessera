@@ -30,6 +30,7 @@ import io.lightine.tessera.mrz.transliteration.TransliterationResult
 import io.lightine.tessera.mrz.transliteration.transliterate
 import io.lightine.tessera.types.errors.MrzGenerationFieldOverflow
 import io.lightine.tessera.types.errors.MrzGenerationFieldTooShort
+import io.lightine.tessera.types.errors.MrzGenerationInvalidSexValue
 import io.lightine.tessera.types.errors.MrzGenerationNumericInNameField
 import io.lightine.tessera.types.errors.MrzGenerationUnsupportedCharacters
 import io.lightine.tessera.types.vocabulary.MrzField
@@ -47,7 +48,8 @@ import kotlin.native.ObjCName
  * `MrzGenerationFieldTooShort` when a document's date part is shorter than 2 characters, and
  * `MrzGenerationUnsupportedCharacters` when a name, number, type, state, nationality, optional-data, or
  * date value has a character outside `A-Z`, `0-9`, and `<`. Reports `MrzGenerationNumericInNameField` when an
- * identifier or the name field contains a digit. A failure holds the first problem found.
+ * identifier or the name field contains a digit, and `MrzGenerationInvalidSexValue` when a document's sex
+ * character is not `M`, `F`, or `<`. A failure holds the first problem found.
  *
  * @since 0.1.0
  */
@@ -58,9 +60,12 @@ public object MrzGenerator {
      * Pads short fields with `<` and computes every check digit; the check digits stored in the
      * document are not used. Checks that the name field has no digit, then the width and
      * characters of the document type, issuing state, name field, document number, nationality,
-     * optional data, and each date part. A date part must be exactly 2 characters; a shorter one
-     * is never padded, because `<` in a date means "unknown". Writes `rawSex` as it is, unchecked.
-     * Applies no transliteration profile: the name field must already be in the MRZ alphabet.
+     * optional data, and each date part, then the sex character. A date part must be exactly 2
+     * characters; a shorter one is never padded, because `<` in a date means "unknown". The sex
+     * character `rawSex` must be `M`, `F`, or `<`: ICAO Doc 9303 allows `X` only in the visual zone,
+     * so `X` fails too. This overload applies no transliteration profile: the name field must
+     * already be in the MRZ alphabet. To convert a name field in the source script, use the overload
+     * that takes a [TransliterationProfile].
      *
      * In Swift this is `generate(document:)`, and the overloads for one format are
      * `generate(td3:)`, `generate(td2:)`, `generate(td1:)`, `generate(mrvA:)`, and `generate(mrvB:)`.
@@ -68,7 +73,8 @@ public object MrzGenerator {
      * @param document the document to encode.
      * @return [GenerationResult.Success] with the MRZ lines, or [GenerationResult.Failure] with
      *   [MrzGenerationNumericInNameField], [MrzGenerationFieldOverflow],
-     *   [MrzGenerationFieldTooShort], or [MrzGenerationUnsupportedCharacters].
+     *   [MrzGenerationFieldTooShort], [MrzGenerationUnsupportedCharacters], or
+     *   [MrzGenerationInvalidSexValue].
      */
     public fun generate(
         @ObjCName("document") document: MrzDocument,
@@ -105,6 +111,118 @@ public object MrzGenerator {
     public fun generate(
         @ObjCName("mrvB") document: MrvB,
     ): GenerationResult = generateMrvB(document)
+
+    /**
+     * Encodes a document of any format as MRZ lines, converting its name field with a profile first.
+     *
+     * Checks that the raw name field has no digit, then runs [transliteration] over the whole raw
+     * name field, and then encodes the document with the converted name field as the one-argument
+     * `generate(document)` does, with the same checks. Only the raw name field is converted; every
+     * other field must already be in the MRZ alphabet. A converted name field can be longer than the
+     * original (the `AZE` profile writes `SH` for `Ş`), so it can overflow its field.
+     *
+     * Pass a profile only when the name field holds the name in its source script, for example
+     * `Ş` or `Ü`. Never pass one for a document that came from parsing an MRZ: a profile may also
+     * change letters that are already in the MRZ alphabet. The `AZE` profile maps `J` to `ZH`, `C` to
+     * `J`, `X` to `KH`, and `Q` to `G`. A parsed name field keeps its `<` filler and fills its whole
+     * width, so a parsed name would change (`C` becomes `J`) or no longer fit (`J` becomes `ZH`).
+     *
+     * In Swift this is `generate(document:transliteration:)`, and the overloads for one format are
+     * `generate(td3:transliteration:)`, `generate(td2:transliteration:)`,
+     * `generate(td1:transliteration:)`, `generate(mrvA:transliteration:)`, and
+     * `generate(mrvB:transliteration:)`.
+     *
+     * @param document the document to encode.
+     * @param transliteration the profile that maps the raw name field to the MRZ alphabet.
+     * @return [GenerationResult.Success] with the MRZ lines, or [GenerationResult.Failure] with
+     *   [MrzGenerationNumericInNameField] (checked before the profile runs),
+     *   [MrzGenerationUnsupportedCharacters] (also when the profile cannot map a character),
+     *   [MrzGenerationFieldOverflow], [MrzGenerationFieldTooShort], or [MrzGenerationInvalidSexValue].
+     *   When the profile ran on a non-empty name field, the result metadata holds the
+     *   transliteration details: one entry for the whole raw name field.
+     * @since 0.6.0
+     */
+    public fun generate(
+        @ObjCName("document") document: MrzDocument,
+        transliteration: TransliterationProfile,
+    ): GenerationResult =
+        when (document) {
+            is TD1 -> generate(document, transliteration)
+            is TD2 -> generate(document, transliteration)
+            is TD3 -> generate(document, transliteration)
+            is MrvA -> generate(document, transliteration)
+            is MrvB -> generate(document, transliteration)
+        }
+
+    /**
+     * Encodes a TD3 (passport) document as 2 MRZ lines, converting its name field with a profile
+     * first. Works and reports as the [MrzDocument] overload with a profile does.
+     *
+     * @since 0.6.0
+     */
+    public fun generate(
+        @ObjCName("td3") document: TD3,
+        transliteration: TransliterationProfile,
+    ): GenerationResult =
+        generateWithProfile(MrzFormat.TD3, document.commonFields.rawNameField, transliteration) { rawNameField ->
+            generateTd3(document.copy(commonFields = document.commonFields.copy(rawNameField = rawNameField)))
+        }
+
+    /**
+     * Encodes a TD2 document as 2 MRZ lines, converting its name field with a profile first. Works
+     * and reports as the [MrzDocument] overload with a profile does.
+     *
+     * @since 0.6.0
+     */
+    public fun generate(
+        @ObjCName("td2") document: TD2,
+        transliteration: TransliterationProfile,
+    ): GenerationResult =
+        generateWithProfile(MrzFormat.TD2, document.commonFields.rawNameField, transliteration) { rawNameField ->
+            generateTd2(document.copy(commonFields = document.commonFields.copy(rawNameField = rawNameField)))
+        }
+
+    /**
+     * Encodes a TD1 (identity card) document as 3 MRZ lines, converting its name field with a
+     * profile first. Works and reports as the [MrzDocument] overload with a profile does.
+     *
+     * @since 0.6.0
+     */
+    public fun generate(
+        @ObjCName("td1") document: TD1,
+        transliteration: TransliterationProfile,
+    ): GenerationResult =
+        generateWithProfile(MrzFormat.TD1, document.commonFields.rawNameField, transliteration) { rawNameField ->
+            generateTd1(document.copy(commonFields = document.commonFields.copy(rawNameField = rawNameField)))
+        }
+
+    /**
+     * Encodes an MRV-A (Type-A visa) document as 2 MRZ lines, converting its name field with a
+     * profile first. Works and reports as the [MrzDocument] overload with a profile does.
+     *
+     * @since 0.6.0
+     */
+    public fun generate(
+        @ObjCName("mrvA") document: MrvA,
+        transliteration: TransliterationProfile,
+    ): GenerationResult =
+        generateWithProfile(MrzFormat.MRV_A, document.commonFields.rawNameField, transliteration) { rawNameField ->
+            generateMrvA(document.copy(commonFields = document.commonFields.copy(rawNameField = rawNameField)))
+        }
+
+    /**
+     * Encodes an MRV-B (Type-B visa) document as 2 MRZ lines, converting its name field with a
+     * profile first. Works and reports as the [MrzDocument] overload with a profile does.
+     *
+     * @since 0.6.0
+     */
+    public fun generate(
+        @ObjCName("mrvB") document: MrvB,
+        transliteration: TransliterationProfile,
+    ): GenerationResult =
+        generateWithProfile(MrzFormat.MRV_B, document.commonFields.rawNameField, transliteration) { rawNameField ->
+            generateMrvB(document.copy(commonFields = document.commonFields.copy(rawNameField = rawNameField)))
+        }
 
     // ----------------------------------------------------------------
     // Primitive-input methods
@@ -501,6 +619,7 @@ public object MrzGenerator {
 
         validateCommonFieldChars(MrzFormat.TD3, document)?.let { return it }
         validateDates(MrzFormat.TD3, document)?.let { return it }
+        validateSex(MrzFormat.TD3, document.commonFields.rawSex)?.let { return it }
         validateMrzAlphabet(MrzFormat.TD3, MrzField.OPTIONAL_DATA, document.personalNumber)?.let { return it }
 
         val docType =
@@ -583,6 +702,7 @@ public object MrzGenerator {
 
         validateCommonFieldChars(MrzFormat.TD2, document)?.let { return it }
         validateDates(MrzFormat.TD2, document)?.let { return it }
+        validateSex(MrzFormat.TD2, document.commonFields.rawSex)?.let { return it }
         validateMrzAlphabet(MrzFormat.TD2, MrzField.OPTIONAL_DATA, document.optionalData)?.let { return it }
 
         val docType =
@@ -666,6 +786,7 @@ public object MrzGenerator {
 
         validateCommonFieldChars(MrzFormat.TD1, document)?.let { return it }
         validateDates(MrzFormat.TD1, document)?.let { return it }
+        validateSex(MrzFormat.TD1, document.commonFields.rawSex)?.let { return it }
         validateMrzAlphabet(MrzFormat.TD1, MrzField.OPTIONAL_DATA, document.optionalData1)?.let { return it }
         validateMrzAlphabet(MrzFormat.TD1, MrzField.OPTIONAL_DATA, document.optionalData2)?.let { return it }
 
@@ -747,6 +868,7 @@ public object MrzGenerator {
 
         validateCommonFieldChars(MrzFormat.MRV_A, document)?.let { return it }
         validateDates(MrzFormat.MRV_A, document)?.let { return it }
+        validateSex(MrzFormat.MRV_A, document.commonFields.rawSex)?.let { return it }
         validateMrzAlphabet(MrzFormat.MRV_A, MrzField.OPTIONAL_DATA, document.optionalData)?.let { return it }
 
         val docType =
@@ -821,6 +943,7 @@ public object MrzGenerator {
 
         validateCommonFieldChars(MrzFormat.MRV_B, document)?.let { return it }
         validateDates(MrzFormat.MRV_B, document)?.let { return it }
+        validateSex(MrzFormat.MRV_B, document.commonFields.rawSex)?.let { return it }
         validateMrzAlphabet(MrzFormat.MRV_B, MrzField.OPTIONAL_DATA, document.optionalData)?.let { return it }
 
         val docType =
@@ -899,6 +1022,26 @@ public object MrzGenerator {
                 transliteratedFields = fields,
             )
         return IdentifierProcessing.Success(processedPrimary, processedSecondary, details)
+    }
+
+    // The document path with a profile: the digit check first, on the name field as supplied (as
+    // processIdentifiers does), then the profile over the whole raw name field, then the usual
+    // per-format checks and assembly on the converted field.
+    private inline fun generateWithProfile(
+        format: MrzFormat,
+        rawNameField: String,
+        profile: TransliterationProfile,
+        generateConverted: (String) -> GenerationResult,
+    ): GenerationResult {
+        rejectIfNameFieldContainsDigits(format, rawNameField)?.let { return it }
+        val fields = mutableListOf<TransliteratedField>()
+        val converted =
+            when (val outcome = applyProfile(format, MrzField.NAME_FIELD, rawNameField, profile, fields)) {
+                is TransliterationApply.Success -> outcome.output
+                is TransliterationApply.Failure -> return outcome.result
+            }
+        val details = TransliterationDetails(profileIdentifier = profile.identifier, transliteratedFields = fields)
+        return attachTransliterationDetails(generateConverted(converted), details)
     }
 
     private fun rejectIfNameFieldContainsDigits(
@@ -1115,6 +1258,19 @@ public object MrzGenerator {
         validateDate(format, MrzField.DATE_OF_BIRTH, cf.dateOfBirth)?.let { return it }
         validateDate(format, MrzField.DATE_OF_EXPIRY, cf.dateOfExpiry)?.let { return it }
         return null
+    }
+
+    // ICAO Doc 9303 allows only `M`, `F`, and `<` in the MRZ sex field; `X` is allowed only in the
+    // visual zone. The field-value path maps a `Sex` enum and never reaches an invalid character.
+    private fun validateSex(
+        format: MrzFormat,
+        rawSex: Char,
+    ): GenerationResult.Failure? {
+        if (rawSex == 'M' || rawSex == 'F' || rawSex == '<') return null
+        return GenerationResult.Failure(
+            error = MrzGenerationInvalidSexValue(format = format, observed = rawSex),
+            metadata = emptyMetadata(),
+        )
     }
 
     private fun validateDate(
