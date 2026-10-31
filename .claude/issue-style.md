@@ -40,7 +40,7 @@ Plain top, then `---`, then technical details. The top must make sense to someon
 **Notes:** logs, suspects (mark guesses as guesses)
 ```
 
-**Task**
+**Feature, Improvement, Upkeep, Documentation**
 ```
 **Problem:** What is missing or poor today.
 **Why it matters:**
@@ -50,6 +50,19 @@ Plain top, then `---`, then technical details. The top must make sense to someon
 **Where:**
 **Approach:** only if it is already chosen
 ```
+
+**Process improvement**
+```
+**Problem:** What slows the work or goes wrong in how we work.
+**Why it matters:** What it costs (time, rework, risk).
+**Done when:**
+- [ ] A change in the rules, hooks, CI or board that anyone can check
+---
+**Where:** the guide section, hook, workflow
+**Approach:** only if it is already chosen
+```
+
+A raw item in New may be one line with no template. Triage (Options) is when it gets the template.
 
 **Decision**
 ```
@@ -90,13 +103,27 @@ Old comments stay as they are.
 
 ## Comments
 
-Only for a decision, a result, or a blocker. Three lines at most. Start with the word: Decision, Result, or Blocked. Put the next step in the last line. Progress logs go to commits, the PR, or the handoff. If a comment changes the plan, update the description too.
+Only for a decision, a result, or a blocker. Three lines at most. Start with the word: Decision, Result, or Blocked. Put the next step in the last line. A blocked card gets the `blocked` tag plus a Blocked comment with the reason. Progress logs go to commits, the PR, or the handoff. If a comment changes the plan, update the description too.
 
 ## Fields
 
-Type (built in): Bug, Task, Decision, Epic.
+Type (built in): Feature, Improvement, Bug, Decision, Upkeep, Documentation, Process improvement, Epic.
 
-**Area** (one value):
+**Stage**: New, Options, Next, Develop, Review, Test, Staging, Done, Rejected. The columns are in [`how-we-work.md`](how-we-work.md).
+
+**Service** (one value; empty for process work): SDK, Vulnerability response, Questions and bug reports, Contributions.
+
+**Class of service**: Expedite, Fixed Date, Standard, Intangible.
+
+**Goal** (one value; empty for process work): 1.0, Later.
+
+**Due Date**: only on Fixed Date cards.
+
+**Fixed in**: the release version. CI sets it at the release; never by hand.
+
+**Assignee**: the worker.
+
+**Area** (optional, one value):
 - Core: MRZ parsing, validation, generation
 - Camera: capture and text recognition shared logic
 - UI: the ready-made scanner screens on any platform (Platform says which)
@@ -112,16 +139,6 @@ No new Area is needed now. Add one only when 5 or more open issues do not fit.
 - JVM
 - All
 
-**Release** (one value):
-- 0.5.x: patch line, shipping now
-- 0.6.0: next planned minor
-- 1.0: needed before 1.0
-- Later: wanted, no date
-- Unplanned: not yet looked at
+**Tags**: `blocked` (reason in a comment); `failure-demand` (work that exists only because earlier work was wrong or incomplete).
 
-**Effort** (one value, a rough size, never days):
-- S: under half a day, one place, low risk
-- M: about a day or two, a few places
-- L: more than that, or unclear. Split it before starting if you can.
-
-A Done issue keeps the Release and Effort it had; nobody clears them (the YouTrack connector cannot clear a field). Do not add or sum sizes. The board check (`.claude/skills/board-check/SKILL.md`) looks for missing fields, missing Outcome blocks, code names in titles, and stages that contradict GitHub.
+Card text may name roles (owner, worker), never people. The board check (`.claude/skills/board-check/SKILL.md`) looks for missing fields, missing Outcome blocks, code names in titles, and stages that contradict GitHub.

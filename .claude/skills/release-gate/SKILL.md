@@ -1,12 +1,15 @@
 ---
 name: release-gate
-description: Pre-tag release ritual for Tessera. Invoke when a release issue becomes the session focus, when preparing to tag any version (0.x or later), or when the maintainer says "prepare the release" / "cut X.Y.Z". Runs the tech-stack review, the two review agents, the documentation checks, and the mechanical pre-tag checks. Read-only until the maintainer approves each fix; the maintainer pushes the tag.
+description: Pre-tag release ritual for Tessera. Invoke when a release card becomes the session focus, when preparing to tag any version (0.x or later), or when the maintainer says "prepare the release" / "cut X.Y.Z". Runs the tech-stack review, the two review agents, the documentation checks, and the mechanical pre-tag checks. Read-only until the maintainer approves each fix; the maintainer pushes the tag.
 ---
 
 # Release gate: the pre-tag ritual
 
+The release triggers and the post-release review are in `.claude/how-we-work.md`
+(sections "Releases" and "Reviews").
+
 Every gate is binary. Run them in order and report pass or fail per gate to the
-maintainer. Record the results as a comment on the release issue.
+maintainer. Record the results as a comment on the release card.
 
 1. **Tech-stack review.** Best at the start of release work; if it was skipped, do it
    here. Answer each in one or two lines:
@@ -42,12 +45,13 @@ maintainer. Record the results as a comment on the release issue.
    target (jvm, klib, and android under `api/android/`).
 6. **CHANGELOG roll.** `[Unreleased]` becomes `[X.Y.Z] - YYYY-MM-DD`, with a fresh
    `[Unreleased]` opened in the same PR.
-7. **Dependabot.** `gh api repos/{owner}/{repo}/dependabot/alerts?state=open`: anything
-   a shipped artifact can reach is triaged before the tag; build-only and test-only
-   alerts get a recorded dismissal reason.
+7. **Dependabot.** `gh api repos/{owner}/{repo}/dependabot/alerts?state=open`: each open
+   alert has its card per the guide's "Vulnerabilities" section (shipped dependency: a
+   Fixed Date card due 60 days after the alert; build-only or test-only: Intangible, or
+   dismissed with a recorded reason). A card past its due date is raised before the tag.
 8. **Board.** Test is empty, or the owner accepts its open cards in writing on the release
-   issue. After the release run succeeds, CI (`youtrack-sync.yml`) sets "Fixed in" on every
-   card in Staging, the release issue included, and moves it to Done; check that it did.
+   card. After the release run succeeds, CI (`youtrack-sync.yml`) sets "Fixed in" on every
+   card in Staging, the release card included, and moves it to Done; check that it did.
 9. **tessera-swift is complete before the tag.** The release workflow tags tessera-swift
    at its `main` head right after merging the Package.swift pin, so an open PR there is
    left out of the tag (the 0.5.0 incident, TES-138).

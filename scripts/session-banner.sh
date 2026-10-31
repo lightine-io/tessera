@@ -58,6 +58,9 @@ if [ -n "$status" ]; then
   echo ""
 fi
 
+echo "Start with the Kanban meeting (.claude/how-we-work.md): read the board right to left."
+echo ""
+
 latest=$(ls -1 "$hd"/SESSION-HANDOFF-*.md 2>/dev/null | sort -r | head -1 || true)
 [ -n "$latest" ] || exit 0
 

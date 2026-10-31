@@ -20,12 +20,12 @@ same PR).
 # Session handoff: <date> <UTC time>: <slug>
 
 ## START HERE
-- Focus: <TES-n>: <one-line state>. Next action: <one line>.
+- Develop card: <TES-n>: <one-line state>. Next action: <one line>.
 - Uncommitted state: <branch + files, or "clean, on main at <sha>">.
 
 ## Next Session Should
-1. <the single default starting move>
+1. The Kanban meeting; then <the one move the board does not show, or "pull per the guide">
 
 ## Things to Watch For
-- <session-local gotchas only; nothing durable belongs here>
+- <session-local gotchas only; nothing durable belongs here, and nothing the board shows>
 ```

@@ -43,6 +43,7 @@ EOF
 
 echo "Test 1: newest handoff, three sections only; marker written for this session"
 out="$(run "$tmp" s1)"
+assert_contains "$out" "Start with the Kanban meeting"
 assert_contains "$out" "newer.md"
 assert_contains "$out" "NEW-STATE main at deadbeef"
 assert_contains "$out" "NEXT-ACTION do the thing"
