@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-01
+
 - **The Android camera modules have standard names: `tessera-mrz-camera` and `tessera-mrz-camera-ui`** (`mrz-camera`, `mrz-camera-ui`, formerly `mrz-camera-android` and `mrz-camera-ui-android`; build and publishing change, no API change). The two Android-only modules were published as `tessera-mrz-camera-android` and `tessera-mrz-camera-ui-android`, so the Android part got a doubled name ending in `-android-android`. Each module now publishes a main artifact and an Android artifact, like every other module. What to change in a Gradle build: replace `tessera-mrz-camera-android` with `tessera-mrz-camera`, and `tessera-mrz-camera-ui-android` with `tessera-mrz-camera-ui`. Packages, imports, class names and string keys stay the same. Tools that read only the POM, such as Maven or Bazel, use the Android artifacts `tessera-mrz-camera-android` and `tessera-mrz-camera-ui-android`; the main artifact's POM now depends on its Android artifact at compile scope. The `-android-android` artifacts are no longer published.
 - **The `Tessera` framework describes itself correctly** (`mrz-camera-ios`; build change, no API change). The `Info.plist` inside `Tessera.xcframework` said version `1.0`, build `1`, minimum iOS `15.0` and bundle id `io.lightine.tessera.mrz.camera.Tessera`. It now says the release version for both version fields, minimum iOS `18.0` (the framework is built for iOS 18, and the Swift package already required it) and bundle id `io.lightine.tessera`.
 - **The short-row rescue rules now live in `mrz-camera-core` as internal API** (`mrz-camera-core`, `mrz-camera`, `mrz-camera-ios`; build change, no consumer API change). The rules both camera modules use to read a short MRZ row again were one source file compiled into each camera module. They are now ordinary `mrz-camera-core` code, public only for Tessera's own modules and marked with the new `InternalTesseraApi` opt-in annotation: using them outside Tessera is a compile error, the ABI dumps leave them out, and Swift does not see them. The only new entry in the ABI dumps is the annotation class itself. The copied chevron set is gone; the rules use the one in `MrzLineDetection`.
@@ -659,7 +661,8 @@ These are documented commitments that are explicitly *not* in this `[Unreleased]
 - iOS targets, Android targets (waiting on Xcode install / 0.2.0 platform I/O work)
 - Platform I/O modules (`mrz-camera-*`, `emrtd-nfc-*`, `mrz-camera-ui-*`)
 
-[Unreleased]: https://github.com/lightine-io/tessera/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/lightine-io/tessera/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/lightine-io/tessera/releases/tag/v0.7.0
 [0.6.0]: https://github.com/lightine-io/tessera/releases/tag/v0.6.0
 [0.5.3]: https://github.com/lightine-io/tessera/releases/tag/v0.5.3
 [0.5.1]: https://github.com/lightine-io/tessera/releases/tag/v0.5.1

@@ -135,7 +135,13 @@ public object MrzRowRescue {
         }
     }
 
-    /** One recognized line with its box, as the recognizer reported it. */
+    /**
+     * One recognized line with its box, as the recognizer reported it.
+     *
+     * @property text The line's text, verbatim.
+     * @property confidence The recognizer's confidence for the line, or null when it gives none.
+     * @property box Where the line sits in the image, in pixels.
+     */
     @InternalTesseraApi
     public data class BoxedLine(
         public val text: String,
@@ -168,8 +174,12 @@ public object MrzRowRescue {
     ): Box = row.map { lines[it].box }.reduce(Box::union)
 
     /**
-     * One planned re-read: the short [row] (indices into the recognized lines), its fragments' union
-     * [rowBox], the [crop] to read again (same pixel space), and the [width] of the exact neighbour.
+     * One planned re-read of a short row.
+     *
+     * @property row The short row, as indices into the recognized lines.
+     * @property rowBox The union of the row's fragment boxes.
+     * @property crop The area to read again, in the same pixel space.
+     * @property width The character count of the exact-width neighbouring row; a re-read is kept only at this length.
      */
     @InternalTesseraApi
     public data class RereadPlan(
