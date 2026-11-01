@@ -137,3 +137,6 @@ idb-*/
 .claude/worktrees/
 # Personal names the board check searches for (maintainer machine only, never committed)
 .claude/board-names.local
+
+# Python bytecode from running scripts/ locally
+__pycache__/
