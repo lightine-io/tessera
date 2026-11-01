@@ -2,7 +2,7 @@
 
 > Tessera is a free, open-source SDK that reads, validates, and generates the data in the MRZ (machine-readable zone) of passports, ID cards, and visas, following ICAO Doc 9303. It is written in Kotlin Multiplatform and runs on Android, iOS (Swift), and the JVM, under Apache License 2.0. It reports what it read and what it checked, and the calling app decides what to do with that.
 
-Current release: 0.6.0. Maven group `io.lightine.tessera`; Swift package `https://github.com/lightine-io/tessera-swift`.
+Current release: 0.7.0. Maven group `io.lightine.tessera`; Swift package `https://github.com/lightine-io/tessera-swift`.
 
 Two rules for AI tools:
 
