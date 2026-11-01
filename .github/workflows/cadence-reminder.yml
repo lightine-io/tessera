@@ -35,4 +35,4 @@ jobs:
           gh issue create -R "$REPO" \
             --title "Dependency-upgrade cadence checkpoint ($(date -u +%Y-%m))" \
             --label dependency-cadence \
-            --body "Six-monthly cadence checkpoint. Run the \`dependency-upgrade-cadence\` skill: bump toolchain/dependencies to current stable, sweep the accepted-risk entries (Dependabot triage, wrapper \`distributionSha256Sum\`, the \`mrz-camera-android\` ABI-tooling re-check), and do the 5-minute CLAUDE.md health review. Procedure: \`.claude/skills/dependency-upgrade-cadence/SKILL.md\`."
+            --body "Six-monthly cadence checkpoint. Run the \`dependency-upgrade-cadence\` skill: bump toolchain/dependencies to current stable, sweep the accepted-risk entries (Dependabot triage, wrapper \`distributionSha256Sum\`, the \`mrz-camera\` ABI-tooling re-check), and do the 5-minute CLAUDE.md health review. Procedure: \`.claude/skills/dependency-upgrade-cadence/SKILL.md\`."

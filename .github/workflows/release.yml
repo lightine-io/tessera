@@ -93,8 +93,8 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # The Android camera AAR (tessera-mrz-camera-android) publishes here, so the macOS runner needs
-      # the compileSdk platform. macos-26 ships the Android SDK; ensure android-37.0 is present.
+      # The Android camera modules (tessera-mrz-camera, tessera-mrz-camera-ui and their -android AARs)
+      # publish here, so the macOS runner needs the compileSdk platform. macos-26 ships the Android SDK; ensure android-37.0 is present.
       - name: Ensure Android SDK platform 37
         run: |
           SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
@@ -154,7 +154,7 @@ jobs:
             echo '```kotlin'
             echo "implementation(platform(\"io.lightine.tessera:tessera-bom:$VERSION\"))"
             echo 'implementation("io.lightine.tessera:tessera-mrz-core")            // parse / validate / generate'
-            echo 'implementation("io.lightine.tessera:tessera-mrz-camera-android")  // Android live-camera scanning'
+            echo 'implementation("io.lightine.tessera:tessera-mrz-camera")          // Android live-camera scanning'
             echo '```'
             echo
             echo "**iOS (Swift Package Manager):** add \`https://github.com/lightine-io/tessera-swift\` in Xcode and select \`$TAG\`."

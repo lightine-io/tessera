@@ -15,12 +15,13 @@ plugins {
 
 // The default Android UI module (0.5.0, ADR-002 / ADR-026): an optional, out-of-the-box Jetpack Compose
 // scanner screen layered over the headless reading APIs. A SEPARATE module — not a package inside
-// mrz-camera-android — so headless consumers never transitively pull the Compose runtime; dependency
+// mrz-camera — so headless consumers never transitively pull the Compose runtime; dependency
 // cleanliness is the Principle-11 promotion trigger that justifies a standalone module. Android-only
-// (no jvm() target): Compose is an Android-target concern, so like mrz-camera-android its unit tests run
+// (no jvm() target): Compose is an Android-target concern, so like mrz-camera its unit tests run
 // on the JVM host via the KMP-library plugin's androidHostTest. Published to Maven Central as
-// `tessera-mrz-camera-ui-android` (ADR-016 lockstep versioning); iOS ships its UI as Swift source in
-// the tessera-swift package instead (ADR-026 — the reserved mrz-camera-ui-ios module is retired).
+// `tessera-mrz-camera-ui` (root) + `tessera-mrz-camera-ui-android` (the AAR) (ADR-016 lockstep
+// versioning); iOS ships its UI as Swift source in the tessera-swift package
+// instead (ADR-026 — the reserved mrz-camera-ui-ios module is retired).
 //
 // SCAFFOLD SLICE: this establishes the module, its published shape, and the frozen public surface (one
 // entry composable + one config + one result callback, everything else internal). The live camera
@@ -29,15 +30,15 @@ plugins {
 // the surface below still evolves through the release cycle.
 
 mavenPublishing {
-    coordinates(group.toString(), "tessera-mrz-camera-ui-android", version.toString())
+    coordinates(group.toString(), "tessera-mrz-camera-ui", version.toString())
 
     pom {
-        name.set("tessera-mrz-camera-ui-android")
+        name.set("tessera-mrz-camera-ui")
         description.set(
             "Optional default Jetpack Compose UI for Android MRZ scanning in the Tessera " +
                 "identity-document SDK: a ready-made scanner screen (live camera, saved image, and " +
                 "manual entry per consumer configuration) built over the headless " +
-                "tessera-mrz-camera-android reading APIs. Consumers who supply their own UI do not " +
+                "tessera-mrz-camera reading APIs. Consumers who supply their own UI do not " +
                 "depend on this module.",
         )
     }
@@ -48,7 +49,7 @@ kotlin {
 
     // ABI tracking (ADR-007). Since Kotlin 2.4.20 (KT-85950) abiValidation dumps the AGP-KMP `android {}`
     // target too, so this module's android-only public surface (MrzScannerScreen + MrzScannerConfig +
-    // MrzScannerResult) is baselined in api/android/mrz-camera-ui-android.api and gated by `checkKotlinAbi`
+    // MrzScannerResult) is baselined in api/android/mrz-camera-ui.api and gated by `checkKotlinAbi`
     // like every other module. Refresh after an intended change: `./gradlew updateKotlinAbi`.
     // The Compose compiler's `ComposableSingletons$…` lambda-holder classes are excluded: they are
     // generated implementation detail (not consumer API) whose `getLambda$<hash>` members carry a
@@ -99,7 +100,7 @@ kotlin {
                 // arms its opt-in preview seam and renders the SurfaceRequest it publishes. `implementation`
                 // — the scanner is an internal engine of the screen, not part of this module's public API
                 // (the frozen surface is MrzScannerScreen + config + result only).
-                implementation(project(":mrz-camera-android"))
+                implementation(project(":mrz-camera"))
                 // compose-runtime is `api` — the public entry point is a `@Composable`, so a consumer's
                 // own compilation needs the Compose runtime on its classpath. The rest of Compose is an
                 // internal implementation detail of the screens.
@@ -113,7 +114,7 @@ kotlin {
                 implementation(libs.androidx.compose.material3)
                 // camera-compose supplies the CameraXViewfinder composable that draws the scanner's live
                 // preview SurfaceRequest — the live-preview slice (0.5.0). SurfaceRequest itself arrives
-                // transitively via mrz-camera-android's `api(camera-core)`.
+                // transitively via mrz-camera's `api(camera-core)`.
                 implementation(libs.androidx.camera.compose)
                 // lifecycle-runtime-compose supplies collectAsStateWithLifecycle for hoisting scanner
                 // state (the SurfaceRequest and per-frame results) off the camera thread into Compose;

@@ -8,16 +8,16 @@ kotlinx-datetime = "0.8.0"
 kotlinx-coroutines = "1.11.0"
 maven-publish = "0.37.0"
 dokka = "2.2.0"
-# Android camera I/O stack (mrz-camera-android, 0.2.0). camera-core supplies the ImageProxy
+# Android camera I/O stack (mrz-camera, 0.2.0). camera-core supplies the ImageProxy
 # frame type; ML Kit text-recognition is the bundled-model variant — the recognition model
 # ships in the app (no runtime model download / no network for OCR), though it still pulls
 # Play Services ML Kit libs + Google's datatransport stack transitively (see reading-risks.md).
 # Both are latest stable.
 camerax = "1.6.2"
 mlkit-text-recognition = "16.0.1"
-# androidx.exifinterface (mrz-camera-android, 0.3.0) — reads a saved image's EXIF for capture metadata. Latest stable.
+# androidx.exifinterface (mrz-camera, 0.3.0) — reads a saved image's EXIF for capture metadata. Latest stable.
 androidx-exifinterface = "1.4.2"
-# Jetpack Compose UI stack for the default Android UI module (mrz-camera-ui-android, 0.5.0; ADR-002 /
+# Jetpack Compose UI stack for the default Android UI module (mrz-camera-ui, 0.5.0; ADR-002 /
 # ADR-026). Deliberately pinned per-artifact with NO Compose BOM (the module owns its versions
 # explicitly — one fewer transitive contract to reason about). `androidx-compose` is the shared version
 # of the Compose UI group (runtime + ui + foundation ship in lockstep); Material3 versions on its own
@@ -30,7 +30,7 @@ androidx-compose-material3 = "1.4.0"
 # stable (2.11.0) declares minCompileSdk=37 (Android 17) — met by the repo-wide compileSdk 37. Latest stable.
 androidx-lifecycle = "2.11.0"
 # activity-compose supplies rememberLauncherForActivityResult + the PickVisualMedia contract — the system
-# Android photo picker the saved-image (mockup 07) slice launches to pick an image (mrz-camera-ui-android,
+# Android photo picker the saved-image (mockup 07) slice launches to pick an image (mrz-camera-ui,
 # 0.5.0). Latest stable, verified against Google's Maven / the Activity release notes at write time.
 androidx-activity-compose = "1.13.0"
 # Robolectric runs the module's Compose UI tests on the JVM host (androidHostTest) — no device/emulator —
@@ -52,12 +52,12 @@ androidx-camera-core = { module = "androidx.camera:camera-core", version.ref = "
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
 # camera-compose supplies the CameraXViewfinder composable that renders the scanner's SurfaceRequest
-# (mrz-camera-ui-android live preview, 0.5.0). Same `camerax` version ref as the rest of the CameraX
+# (mrz-camera-ui live preview, 0.5.0). Same `camerax` version ref as the rest of the CameraX
 # stack so the viewfinder matches the session it draws.
 androidx-camera-compose = { module = "androidx.camera:camera-compose", version.ref = "camerax" }
 mlkit-text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "mlkit-text-recognition" }
 androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "androidx-exifinterface" }
-# Compose UI stack for mrz-camera-ui-android (0.5.0). compose-runtime is `api` in the module — the
+# Compose UI stack for mrz-camera-ui (0.5.0). compose-runtime is `api` in the module — the
 # public entry point is a `@Composable`, so a consumer's own compilation needs the runtime; ui /
 # foundation / material3 are internal implementation detail (`implementation`). The live camera preview
 # uses androidx-camera-compose (above) fed by the scanner's SurfaceRequest seam.
@@ -86,7 +86,7 @@ robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectr
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 # The Compose compiler, versioned in lockstep with Kotlin (it is part of the Kotlin release). Applied by
-# mrz-camera-ui-android instead of an AGP `buildFeatures.compose` flag (the KMP-AGP library plugin has none).
+# mrz-camera-ui instead of an AGP `buildFeatures.compose` flag (the KMP-AGP library plugin has none).
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }

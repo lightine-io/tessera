@@ -8,7 +8,7 @@ import io.lightine.tessera.mrz.formats.Td3FormatSpec
 import kotlin.math.ceil
 
 /**
- * The pure rules both platform recognizers use to read a short MRZ row again (mrz-camera-android's ML Kit
+ * The pure rules both platform recognizers use to read a short MRZ row again (mrz-camera's ML Kit
  * recognizer and mrz-camera-ios's Vision saved-image recognizer), kept here so both platforms follow ONE
  * rule and it is tested once, in this module's commonTest. It is public only so those modules can call it,
  * and marked [InternalTesseraApi]: not consumer API, left out of the ABI dumps, hidden from Swift.

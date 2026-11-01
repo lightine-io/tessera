@@ -43,8 +43,8 @@ Release 0.6.0. Minimums: minSdk 23, iOS 18, Java 21. Modules: [Choose your piece
 dependencies {
     implementation(platform("io.lightine.tessera:tessera-bom:0.6.0"))
     implementation("io.lightine.tessera:tessera-mrz-core")
-    implementation("io.lightine.tessera:tessera-mrz-camera-android")
-    implementation("io.lightine.tessera:tessera-mrz-camera-ui-android")
+    implementation("io.lightine.tessera:tessera-mrz-camera")
+    implementation("io.lightine.tessera:tessera-mrz-camera-ui")
 }
 ```
 
