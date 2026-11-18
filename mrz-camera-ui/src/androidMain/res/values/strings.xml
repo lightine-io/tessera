@@ -242,6 +242,23 @@
     <!-- Neutral advisory shown when one or more checks did not match — it points at the document, it does
          not pass judgement. Rendered with a ⓘ mark. -->
     <string name="tessera_scanner_obs_some_mismatch">Some checks didn\'t agree. Please compare with your document.</string>
+    <!-- Warning notes: what the reader noticed in the printed lines. Each is a stated observation, never a
+         verdict, and the person can still use the result. Rendered with a ⓘ mark, after the provenance line. -->
+    <!-- A country code is not in the SDK's country list. "%1$s" is the field label (issuing state or
+         nationality), "%2$s" the code exactly as read (for example a zero where a letter O belongs). -->
+    <string name="tessera_scanner_obs_warning_unknown_country">%1$s %2$s isn\'t in our country list</string>
+    <!-- The document type code is not in the SDK's list. "%1$s" is the code exactly as read. -->
+    <string name="tessera_scanner_obs_warning_unknown_document_type">Document type %1$s isn\'t in our list</string>
+    <!-- The expiry date is before today. -->
+    <string name="tessera_scanner_obs_warning_expiry_past">Expiry date has passed</string>
+    <!-- The expiry date is implausibly far ahead. "%1$s" is the number of years used as the limit. -->
+    <string name="tessera_scanner_obs_warning_expiry_far">Expiry date is more than %1$s years away</string>
+    <!-- The name uses its whole line, so the printed name may be cut short. -->
+    <string name="tessera_scanner_obs_warning_name_truncated">The name fills its whole line and may be cut short</string>
+    <!-- The personal number has content but its check number position holds a filler. -->
+    <string name="tessera_scanner_obs_warning_personal_number_no_check">Personal number has no check number</string>
+    <!-- The sex position holds an X. -->
+    <string name="tessera_scanner_obs_warning_sex_x">Sex is printed as X</string>
     <!-- Provenance line: how the SDK read this document. "%1$s" is the read-method label below. Rendered
          with a ⓘ mark. -->
     <string name="tessera_scanner_obs_read_by">Read by %1$s</string>
