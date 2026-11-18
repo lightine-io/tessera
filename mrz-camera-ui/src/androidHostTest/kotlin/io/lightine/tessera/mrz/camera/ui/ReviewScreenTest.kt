@@ -28,6 +28,7 @@ import io.lightine.tessera.mrz.camera.ScanQuality
 import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.mrz.recognition.DocumentType
+import io.lightine.tessera.types.errors.MrzUnknownCountryCode
 import io.lightine.tessera.types.vocabulary.DocumentCategory
 import io.lightine.tessera.types.vocabulary.ReadMethod
 import org.junit.Rule
@@ -185,6 +186,109 @@ class ReviewScreenTest {
         // The OTHER check digits on this specimen still match, but a passing ✓ row must NOT appear in the
         // summary — only the one that actually needs attention does.
         composeRule.onAllNodesWithText("check number agrees", substring = true).assertCountEquals(0)
+    }
+
+    // ----------------------------------------------------------------------------------------------------
+    // TES-152: parser warnings are shown as neutral notes (after provenance, before the mismatch advisory).
+    // ----------------------------------------------------------------------------------------------------
+
+    // The specimen with the nationality read as "UT0" (a zero in place of the letter O): not in the country
+    // table, so the parser attaches an MrzUnknownCountryCode. No check digit covers the nationality, so this
+    // alone reports no mismatch; [zeroNationalityAndMismatchLine2] adds the wrong birth-date check digit.
+    private val zeroNationalityLine2 = specimenLine2.replaceRange(10, 13, "UT0")
+
+    private val zeroNationalityAndMismatchLine2 = mismatchLine2.replaceRange(10, 13, "UT0")
+
+    private fun showReview(
+        decoded: MrzScanResult.Decoded,
+        expanded: Boolean,
+    ) {
+        composeRule.setContent {
+            MrzScannerConfig().let { config ->
+                TesseraScannerTheme(config.theme) {
+                    ReviewContent(decoded = decoded, expanded = expanded, onToggleExpanded = {}, onUse = {}, onRescan = {})
+                }
+            }
+        }
+    }
+
+    @Test
+    fun unknown_country_note_shows_the_raw_code_in_the_summary() {
+        val decoded = decoded(specimenLine1, zeroNationalityLine2)
+        assertTrue(
+            decoded.parse.metadata.warnings
+                .any { it is MrzUnknownCountryCode },
+            "fixture must carry the warning",
+        )
+
+        showReview(decoded, expanded = false)
+
+        composeRule.onNodeWithText("Nationality UT0 isn't in our country list").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun unknown_country_note_shows_the_raw_code_in_the_expanded_view() {
+        val decoded = decoded(specimenLine1, zeroNationalityLine2)
+
+        showReview(decoded, expanded = true)
+
+        composeRule.onNodeWithText("Nationality UT0 isn't in our country list").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun warning_notes_come_after_provenance_and_the_advisory_stays_last() {
+        val decoded = decoded(specimenLine1, zeroNationalityAndMismatchLine2)
+        assertTrue(
+            decoded.parse.metadata.validationFailures
+                .isNotEmpty(),
+            "fixture must also carry a mismatch",
+        )
+        var texts: List<String> = emptyList()
+
+        composeRule.setContent {
+            texts = reviewObservations(decoded).map { it.text }
+        }
+        composeRule.waitForIdle()
+
+        val provenance = texts.indexOf("Read by live camera")
+        val warning = texts.indexOf("Nationality UT0 isn't in our country list")
+        val advisory = texts.indexOf("Some checks didn't agree. Please compare with your document.")
+        assertTrue(provenance >= 0 && warning >= 0 && advisory >= 0, "all three rows present: $texts")
+        assertTrue(provenance < warning, "provenance before warning notes: $texts")
+        assertEquals(texts.lastIndex, advisory, "the advisory is last: $texts")
+        assertTrue(warning < advisory, "warning notes before the advisory: $texts")
+    }
+
+    @Test
+    fun a_clean_read_shows_no_warning_note() {
+        val decoded = decoded(specimenLine1, specimenLine2)
+        assertTrue(
+            decoded.parse.metadata.warnings
+                .isEmpty(),
+            "clean specimen carries no warnings",
+        )
+
+        showReview(decoded, expanded = true)
+
+        composeRule.onAllNodesWithText("country list", substring = true).assertCountEquals(0)
+        composeRule.onAllNodesWithText("isn't in our", substring = true).assertCountEquals(0)
+        composeRule.onNodeWithText("Read by live camera").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun a_filler_personal_number_check_is_a_note_and_not_a_check_row() {
+        // The personal number has content but its check position (index 42) holds a filler: the parser
+        // reports a warning and no mismatch for that digit, so the screen must not say that it agrees.
+        val decoded = decoded(specimenLine1, specimenLine2.replaceRange(42, 43, "<"))
+        var texts: List<String> = emptyList()
+
+        composeRule.setContent {
+            texts = reviewObservations(decoded).map { it.text }
+        }
+        composeRule.waitForIdle()
+
+        assertTrue("Personal number has no check number" in texts, "the note is present: $texts")
+        assertTrue(texts.none { it.startsWith("Personal number (optional) - ") }, "no check row for it: $texts")
     }
 
     @Test

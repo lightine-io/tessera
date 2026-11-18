@@ -53,7 +53,16 @@ import io.lightine.tessera.mrz.model.TD3
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.mrz.recognition.CountryCode
 import io.lightine.tessera.mrz.recognition.DocumentType
+import io.lightine.tessera.types.errors.MrzBirthDateImplausiblyOld
 import io.lightine.tessera.types.errors.MrzCheckDigitMismatch
+import io.lightine.tessera.types.errors.MrzExpiryDateImplausiblyFar
+import io.lightine.tessera.types.errors.MrzExpiryDatePast
+import io.lightine.tessera.types.errors.MrzNameTruncated
+import io.lightine.tessera.types.errors.MrzPersonalNumberCheckDigitFiller
+import io.lightine.tessera.types.errors.MrzSexCharacterX
+import io.lightine.tessera.types.errors.MrzUnknownCountryCode
+import io.lightine.tessera.types.errors.MrzUnknownDocumentTypeCode
+import io.lightine.tessera.types.errors.MrzWarning
 import io.lightine.tessera.types.vocabulary.DocumentCategory
 import io.lightine.tessera.types.vocabulary.MrzField
 import io.lightine.tessera.types.vocabulary.ReadMethod
@@ -229,7 +238,10 @@ internal fun reviewSummaryObservations(decoded: MrzScanResult.Decoded): List<Obs
  *    recorded and computed digits - neither is "the right one"; the consumer decides (Principle 1).
  * 2. **Expiry well-formed** - a MATCH observation only when the expiry components form a real calendar date
  *    (`componentsFormCalendarDate == true`).
- * 3. **Advisory** - a single neutral INFO observation "some checks did not match - verify against the
+ * 3. **Warning notes** (TES-152) - one neutral INFO observation per entry of `metadata.warnings`, in list
+ *    order, stating what the parser noticed (an unknown country code, an expiry date that has passed, ...).
+ *    Observations only: they never block or change anything (Principle 1).
+ * 4. **Advisory** - a single neutral INFO observation "some checks did not match - verify against the
  *    document" appended when any check-digit mismatch was reported.
  *
  * A [`ParseResult.Failure`][ParseResult.Failure] carries no parsed document, so it yields an empty list.
@@ -257,7 +269,10 @@ internal fun parseObservations(parse: ParseResult): List<Observation> {
             add(MrzField.DOCUMENT_NUMBER to stringResource(R.string.tessera_scanner_check_label_document_number))
             add(MrzField.DATE_OF_BIRTH to stringResource(R.string.tessera_scanner_check_label_date_of_birth))
             add(MrzField.DATE_OF_EXPIRY to stringResource(R.string.tessera_scanner_check_label_date_of_expiry))
-            if (fields.checkDigits.optionalData != null) {
+            // A filler in the personal-number check position is neither a match nor a mismatch: the parser
+            // reports it as a warning, shown as its own note in step 3, so no check row is stated for it.
+            val optionalCheckIsFiller = parse.metadata.warnings.any { it is MrzPersonalNumberCheckDigitFiller }
+            if (fields.checkDigits.optionalData != null && !optionalCheckIsFiller) {
                 val optionalLabel =
                     if (document is TD3) R.string.tessera_scanner_field_optional else R.string.tessera_scanner_check_label_optional_data
                 add(MrzField.OPTIONAL_DATA to stringResource(optionalLabel))
@@ -304,7 +319,14 @@ internal fun parseObservations(parse: ParseResult): List<Observation> {
             )
     }
 
-    // 3. Neutral advisory when anything did not match.
+    // 3. One neutral note per parser warning, in list order (TES-152). Before the advisory, so the advisory
+    // stays the last line once reviewObservations slots provenance in front of the first INFO row.
+    for (warning in parse.metadata.warnings) {
+        val text = warningText(warning) ?: continue
+        observations += Observation(symbol = SYMBOL_INFO, text = text, tone = ObservationTone.INFO)
+    }
+
+    // 4. Neutral advisory when anything did not match.
     if (mismatches.isNotEmpty()) {
         observations +=
             Observation(
@@ -316,6 +338,53 @@ internal fun parseObservations(parse: ParseResult): List<Observation> {
 
     return observations
 }
+
+/**
+ * The plain-language note for one parser [warning], or null when it has no row. Exhaustive over the sealed
+ * [MrzWarning], so a new warning subtype fails to compile here until it is given a note (or a deliberate null).
+ * The suppression is for [MrzBirthDateImplausiblyOld]: deprecated and never reported (removed at 1.0), so no row.
+ */
+@Suppress("DEPRECATION")
+@Composable
+private fun warningText(warning: MrzWarning): String? =
+    when (warning) {
+        is MrzUnknownCountryCode -> {
+            val label =
+                when (warning.field) {
+                    MrzField.ISSUING_STATE -> R.string.tessera_scanner_field_issuing_state
+                    else -> R.string.tessera_scanner_field_nationality
+                }
+            stringResource(R.string.tessera_scanner_obs_warning_unknown_country, stringResource(label), warning.rawCode)
+        }
+
+        is MrzUnknownDocumentTypeCode -> {
+            stringResource(R.string.tessera_scanner_obs_warning_unknown_document_type, warning.rawCode)
+        }
+
+        is MrzExpiryDatePast -> {
+            stringResource(R.string.tessera_scanner_obs_warning_expiry_past)
+        }
+
+        is MrzExpiryDateImplausiblyFar -> {
+            stringResource(R.string.tessera_scanner_obs_warning_expiry_far, warning.thresholdYears.toString())
+        }
+
+        is MrzNameTruncated -> {
+            stringResource(R.string.tessera_scanner_obs_warning_name_truncated)
+        }
+
+        is MrzPersonalNumberCheckDigitFiller -> {
+            stringResource(R.string.tessera_scanner_obs_warning_personal_number_no_check)
+        }
+
+        is MrzSexCharacterX -> {
+            stringResource(R.string.tessera_scanner_obs_warning_sex_x)
+        }
+
+        is MrzBirthDateImplausiblyOld -> {
+            null
+        }
+    }
 
 // ---------------------------------------------------------------------------------------------------------
 // Screens
