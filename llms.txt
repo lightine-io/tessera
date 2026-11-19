@@ -28,7 +28,7 @@ Read each list in order. Where no tutorial is named, none exists.
 | Capability | JVM | Android | iOS |
 |---|---|---|---|
 | Parse and read fields | ✓ | ✓ | ◐ |
-| Validate and check digits | ✓ | ✓ | ◐ |
+| Validate and check digits | ✓ | ✓ | ✓ |
 | Look up codes and layouts | ✓ | ✓ | ◐ |
 | Generate an MRZ | ✓ | ✓ | ◐ |
 | Transliterate names | ✓ | ✓ | ✓ |
@@ -39,7 +39,7 @@ Read each list in order. Where no tutorial is named, none exists.
 | Saved image | ◐ | ✓ | ✓ |
 | Ready-made scanner screen | n/a | ✓ | ✓ |
 | Frame agreement setting | n/a | ✓ | ✗ |
-| Diagnostic events | ✓ | ✓ | ◐ |
+| Diagnostic events | ✓ | ✓ | ✓ |
 | Install and align versions | ✓ | ✓ | ✓ |
 
 ## Start here
