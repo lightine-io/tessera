@@ -74,5 +74,11 @@ maintainer. Record the results as a comment on the release card.
     install blocks (the Gradle BOM, the Maven version, the Swift `exact:`, the release
     line) name the version being tagged. Update both READMEs first (the 0.5.1 incident,
     TES-168); tessera-swift's README change must be merged before the tag (gate 9).
+13. **KB install versions.** Search the KB for the previous release number
+    (`search_articles` with `project: TES <previous version>`, or the KB search box).
+    Every hit must be version history ("or later", "since"). An install snippet, a
+    "Written for Tessera" footer, or a "current release" sentence on the old number is
+    updated with the release's pages, and only after the page's code was checked against
+    this release. By hand until the shelf check can do it.
 
 **The maintainer pushes the tag. The session never does.**

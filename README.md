@@ -23,13 +23,13 @@ It is for developers adding document reading to apps or backends. Documentation:
 | Capability | JVM | Android | iOS |
 |---|---|---|---|
 | Parse and read fields | ✓ | ✓ | ◐ |
-| Validate and check digits | ✓ | ✓ | ◐ |
+| Validate and check digits | ✓ | ✓ | ✓ |
 | Generate an MRZ | ✓ | ✓ | ◐ |
 | Transliterate names | ✓ | ✓ | ✓ |
 | Live camera, no UI | n/a | ✓ | ◐ |
 | Saved image | ◐ | ✓ | ✓ |
 | Ready-made scanner screen | n/a | ✓ | ✓ |
-| Diagnostic events | ✓ | ✓ | ◐ |
+| Diagnostic events | ✓ | ✓ | ✓ |
 
 Tessera's own code makes no network calls and logs nothing. On Android, the text recognition (Google ML Kit) uploads usage metrics to Google, never images or text; an app that must make no network calls can turn this off. See [SECURITY.md](SECURITY.md#scope).
 
