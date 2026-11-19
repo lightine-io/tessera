@@ -49,9 +49,11 @@ kotlin {
 
     jvmToolchain(21)
 
-    // The JVM target carries the host tests for this platform-agnostic core, so they run on the
-    // existing JVM `check` CI runner with no Android SDK and no device. It is a build/test target,
-    // not a declared publication shape — what this module publishes is decided at the release slice.
+    // The JVM target is published as `tessera-mrz-camera-core-jvm` and listed in the BOM: a JVM app
+    // uses it to analyze its own frames and to read saved images with its own recognizer. It also
+    // carries the host tests for this platform-agnostic core, so they run on the JVM `check` CI
+    // runner with no Android SDK and no device. Removing the target would remove a published
+    // artifact, which is a breaking change (ADR-007).
     jvm()
 
     // Android target. compileSdk tracks the latest stable API (37, Android 17 — ADR-017); minSdk 23 per ADR-018. The
