@@ -1,4 +1,8 @@
 pluginManagement {
+    // Tessera's convention plugins (tessera.kotlin-multiplatform, tessera.android-library,
+    // tessera.public-api, tessera.publishing, tessera.kmp-publishing): the build settings every
+    // module shares (TES-269).
+    includeBuild("build-logic")
     repositories {
         gradlePluginPortal()
         mavenCentral()

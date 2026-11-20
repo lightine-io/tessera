@@ -1,16 +1,13 @@
 plugins {
-    alias(libs.plugins.kotlin.multiplatform)
-    // Android target via Google's KMP-library plugin (ADR-017), same as the other Android modules.
-    alias(libs.plugins.android.kotlin.multiplatform.library)
+    id("tessera.android-library")
+    id("tessera.public-api")
     // The Compose compiler (org.jetbrains.kotlin.plugin.compose), pinned to the Kotlin version. Under the
     // KMP-AGP library plugin there is no `buildFeatures.compose` flag (that belongs to the application /
     // library AGP plugins); the compiler is wired in by applying this plugin, which enables Compose for
     // every Kotlin compilation in the module — here the single Android target and its host tests
     // (ADR-026 / the 0.5.0 tech-stack recap).
     alias(libs.plugins.compose.compiler)
-    // dokka before maven.publish (see mrz-core's note) — the javadoc jar is realized during publish apply.
-    alias(libs.plugins.dokka)
-    alias(libs.plugins.maven.publish)
+    id("tessera.kmp-publishing")
 }
 
 // The default Android UI module (0.5.0, ADR-002 / ADR-026): an optional, out-of-the-box Jetpack Compose
@@ -45,34 +42,25 @@ mavenPublishing {
 }
 
 kotlin {
-    explicitApi()
-
-    // ABI tracking (ADR-007). Since Kotlin 2.4.20 (KT-85950) abiValidation dumps the AGP-KMP `android {}`
+    // ABI tracking (tessera.public-api). Since Kotlin 2.4.20 (KT-85950) abiValidation dumps the AGP-KMP `android {}`
     // target too, so this module's android-only public surface (MrzScannerScreen + MrzScannerConfig +
     // MrzScannerResult) is baselined in api/android/mrz-camera-ui.api and gated by `checkKotlinAbi`
-    // like every other module. Refresh after an intended change: `./gradlew updateKotlinAbi`.
+    // like every other module.
     // The Compose compiler's `ComposableSingletons$…` lambda-holder classes are excluded: they are
     // generated implementation detail (not consumer API) whose `getLambda$<hash>` members carry a
     // position-derived hash that shifts across compose-compiler versions — baselining them would
     // produce spurious ABI breaks. (metalava filters these too.)
     @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
-    abiValidation {
-        filters {
-            exclude {
-                byNames.add("**ComposableSingletons**")
-            }
+    abiValidation.filters {
+        exclude {
+            byNames.add("**ComposableSingletons**")
         }
     }
 
-    jvmToolchain(21)
-
-    // Android target. compileSdk tracks the latest stable API (37, Android 17 — ADR-017), like every
-    // module; minSdk 23 per ADR-018. (This module's Compose stack — lifecycle-runtime-compose 2.11.0 —
-    // independently requires compileSdk 37 via its AAR minCompileSdk.)
+    // Android target (compileSdk and minSdk: tessera.android-library). This module's Compose stack
+    // (lifecycle-runtime-compose 2.11.0) independently requires compileSdk 37 via its AAR minCompileSdk.
     android {
         namespace = "io.lightine.tessera.mrz.camera.ui"
-        compileSdk = 37
-        minSdk = 23
         // Process this module's res/ and generate its R class (the KMP-library plugin leaves resource
         // handling off by default). This backs the tessera_* string-resource overlay contract (TES-46):
         // MrzScannerScreen reads its user-facing copy via stringResource(R.string.tessera_scanner_*), and a

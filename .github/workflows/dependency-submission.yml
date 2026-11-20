@@ -69,4 +69,7 @@ jobs:
           # configuration, so it cannot be excluded here. Result: the submitted graph covers the
           # runtime/compile classpaths of the published artifacts only, so consumer-facing dependency
           # CVEs are still alerted.
+          #   - `:build-logic` - the included build of convention plugins (TES-269). Its classpath is the
+          #     Gradle plugins themselves (Kotlin, AGP, Dokka, vanniktech): build-time only, never shipped.
           dependency-graph-exclude-configurations: '.*[Tt]est(Compile|Runtime)Classpath'
+          dependency-graph-exclude-projects: ':build-logic'

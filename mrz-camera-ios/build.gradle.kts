@@ -1,7 +1,8 @@
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 
 plugins {
-    alias(libs.plugins.kotlin.multiplatform)
+    id("tessera.kotlin-multiplatform")
+    id("tessera.public-api")
 }
 
 // The iOS platform-I/O module: AVFoundation + Apple Vision on top of the platform-agnostic
@@ -15,21 +16,11 @@ plugins {
 // off (this module is not on Maven Central — iOS ships only through SPM).
 
 kotlin {
-    explicitApi()
-
     // Opts in to mrz-camera-core's @InternalTesseraApi: declarations public only so Tessera's camera modules
     // can share them (the short-row rescue rules, MrzRowRescue). Not consumer API; consumers never opt in.
     compilerOptions {
         optIn.add("io.lightine.tessera.mrz.camera.InternalTesseraApi")
     }
-
-    // ABI tracking — enforces the ADR-007 no-public-API-break promise: snapshots the public API under
-    // api/ and fails `check` on an accidental break. Built-in Kotlin Gradle feature (no extra
-    // dependency, bundled with Kotlin so it never blocks a Kotlin bump). Refresh: `./gradlew updateKotlinAbi`.
-    @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
-    abiValidation()
-
-    jvmToolchain(21)
 
     // iOS targets (ADR-017): device arm64 plus the Apple-Silicon simulator. These two
     // standard shortcuts activate Kotlin's default hierarchy template, providing the shared

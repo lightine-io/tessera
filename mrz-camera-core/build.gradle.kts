@@ -1,12 +1,7 @@
 plugins {
-    alias(libs.plugins.kotlin.multiplatform)
-    // Android target via Google's KMP-library plugin (ADR-017). Applied right after the Kotlin
-    // Multiplatform plugin so the `android {}` target is available inside the `kotlin {}` block.
-    alias(libs.plugins.android.kotlin.multiplatform.library)
-    // dokka must be applied before maven.publish (see mrz-core's note): signAllPublications() in the
-    // root build eagerly realizes the Dokka javadoc jar during maven.publish's apply.
-    alias(libs.plugins.dokka)
-    alias(libs.plugins.maven.publish)
+    id("tessera.android-library")
+    id("tessera.public-api")
+    id("tessera.kmp-publishing")
 }
 
 // The platform-agnostic camera-reading core (ADR-021): the analyse-frame engine, the streaming
@@ -31,23 +26,15 @@ mavenPublishing {
 }
 
 kotlin {
-    explicitApi()
-
-    // ABI tracking — enforces the ADR-007 no-public-API-break promise: snapshots the public API under
-    // api/ and fails `check` on an accidental break. Built-in Kotlin Gradle feature (no extra
-    // dependency, bundled with Kotlin so it never blocks a Kotlin bump). Refresh: `./gradlew updateKotlinAbi`.
-    // Declarations marked @InternalTesseraApi (public only so Tessera's camera modules can share them, e.g.
-    // MrzRowRescue) are left out of the dumps: they are not consumer API and may change in any release.
+    // ABI tracking (tessera.public-api): declarations marked @InternalTesseraApi (public only so Tessera's
+    // camera modules can share them, e.g. MrzRowRescue) are left out of the dumps: they are not consumer
+    // API and may change in any release.
     @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
-    abiValidation {
-        filters {
-            exclude {
-                annotatedWith.add("io.lightine.tessera.mrz.camera.InternalTesseraApi")
-            }
+    abiValidation.filters {
+        exclude {
+            annotatedWith.add("io.lightine.tessera.mrz.camera.InternalTesseraApi")
         }
     }
-
-    jvmToolchain(21)
 
     // The JVM target is published as `tessera-mrz-camera-core-jvm` and listed in the BOM: a JVM app
     // uses it to analyze its own frames and to read saved images with its own recognizer. It also
@@ -56,14 +43,11 @@ kotlin {
     // artifact, which is a breaking change (ADR-007).
     jvm()
 
-    // Android target. compileSdk tracks the latest stable API (37, Android 17 — ADR-017); minSdk 23 per ADR-018. The
-    // namespace is distinct from mrz-camera's (each module's AAR manifest needs its own),
+    // Android target (compileSdk and minSdk: tessera.android-library). The namespace is distinct from mrz-camera's (each module's AAR manifest needs its own),
     // while the Kotlin package stays io.lightine.tessera.mrz.camera across both — Android's namespace
     // and the Kotlin package are independent. Verified by the android-compile CI job.
     android {
         namespace = "io.lightine.tessera.mrz.camera.core"
-        compileSdk = 37
-        minSdk = 23
         // Run the common test suite against the Android target on the JVM host (androidHostTest) —
         // executed by the android-compile CI job, closing the "Android target is compile-only" gap.
         withHostTest {}

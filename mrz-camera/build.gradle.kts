@@ -1,11 +1,7 @@
 plugins {
-    alias(libs.plugins.kotlin.multiplatform)
-    // Android target via Google's KMP-library plugin (ADR-017). Applied right after the Kotlin
-    // Multiplatform plugin so the `android {}` target is available inside the `kotlin {}` block.
-    alias(libs.plugins.android.kotlin.multiplatform.library)
-    // dokka before maven.publish (see mrz-core's note) — the javadoc jar is realized during publish apply.
-    alias(libs.plugins.dokka)
-    alias(libs.plugins.maven.publish)
+    id("tessera.android-library")
+    id("tessera.public-api")
+    id("tessera.kmp-publishing")
 }
 
 // The Android platform-I/O module: CameraX + ML Kit wiring on top of the platform-agnostic
@@ -32,30 +28,22 @@ mavenPublishing {
 }
 
 kotlin {
-    explicitApi()
-
     // Opts in to mrz-camera-core's @InternalTesseraApi: declarations public only so Tessera's camera modules
     // can share them (the short-row rescue rules, MrzRowRescue). Not consumer API; consumers never opt in.
     compilerOptions {
         optIn.add("io.lightine.tessera.mrz.camera.InternalTesseraApi")
     }
 
-    // ABI tracking (ADR-007). Since Kotlin 2.4.20 (KT-85950) abiValidation dumps the AGP-KMP `android {}`
-    // target too, so this module's android-only public surface (CameraXMrzScanner, MlKitMrzTextRecognizer,
-    // the saved-image/EXIF factories) is baselined in api/android/mrz-camera.api and gated by
-    // `checkKotlinAbi` like every other module. Refresh after an intended change: `./gradlew updateKotlinAbi`.
-    @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
-    abiValidation()
+    // ABI tracking (tessera.public-api). Since Kotlin 2.4.20 (KT-85950) abiValidation dumps the AGP-KMP
+    // `android {}` target too, so this module's android-only public surface (CameraXMrzScanner,
+    // MlKitMrzTextRecognizer, the saved-image/EXIF factories) is baselined in api/android/mrz-camera.api
+    // and gated by `checkKotlinAbi` like every other module.
 
-    jvmToolchain(21)
-
-    // Android target. compileSdk tracks the latest stable API (37, Android 17 — ADR-017); minSdk 23 per ADR-018. The
+    // Android target (compileSdk and minSdk: tessera.android-library). The
     // androidMain CameraX / ML Kit code compiles here and is verified by the android-compile CI job
     // (a Linux `check` runner has no Android SDK, so it cannot compile this target).
     android {
         namespace = "io.lightine.tessera.mrz.camera"
-        compileSdk = 37
-        minSdk = 23
         // Enables the androidHostTest source set — local JVM unit tests for this Android-only module
         // (the KMP-library plugin's host-test target). classifyCameraState is a pure function over the
         // androidx CameraState int codes, so its test runs on the JVM with no device — the Android
