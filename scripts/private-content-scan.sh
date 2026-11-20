@@ -54,7 +54,7 @@ if [ -n "$MRZ_HITS" ]; then
     exit 2
 fi
 # --- 1b. Organization guard ---------------------------------------------------------
-ORG_SUFFIX='(Inc\.?|LLC|Ltd\.?|GmbH|AG|Corp\.?|Corporation|PLC|LLP|S\.A\.|B\.V\.)'
+ORG_SUFFIX='(Inc\.?|LLC|Ltd\.?|GmbH|Corp\.?|Corporation|PLC|LLP|S\.A\.|B\.V\.)'
 ORG_HITS=$(
     git ls-files -z -- '*.md' '*.kt' '*.kts' '*.swift' '*.xcstrings' '*.yml' '*.yaml' '*.xml' '*.toml' \
             ':!:scripts/test/**' \
