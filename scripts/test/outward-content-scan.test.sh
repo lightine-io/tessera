@@ -33,4 +33,18 @@ expect 0 "malformed payload fails open" 'not json'
 rm "$tmp/.claude/private-content-terms.local"
 expect 0 "no terms file: nothing to scan" '{"tool_name":"Bash","tool_input":{"command":"gh pr create --body \"examplecorp\""}}'
 
+# The list of YouTrack write tools lives in two places: the hook matcher in
+# .claude/settings.json (which calls decide a scan) and the pattern in the scan script
+# (which payloads it reads). A tool in one and not the other escapes the scan.
+repo_root=$(cd "$(dirname "$hook")/.." && pwd)
+pattern='mcp__\.\+__\([a-z_|]+\)'
+in_settings=$(grep -oE "$pattern" "$repo_root/.claude/settings.json" | sort -u || true)
+in_script=$(grep -oE "$pattern" "$hook" | sort -u || true)
+if [ -z "$in_settings" ] || [ "$in_settings" != "$in_script" ]; then
+  echo "  FAIL [YouTrack write-tool list differs between .claude/settings.json and the scan script]"
+  echo "    settings.json: $in_settings"
+  echo "    scan script:   $in_script"
+  fail=1
+fi
+
 if [ "$fail" -eq 0 ]; then echo "ALL PASS"; else echo "FAILURES ABOVE"; exit 1; fi
