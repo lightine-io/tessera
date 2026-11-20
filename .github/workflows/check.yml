@@ -311,6 +311,15 @@ jobs:
       - name: Markdown links
         run: bash scripts/check-markdown-links.sh
 
+      # A cache file carries local machine paths and stays in public history once merged.
+      # .gitignore covers the folder, but a forced add still gets through.
+      - name: No Python cache files
+        run: |
+          if git ls-files | grep -E '(^|/)__pycache__/|\.py[co]$'; then
+            echo "::error::Python cache files are tracked (listed above). Remove them with: git rm --cached <file>"
+            exit 1
+          fi
+
       - name: types module holds types only
         run: |
           if git grep -nE '^(public |internal |private )?((inline|suspend|infix|operator|tailrec) )*(fun|val|var) ' -- 'types/src/*.kt'; then
