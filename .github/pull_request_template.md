@@ -9,6 +9,7 @@
 ## Changelog
 
 - [ ] `CHANGELOG.md` entry under `[Unreleased]`, or the `no-changelog` label because nothing ships (say why here). CI checks for one or the other; the label also moves the board issue to Done at merge. The entry explains the change in plain words; no issue ids or private links (the issue id stays in the PR title and commit).
+- [ ] No organization names in the diff, the title or this text, except the standards bodies ICAO and ISO/IEC and the vendors of the tools we use. CI catches only names written with a company suffix; the rest is this check.
 - [ ] The `device-qa` label if the change needs a check on a real device; after the merge the card waits in Test until that check passes.
 
 ## Feature documentation
