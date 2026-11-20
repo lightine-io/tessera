@@ -174,7 +174,8 @@ class SavedImageMrzReaderTest {
                 asRecognized?.parse,
                 "the as-recognized reading should be surfaced and parse as the valid specimen",
             )
-            assertTrue(result.candidates.any { it.disambiguations.isNotEmpty() }, "at least one disambiguated alternative should surface")
+            // Its ambiguous name glyphs are never varied: no check digit could confirm a change there (TES-265).
+            assertTrue(result.candidates.all { it.mrzLines[0] == td3Line1 }, "the name line is never changed")
             result.candidates.forEach { candidate ->
                 assertEquals(ReadMethod.PRE_CAPTURED_IMAGE, candidate.parse.metadata.readMethod)
                 // Every recorded disambiguation must actually differ (recognized != resolved) at a real position.

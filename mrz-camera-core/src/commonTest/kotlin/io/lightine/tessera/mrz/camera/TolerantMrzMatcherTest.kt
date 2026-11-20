@@ -84,4 +84,63 @@ class TolerantMrzMatcherTest {
 
         assertTrue(result.isEmpty())
     }
+
+    // Line 2 of the specimen with the expiry date's `0` (column 23) read as `O`. Line 1 alone holds more ambiguous
+    // glyphs than the guess budget, all in fields no check digit covers.
+    private val td3Line2ExpiryMisread = td3Line2.replaceRange(23, 24, "O")
+
+    @Test
+    fun the_budget_reaches_a_check_digit_field_past_an_ambiguous_name() {
+        // Before TES-265 the budget went to the first ambiguous glyphs in reading order: all of them on line 1
+        // (issuing state and name). The misread expiry date was never tried, so no reading passed its check digits.
+        val result = matcher().candidates(textOf(td3Line1, td3Line2ExpiryMisread))
+
+        // Only check-digit-consistent readings are listed once any exists. Two swaps can also cancel out in a check
+        // digit, so the fix need not be the only one listed; it must be among them.
+        assertTrue(result.isNotEmpty() && result.all { it.parse is ParseResult.Success }, "a consistent reading was found")
+        val fixed = result.single { it.mrzLines == listOf(td3Line1, td3Line2) }
+        assertEquals(listOf(CharacterDisambiguation(1, 23, 'O', '0')), fixed.disambiguations)
+    }
+
+    @Test
+    fun no_glyph_is_changed_in_a_field_that_no_check_digit_covers() {
+        // Neither expiry digit fix passes (the expiry check digit is also wrong), so the matcher falls back to every
+        // parseable reading: the widest set it ever lists. Every change must still sit in a check-digit field.
+        val unfixable = td3Line2ExpiryMisread.replaceRange(27, 28, "8")
+        val inputs = listOf(listOf(td3Line1, td3Line2), listOf(td3Line1, td3Line2ExpiryMisread), listOf(td3Line1, unfixable))
+
+        inputs.forEach { lines ->
+            val result = matcher().candidates(textOf(*lines.toTypedArray()))
+            assertTrue(result.isNotEmpty())
+            result.forEach { candidate ->
+                assertEquals(lines[0], candidate.mrzLines[0], "line 1 (document code, issuing state, name) is never changed")
+                candidate.disambiguations.forEach { d ->
+                    assertEquals(1, d.lineIndex)
+                    assertTrue(d.columnIndex !in 10..12 && d.columnIndex != 20, "nationality and sex are never changed: $d")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun a_six_g_swap_is_never_tried_because_no_check_digit_can_see_it() {
+        // `6` and `G` have values 6 and 16, so every check digit is the same either way: the date of birth's `6`
+        // read as `G` would be listed as a fully consistent reading. It must never be tried.
+        val result = matcher().candidates(textOf(td3Line1, td3Line2ExpiryMisread))
+
+        assertTrue(result.isNotEmpty())
+        result.flatMap { it.disambiguations }.forEach { d ->
+            assertTrue(d.recognized !in "6G" && d.resolved !in "6G", "no 6/G swap: $d")
+        }
+    }
+
+    @Test
+    fun a_clean_specimen_lists_no_name_guess() {
+        // Changing a name glyph breaks no check digit, so before TES-265 such guesses were listed as consistent
+        // readings. Now the name line is never changed in any listed reading.
+        val result = matcher().candidates(textOf(td3Line1, td3Line2))
+
+        assertTrue(result.any { it.mrzLines == listOf(td3Line1, td3Line2) && it.disambiguations.isEmpty() })
+        assertTrue(result.all { it.mrzLines[0] == td3Line1 && it.disambiguations.all { d -> d.lineIndex == 1 } })
+    }
 }
