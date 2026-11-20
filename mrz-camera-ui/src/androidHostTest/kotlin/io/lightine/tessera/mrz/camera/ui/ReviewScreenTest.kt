@@ -28,6 +28,7 @@ import io.lightine.tessera.mrz.camera.ScanQuality
 import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.mrz.recognition.DocumentType
+import io.lightine.tessera.types.errors.MrzExpiryDateCenturyNotInferred
 import io.lightine.tessera.types.errors.MrzUnknownCountryCode
 import io.lightine.tessera.types.vocabulary.DocumentCategory
 import io.lightine.tessera.types.vocabulary.ReadMethod
@@ -642,6 +643,34 @@ class ReviewScreenTest {
         composeRule.onNodeWithText("1974-08-12").performScrollTo().assertIsDisplayed()
         // TES-112: the printed parts, day first with the two-digit year, like the document's visual zone.
         composeRule.onNodeWithText("15 04 12").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun an_expiry_with_no_century_shows_a_note_with_the_printed_year() {
+        // The ICAO published TD3 specimen expiring in 12: at 2026 neither 2012 nor 1912 is inside the window,
+        // so the parser reports MrzExpiryDateCenturyNotInferred and the screen states it as a note.
+        val icaoLine1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
+        val icaoLine2 = "L898902C36UTO7408122F1204159ZE184226B<<<<<10"
+        val icaoDecoded =
+            MrzScanResult.Decoded(
+                parse = MrzParser.parse(listOf(icaoLine1, icaoLine2), referenceTime = Instant.parse("2026-05-04T12:00:00Z")),
+                recognizedText = RecognizedText(listOf(RecognizedLine(icaoLine1, null), RecognizedLine(icaoLine2, null))),
+                quality = ScanQuality(mrzRegionFound = true, ocrConfidence = null, recognizedLineCount = 2),
+            )
+        assertTrue(
+            icaoDecoded.parse.metadata.warnings
+                .any { it is MrzExpiryDateCenturyNotInferred },
+            "fixture must carry the warning",
+        )
+        var texts: List<String> = emptyList()
+
+        composeRule.setContent {
+            texts = reviewObservations(icaoDecoded).map { it.text }
+        }
+        composeRule.waitForIdle()
+
+        assertTrue("Expiry year 12 can't be placed in a century" in texts, "the note is present: $texts")
+        assertTrue(texts.none { it == "Expiry date has passed" }, "no past-expiry note: $texts")
     }
 
     // ----------------------------------------------------------------------------------------------------

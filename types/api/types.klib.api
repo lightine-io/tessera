@@ -190,6 +190,30 @@ final class io.lightine.tessera.types.errors/MrzDateNotInCalendar : io.lightine.
     final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzDateNotInCalendar.toString|toString(){}[0]
 }
 
+final class io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred : io.lightine.tessera.types.errors/MrzWarning { // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred|null[0]
+    constructor <init>(kotlin/String, kotlin/String, kotlin/String, kotlinx.datetime/LocalDate) // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlinx.datetime.LocalDate){}[0]
+
+    final val description // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.description.<get-description>|<get-description>(){}[0]
+    final val rawDay // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.rawDay|{}rawDay[0]
+        final fun <get-rawDay>(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.rawDay.<get-rawDay>|<get-rawDay>(){}[0]
+    final val rawMonth // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.rawMonth|{}rawMonth[0]
+        final fun <get-rawMonth>(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.rawMonth.<get-rawMonth>|<get-rawMonth>(){}[0]
+    final val rawYear // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.rawYear|{}rawYear[0]
+        final fun <get-rawYear>(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.rawYear.<get-rawYear>|<get-rawYear>(){}[0]
+    final val referenceDate // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.referenceDate|{}referenceDate[0]
+        final fun <get-referenceDate>(): kotlinx.datetime/LocalDate // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.referenceDate.<get-referenceDate>|<get-referenceDate>(){}[0]
+
+    final fun component1(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.component1|component1(){}[0]
+    final fun component2(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.component2|component2(){}[0]
+    final fun component3(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.component3|component3(){}[0]
+    final fun component4(): kotlinx.datetime/LocalDate // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.component4|component4(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlinx.datetime/LocalDate = ...): io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.copy|copy(kotlin.String;kotlin.String;kotlin.String;kotlinx.datetime.LocalDate){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred.toString|toString(){}[0]
+}
+
 final class io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar : io.lightine.tessera.types.errors/MrzWarning { // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar|null[0]
     constructor <init>(kotlinx.datetime/LocalDate, kotlinx.datetime/LocalDate, kotlin/Int) // io.lightine.tessera.types.errors/MrzExpiryDateImplausiblyFar.<init>|<init>(kotlinx.datetime.LocalDate;kotlinx.datetime.LocalDate;kotlin.Int){}[0]
 

@@ -25,6 +25,7 @@ import io.lightine.tessera.mrz.recognition.DocumentType
 import io.lightine.tessera.types.errors.MrzBirthDateImplausiblyOld
 import io.lightine.tessera.types.errors.MrzCheckDigitMismatch
 import io.lightine.tessera.types.errors.MrzDateNotInCalendar
+import io.lightine.tessera.types.errors.MrzExpiryDateCenturyNotInferred
 import io.lightine.tessera.types.errors.MrzExpiryDateImplausiblyFar
 import io.lightine.tessera.types.errors.MrzExpiryDatePast
 import io.lightine.tessera.types.errors.MrzInvalidSexValue
@@ -39,7 +40,6 @@ import io.lightine.tessera.types.errors.MrzWarning
 import io.lightine.tessera.types.vocabulary.MrzField
 import io.lightine.tessera.types.vocabulary.MrzFormat
 import kotlinx.datetime.DateTimeUnit
-import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
@@ -52,7 +52,7 @@ import kotlin.time.Instant
  *
  * Reports `MrzCheckDigitMismatch`, `MrzDateNotInCalendar`, and `MrzInvalidSexValue` as validation
  * failures. Reports `MrzExpiryDatePast`, `MrzExpiryDateImplausiblyFar`,
- * `MrzBirthDateImplausiblyOld`, `MrzNameTruncated`, `MrzUnknownCountryCode`,
+ * `MrzExpiryDateCenturyNotInferred`, `MrzBirthDateImplausiblyOld`, `MrzNameTruncated`, `MrzUnknownCountryCode`,
  * `MrzUnknownDocumentTypeCode`, `MrzSexCharacterX`, and `MrzPersonalNumberCheckDigitFiller` as
  * warnings. Visa formats have no composite check digit and no optional-data check digit.
  *
@@ -68,7 +68,10 @@ public object MrzValidator {
      * Reads the field text from `document.rawLines` and the printed check digits from
      * `document.commonFields.checkDigits`. Reports [MrzExpiryDatePast] only when the expiry date is
      * strictly earlier than the reference date, and [MrzExpiryDateImplausiblyFar] when it is more
-     * than 10 years after it. Both compare UTC dates.
+     * than 10 years after it. Both compare UTC dates. Reports [MrzExpiryDateCenturyNotInferred]
+     * instead when the expiry parts are digits that form a real date but neither the 2000s nor the
+     * 1900s puts the year from 10 years before to 50 years after the reference year, so there is no
+     * expiry date to compare.
      *
      * If `document.rawLines` cannot be read as the document's format, no check runs and
      * `structuralFailure` says why: `MrzInvalidLength` when the line count or a line length does
@@ -331,7 +334,7 @@ public object MrzValidator {
 
         addExpiryWarningsIfApplicable(
             into = warnings,
-            expiryComputedDate = document.commonFields.dateOfExpiry.computedDate,
+            expiryDate = document.commonFields.dateOfExpiry,
             referenceTime = referenceTime,
         )
         addBirthAgeWarningIfApplicable(
@@ -433,7 +436,7 @@ public object MrzValidator {
 
         addExpiryWarningsIfApplicable(
             into = warnings,
-            expiryComputedDate = document.commonFields.dateOfExpiry.computedDate,
+            expiryDate = document.commonFields.dateOfExpiry,
             referenceTime = referenceTime,
         )
         addBirthAgeWarningIfApplicable(
@@ -522,7 +525,7 @@ public object MrzValidator {
 
         addExpiryWarningsIfApplicable(
             into = warnings,
-            expiryComputedDate = document.commonFields.dateOfExpiry.computedDate,
+            expiryDate = document.commonFields.dateOfExpiry,
             referenceTime = referenceTime,
         )
         addBirthAgeWarningIfApplicable(
@@ -624,7 +627,7 @@ public object MrzValidator {
 
         addExpiryWarningsIfApplicable(
             into = warnings,
-            expiryComputedDate = document.commonFields.dateOfExpiry.computedDate,
+            expiryDate = document.commonFields.dateOfExpiry,
             referenceTime = referenceTime,
         )
         addBirthAgeWarningIfApplicable(
@@ -713,7 +716,7 @@ public object MrzValidator {
 
         addExpiryWarningsIfApplicable(
             into = warnings,
-            expiryComputedDate = document.commonFields.dateOfExpiry.computedDate,
+            expiryDate = document.commonFields.dateOfExpiry,
             referenceTime = referenceTime,
         )
         addBirthAgeWarningIfApplicable(
@@ -842,13 +845,30 @@ public object MrzValidator {
         }
     }
 
+    // At most one expiry warning per document. A date with no computed date gets
+    // MrzExpiryDateCenturyNotInferred only when its parts are digits that form a real calendar
+    // date (componentsFormCalendarDate == true) and still no century fit the window. Parts that
+    // are not digits (null) get nothing here; parts that form no calendar date (false) are
+    // already MrzDateNotInCalendar.
     private fun addExpiryWarningsIfApplicable(
         into: MutableList<MrzWarning>,
-        expiryComputedDate: LocalDate?,
+        expiryDate: MrzDate,
         referenceTime: Instant,
     ) {
-        if (expiryComputedDate == null) return
         val referenceDate = referenceTime.toLocalDateTime(TimeZone.UTC).date
+        val expiryComputedDate = expiryDate.computedDate
+        if (expiryComputedDate == null) {
+            if (expiryDate.componentsFormCalendarDate == true) {
+                into +=
+                    MrzExpiryDateCenturyNotInferred(
+                        rawYear = expiryDate.rawYear,
+                        rawMonth = expiryDate.rawMonth,
+                        rawDay = expiryDate.rawDay,
+                        referenceDate = referenceDate,
+                    )
+            }
+            return
+        }
         if (expiryComputedDate < referenceDate) {
             into += MrzExpiryDatePast(expiryDate = expiryComputedDate, referenceDate = referenceDate)
             return

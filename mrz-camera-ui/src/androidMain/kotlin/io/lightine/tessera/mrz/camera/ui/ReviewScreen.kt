@@ -55,6 +55,7 @@ import io.lightine.tessera.mrz.recognition.CountryCode
 import io.lightine.tessera.mrz.recognition.DocumentType
 import io.lightine.tessera.types.errors.MrzBirthDateImplausiblyOld
 import io.lightine.tessera.types.errors.MrzCheckDigitMismatch
+import io.lightine.tessera.types.errors.MrzExpiryDateCenturyNotInferred
 import io.lightine.tessera.types.errors.MrzExpiryDateImplausiblyFar
 import io.lightine.tessera.types.errors.MrzExpiryDatePast
 import io.lightine.tessera.types.errors.MrzNameTruncated
@@ -367,6 +368,10 @@ private fun warningText(warning: MrzWarning): String? =
 
         is MrzExpiryDateImplausiblyFar -> {
             stringResource(R.string.tessera_scanner_obs_warning_expiry_far, warning.thresholdYears.toString())
+        }
+
+        is MrzExpiryDateCenturyNotInferred -> {
+            stringResource(R.string.tessera_scanner_obs_warning_expiry_century_unknown, warning.rawYear)
         }
 
         is MrzNameTruncated -> {

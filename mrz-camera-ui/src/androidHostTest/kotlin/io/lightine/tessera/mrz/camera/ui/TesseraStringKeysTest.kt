@@ -149,6 +149,7 @@ class TesseraStringKeysTest {
                 "tessera_scanner_obs_tone_info",
                 "tessera_scanner_obs_tone_match",
                 "tessera_scanner_obs_tone_mismatch",
+                "tessera_scanner_obs_warning_expiry_century_unknown",
                 "tessera_scanner_obs_warning_expiry_far",
                 "tessera_scanner_obs_warning_expiry_past",
                 "tessera_scanner_obs_warning_name_truncated",

@@ -22,6 +22,7 @@ class ObservationDescriptionTextTest {
     private val warnings: List<MrzWarning> =
         listOf(
             MrzBirthDateImplausiblyOld("00", "01", "01", date, 120),
+            MrzExpiryDateCenturyNotInferred("00", "01", "01", date),
             MrzExpiryDateImplausiblyFar(date, date, 20),
             MrzExpiryDatePast(date, date),
             MrzNameTruncated("SMITH<<JOHN", 5),
@@ -76,6 +77,7 @@ class ObservationDescriptionTextTest {
     private fun exhaustive(w: MrzWarning): Boolean =
         when (w) {
             is MrzBirthDateImplausiblyOld,
+            is MrzExpiryDateCenturyNotInferred,
             is MrzExpiryDateImplausiblyFar,
             is MrzExpiryDatePast,
             is MrzNameTruncated,
