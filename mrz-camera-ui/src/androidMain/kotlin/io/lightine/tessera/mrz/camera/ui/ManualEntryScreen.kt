@@ -25,8 +25,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -217,7 +215,7 @@ internal fun ManualRawContent(
                 text = stringResource(R.string.tessera_scanner_manual_parse_failed),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                modifier = Modifier.liveRegionOf(LiveRegionMode.Polite),
             )
         }
 
@@ -251,8 +249,5 @@ private fun manualObservations(text: String): List<Observation> =
                 note.lineNumber.toString(),
                 note.chars.toString(),
             )
-        Observation(symbol = MANUAL_SYMBOL_INFO, text = message, tone = ObservationTone.INFO)
+        Observation(symbol = SYMBOL_INFO, text = message, tone = ObservationTone.INFO)
     }
-
-/** The ⓘ mark used on the manual-entry info observations (matches the review screens' info symbol). */
-private const val MANUAL_SYMBOL_INFO: String = "ⓘ"

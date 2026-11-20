@@ -34,7 +34,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontFamily
@@ -435,7 +434,7 @@ internal fun ReviewContent(
                 style = MaterialTheme.typography.headlineSmall,
                 // The review screen is the decode-landing: it appears the moment an MRZ is read. Assertive so a
                 // screen reader announces the outcome ("MRZ read") on arrival — the result deserves attention.
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
+                modifier = Modifier.liveRegionOf(LiveRegionMode.Assertive),
             )
         },
         body = {
@@ -565,7 +564,7 @@ internal fun ReadFailedContent(
                 style = MaterialTheme.typography.headlineSmall,
                 // The read-failed screen is a decode-landing too (OCR text that didn't parse). Assertive so the
                 // outcome ("Couldn't read this MRZ") is announced on arrival — the user needs to know to retry.
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
+                modifier = Modifier.liveRegionOf(LiveRegionMode.Assertive),
             )
             Text(
                 text = stringResource(R.string.tessera_scanner_read_failed_body),
@@ -877,7 +876,7 @@ internal fun ReviewObservationRow(observation: Observation) {
 /** The ✓ / ‼ / ⓘ marks used across the observation lines. */
 private const val SYMBOL_MATCH: String = "✓"
 private const val SYMBOL_MISMATCH: String = "‼"
-private const val SYMBOL_INFO: String = "ⓘ"
+internal const val SYMBOL_INFO: String = "ⓘ"
 
 /** The document that a non-failure decode carries. Only called where the caller has already excluded Failure. */
 private fun reviewDocument(decoded: MrzScanResult.Decoded): MrzDocument =

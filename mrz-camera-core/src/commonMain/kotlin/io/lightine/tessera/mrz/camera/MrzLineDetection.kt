@@ -5,6 +5,7 @@ import io.lightine.tessera.mrz.formats.MrvBFormatSpec
 import io.lightine.tessera.mrz.formats.Td1FormatSpec
 import io.lightine.tessera.mrz.formats.Td2FormatSpec
 import io.lightine.tessera.mrz.formats.Td3FormatSpec
+import io.lightine.tessera.mrz.parsing.isMrzAlphabetCharacter
 
 /**
  * The line-detection core shared by [MrzFrameAnalyzer] (strict/lenient decode) and [TolerantMrzMatcher]
@@ -63,7 +64,7 @@ internal object MrzLineDetection {
     // real zone out of same-width printed noise: a line of the right length but carrying punctuation, digits'
     // separators, or lowercase left over from surrounding text (already upper-folded and chevron-recovered by
     // normalizeLine) is rejected, so the window lands on the actual MRZ pair/triple rather than a neighbour.
-    private fun String.isMrzLineOf(width: Int): Boolean = length == width && all { it in 'A'..'Z' || it in '0'..'9' || it == '<' }
+    private fun String.isMrzLineOf(width: Int): Boolean = length == width && all(::isMrzAlphabetCharacter)
 
     internal data class MrzLineShape(
         val lineCount: Int,

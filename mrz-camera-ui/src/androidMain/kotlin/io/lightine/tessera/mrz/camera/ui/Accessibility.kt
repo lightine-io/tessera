@@ -6,7 +6,11 @@ package io.lightine.tessera.mrz.camera.ui
 import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 
 // Shared accessibility helpers for the default scanner UI (TES-47). Everything here is internal wiring — no
 // public API. The screens carry meaning in text (never colour or motion alone), and these helpers back the
@@ -37,3 +41,10 @@ internal fun animationsEnabled(): Boolean {
         ) != 0f
     }
 }
+
+/**
+ * Marks this node as a live region with the given [mode], so a screen reader announces its text when it
+ * changes or arrives. The one place the pattern is written: [LiveRegionMode.Assertive] for a terminal
+ * landing the user did not trigger, [LiveRegionMode.Polite] for a status that updates in place.
+ */
+internal fun Modifier.liveRegionOf(mode: LiveRegionMode): Modifier = semantics { liveRegion = mode }

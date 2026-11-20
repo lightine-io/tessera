@@ -82,7 +82,6 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -252,6 +251,14 @@ private fun ScannerFlow(
     // a fresh live session begins. Saved-image / manual entry are one-shot and route without this gate.
     val consensus = remember(config.consensusReads) { MrzDecodeConsensus(config.consensusReads) }
 
+    // Starts a fresh live session: re-arms the decode latch and clears the consensus tally. One place, so
+    // the two never drift apart across the call sites that begin a session (resume, pick, method switch,
+    // rescan, back to camera).
+    val resetLiveSession = {
+        decodeRouted = false
+        consensus.reset()
+    }
+
     // Wall-clock of the last frame that decoded an MRZ, so the "hold steady" cue lingers briefly instead of
     // strobing: detection flickers frame-to-frame even on a steady card (a miss between two decodes is normal),
     // so the cue is cleared only after GATHERING_CUE_LINGER_MS with no decode — long enough to bridge the
@@ -394,8 +401,7 @@ private fun ScannerFlow(
         val observer =
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME && uiState is ScannerUiState.CameraInUse) {
-                    decodeRouted = false
-                    consensus.reset()
+                    resetLiveSession()
                     uiState = ScannerUiState.Scanning()
                 }
             }
@@ -434,8 +440,7 @@ private fun ScannerFlow(
                     // via SavedImageMrzReader directly.)
                     tolerant = false,
                 ).use { reader -> reader.read(uri) }
-            decodeRouted = false
-            consensus.reset()
+            resetLiveSession()
             when (val outcome = mapSavedImageResult(result)) {
                 is SavedImageOutcome.SingleDecode -> routeDecoded(outcome.decoded, ScanMethod.SAVED_IMAGE)
                 SavedImageOutcome.Empty -> uiState = ScannerUiState.SavedImageEmpty
@@ -493,8 +498,7 @@ private fun ScannerFlow(
     // decode latch so a fresh method's first decode routes on (a previous decode may have set it). Pure target
     // selection; the picker for Photo is launched by the LaunchedEffect above.
     val onSelectMethod = { method: ScanMethod ->
-        decodeRouted = false
-        consensus.reset()
+        resetLiveSession()
         uiState =
             when (method) {
                 ScanMethod.CAMERA -> ScannerUiState.Scanning()
@@ -510,8 +514,7 @@ private fun ScannerFlow(
     // (TES-93 — editing a manual-provenance reading should not start from a blank field). Arms the decode
     // latch and the struggle gate afresh so the target method starts clean.
     val returnToSource = { review: ScannerUiState.Review ->
-        decodeRouted = false
-        consensus.reset()
+        resetLiveSession()
         when (review.source) {
             ScanMethod.CAMERA -> {
                 uiState = ScannerUiState.Scanning()
@@ -557,8 +560,7 @@ private fun ScannerFlow(
             }
 
             BackEffect.ReturnToCamera -> {
-                decodeRouted = false
-                consensus.reset()
+                resetLiveSession()
                 uiState = ScannerUiState.Scanning()
             }
 
@@ -585,6 +587,7 @@ private fun ScannerFlow(
             state = uiState,
             config = config,
             onResult = onResult,
+            onDecoded = routeDecoded,
             onCameraResult = onCameraResult,
             onManualEntry = onManualEntry,
             onCancel = onCancel,
@@ -602,7 +605,7 @@ private fun ScannerFlow(
  * The per-state screen dispatch - the exhaustive `when` over [ScannerUiState], rendered inside the
  * [ScannerScaffold] body (so the shared top bar + method switcher sit above it, TES-71). Split out of
  * [ScannerFlow] purely so the flow function stays readable; it holds no state of its own, receiving the
- * flow's callbacks. [setState] mutates the flow's `uiState`; [onManualDraftChange] keeps the flow's hoisted
+ * flow's callbacks. [onDecoded] is the flow's own decode routing (the manual-entry success path shares it with the camera and saved-image paths); [setState] mutates the flow's `uiState`; [onManualDraftChange] keeps the flow's hoisted
  * manual-entry draft in sync with every edit (TES-93); [onRescanFromReview] is the flow's shared
  * `returnToSource` decision, reused here for the Review screen's secondary action and in [ScannerFlow]'s
  * `BackHandler` (TES-92 / TES-96) so the two paths can never drift apart; [onStruggling] is the flow's
@@ -613,6 +616,7 @@ private fun ScannerBody(
     state: ScannerUiState,
     config: MrzScannerConfig,
     onResult: (MrzScannerResult) -> Unit,
+    onDecoded: (MrzScanResult.Decoded, ScanMethod) -> Unit,
     onCameraResult: (MrzScanResult) -> Unit,
     onManualEntry: () -> Unit,
     onCancel: () -> Unit,
@@ -623,18 +627,6 @@ private fun ScannerBody(
     onStruggling: () -> Unit,
     onPermissionFaceChange: (PermissionScreenState?) -> Unit,
 ) {
-    // Route a decode straight to the matching state via routeDecode — the manual-entry success path, which
-    // produces a Decoded that follows the identical decode routing (read-failed / review / straight back
-    // under INSTANT_RETURN) a camera or saved-image decode does. Kept local rather than inlined so the
-    // manual-entry onRead below stays readable.
-    val routeThroughDecode = { decoded: MrzScanResult.Decoded, source: ScanMethod ->
-        when (val route = routeDecode(decoded, config.reviewMode)) {
-            is DecodeRoute.ShowReadFailed -> setState(ScannerUiState.ReadFailed(route.capturedText))
-            is DecodeRoute.ReturnConfirmed -> onResult(MrzScannerResult.Confirmed(route.decoded))
-            is DecodeRoute.ShowReview -> setState(ScannerUiState.Review(route.decoded, source))
-        }
-    }
-
     // The manual-entry escape (the struggling hint, both camera-status notices, and the permission gate all
     // offer "Enter details manually") is shown only when the consumer actually enabled MANUAL_ENTRY — a
     // camera-only config must not route the user into, and strand them on, a screen they cannot reach any
@@ -712,7 +704,7 @@ private fun ScannerBody(
                     if (decoded.parse is ParseResult.Failure) {
                         setState(state.copy(parseFailed = true))
                     } else {
-                        routeThroughDecode(decoded, ScanMethod.MANUAL_ENTRY)
+                        onDecoded(decoded, ScanMethod.MANUAL_ENTRY)
                     }
                 },
             )
@@ -1448,7 +1440,7 @@ internal fun StrugglingHint(
             textAlign = TextAlign.Center,
             // The hint overlays the preview via the struggle-timeout auto-transition (mockup 02), so it is a
             // polite live region — announced when it appears without the user having to move focus to it.
-            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            modifier = Modifier.liveRegionOf(LiveRegionMode.Polite),
         )
         if (showManualEntry) {
             TextButton(onClick = onManualEntry) {
@@ -1485,7 +1477,7 @@ internal fun GatheringHint(modifier: Modifier = Modifier) {
             textAlign = TextAlign.Center,
             // Appears on an auto-transition (a read starting to confirm), not a focus move, so it is a polite
             // live region — announced when it appears without the user having to move focus to it.
-            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            modifier = Modifier.liveRegionOf(LiveRegionMode.Polite),
         )
     }
 }
@@ -1710,7 +1702,7 @@ internal fun InitializingContent() {
             text = stringResource(R.string.tessera_scanner_initializing_title),
             style = MaterialTheme.typography.headlineSmall,
             textAlign = TextAlign.Center,
-            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            modifier = Modifier.liveRegionOf(LiveRegionMode.Polite),
         )
         Text(
             text = stringResource(R.string.tessera_scanner_initializing_body),
