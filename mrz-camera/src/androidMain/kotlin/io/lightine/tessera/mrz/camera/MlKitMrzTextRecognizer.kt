@@ -93,54 +93,15 @@ public class MlKitMrzTextRecognizer(
         )
     }
 
-    // Builds a bitmap of just the MRZ band. ML Kit has no region-of-interest, so the frame is cropped
-    // here: toBitmap() yields the frame in *sensor* orientation, which is rotated upright (honouring
-    // rotationDegrees) so "the bottom of the document" is the bottom of the bitmap, then the bottom band is
-    // cropped; it is read with rotation 0 (already upright). Returns null when the producer already released
-    // the backing image (nothing to recognize). The intermediate bitmaps are per-frame and short-lived (ML
-    // Kit copies the band's pixels), so they are left to GC rather than eagerly recycled — the frame is
-    // throttled + KEEP_ONLY_LATEST, matching the module's no-frame-held-in-state hygiene.
+    // Builds an upright bitmap of just the MRZ band. ML Kit has no region-of-interest, so the frame is cropped
+    // here. toBitmap() yields the whole frame in *sensor* orientation; it is the one full-size bitmap per frame
+    // (CameraX's YUV_420_888 conversion has no crop option), and [mrzBand] then copies only the band. Returns
+    // null when the producer already released the backing image (nothing to recognize). The bitmaps are
+    // per-frame and short-lived (ML Kit copies the band's pixels), so they are left to GC rather than eagerly
+    // recycled; the frame is throttled + KEEP_ONLY_LATEST, matching the module's no-frame-held-in-state hygiene.
     private fun mrzBandBitmap(frame: ImageProxy): Bitmap? {
         if (frame.image == null) return null
-        val full = frame.toBitmap()
-        // Honour the crop rect CameraX put on the frame. With a ViewPort (UseCaseGroup), that rect is the
-        // WYSIWYG region — the exact area the viewfinder shows — expressed in the FULL analysis buffer's
-        // coordinates; `toBitmap()` returns the full buffer, so we apply the crop ourselves (CameraX
-        // "Transform output": buffer + separate transform metadata). Without a ViewPort it defaults to the
-        // whole buffer, so this is a no-op. Done in sensor orientation, before rotating upright.
-        val cropped = cropToRect(full, frame.cropRect)
-        val rotation = frame.imageInfo.rotationDegrees
-        val upright =
-            if (rotation == 0) {
-                cropped
-            } else {
-                Bitmap.createBitmap(
-                    cropped,
-                    0,
-                    0,
-                    cropped.width,
-                    cropped.height,
-                    Matrix().apply { postRotate(rotation.toFloat()) },
-                    true,
-                )
-            }
-        val (top, height) = mrzBandRect(upright.height)
-        return Bitmap.createBitmap(upright, 0, top, upright.width, height)
-    }
-
-    // Crops [bitmap] to [rect], clamped to the bitmap's bounds so an out-of-range rect can never crash (a
-    // CameraX crop rect is within the buffer, but clamp defensively). Returns the bitmap unchanged when the
-    // rect already covers it (the no-ViewPort default), avoiding a needless copy.
-    private fun cropToRect(
-        bitmap: Bitmap,
-        rect: Rect,
-    ): Bitmap {
-        val left = rect.left.coerceIn(0, bitmap.width)
-        val top = rect.top.coerceIn(0, bitmap.height)
-        val width = (rect.right.coerceIn(left, bitmap.width) - left).coerceAtLeast(1)
-        val height = (rect.bottom.coerceIn(top, bitmap.height) - top).coerceAtLeast(1)
-        if (left == 0 && top == 0 && width == bitmap.width && height == bitmap.height) return bitmap
-        return Bitmap.createBitmap(bitmap, left, top, width, height)
+        return mrzBand(frame.toBitmap(), frame.cropRect, frame.imageInfo.rotationDegrees)
     }
 
     /** Releases the underlying ML Kit recognizer. */
@@ -167,6 +128,47 @@ public class MlKitMrzTextRecognizer(
         internal fun mrzBandRect(frameHeight: Int): Pair<Int, Int> {
             val height = (frameHeight * MRZ_BAND_HEIGHT_FRACTION).toInt().coerceIn(1, frameHeight)
             return ((frameHeight - height) / 2) to height
+        }
+
+        // Cuts the band out of [full] (the frame in sensor orientation, as `toBitmap()` returns it) in one step:
+        // the band's rectangle is worked out in sensor coordinates, then one `Bitmap.createBitmap` crops it
+        // and rotates it upright, so the only copy is the band itself (TES-118; before, the crop and the
+        // upright frame were full copies). [cropRect] is the crop rect CameraX put on the frame: with a
+        // ViewPort (UseCaseGroup) it is the WYSIWYG region the viewfinder shows, in the FULL buffer's
+        // coordinates; without one it is the whole buffer (CameraX "Transform output"). It is clamped to the
+        // bitmap so an out-of-range rect can never crash. The band is centred in the upright crop
+        // ([mrzBandRect]); the result is upright and read with rotation 0.
+        internal fun mrzBand(
+            full: Bitmap,
+            cropRect: Rect,
+            rotationDegrees: Int,
+        ): Bitmap {
+            val left = cropRect.left.coerceIn(0, full.width)
+            val top = cropRect.top.coerceIn(0, full.height)
+            val width = (cropRect.right.coerceIn(left, full.width) - left).coerceAtLeast(1)
+            val height = (cropRect.bottom.coerceIn(top, full.height) - top).coerceAtLeast(1)
+            val rotation = ((rotationDegrees % 360) + 360) % 360
+            // A quarter turn swaps the axes: the upright height is the crop's sensor width.
+            val sideways = rotation == 90 || rotation == 270
+            val (bandTop, bandHeight) = mrzBandRect(if (sideways) width else height)
+            // The band as a sensor-space rectangle. Turning clockwise by 90 maps sensor columns to upright
+            // rows, by 270 maps them reversed, by 180 reverses the rows.
+            val band =
+                when (rotation) {
+                    90 -> Rect(left + bandTop, top, left + bandTop + bandHeight, top + height)
+                    180 -> Rect(left, top + height - bandTop - bandHeight, left + width, top + height - bandTop)
+                    270 -> Rect(left + width - bandTop - bandHeight, top, left + width - bandTop, top + height)
+                    else -> Rect(left, top + bandTop, left + width, top + bandTop + bandHeight)
+                }
+            return Bitmap.createBitmap(
+                full,
+                band.left,
+                band.top,
+                band.width(),
+                band.height(),
+                Matrix().apply { postRotate(rotation.toFloat()) },
+                true,
+            )
         }
     }
 }

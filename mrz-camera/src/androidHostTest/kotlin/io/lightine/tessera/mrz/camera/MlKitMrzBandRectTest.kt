@@ -6,10 +6,9 @@ import kotlin.test.assertTrue
 
 /**
  * Host test (JVM, no device) for [MlKitMrzTextRecognizer.mrzBandRect] — the pure band-rectangle math behind
- * the MRZ region-of-interest crop (TES-86). The crop itself (`ImageProxy.toBitmap()` → rotate → crop →
- * `InputImage.fromBitmap`) needs a real camera frame and is device-verified; only the band geometry is pure,
- * so it is locked here: the band is the bottom [MlKitMrzTextRecognizer.MRZ_BAND_HEIGHT_FRACTION] of the
- * (upright) frame and reaches the very bottom edge (where the MRZ sits on a document held upright). Derives
+ * the MRZ region-of-interest crop (TES-86). The pixel crop is checked by [MlKitMrzBandBitmapTest]; the
+ * frame conversion (`ImageProxy.toBitmap()`) needs a real camera frame and is device-verified. Here the band
+ * is the centred [MlKitMrzTextRecognizer.MRZ_BAND_HEIGHT_FRACTION] of the (upright) frame. Derives
  * the expectation from the constant so retuning the band fraction on-device does not break the test.
  */
 class MlKitMrzBandRectTest {
