@@ -24,6 +24,9 @@ feel sure: confidence is not evidence. After two or three failed attempts, stop 
 and read. The docs feed your analysis; they can be stale or wrong, so check them against
 what you observe.
 
+This file loads only when the paths above are touched. A vendor product adopted with no
+file touched (through MCP tools, for example) is covered by CLAUDE.md, "Drivers".
+
 ## Record the stack
 
 When you add or remove a dependency, plugin, tool, or CI action, name the row change in
