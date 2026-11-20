@@ -26,8 +26,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
@@ -70,41 +68,15 @@ internal fun CameraInUseContent(
     onManualEntry: () -> Unit,
     showManualEntry: Boolean = true,
 ) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxHeight()
-                .contentMaxWidth()
-                .padding(24.dp)
-                .testTag(CAMERA_IN_USE_TEST_TAG),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        // Heading + body + the reconnecting indicator sit centred in the available space; the single action
-        // stays pinned below.
-        Column(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = stringResource(R.string.tessera_scanner_camera_in_use_title),
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                text = stringResource(R.string.tessera_scanner_camera_in_use_body),
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-            )
-            ReconnectingIndicator()
-        }
-
-        if (showManualEntry) {
-            Button(onClick = onManualEntry, modifier = Modifier.fillMaxWidth()) {
-                Text(text = stringResource(R.string.tessera_scanner_camera_manual))
-            }
-        }
-    }
+    CameraStatusScaffold(
+        testTag = CAMERA_IN_USE_TEST_TAG,
+        title = stringResource(R.string.tessera_scanner_camera_in_use_title),
+        titleModifier = Modifier,
+        body = stringResource(R.string.tessera_scanner_camera_in_use_body),
+        onManualEntry = onManualEntry,
+        showManualEntry = showManualEntry,
+        extra = { ReconnectingIndicator() },
+    )
 }
 
 /**
@@ -120,33 +92,61 @@ internal fun CameraUnavailableContent(
     onManualEntry: () -> Unit,
     showManualEntry: Boolean = true,
 ) {
+    CameraStatusScaffold(
+        testTag = CAMERA_UNAVAILABLE_TEST_TAG,
+        title = stringResource(R.string.tessera_scanner_camera_unavailable_title),
+        // Terminal, auto-transition landing (no focus move brought the user here) — assertive so a
+        // screen reader announces the outcome on arrival, matching ReadFailed / SavedImageEmpty.
+        titleModifier = Modifier.liveRegionOf(LiveRegionMode.Assertive),
+        body = stringResource(R.string.tessera_scanner_camera_unavailable_body),
+        onManualEntry = onManualEntry,
+        showManualEntry = showManualEntry,
+    )
+}
+
+/**
+ * The layout the two camera-status screens share: heading + body (+ an optional [extra] such as the
+ * reconnecting indicator) centred in the available space, with the manual-entry action pinned below when
+ * [showManualEntry]. Same shape as the permission screen's scaffold; each screen supplies only its tag, copy
+ * and [titleModifier] (its live-region choice).
+ */
+@Composable
+private fun CameraStatusScaffold(
+    testTag: String,
+    title: String,
+    titleModifier: Modifier,
+    body: String,
+    onManualEntry: () -> Unit,
+    showManualEntry: Boolean,
+    extra: @Composable () -> Unit = {},
+) {
     Column(
         modifier =
             Modifier
                 .fillMaxHeight()
                 .contentMaxWidth()
                 .padding(24.dp)
-                .testTag(CAMERA_UNAVAILABLE_TEST_TAG),
+                .testTag(testTag),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        // Heading + body (+ extra) sit centred in the available space; the single action stays pinned below.
         Column(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = stringResource(R.string.tessera_scanner_camera_unavailable_title),
+                text = title,
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center,
-                // Terminal, auto-transition landing (no focus move brought the user here) — assertive so a
-                // screen reader announces the outcome on arrival, matching ReadFailed / SavedImageEmpty.
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
+                modifier = titleModifier,
             )
             Text(
-                text = stringResource(R.string.tessera_scanner_camera_unavailable_body),
+                text = body,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
             )
+            extra()
         }
 
         if (showManualEntry) {
@@ -213,7 +213,7 @@ private fun ReconnectingIndicator() {
             color = MaterialTheme.colorScheme.tertiary,
             // Polite live region: the camera-in-use screen arrives via an auto-transition, so the recoverable
             // status is announced on appearance without the user needing to find it.
-            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            modifier = Modifier.liveRegionOf(LiveRegionMode.Polite),
         )
     }
 }

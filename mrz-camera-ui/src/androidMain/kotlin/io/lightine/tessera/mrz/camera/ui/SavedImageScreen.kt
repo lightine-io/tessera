@@ -20,8 +20,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.lightine.tessera.mrz.camera.MrzScanResult
 import io.lightine.tessera.mrz.camera.SavedImageScanResult
@@ -147,7 +145,7 @@ internal fun SavedImageAnalyzingContent() {
         Text(
             text = stringResource(R.string.tessera_scanner_saved_image_analyzing_title),
             style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            modifier = Modifier.liveRegionOf(LiveRegionMode.Polite),
         )
         // Decorative spinner — the title states what is happening; cleared so it is not an unlabeled node.
         CircularProgressIndicator(modifier = Modifier.clearAndSetSemantics {})
@@ -192,7 +190,7 @@ internal fun SavedImageEmptyContent(
         Text(
             text = stringResource(R.string.tessera_scanner_saved_image_empty_title),
             style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
+            modifier = Modifier.liveRegionOf(LiveRegionMode.Assertive),
         )
         Text(
             text = stringResource(R.string.tessera_scanner_saved_image_empty_body),
