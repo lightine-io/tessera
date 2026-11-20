@@ -6,11 +6,14 @@ import io.lightine.tessera.mrz.parsing.ParseResult
  * One reconstruction of the recognized MRZ, listed by tolerant saved-image reading.
  *
  * Tolerant reading ([SavedImageMrzReader] with `tolerant = true`) tries the alternatives for ambiguous
- * characters (`0`/`O`, `1`/`I`, `2`/`Z`, `5`/`S`, `8`/`B`, `6`/`G`), parses each distinct
+ * characters (`0`/`O`, `1`/`I`, `2`/`Z`, `5`/`S`, `8`/`B`), parses each distinct
  * reconstruction, and lists them without choosing one. Reconstructions that do not parse are
  * dropped. When any reconstruction passes every check digit, only those are listed; otherwise
- * every parseable one is listed. At most 8 are listed. Only the first 6 ambiguous positions, in
- * reading order, are varied; later ones stay as recognized. An absent candidate means the reading
+ * every parseable one is listed. At most 8 are listed. Only characters in a field that a check
+ * digit covers are varied; the name and every other unchecked field stay as recognized. `6`/`G` is
+ * not tried, because a check digit cannot tell the two apart. At most 6
+ * ambiguous positions are varied: those in fields whose check digit fails come first, then the
+ * rest, each in reading order; later ones stay as recognized. An absent candidate means the reading
  * was not explored, not that it is ruled out. The type holds document data: do not log it
  * verbatim.
  *
