@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 # Scan tracked files for real document data and private terms. Blocks on a hit.
 #
-# Two halves:
+# Three parts:
 #   1. MRZ guard (no secrets, runs everywhere, CI included): a line in a main source set,
 #      Sources/, or a Markdown file holding a 30+ character MRZ-alphabet run with at least
 #      one '<' filler is blocked. Test sources are not scanned: they hold synthetic MRZ from
 #      the SDK's own generator. Always allowed: the ICAO Doc 9303 specimen
 #      (UTOERIKSSON, L898902C3) and lines marked `mrz-ok`.
+#   1b. Organization guard (no secrets, runs everywhere, CI included): a line in tracked
+#      text that names a legal entity, that is one or more capitalized words followed by a
+#      company suffix (Inc, LLC, Ltd, GmbH, Corp, Corporation, PLC, LLP, S.A., B.V.), is
+#      blocked. It cannot know every organization name: it catches the form a company name
+#      takes when written in full. Names without a suffix belong in the terms file below.
+#      Always allowed: lines marked `org-ok` (license texts, a vendor's legal name in a
+#      notice).
 #   2. Terms scan (local only): case-insensitive substrings from the gitignored
 #      .claude/private-content-terms.local, over tracked Markdown, Kotlin, Gradle, Swift,
 #      string catalogs, and YAML. Only the maintainer has the terms file, so this half
@@ -43,6 +50,27 @@ if [ -n "$MRZ_HITS" ]; then
         echo ""
         echo "Real document data must never be committed. If this is a curated synthetic"
         echo "or specimen example, append an 'mrz-ok' marker comment to the line."
+    } >&2
+    exit 2
+fi
+# --- 1b. Organization guard ---------------------------------------------------------
+ORG_SUFFIX='(Inc\.?|LLC|Ltd\.?|GmbH|Corp\.?|Corporation|PLC|LLP|S\.A\.|B\.V\.)'
+ORG_HITS=$(
+    git ls-files -z -- '*.md' '*.kt' '*.kts' '*.swift' '*.xcstrings' '*.yml' '*.yaml' '*.xml' '*.toml' \
+            ':!:scripts/test/**' \
+        | xargs -0 grep -EHn "\b[A-Z][A-Za-z0-9&-]+( [A-Z][A-Za-z0-9&-]+)* ${ORG_SUFFIX}([[:space:],;:)]|\.?\$)" 2>/dev/null \
+        | grep -v 'org-ok' \
+        || true
+)
+if [ -n "$ORG_HITS" ]; then
+    {
+        echo "private-content-scan: BLOCKED - a line names a legal entity (company suffix)."
+        echo ""
+        echo "$ORG_HITS"
+        echo ""
+        echo "Committed files name no organizations, except the standards bodies ICAO and"
+        echo "ISO/IEC and the vendors of the tools we use. If this is such a vendor's legal"
+        echo "name (a license or notice), append an 'org-ok' marker comment to the line."
     } >&2
     exit 2
 fi

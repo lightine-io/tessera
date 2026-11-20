@@ -35,6 +35,20 @@ expect 0 "ICAO specimen passes" "$d" --mrz-only
 d=$(repo); add "$d" "README.md" "$MRZ  <!-- mrz-ok -->"
 expect 0 "mrz-ok marker passes" "$d" --mrz-only
 
+# Organization guard: the fixture names are built at run time so this file never trips it.
+SUFFIX="Gm""bH"
+d=$(repo); add "$d" "README.md" "Built for Example Works $SUFFIX last year."
+expect 2 "a legal entity name blocks" "$d" --mrz-only
+
+d=$(repo); add "$d" "core/src/commonMain/kotlin/A.kt" "// used by Example Works $SUFFIX"
+expect 2 "a legal entity name in a source comment blocks" "$d" --mrz-only
+
+d=$(repo); add "$d" "NOTICE.md" "Copyright Example Works $SUFFIX <!-- org-ok -->"
+expect 0 "org-ok marker passes" "$d" --mrz-only
+
+d=$(repo); add "$d" "README.md" "A suffix in lower case (ltd), ICAO and ISO/IEC, and Android Gradle Plugin pass."
+expect 0 "lower-case words and standards bodies pass" "$d" --mrz-only
+
 d=$(repo); add "$d" "README.md" "mentions examplecorp here"
 expect 0 "no terms file: terms half skipped" "$d"
 mkdir -p "$d/.claude"; printf '# terms\nexamplecorp\n' > "$d/.claude/private-content-terms.local"
