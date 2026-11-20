@@ -94,7 +94,7 @@ A Decision item (class Standard) leaves Next when a worker takes it. In Develop:
 
 ## Releases
 
-- Decide to release (delivery planning) when a goal is reached, when Staging reaches 8 items, when 10 weeks have passed with no release (the limit is 3 months), or at once after an expedite fix is merged.
+- Decide to release (delivery planning) when a goal is reached, when Staging reaches 8 items, when 10 weeks have passed with no release (the limit is 3 months; CI opens a reminder issue then, `release-reminder.yml`), or at once after an expedite fix is merged.
 - Check Test first (see Device QA).
 - The owner pushes the signed tag. The release workflow publishes. CI sets "Fixed in" on every released card and moves it to Done.
 - Public KB pages for the release are published by the owner at the release.

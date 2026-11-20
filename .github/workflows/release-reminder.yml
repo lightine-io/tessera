@@ -1,0 +1,50 @@
+# Opens a reminder issue when 10 weeks have passed with no release, so the release trigger
+# in .claude/how-we-work.md ("when 10 weeks have passed with no release (the limit is
+# 3 months)") fires on its own instead of relying on memory.
+#
+# Idempotent: skips if an open issue with the marker label already exists.
+# No checkout needed: `gh` operates via the API.
+
+name: release reminder
+
+on:
+  schedule:
+    - cron: "0 9 * * 1" # 09:00 UTC every Monday
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  remind:
+    name: open release reminder issue
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create the reminder issue (10 weeks with no release, none open)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          LIMIT_DAYS: "70"
+        run: |
+          published=$(gh release view -R "$REPO" --json publishedAt,tagName --jq '.publishedAt + " " + .tagName' 2>/dev/null || true)
+          if [ -z "$published" ]; then
+            echo "No release found; nothing to measure from."
+            exit 0
+          fi
+          tag=${published#* }
+          days=$(( ( $(date -u +%s) - $(date -u -d "${published%% *}" +%s) ) / 86400 ))
+          echo "Latest release $tag was published $days days ago (limit $LIMIT_DAYS)."
+          if [ "$days" -lt "$LIMIT_DAYS" ]; then
+            exit 0
+          fi
+          existing=$(gh issue list -R "$REPO" --label release-reminder --state open --json number --jq 'length')
+          if [ "$existing" -gt 0 ]; then
+            echo "An open release reminder already exists; skipping."
+            exit 0
+          fi
+          gh label create release-reminder -R "$REPO" --description "10 weeks have passed with no release" --color fbca04 2>/dev/null || true
+          gh issue create -R "$REPO" \
+            --title "No release for $days days (latest: $tag)" \
+            --label release-reminder \
+            --body "The latest release, $tag, was published $days days ago. The guide's release trigger is 10 weeks with no release, and the limit is 3 months (\`.claude/how-we-work.md\`, \"Releases\"). Decide to release, or record here why not. Procedure: \`.claude/skills/release-gate/SKILL.md\`. Close this issue after the next release."
