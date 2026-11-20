@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Documentation checks for Tessera. Python 3 stdlib only.
 
-Reads files, writes nothing, needs no network and no secret. Run from the repo root
+Reads files, writes nothing, needs no secret, and uses the network only in `shelf --live`. Run from the repo root
 with `python3 -I scripts/check-docs.py <command>`. Rule: .claude/rules/documentation.md.
 
 Commands and where they run:
@@ -14,11 +14,13 @@ Commands and where they run:
                    (release gate until the code-docs pass reaches zero).
   code-docs        Release gate. Every public Kotlin declaration in a main source set
                    has a doc comment. --swift DIR adds a Swift package's Sources/.
-  shelf DIR        Release gate. DIR is a local folder holding the public pages (a fresh
-                   export of the public KB, one file per page in the shelf folders). Every check mark in the capability matrix links
-                   a how-to page for that platform. The repo-root llms.txt lists every
-                   consumer tutorial and how-to by its exact title, with a KB article URL.
-                   Reads local files only: no network, so CI never depends on YouTrack.
+  shelf --live     Release gate. Reads the live public KB anonymously over HTTPS (the one
+                   place in this repo's tooling that uses the network; CI never runs it).
+                   Every check mark in the capability matrix links a how-to page for that
+                   platform. The repo-root llms.txt lists every consumer tutorial and
+                   how-to by its exact title, with the page's KB article URL.
+  shelf DIR        The same rules over a local folder of exported pages. Offline: this is
+                   how the rules are tested.
 
 Exit 0: clean. Exit 1: findings (listed as path:line: message). Exit 2: could not run.
 """
@@ -570,27 +572,10 @@ def title_key(s):
     return re.sub(r"\s+", " ", s.strip()).casefold()
 
 
-def cmd_shelf(root, shelf, matrix_rel, llms_rel):
-    if not os.path.isdir(shelf):
-        fail("no shelf folder at %s" % shelf)
-    pages, titles = {}, {}
-    for dirpath, _, names in os.walk(shelf):
-        for name in names:
-            if name.endswith(".md"):
-                rel = os.path.relpath(os.path.join(dirpath, name), shelf).replace(os.sep, "/")
-                text = read(os.path.join(dirpath, name))
-                pages[rel] = frontmatter(text)
-                titles[rel] = page_title(text)
-    findings = []
-    for rel, meta in sorted(pages.items()):
-        if not meta.get("kind"):
-            findings.append("%s: no kind in the page header" % rel)
-
-    matrix_path = os.path.join(shelf, matrix_rel)
-    if not os.path.isfile(matrix_path):
-        fail("no capability matrix at %s" % matrix_path)
-    cols = None
-    for no, line in enumerate(read(matrix_path).splitlines(), 1):
+def parse_matrix(text):
+    """Matrix rows: (line, capability, {platform: mark}, how-to cell). Same table rules for both modes."""
+    rows, cols = [], None
+    for no, line in enumerate(text.splitlines(), 1):
         if not line.startswith("|"):
             cols = None
             continue
@@ -602,47 +587,185 @@ def cmd_shelf(root, shelf, matrix_rel, llms_rel):
             continue
         if cols is None or cols["howto"] is None or set(line.replace("|", "").strip()) <= set("-: "):
             continue
-        links = link_targets(cells[cols["howto"]], os.path.dirname(matrix_rel))
+        marks = {p: cells[cols[p]] for p in ("jvm", "android", "ios")}
+        rows.append((no, cells[0], marks, cells[cols["howto"]]))
+    return rows
+
+
+def shelf_findings(pages, matrix_loc, matrix_rows, llms_text, llms_rel):
+    """The shared shelf rules. Both modes build the same inputs; nothing here reads a file or the network.
+
+    pages: {key: {"title", "kind" ('tutorial'|'how-to'|''), "contributor" (bool),
+                  "platforms" (set of jvm/android/ios this how-to serves), "id" (optional article id)}}
+    matrix_rows: [(line, capability, {platform: mark}, [page keys linked in the how-to cell])]
+    llms_text: the text of the repo-root llms.txt, or None when the file is missing.
+    """
+    findings = []
+    for no, name, marks, links in matrix_rows:
         for link in links:
             if link not in pages:
-                findings.append("%s:%d: links a page that does not exist: %s" % (matrix_rel, no, link))
+                findings.append("%s:%d: links a page that does not exist: %s" % (matrix_loc, no, link))
         for plat in ("jvm", "android", "ios"):
-            if cells[cols[plat]] != "\u2713":
+            if marks[plat] != "✓":
                 continue
-            if not any(link.startswith(PLATFORM_DIRS[plat]) and link in pages for link in links):
-                findings.append("%s:%d: '%s' is \u2713 on %s but links no %s how-to page"
-                                % (matrix_rel, no, cells[0], plat, plat))
+            if not any(link in pages and plat in pages[link]["platforms"] for link in links):
+                findings.append("%s:%d: '%s' is ✓ on %s but links no %s how-to page"
+                                % (matrix_loc, no, name, plat, plat))
 
     # llms.txt lives in the repo root. Its links point at KB article URLs, so a page is
     # matched by its title: the link text must be the page title.
-    consumer = {rel: meta for rel, meta in pages.items()
-                if meta.get("audience", "consumer") != "contributor"
-                and not rel.startswith("contribute/")
-                and meta.get("kind") in ("tutorial", "how-to")}
+    consumer = {k: p for k, p in pages.items()
+                if not p["contributor"] and p["kind"] in ("tutorial", "how-to")}
     seen = {}
-    for rel in sorted(consumer):
-        key = title_key(titles[rel])
-        if not key:
-            findings.append("%s: no title (a top-level heading) to match in %s" % (rel, llms_rel))
-        elif key in seen:
-            findings.append("%s: same title as %s; a title must name one page" % (rel, seen[key]))
+    for key in sorted(consumer):
+        tk = title_key(consumer[key]["title"])
+        if not tk:
+            findings.append("%s: no title (a top-level heading) to match in %s" % (key, llms_rel))
+        elif tk in seen:
+            findings.append("%s: same title as %s; a title must name one page" % (key, seen[tk]))
         else:
-            seen[key] = rel
-    llms_path = os.path.join(root, llms_rel)
-    if not os.path.isfile(llms_path):
+            seen[tk] = key
+    if llms_text is None:
         findings.append("%s: missing (it lives in the repo root)" % llms_rel)
-    else:
-        listed = set()
-        for no, line in enumerate(read(llms_path).splitlines(), 1):
-            for text, url in re.findall(r"\[([^\]]+)\]\(([^)\s]+)\)", line):
-                if not re.match(r"^https?://", url):
-                    findings.append("%s:%d: link is not an absolute URL: %s" % (llms_rel, no, url))
-                    continue
-                listed.add(title_key(text))
-        for rel in sorted(consumer):
-            if title_key(titles[rel]) and title_key(titles[rel]) not in listed:
-                findings.append("%s: %s page '%s' not listed in %s"
-                                % (rel, consumer[rel].get("kind"), titles[rel], llms_rel))
+        return findings
+    listed = {}
+    for no, line in enumerate(llms_text.splitlines(), 1):
+        for text, url in re.findall(r"\[([^\]]+)\]\(([^)\s]+)\)", line):
+            if not re.match(r"^https?://", url):
+                findings.append("%s:%d: link is not an absolute URL: %s" % (llms_rel, no, url))
+                continue
+            listed.setdefault(title_key(text), []).append(url)
+    for key in sorted(consumer):
+        p, tk = consumer[key], title_key(consumer[key]["title"])
+        if not tk:
+            continue
+        if tk not in listed:
+            findings.append("%s: %s page '%s' not listed in %s" % (key, p["kind"], p["title"], llms_rel))
+        elif p.get("id") and not any(re.search(r"/articles/%s(?![\w-])" % re.escape(p["id"]), u)
+                                     for u in listed[tk]):
+            findings.append("%s: '%s' is listed in %s but not with its article URL (.../articles/%s)"
+                            % (key, p["title"], llms_rel, p["id"]))
+    return findings
+
+
+def folder_pages(shelf):
+    """Folder mode: the exported pages, with kind, audience and platform read from the folder."""
+    pages, texts, findings = {}, {}, []
+    for dirpath, _, names in os.walk(shelf):
+        for name in names:
+            if name.endswith(".md"):
+                rel = os.path.relpath(os.path.join(dirpath, name), shelf).replace(os.sep, "/")
+                text = read(os.path.join(dirpath, name))
+                meta = frontmatter(text)
+                texts[rel] = text
+                pages[rel] = {"title": page_title(text), "kind": meta.get("kind", ""),
+                              "contributor": meta.get("audience", "consumer") == "contributor"
+                              or rel.startswith("contribute/"),
+                              "platforms": {p for p, dirs in PLATFORM_DIRS.items()
+                                            if rel.startswith(dirs)}}
+                if not meta.get("kind"):
+                    findings.append("%s: no kind in the page header" % rel)
+    return pages, texts, findings
+
+
+def folder_matrix_rows(texts, matrix_rel):
+    rows = []
+    for no, name, marks, cell in parse_matrix(texts[matrix_rel]):
+        rows.append((no, name, marks, link_targets(cell, os.path.dirname(matrix_rel))))
+    return rows
+
+
+# Live mode: the public tree of the KB, read anonymously over HTTPS.
+KB_BASE = "https://lightine.youtrack.cloud"
+KB_USER_AGENT = "tessera-docs-check"
+KB_MATRIX_ID = "TES-A-139"
+KB_TUTORIALS_ID = "TES-A-141"       # tutorials tree
+KB_HOWTO_ID = "TES-A-88"            # how-to tree
+KB_PLATFORM_TREES = {"TES-A-127": {"jvm", "android"},  # Kotlin how-tos serve JVM and Android
+                     "TES-A-89": {"android"},
+                     "TES-A-103": {"ios"}}
+KB_CONTRIBUTE_ID = "TES-A-78"
+
+
+def http_get_json(url):
+    """The one network call in this repo's tooling: an anonymous GET. Raises OSError or ValueError."""
+    import json
+    import urllib.request
+    req = urllib.request.Request(url, headers={"User-Agent": KB_USER_AGENT, "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def fetch_live(fetch):
+    """Read the public KB with `fetch(url) -> parsed JSON`. Returns (pages, matrix_text).
+    Any failure raises; the caller turns it into 'cannot run'."""
+    from urllib.parse import quote
+    fields = quote("idReadable,summary,parentArticle(idReadable)", safe="(),")
+    articles, skip = [], 0
+    while True:
+        batch = fetch("%s/api/articles?fields=%s&$top=100&$skip=%d" % (KB_BASE, fields, skip))
+        if not isinstance(batch, list):
+            raise ValueError("unexpected answer from the article list")
+        articles.extend(batch)
+        if len(batch) < 100:
+            break
+        skip += 100
+    parent = {a["idReadable"]: (a.get("parentArticle") or {}).get("idReadable") for a in articles}
+    title = {a["idReadable"]: a.get("summary", "") for a in articles}
+    has_children = {p for p in parent.values() if p}
+    if KB_MATRIX_ID not in parent:
+        raise ValueError("%s (capability matrix) is not in the public tree" % KB_MATRIX_ID)
+
+    def ancestors(aid):
+        out, seen = [], set()
+        while parent.get(aid) and aid not in seen:
+            seen.add(aid)
+            aid = parent[aid]
+            out.append(aid)
+        return out
+
+    pages = {}
+    for aid in parent:
+        up = ancestors(aid)
+        kind = ""
+        if aid not in has_children:  # index pages (sections) are not tutorials or how-tos
+            if KB_TUTORIALS_ID in up:
+                kind = "tutorial"
+            elif KB_HOWTO_ID in up:
+                kind = "how-to"
+        pages[aid] = {"id": aid, "title": title[aid], "kind": kind,
+                      "contributor": KB_CONTRIBUTE_ID in up or aid == KB_CONTRIBUTE_ID,
+                      "platforms": set().union(*[KB_PLATFORM_TREES.get(a, set()) for a in up])
+                      if kind == "how-to" else set()}
+    art = fetch("%s/api/articles/%s?fields=content" % (KB_BASE, KB_MATRIX_ID))
+    content = art.get("content") if isinstance(art, dict) else None
+    if not isinstance(content, str):
+        raise ValueError("%s came back without content" % KB_MATRIX_ID)
+    return pages, content
+
+
+def live_matrix_rows(matrix_text):
+    return [(no, name, marks, re.findall(r"/articles/(TES-A-\d+)", cell))
+            for no, name, marks, cell in parse_matrix(matrix_text)]
+
+
+def cmd_shelf(root, shelf, matrix_rel, llms_rel, live=False, fetch=http_get_json):
+    llms_path = os.path.join(root, llms_rel)
+    llms_text = read(llms_path) if os.path.isfile(llms_path) else None
+    if live:
+        try:
+            pages, matrix_text = fetch_live(fetch)
+        except Exception as exc:  # network, HTTP, JSON, or shape: the check cannot run
+            fail("cannot read the live KB at %s: %s: %s" % (KB_BASE, type(exc).__name__, exc))
+        findings = shelf_findings(pages, "KB %s" % KB_MATRIX_ID, live_matrix_rows(matrix_text),
+                                  llms_text, llms_rel)
+        return report(findings, "shelf")
+    if not os.path.isdir(shelf):
+        fail("no shelf folder at %s" % shelf)
+    pages, texts, findings = folder_pages(shelf)
+    if matrix_rel not in texts:
+        fail("no capability matrix at %s" % os.path.join(shelf, matrix_rel))
+    findings += shelf_findings(pages, matrix_rel, folder_matrix_rows(texts, matrix_rel), llms_text, llms_rel)
     return report(findings, "shelf")
 
 
@@ -660,7 +783,9 @@ def main(argv=None):
     cd = sub.add_parser("code-docs")
     cd.add_argument("--swift", help="also check a Swift package root (its Sources/)")
     sh = sub.add_parser("shelf")
-    sh.add_argument("shelf", help="local folder holding the public pages (a vault folder or a KB export)")
+    sh.add_argument("shelf", nargs="?", help="local folder holding the public pages (offline mode)")
+    sh.add_argument("--live", action="store_true",
+                    help="read the live public KB anonymously over HTTPS (release gate only)")
     sh.add_argument("--matrix", default="start/capability-matrix.md", help="matrix page, relative to the folder")
     sh.add_argument("--llms", default="llms.txt", help="llms.txt, relative to the repo root")
     args = ap.parse_args(argv)
@@ -671,7 +796,11 @@ def main(argv=None):
         return cmd_style(root, args.files, args.kdoc, args.swift)
     if args.cmd == "code-docs":
         return cmd_code_docs(root, args.swift)
-    return cmd_shelf(root, os.path.abspath(args.shelf), args.matrix, args.llms)
+    if not args.live and not args.shelf:
+        ap.error("shelf needs a folder, or --live")
+    if args.live and args.shelf:
+        ap.error("shelf takes a folder or --live, not both")
+    return cmd_shelf(root, os.path.abspath(args.shelf) if args.shelf else None, args.matrix, args.llms, args.live)
 
 
 if __name__ == "__main__":
