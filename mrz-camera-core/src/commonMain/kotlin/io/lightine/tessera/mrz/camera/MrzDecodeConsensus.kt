@@ -21,7 +21,6 @@ import io.lightine.tessera.mrz.parsing.ParseResult
 public class MrzDecodeConsensus
     @Throws(IllegalArgumentException::class)
     constructor(
-        /** How many frames in total must decode the same document. At least 1; 1 accepts the first decode. */
         public val threshold: Int = DEFAULT_THRESHOLD,
     ) {
         init {

@@ -405,7 +405,8 @@ def kotlin_findings(rel, text):
         if masked[o] != "(":
             continue
         hdr = header_before(masked, o)
-        cls = list(re.finditer(r"\bclass\b", hdr))
+        # `::class` (as in `@Throws(X::class)`) is a class reference, not the class keyword.
+        cls = list(re.finditer(r"(?<!::)\bclass\b", hdr))
         if not cls or re.search(r"\b(private|internal)\b", hdr) or enclosed_by_hidden(masked, pairs, o):
             continue
         cls_pos = o - len(hdr) + cls[-1].start()

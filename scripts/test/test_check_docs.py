@@ -184,6 +184,26 @@ class CodeDocs(unittest.TestCase):
             self.assertNotIn(absent, text)
         self.assertEqual(len(found), 4)
 
+    def test_class_reference_in_an_annotation_is_not_the_class_keyword(self):
+        # `@Throws(X::class)` between the class name and its constructor must not hide the class doc.
+        source = textwrap.dedent('''\
+            /**
+             * A counter.
+             *
+             * @property limit documented by the tag.
+             */
+            public class Counter
+                @Throws(IllegalArgumentException::class)
+                constructor(
+                    public val limit: Int,
+                    public val missing: Int,
+                )
+            ''')
+        code, found = self.findings(source)
+        self.assertEqual(code, 1)
+        self.assertEqual(len(found), 1)
+        self.assertIn("constructor property missing", found[0])
+
     def test_test_sources_are_skipped(self):
         code, found = self.findings("public fun x() = 1\n", "core/src/commonTest/kotlin/T.kt")
         self.assertEqual((code, found), (0, []))
