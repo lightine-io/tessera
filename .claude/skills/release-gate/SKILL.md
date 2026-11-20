@@ -24,7 +24,10 @@ maintainer. Record the results as a comment on the release card.
    A significant change of direction becomes an ADR in the internal KB (TES-A-17).
 2. **Review agents.** Launch `qa-coverage-reviewer` and `security-reviewer` in parallel
    on the release diff (last tag to HEAD). Triage each finding with the maintainer: fix
-   it or accept it with a recorded reason.
+   it or accept it with a recorded reason. A finding to fix before the tag becomes its
+   own card in Develop, and the release card is marked blocked until it merges; it is
+   never folded into the release-prep PR. Every other finding goes to New
+   ([how we work](../../how-we-work.md), "During work").
 3. **Documentation.**
    - `python3 -I scripts/check-docs.py code-docs --swift ../tessera-swift` exits 0.
    - `python3 -I scripts/check-docs.py style --kdoc --swift ../tessera-swift` exits 0.
