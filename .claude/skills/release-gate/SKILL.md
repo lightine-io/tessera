@@ -31,10 +31,11 @@ maintainer. Record the results as a comment on the release card.
 3. **Documentation.**
    - `python3 -I scripts/check-docs.py code-docs --swift ../tessera-swift` exits 0.
    - `python3 -I scripts/check-docs.py style --kdoc --swift ../tessera-swift` exits 0.
-   - `python3 -I scripts/check-docs.py shelf <folder>` exits 0. The folder holds the
-     release's public pages: a fresh export of the public KB, one file per page in the
-     shelf folders. The check reads local files only; the repo-root `llms.txt`
-     must list every consumer tutorial and how-to by title.
+   - `python3 -I scripts/check-docs.py shelf --live` exits 0. It reads the live public KB
+     anonymously over HTTPS (no token): every ✓ in the capability matrix has its how-to
+     page, and the repo-root `llms.txt` lists every consumer tutorial and how-to by exact
+     title with its KB article URL. Publish the release's pages first. Exit 2 means the KB
+     could not be read (network or HTTP error): rerun, never skip it.
    - Scope against reality: everything `[Unreleased]` and the release's pages claim
      exists and is tested. Implement the gap or narrow the claim; never tag before they
      match.

@@ -329,5 +329,103 @@ class Shelf(unittest.TestCase):
         self.assertEqual(ctx.exception.code, 2)
 
 
+def fake_page(kind, title, platforms=(), contributor=False, aid=None):
+    return {"title": title, "kind": kind, "contributor": contributor,
+            "platforms": set(platforms), "id": aid}
+
+
+FAKE_LLMS = "- [Parse an MRZ in Kotlin](https://x.example/articles/TES-A-25)\n"
+
+
+class ShelfRules(unittest.TestCase):
+    """The shared rule function over an in-memory page set: no files, no network."""
+
+    def rows(self, mark="\u2713", links=("TES-A-25",)):
+        return [(7, "Parse", {"jvm": mark, "android": "n/a", "ios": "n/a"}, list(links))]
+
+    def run_rules(self, pages, rows, llms=FAKE_LLMS):
+        return cd.shelf_findings(pages, "matrix", rows, llms, "llms.txt")
+
+    def pages(self):
+        return {"TES-A-25": fake_page("how-to", "Parse an MRZ in Kotlin", ["jvm", "android"], aid="TES-A-25")}
+
+    def test_clean_set_has_no_findings(self):
+        self.assertEqual(self.run_rules(self.pages(), self.rows()), [])
+
+    def test_check_mark_without_platform_page(self):
+        pages = {"TES-A-25": fake_page("how-to", "Parse an MRZ in Kotlin", ["ios"], aid="TES-A-25")}
+        self.assertIn("matrix:7: 'Parse' is \u2713 on jvm but links no jvm how-to page",
+                      self.run_rules(pages, self.rows()))
+
+    def test_link_to_missing_page(self):
+        out = self.run_rules(self.pages(), self.rows(links=("TES-A-999",)))
+        self.assertIn("matrix:7: links a page that does not exist: TES-A-999", out)
+
+    def test_unlisted_page_and_wrong_url_and_duplicate_title(self):
+        pages = self.pages()
+        pages["TES-A-26"] = fake_page("how-to", "Generate an MRZ in Kotlin", ["jvm"], aid="TES-A-26")
+        pages["TES-A-27"] = fake_page("tutorial", "Parse an MRZ in Kotlin", aid="TES-A-27")
+        out = "\n".join(self.run_rules(pages, self.rows()))
+        self.assertIn("'Generate an MRZ in Kotlin' not listed", out)
+        self.assertIn("same title as TES-A-25", out)
+        out = "\n".join(self.run_rules(self.pages(), self.rows(),
+                                      "- [Parse an MRZ in Kotlin](https://x.example/articles/TES-A-250)\n"))
+        self.assertIn("not with its article URL (.../articles/TES-A-25)", out)
+
+    def test_contributor_and_section_pages_need_no_listing(self):
+        pages = self.pages()
+        pages["TES-A-7"] = fake_page("how-to", "How work flows", contributor=True, aid="TES-A-7")
+        pages["TES-A-89"] = fake_page("", "How-to: Android", aid="TES-A-89")
+        self.assertEqual(self.run_rules(pages, self.rows()), [])
+
+    def test_missing_llms(self):
+        self.assertIn("llms.txt: missing (it lives in the repo root)",
+                      self.run_rules(self.pages(), self.rows(), None))
+
+
+class ShelfLive(unittest.TestCase):
+    def live(self, fetch):
+        repo = tempfile.mkdtemp()
+        write(repo, "llms.txt", FAKE_LLMS)
+        return cd.cmd_shelf(repo, None, "unused", "llms.txt", live=True, fetch=fetch)
+
+    def test_fetch_error_cannot_run(self):
+        def boom(url):
+            raise OSError("no route")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            with self.assertRaises(SystemExit) as ctx:
+                self.live(boom)
+        self.assertEqual(ctx.exception.code, 2)
+        self.assertIn("cannot read the live KB", err.getvalue())
+
+    def test_odd_answer_cannot_run(self):
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as ctx:
+                self.live(lambda url: {"error": "nope"})
+        self.assertEqual(ctx.exception.code, 2)
+
+    def test_tree_is_read_into_pages(self):
+        arts = [("TES-A-3", None, "Public"), ("TES-A-16", "TES-A-3", "Start here"),
+                ("TES-A-139", "TES-A-16", "Capability matrix"), ("TES-A-88", "TES-A-3", "How-to guides"),
+                ("TES-A-127", "TES-A-88", "How-to: Kotlin"), ("TES-A-25", "TES-A-127", "Parse an MRZ in Kotlin"),
+                ("TES-A-78", "TES-A-3", "Contribute"), ("TES-A-7", "TES-A-78", "How work flows")]
+        listing = [{"idReadable": i, "summary": t, "parentArticle": {"idReadable": p} if p else None}
+                   for i, p, t in arts]
+        matrix = "| Capability | JVM | Android | iOS | How to |\n|---|---|---|---|---|\n" \
+                 "| Parse | " + TICK + " | " + TICK + " | n/a | [P](https://k/articles/TES-A-25) |\n"
+
+        def fetch(url):
+            return {"content": matrix} if "fields=content" in url else listing
+        pages, text = cd.fetch_live(fetch)
+        self.assertEqual(pages["TES-A-25"]["platforms"], {"jvm", "android"})
+        self.assertEqual(pages["TES-A-25"]["kind"], "how-to")
+        self.assertEqual(pages["TES-A-127"]["kind"], "")
+        self.assertTrue(pages["TES-A-7"]["contributor"])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(self.live(fetch), 0)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

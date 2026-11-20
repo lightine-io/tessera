@@ -73,8 +73,11 @@ Tick each item or say why it does not apply.
   section name, no em-dash or banned word in repo Markdown), and
   `scripts/check-markdown-links.sh`.
 - Release gate: `check-docs.py code-docs` (every public declaration documented),
-  `style --kdoc`, and `shelf <folder>` (every ✓ in the capability matrix has its how-to;
-  the repo-root `llms.txt` lists every consumer tutorial and how-to by title). `shelf`
-  reads a local folder, never the network: a fresh
-  export of the public KB. It runs at the release gate only, because the pages are not in
-  the repo and a PR cannot change them.
+  `style --kdoc`, and `shelf --live` (every ✓ in the capability matrix has its how-to;
+  the repo-root `llms.txt` lists every consumer tutorial and how-to by exact title with the
+  page's KB article URL; no two pages share a title). `shelf --live` reads the live public
+  KB anonymously over HTTPS, and it never runs on PRs. A network or HTTP error stops it with exit 2, never a pass. It reads
+  the whole public tree (root "Public"): pages under "How-to guides" and "Tutorials" with no child
+  pages are the consumer pages, and pages under "Contribute to Tessera" need no listing.
+  `shelf <folder>` applies the same rules to a local folder of exported pages (offline; the
+  tests use it). It runs at the release gate only, because a PR cannot change the pages.
