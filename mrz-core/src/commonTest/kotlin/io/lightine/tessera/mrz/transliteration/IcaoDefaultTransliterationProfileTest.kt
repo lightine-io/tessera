@@ -129,7 +129,7 @@ class IcaoDefaultTransliterationProfileTest {
         // (no filler character shall be inserted in their place in the MRZ)."
         assertEquals(
             TransliterationResult.Success("ABC"),
-            IcaoDefaultTransliterationProfile.toMrzAlphabet("A.B,C"),
+            IcaoDefaultTransliterationProfile.toMrzAlphabet("A.B;C"),
         )
         assertEquals(
             TransliterationResult.Success("AB"),
@@ -139,6 +139,32 @@ class IcaoDefaultTransliterationProfileTest {
             TransliterationResult.Success("AB"),
             IcaoDefaultTransliterationProfile.toMrzAlphabet("A(B)"),
         )
+    }
+
+    @Test
+    fun comma_between_name_components_is_one_filler_per_icao_part_3_section_4_6() {
+        // Spec example: VIZ "ANNA, MARIA" is MRZ "ANNA<MARIA". The space is not what makes the filler.
+        for (input in listOf("ANNA, MARIA", "ANNA,MARIA", "ANNA ,MARIA", "ANNA , MARIA", "ANNA,  MARIA", "ANNA,,MARIA")) {
+            assertEquals(
+                TransliterationResult.Success("ANNA<MARIA"),
+                IcaoDefaultTransliterationProfile.toMrzAlphabet(input),
+                "input: $input",
+            )
+        }
+    }
+
+    @Test
+    fun comma_that_separates_nothing_is_dropped() {
+        for (input in listOf(",ANNA", "ANNA,", "ANNA, ", "ANNA,'", "',ANNA")) {
+            assertEquals(
+                TransliterationResult.Success("ANNA"),
+                IcaoDefaultTransliterationProfile.toMrzAlphabet(input),
+                "input: $input",
+            )
+        }
+        assertEquals(TransliterationResult.Success(""), IcaoDefaultTransliterationProfile.toMrzAlphabet(","))
+        // A leading space is a filler, as before; the comma in front of it adds nothing.
+        assertEquals(TransliterationResult.Success("<ANNA"), IcaoDefaultTransliterationProfile.toMrzAlphabet(", ANNA"))
     }
 
     @Test

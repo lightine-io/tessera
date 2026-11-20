@@ -206,4 +206,15 @@ class AzeTransliterationProfileTest {
         val looked = TransliterationProfileRegistry.lookup(AzeTransliterationProfile.IDENTIFIER)
         assertEquals(AzeTransliterationProfile, looked)
     }
+
+    @Test
+    fun comma_between_name_components_is_one_filler_per_icao_part_3_section_4_6() {
+        for (input in listOf("ANNA, MARIA", "ANNA,MARIA")) {
+            assertEquals(
+                TransliterationResult.Success("ANNA<MARIA"),
+                AzeTransliterationProfile.toMrzAlphabet(input),
+                "input: $input",
+            )
+        }
+    }
 }
