@@ -101,6 +101,11 @@ layers are in
 [`.claude/rules/platform-work.md`](.claude/rules/platform-work.md).
 If a prescribed driver is absent, surface it; never silently fall back.
 
+**A new vendor product or service** (a design tool, a cloud service, anything reached
+through MCP tools or a web console): read the vendor's product docs before building on
+it. Adopting the product is the trigger, not touching a code path; the tool's own
+interface is not its documentation.
+
 ## Pointer table
 
 | Need | Home |
