@@ -5,6 +5,9 @@
 #   PR merged, label `no-changelog`       -> Stage Done     (no shipped artifact)
 #   PR merged, otherwise                  -> Stage Staging  (merged, awaiting release)
 #   release run succeeded on tag vX.Y.Z   -> every Staging card: Fixed in X.Y.Z, Stage Done
+# A card that already waits in Staging or Test holds a shipped change, so a follow-up PR
+# that ships nothing leaves it there: an opened PR does not pull it back to Review, and a
+# merged `no-changelog` PR does not send it to Done past the release step.
 #
 # Why `no-changelog` is the Done signal: the required `changelog · entry present` check
 # already forces every PR to either touch CHANGELOG.md or carry this label. CHANGELOG.md
@@ -53,12 +56,21 @@ jobs:
           [ -n "$YOUTRACK_TOKEN" ] || { echo "No YOUTRACK_TOKEN secret; skipping."; exit 0; }
           issue=$(printf '%s\n%s\n' "$BRANCH" "$TITLE" | grep -oE 'TES-[0-9]+' | head -1 || true)
           [ -n "$issue" ] || { echo "No TES-<n> in branch or title; skipping."; exit 0; }
+          # The card's Stage now. Empty when the read fails: then the move goes ahead as before.
+          current=$(curl -sS -H "Authorization: Bearer $YOUTRACK_TOKEN" -H 'Accept: application/json' \
+            "https://lightine.youtrack.cloud/api/issues/$issue?fields=customFields(name,value(name))" \
+            | jq -r '.customFields[]? | select(.name == "Stage") | .value.name // empty' 2>/dev/null || true)
+          waiting=false
+          case "$current" in Staging|Test) waiting=true ;; esac
           if [ "$ACTION" = "closed" ]; then
             [ "$MERGED" = "true" ] || { echo "PR closed without merge; stage untouched."; exit 0; }
             if [ "$HAS_DEVICE_QA" = "true" ]; then stage="Test"
-            elif [ "$NO_CHANGELOG" = "true" ]; then stage="Done"
+            elif [ "$NO_CHANGELOG" = "true" ]; then
+              [ "$waiting" = "false" ] || { echo "$issue waits in $current; a no-changelog PR leaves it there."; exit 0; }
+              stage="Done"
             else stage="Staging"; fi
           else
+            [ "$waiting" = "false" ] || { echo "$issue waits in $current; an opened PR leaves it there."; exit 0; }
             stage="Review"
           fi
           echo "$issue: Stage $stage"
