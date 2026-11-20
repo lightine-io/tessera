@@ -393,8 +393,7 @@ internal val CONVENTION_VECTORS: List<ConventionVector> =
             printed = "ERIKSSON<<ANNA<MARIA",
             splitAtComma = true,
         ),
-        // Comma between two components: one filler. The ICAO profile drops the comma and maps the
-        // space after it to a filler, so the result matches only because the VIZ has that space.
+        // Comma between two components: one filler, with or without a space after the comma.
         ConventionVector(
             id = "P3-N-4",
             source = IcaoSource(part = 3, where = "4.6, comma between components", pdfPage = 26),

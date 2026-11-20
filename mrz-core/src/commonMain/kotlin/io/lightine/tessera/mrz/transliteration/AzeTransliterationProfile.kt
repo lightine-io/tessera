@@ -57,15 +57,10 @@ public object AzeTransliterationProfile : TransliterationProfile {
      * @return [TransliterationResult.Success] with the mapped text.
      */
     public override fun toMrzAlphabet(normalizedInput: String): TransliterationResult {
-        val output = StringBuilder(normalizedInput.length)
-        for (char in normalizedInput) {
-            val mapped = mappings[char]
-            when {
-                mapped != null -> output.append(mapped)
-                isMrzAlphabetCharacter(char) -> output.append(char)
-                else -> output.append(FILLER)
+        val output =
+            mapToMrzAlphabet(normalizedInput) { char ->
+                mappings[char] ?: if (isMrzAlphabetCharacter(char)) char.toString() else FILLER.toString()
             }
-        }
-        return TransliterationResult.Success(output.toString())
+        return TransliterationResult.Success(output)
     }
 }

@@ -20,7 +20,8 @@ package io.lightine.tessera.mrz.transliteration
 //
 // Punctuation handling: per ICAO Doc 9303 Part 3 §4.6, apostrophes shall be
 // omitted (no filler), hyphens shall be converted to the filler character
-// (handled implicitly via the unmapped-character fallback), and "all other
+// (handled implicitly via the unmapped-character fallback), a comma between two
+// name components is one filler (handled by mapToMrzAlphabet), and "all other
 // punctuation characters shall be omitted from the MRZ (no filler character
 // shall be inserted in their place)." Apostrophe and common Western
 // punctuation are explicitly mapped to the empty string below so the
@@ -78,9 +79,43 @@ internal fun buildIcaoLatinMappings(): MutableMap<Char, String> {
     // omitted from the MRZ (no filler character shall be inserted in their place)."
     // Note: '-' (U+002D) is NOT in this list — per §4.6 hyphens convert to filler,
     // which is the unmapped-character fallback the profile already applies.
-    addAll(map, "\".,;:?!()[]{}*&@#\$%+=~_/\\|^“”", "")
+    // ',' (U+002C) is NOT in this list either: per §4.6 a comma between two name
+    // components is one filler; [mapToMrzAlphabet] handles it.
+    addAll(map, "\".;:?!()[]{}*&@#\$%+=~_/\\|^“”", "")
 
     return map
+}
+
+private const val COMMA: Char = ','
+private const val FILLER: Char = '<'
+
+/**
+ * Maps [input] one character at a time with [mapChar], and applies the comma rule of ICAO
+ * Doc 9303 Part 3 §4.6: a comma between two name components is one filler.
+ *
+ * A comma together with the whitespace around it counts as one separator, so `ANNA, MARIA`
+ * and `ANNA,MARIA` both give `ANNA<MARIA`. A comma with nothing before it or nothing after it
+ * separates nothing and is dropped.
+ */
+internal fun mapToMrzAlphabet(
+    input: String,
+    mapChar: (Char) -> String,
+): String {
+    val output = StringBuilder(input.length)
+    var commaPending = false
+    for (char in input) {
+        if (char == COMMA) {
+            commaPending = output.isNotEmpty()
+            continue
+        }
+        if (commaPending && char.isWhitespace()) continue
+        val mapped = mapChar(char)
+        if (mapped.isEmpty()) continue
+        if (commaPending && output.last() != FILLER) output.append(FILLER)
+        commaPending = false
+        output.append(mapped)
+    }
+    return output.toString()
 }
 
 private fun addAll(
