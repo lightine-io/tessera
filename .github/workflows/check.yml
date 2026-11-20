@@ -142,8 +142,8 @@ jobs:
   # so the failure only surfaced mid-release, after environment approval. This job runs a REAL
   # local publish on every PR and push to main, executing the exact failure site with no
   # secrets: publishToMavenLocal needs no Sonatype creds, and `-Ptessera.skipSigning` (the
-  # explicit escape hatch in the root build.gradle.kts) skips PGP signing, which keyless
-  # runners cannot do. macOS runner because K/N publication metadata needs the Apple toolchain.
+  # explicit escape hatch in the tessera.publishing convention plugin, build-logic/) skips PGP
+  # signing, which keyless runners cannot do. macOS runner because K/N publication metadata needs the Apple toolchain.
   # Rule of thumb this enforces: a module that declares a target must produce an artifact for
   # it; empty placeholders (emrtd-core, logging) declare JVM+Android only - an empty jar/aar
   # is valid, a missing klib is not.

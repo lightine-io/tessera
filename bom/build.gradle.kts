@@ -1,6 +1,6 @@
 plugins {
     `java-platform`
-    alias(libs.plugins.maven.publish)
+    id("tessera.publishing")
 }
 
 // BOM (Bill of Materials) — a POM-only artifact that declares the version of every

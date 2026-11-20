@@ -2,6 +2,7 @@
 paths:
   - "**/build.gradle.kts"
   - "settings.gradle.kts"
+  - "build-logic/**"
   - "gradle/libs.versions.toml"
   - "gradle/wrapper/gradle-wrapper.properties"
   - ".github/workflows/**"
