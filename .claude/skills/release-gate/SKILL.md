@@ -62,6 +62,11 @@ maintainer. Record the results as a comment on the release card.
    enforces this and fails the publish step otherwise (merge, then re-run the job).
    The workflow also waits for the pin PR's checks in tessera-swift and stops before the
    merge and the tag if any fails (TES-218); the next gate catches that before the tag.
+   Its merged work is in the CHANGELOG too: tessera-swift has no changelog of its own and
+   no entry check, so list what merged there since the last release,
+   `gh pr list --repo lightine-io/tessera-swift --state merged --search "merged:>=<date of the last tag>"`,
+   and for each PR find its line under `[Unreleased]` or the words "no changelog" with a
+   reason in its body. A PR with neither gets an entry before the tag.
 10. **tessera-swift builds against this release's framework.**
     `scripts/test-swift-against-local-framework.sh` exits 0. It builds the XCFramework,
     copies it into `../tessera-swift/.local-xcframework/`, and runs tessera-swift's tests
