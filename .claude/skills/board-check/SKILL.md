@@ -18,7 +18,8 @@ Never trust a write's success reply: read the issue back. There is no local toke
 ## Steps
 
 1. **Fields.** Run each query with the connector's `search_issues`. Each should return nothing.
-   - `project: TES has: -Type`, `has: -Stage`, `has: -Platform`
+   - `project: TES Stage: -New has: -Type` (a card in New has no Type yet; it is set at
+     triage), `has: -Stage`, `has: -Platform`
    - `project: TES Stage: -New, -Rejected has: -{Class of service}`
    - Goal on product cards (a card with a Service; process work has neither):
      `project: TES Stage: Options, Next has: Service has: -Goal`
