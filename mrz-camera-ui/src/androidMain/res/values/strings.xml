@@ -253,6 +253,9 @@
     <string name="tessera_scanner_obs_warning_expiry_past">Expiry date has passed</string>
     <!-- The expiry date is implausibly far ahead. "%1$s" is the number of years used as the limit. -->
     <string name="tessera_scanner_obs_warning_expiry_far">Expiry date is more than %1$s years away</string>
+    <!-- The reader could not tell which century the expiry year is in, so it has no full expiry date to
+         compare with today. "%1$s" is the two-digit year exactly as read. -->
+    <string name="tessera_scanner_obs_warning_expiry_century_unknown">Expiry year %1$s can\'t be placed in a century</string>
     <!-- The name uses its whole line, so the printed name may be cut short. -->
     <string name="tessera_scanner_obs_warning_name_truncated">The name fills its whole line and may be cut short</string>
     <!-- The personal number has content but its check number position holds a filler. -->

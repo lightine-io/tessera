@@ -1,5 +1,6 @@
 package io.lightine.tessera.mrz.conformance
 
+import io.lightine.tessera.types.errors.MrzExpiryDateCenturyNotInferred
 import io.lightine.tessera.types.errors.MrzWarning
 import io.lightine.tessera.types.vocabulary.MrzFormat
 import io.lightine.tessera.types.vocabulary.Sex
@@ -128,7 +129,8 @@ internal val CHECK_DIGIT_VECTORS: List<CheckDigitVector> =
  * @property dateOfExpiry The date of expiry the VIZ states.
  * @property expiryCenturyInferred Whether the SDK places the expiry year in a century at
  *   [REFERENCE_TIME]. Its documented window is 10 years back to 50 years ahead of the reference
- *   year, so expiry years before 2016 stay raw only.
+ *   year, so expiry years before 2016 stay raw only, and the validator reports
+ *   `MrzExpiryDateCenturyNotInferred` for them.
  * @property optionalData The optional data as printed, in the format's order: the personal number
  *   (TD3), optional data 1 and 2 (TD1), or the one optional-data field (TD2, MRV-A, MRV-B).
  * @property warnings The exact warning list expected at [REFERENCE_TIME].
@@ -174,7 +176,7 @@ internal val P3_F_1: SpecimenVector =
         dateOfExpiry = LocalDate(2012, 4, 15),
         expiryCenturyInferred = false,
         optionalData = listOf("ZE184226B<<<<<"),
-        warnings = emptyList(),
+        warnings = listOf(MrzExpiryDateCenturyNotInferred("12", "04", "15", REFERENCE_DATE)),
     )
 
 // VIZ: PP, UTO, L898902C3, ERIKSSON, ANNA MARIA, UTOPIAN, 12 AUG 1974, personal no. ZE184226B, F,
@@ -224,7 +226,7 @@ internal val P5_F_1: SpecimenVector =
         dateOfExpiry = LocalDate(2012, 4, 15),
         expiryCenturyInferred = false,
         optionalData = listOf("<".repeat(15), "<".repeat(11)),
-        warnings = emptyList(),
+        warnings = listOf(MrzExpiryDateCenturyNotInferred("12", "04", "15", REFERENCE_DATE)),
     )
 
 // VIZ: ERIKSSON; ANNA MARIA; UTO; 12 AUG 1974; F; D23145890; valid until 15 APR 2012.
@@ -246,7 +248,7 @@ internal val P6_F_1: SpecimenVector =
         dateOfExpiry = LocalDate(2012, 4, 15),
         expiryCenturyInferred = false,
         optionalData = listOf("<".repeat(7)),
-        warnings = emptyList(),
+        warnings = listOf(MrzExpiryDateCenturyNotInferred("12", "04", "15", REFERENCE_DATE)),
     )
 
 // VIZ: visa document no. M123889546 (not in the MRZ); passport no. L8988901C, which the MRZ
@@ -272,7 +274,7 @@ internal val P7_F_1: SpecimenVector =
         expiryCenturyInferred = false,
         // As printed: the optional data starts with 6. A specimen oddity, read verbatim.
         optionalData = listOf("6ZE184226B<<<<<<"),
-        warnings = emptyList(),
+        warnings = listOf(MrzExpiryDateCenturyNotInferred("96", "12", "10", REFERENCE_DATE)),
     )
 
 // VIZ: as P7-F-1.
@@ -294,7 +296,7 @@ internal val P7_F_2: SpecimenVector =
         dateOfExpiry = LocalDate(1996, 12, 10),
         expiryCenturyInferred = false,
         optionalData = listOf("<".repeat(8)),
-        warnings = emptyList(),
+        warnings = listOf(MrzExpiryDateCenturyNotInferred("96", "12", "10", REFERENCE_DATE)),
     )
 
 // A construction figure with no VIZ: the values are what the printed MRZ says.
@@ -316,7 +318,7 @@ internal val P7_F_3: SpecimenVector =
         dateOfExpiry = LocalDate(1994, 6, 23),
         expiryCenturyInferred = false,
         optionalData = listOf("ZE184226B<<<<<<<"),
-        warnings = emptyList(),
+        warnings = listOf(MrzExpiryDateCenturyNotInferred("94", "06", "23", REFERENCE_DATE)),
     )
 
 // A construction figure with no VIZ. Line 2 ends in optional data with no filler.
@@ -338,7 +340,7 @@ internal val P7_F_4: SpecimenVector =
         dateOfExpiry = LocalDate(1994, 6, 23),
         expiryCenturyInferred = false,
         optionalData = listOf("ZE184226"),
-        warnings = emptyList(),
+        warnings = listOf(MrzExpiryDateCenturyNotInferred("94", "06", "23", REFERENCE_DATE)),
     )
 
 internal val SPECIMEN_VECTORS: List<SpecimenVector> =

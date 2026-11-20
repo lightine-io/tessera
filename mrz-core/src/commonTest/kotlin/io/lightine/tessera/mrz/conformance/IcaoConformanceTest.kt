@@ -17,6 +17,7 @@ import io.lightine.tessera.mrz.transliteration.IcaoDefaultTransliterationProfile
 import io.lightine.tessera.mrz.transliteration.TransliterationResult
 import io.lightine.tessera.mrz.transliteration.transliterate
 import io.lightine.tessera.mrz.validation.MrzValidator
+import io.lightine.tessera.types.errors.MrzExpiryDateCenturyNotInferred
 import io.lightine.tessera.types.errors.MrzExpiryDatePast
 import io.lightine.tessera.types.errors.MrzFormatNotDetected
 import io.lightine.tessera.types.errors.MrzGenerationFieldOverflow
@@ -108,11 +109,13 @@ class IcaoConformanceTest {
             val result = MrzParser.parse(nameExampleLines(v), REFERENCE_TIME)
             val success = assertIs<ParseResult.Success>(result, "parse result")
             assertEquals(v.sdkReportsTruncation, success.document.commonFields.nameTruncated, "nameTruncated")
+            // The host's line with the expiry date is kept, so its expiry warning comes first.
+            val expiry: List<MrzWarning> = v.host.warnings.filterIsInstance<MrzExpiryDateCenturyNotInferred>()
             val expected: List<MrzWarning> =
                 if (v.sdkReportsTruncation) {
-                    listOf(MrzNameTruncated(rawNameField = nameField(v), position = nameFieldPosition(v.host.format)))
+                    expiry + MrzNameTruncated(rawNameField = nameField(v), position = nameFieldPosition(v.host.format))
                 } else {
-                    emptyList()
+                    expiry
                 }
             assertEquals(expected, success.metadata.warnings, "warnings")
         }

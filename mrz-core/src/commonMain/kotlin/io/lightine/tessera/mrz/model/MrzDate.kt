@@ -109,7 +109,8 @@ public data class MrzDate(
          * @return A date with [MrzDate.computedDate] set from the first of the 2000s and the 1900s
          *   whose year is from 10 years before to 50 years after the reference year. If neither
          *   fits, only the printed components are set and the method is
-         *   [MrzDateInferenceMethod.RAW_ONLY].
+         *   [MrzDateInferenceMethod.RAW_ONLY]; the validator then reports
+         *   `MrzExpiryDateCenturyNotInferred` if the components form a real date.
          */
         public fun parseExpiry(
             rawYear: String,
