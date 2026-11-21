@@ -133,7 +133,7 @@ jobs:
       # `checkKotlinAbi` inside the `check` job: since Kotlin 2.4.20 abiValidation dumps the AGP-KMP
       # android target (api/android/<module>.api), so no separate android ABI step runs here.
       - name: Compile Android targets, run Android host tests, verify ML Kit bundled model
-        run: ./gradlew compileAndroidMain :mrz-camera:testAndroidHostTest :mrz-camera-ui:testAndroidHostTest :types:testAndroidHostTest :mrz-core:testAndroidHostTest :telemetry:testAndroidHostTest :mrz-camera-core:testAndroidHostTest :emrtd-core:testAndroidHostTest :emrtd-nfc:testAndroidHostTest :mrz-camera:verifyMlKitBundledModel
+        run: ./gradlew compileAndroidMain :mrz-camera:testAndroidHostTest :mrz-camera-ui:testAndroidHostTest :types:testAndroidHostTest :mrz-core:testAndroidHostTest :telemetry:testAndroidHostTest :mrz-ocr-core:testAndroidHostTest :emrtd-core:testAndroidHostTest :emrtd-nfc:testAndroidHostTest :mrz-camera:verifyMlKitBundledModel
 
   # Empty-module release guard (TES-43 pre-0.5.0 item; the v0.2.0 incident class, PR #154):
   # a module that DECLARES a Kotlin/Native target but produces no klib fails its

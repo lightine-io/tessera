@@ -5,9 +5,9 @@ plugins {
 }
 
 // The Android platform-I/O module: CameraX + ML Kit wiring on top of the platform-agnostic
-// mrz-camera-core contract (ADR-021). Since the analyse-frame core, the scan() engine, and the
-// MrzCameraScanner interface now live in mrz-camera-core, this module is Android-only — it declares
-// no jvm() target (the host tests moved with the contract to mrz-camera-core, which runs them on the
+// mrz-ocr-core contract (ADR-021). Since the analyse-frame core, the scan() engine, and the
+// MrzCameraScanner interface now live in mrz-ocr-core, this module is Android-only — it declares
+// no jvm() target (the host tests moved with the contract to mrz-ocr-core, which runs them on the
 // JVM `check` runner). Published to Maven Central as `tessera-mrz-camera` (root) +
 // `tessera-mrz-camera-android` (the AAR) since TES-267; 0.2.0 to 0.5.x published it as
 // `tessera-mrz-camera-android` alone (ADR-016/ADR-021). The Android distribution of the camera
@@ -21,14 +21,14 @@ mavenPublishing {
         description.set(
             "Android camera MRZ reading for the Tessera identity-document SDK: the CameraX " +
                 "owns-the-session scanner (CameraXMrzScanner) and the bundled-model ML Kit OCR seam, " +
-                "built on the platform-agnostic tessera-mrz-camera-core contract. Headless — the " +
+                "built on the platform-agnostic tessera-mrz-ocr-core contract. Headless — the " +
                 "consumer supplies any UI.",
         )
     }
 }
 
 kotlin {
-    // Opts in to mrz-camera-core's @InternalTesseraApi: declarations public only so Tessera's camera modules
+    // Opts in to mrz-ocr-core's @InternalTesseraApi: declarations public only so Tessera's camera modules
     // can share them (the short-row rescue rules, MrzRowRescue). Not consumer API; consumers never opt in.
     compilerOptions {
         optIn.add("io.lightine.tessera.mrz.camera.InternalTesseraApi")
@@ -56,9 +56,9 @@ kotlin {
             dependencies {
                 // The platform-agnostic contract: CameraXMrzScanner implements MrzCameraScanner and
                 // MlKitMrzTextRecognizer implements MrzTextRecognizer<ImageProxy>, both from
-                // mrz-camera-core, and the scanner's results expose core types — so the core is `api`,
+                // mrz-ocr-core, and the scanner's results expose core types — so the core is `api`,
                 // seen transitively (it re-exports types / mrz-core / telemetry / coroutines in turn).
-                api(project(":mrz-camera-core"))
+                api(project(":mrz-ocr-core"))
                 // CameraX camera-core supplies the ImageProxy frame type the Android recognizer reads and
                 // the SurfaceRequest type exposed on CameraXMrzScanner.surfaceRequest (the opt-in live-
                 // preview seam, 0.5.0) — a public return type, so camera-core is `api`, seen transitively

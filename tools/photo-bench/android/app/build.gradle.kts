@@ -27,7 +27,7 @@ android {
 dependencies {
     // Substituted by the live Tessera projects through the composite build.
     implementation("io.lightine.tessera:mrz-camera")
-    implementation("io.lightine.tessera:mrz-camera-core")
+    implementation("io.lightine.tessera:tessera-mrz-ocr-core")
     implementation("io.lightine.tessera:mrz-core")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     // The rescue experiment (RescueExperiment.kt) reads with ML Kit directly: same artifact and version as

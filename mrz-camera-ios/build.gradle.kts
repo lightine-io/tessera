@@ -6,17 +6,17 @@ plugins {
 }
 
 // The iOS platform-I/O module: AVFoundation + Apple Vision on top of the platform-agnostic
-// mrz-camera-core contract (ADR-021). iOS targets only — no jvm/android target, and (unlike the
+// mrz-ocr-core contract (ADR-021). iOS targets only — no jvm/android target, and (unlike the
 // other camera modules) no Android Gradle plugin, since there is no Android target. It is also the
 // umbrella for iOS distribution (ADR-019): it assembles the `Tessera` XCFramework, exporting
-// mrz-camera-core (and transitively mrz-core / types / telemetry) so a Swift consumer sees the
+// mrz-ocr-core (and transitively mrz-core / types / telemetry) so a Swift consumer sees the
 // result, parse, and error types — not opaque handles. The XCFramework is wrapped in a Swift package
 // (a dedicated distribution repo, JetBrains' recommended layout) and the zipped binary is attached to
 // the GitHub release; that publication step lands at the 0.2.0-release-slice. Maven publication stays
 // off (this module is not on Maven Central — iOS ships only through SPM).
 
 kotlin {
-    // Opts in to mrz-camera-core's @InternalTesseraApi: declarations public only so Tessera's camera modules
+    // Opts in to mrz-ocr-core's @InternalTesseraApi: declarations public only so Tessera's camera modules
     // can share them (the short-row rescue rules, MrzRowRescue). Not consumer API; consumers never opt in.
     compilerOptions {
         optIn.add("io.lightine.tessera.mrz.camera.InternalTesseraApi")
@@ -47,13 +47,13 @@ kotlin {
             freeCompilerArgs += "-Xoverride-konan-properties=osVersionMin.ios_arm64=18.0;osVersionMin.ios_simulator_arm64=18.0"
             // Export each module whose public types appear in the umbrella's Swift-facing surface, so
             // they show in the framework's generated Obj-C/Swift headers rather than as opaque handles:
-            // the camera contract (mrz-camera-core), the parser/result types (mrz-core), the shared
+            // the camera contract (mrz-ocr-core), the parser/result types (mrz-core), the shared
             // vocabulary (types), and the telemetry sink (telemetry). Exported explicitly rather than via
             // the experimental transitiveExport — which also tries to export coroutines' internal atomicfu
             // interop klib (not exportable). coroutines itself is intentionally not exported: Flow does not
             // bridge cleanly to Swift yet (tracked in the issue tracker), so leaving it unexported avoids the
             // atomicfu warning without changing the (already-Kotlin-handle) Swift Flow experience.
-            export(project(":mrz-camera-core"))
+            export(project(":mrz-ocr-core"))
             export(project(":mrz-core"))
             export(project(":types"))
             export(project(":telemetry"))
@@ -65,10 +65,10 @@ kotlin {
         commonMain {
             dependencies {
                 // The platform-agnostic contract: VisionMrzTextRecognizer implements
-                // MrzTextRecognizer<CMSampleBufferRef> from mrz-camera-core, and its results expose
+                // MrzTextRecognizer<CMSampleBufferRef> from mrz-ocr-core, and its results expose
                 // core types — so the core is `api`, seen transitively (it re-exports types / mrz-core
                 // / telemetry / coroutines in turn).
-                api(project(":mrz-camera-core"))
+                api(project(":mrz-ocr-core"))
             }
         }
         // The tests are iOS-only (they drive Apple Vision on the Simulator), so the test framework

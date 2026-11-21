@@ -5,7 +5,7 @@
 // - Show manifest properties: true
 // - Show declarations: true
 
-// Library unique name: <io.lightine.tessera:mrz-camera-core>
+// Library unique name: <io.lightine.tessera:mrz-ocr-core>
 open annotation class io.lightine.tessera.mrz.camera/InternalTesseraApi : kotlin/Annotation { // io.lightine.tessera.mrz.camera/InternalTesseraApi|null[0]
     constructor <init>() // io.lightine.tessera.mrz.camera/InternalTesseraApi.<init>|<init>(){}[0]
 }
