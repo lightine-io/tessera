@@ -29,6 +29,7 @@ import io.lightine.tessera.mrz.checkdigit.computeCheckDigit
 import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.mrz.recognition.DocumentType
+import io.lightine.tessera.types.errors.MrzExpiryDateAfterSingleLetterPassportLimit
 import io.lightine.tessera.types.errors.MrzExpiryDateCenturyNotInferred
 import io.lightine.tessera.types.errors.MrzUnknownCountryCode
 import io.lightine.tessera.types.vocabulary.DocumentCategory
@@ -685,6 +686,35 @@ class ReviewScreenTest {
 
         assertTrue("Expiry year 12 can't be placed in a century" in texts, "the note is present: $texts")
         assertTrue(texts.none { it == "Expiry date has passed" }, "no past-expiry note: $texts")
+    }
+
+    @Test
+    fun a_one_letter_passport_expiring_in_2040_shows_a_note_with_the_code() {
+        // The project's TD3 specimen (code P<) with its expiry moved to 2040: ICAO Doc 9303 Part 4, 4.4 says a
+        // passport with no second code letter expires before 2038, so the parser reports the warning (TES-303).
+        val line2 = specimenLine2WithExpiry("400314")
+        val decoded =
+            MrzScanResult.Decoded(
+                parse = MrzParser.parse(listOf(specimenLine1, line2), referenceTime = Instant.parse("2026-11-21T12:00:00Z")),
+                recognizedText = RecognizedText(listOf(RecognizedLine(specimenLine1, null), RecognizedLine(line2, null))),
+                quality = ScanQuality(mrzRegionFound = true, ocrConfidence = null, recognizedLineCount = 2),
+            )
+        assertTrue(
+            decoded.parse.metadata.warnings
+                .any { it is MrzExpiryDateAfterSingleLetterPassportLimit },
+            "fixture must carry the warning",
+        )
+        var texts: List<String> = emptyList()
+
+        composeRule.setContent {
+            texts = reviewObservations(decoded).map { it.text }
+        }
+        composeRule.waitForIdle()
+
+        assertTrue(
+            "Passport code P< has no second letter, and ICAO says such passports expire before 2038" in texts,
+            "the note is present: $texts",
+        )
     }
 
     // ----------------------------------------------------------------------------------------------------
