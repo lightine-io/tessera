@@ -9,7 +9,8 @@ package io.lightine.tessera.mrz.transliteration
 // as the Latin table does; the MRZ has no lower case.
 //
 // Letters the table does not list (for example 0403, 040B, 040D, 042C, 044C) are not mapped here
-// and become the filler, like every other unmapped character.
+// and become the filler, like every other unmapped character, unless a language's exceptions
+// below map them (the soft sign in Bulgarian and Ukrainian).
 //
 // The table's language exceptions ("except Belorussian = IO", "except if Ukrainian first
 // character, then = YE", ...) are kept apart in [CyrillicLanguage]; the ICAO default profile uses
@@ -72,7 +73,8 @@ private val CYRILLIC_CAPITALS: Map<Char, String> =
  * A language the Section 6.B table names in an exception. Each one changes some letters; every
  * other letter keeps its main value.
  *
- * @property exceptions Capital letter to value, anywhere in a name part.
+ * @property exceptions Capital letter to value, anywhere in a name part. An empty value drops the
+ *   letter. May also map a letter the table does not list, such as the soft sign.
  * @property firstCharacterExceptions Capital letter to value, only as the first letter of a name
  *   part (the table's "if Ukrainian first character").
  */
@@ -83,8 +85,11 @@ internal enum class CyrillicLanguage(
     /** "Belorussian" in the table: Ё is IO, Г is H. */
     BELARUSIAN(mapOf('Ё' to "IO", 'Г' to "H")),
 
-    /** Щ is SHT. */
-    BULGARIAN(mapOf('Щ' to "SHT")),
+    /**
+     * Щ is SHT. The soft sign Ь (and ь) is Y: Bulgaria's Transliteration Act (2009) transliterates
+     * it as Y; whether that act's values are used for passports is not verified.
+     */
+    BULGARIAN(mapOf('Щ' to "SHT", 'Ь' to "Y")),
 
     /**
      * "The language spoken in the former Yugoslav Republic of Macedonia" in the table: Ќ is KJ, Џ is
@@ -106,15 +111,21 @@ internal enum class CyrillicLanguage(
         ),
     ),
 
-    /** Г is H, И is Y; as the first letter of a name part Є is YE, Ї is YI, Й is Y, Ю is YU, Я is YA. */
+    /**
+     * Г is H, И is Y; as the first letter of a name part Є is YE, Ї is YI, Й is Y, Ю is YU, Я is
+     * YA. The soft sign Ь (and ь) produces nothing: Ukraine's Cabinet of Ministers resolution
+     * No. 55 of 27 January 2010 on transliteration of the Ukrainian alphabet into Latin says the
+     * soft sign is not reproduced.
+     */
     UKRAINIAN(
-        mapOf('Г' to "H", 'И' to "Y"),
+        mapOf('Г' to "H", 'И' to "Y", 'Ь' to ""),
         mapOf('Є' to "YE", 'Ї' to "YI", 'Й' to "Y", 'Ю' to "YU", 'Я' to "YA"),
     ),
 }
 
 /**
- * Maps one Cyrillic letter, or returns `null` when Section 6.B does not list it.
+ * Maps one Cyrillic letter, or returns `null` when neither Section 6.B nor the language's
+ * exceptions list it.
  *
  * @param char The letter, capital or small.
  * @param language The language whose exceptions apply, or `null` for the main values.
@@ -127,10 +138,10 @@ internal fun mapCyrillic(
 ): String? {
     if (char !in 'Ѐ'..'ӿ') return null
     val capital = if (char in CYRILLIC_CAPITALS) char else char.uppercaseChar()
-    if (capital !in CYRILLIC_CAPITALS) return null
     if (language != null) {
         if (firstOfNamePart) language.firstCharacterExceptions[capital]?.let { return it }
         language.exceptions[capital]?.let { return it }
     }
+    if (capital !in CYRILLIC_CAPITALS) return null
     return CYRILLIC_CAPITALS.getValue(capital)
 }

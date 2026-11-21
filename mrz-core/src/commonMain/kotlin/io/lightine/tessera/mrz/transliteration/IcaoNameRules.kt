@@ -7,8 +7,9 @@ import io.lightine.tessera.mrz.parsing.isMrzAlphabetCharacter
  * the Cyrillic table (6.B) and the Arabic-script table (6.C), plus the comma rule of section 4.6.
  *
  * Lookup order for each character: [overrides], then the MRZ alphabet as is, then the Latin, the
- * Cyrillic and the Arabic tables, then the filler. For Latin text this is exactly the order the ICAO
- * default profile always had.
+ * Cyrillic and the Arabic tables, then the filler. Language-specific Cyrillic rules apply when the
+ * character has no override. For Latin text this is exactly the order the ICAO default profile
+ * always had.
  *
  * @property cyrillicLanguage The language whose Section 6.B exceptions apply, or `null` for the
  *   table's main values.

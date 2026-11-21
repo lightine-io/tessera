@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ProfileOverridesTest {
     private val profile =
@@ -107,5 +108,95 @@ class ProfileOverridesTest {
         val p = IcaoDefaultTransliterationProfile.withOverrides("MUT", map)
         map['Q'] = "Z"
         assertEquals("K", run(p, "Q"))
+    }
+
+    @Test
+    fun russian_name_soft_sign_can_be_dropped_with_an_override() {
+        val syntheticRussianName = "АЛЕКСЬМОРГАН"
+        assertEquals("ALEKS<MORGAN", run(IcaoDefaultTransliterationProfile, syntheticRussianName))
+
+        val profile =
+            IcaoDefaultTransliterationProfile.withOverrides(
+                "RUSSIAN-SOFT-SIGN-DROPPED",
+                mapOf('Ь' to ""),
+            )
+        assertEquals("ALEKSMORGAN", run(profile, syntheticRussianName))
+    }
+
+    @Test
+    fun cyrillic_language_override_keeps_unoverridden_ukrainian_first_letter_rule() {
+        val profile =
+            IcaoCyrillicLanguageProfiles.withOverrides(
+                IcaoCyrillicLanguageProfiles.ukrainian,
+                "UKRAINIAN-CUSTOM",
+                mapOf('Г' to "K"),
+            )
+        assertEquals("YEVA<KANNA", run(profile, "Єва Ганна"))
+    }
+
+    @Test
+    fun an_override_wins_over_the_ukrainian_soft_sign_drop() {
+        val profile =
+            IcaoCyrillicLanguageProfiles.withOverrides(
+                IcaoCyrillicLanguageProfiles.ukrainian,
+                "UKRAINIAN-SOFT-SIGN-OVERRIDE",
+                mapOf('Ь' to "Q", 'ь' to "Q"),
+            )
+        assertEquals("Q", run(profile, "Ь"))
+        assertEquals("Q", run(profile, "ь"))
+        assertEquals("OLQHA", run(profile, "Ольга"))
+    }
+
+    @Test
+    fun every_cyrillic_language_profile_accepts_copied_overrides() {
+        for (languageProfile in IcaoCyrillicLanguageProfiles.all) {
+            val overrides = mutableMapOf('Ь' to "")
+            val profile =
+                IcaoCyrillicLanguageProfiles.withOverrides(
+                    languageProfile,
+                    "${languageProfile.identifier}-CUSTOM",
+                    overrides,
+                )
+            overrides['Ь'] = "<"
+
+            assertEquals("ALEKSMOR", run(profile, "АЛЕКСЬМОР"), languageProfile.identifier)
+        }
+    }
+
+    @Test
+    fun language_profile_overrides_use_the_same_validation_and_are_not_registered() {
+        assertFailsWith<IllegalArgumentException> {
+            IcaoCyrillicLanguageProfiles.withOverrides(IcaoCyrillicLanguageProfiles.ukrainian, "", emptyMap())
+        }
+        assertFailsWith<IllegalArgumentException> {
+            IcaoCyrillicLanguageProfiles.withOverrides(IcaoCyrillicLanguageProfiles.ukrainian, "BAD-UKRAINIAN", mapOf('Ь' to "a"))
+        }
+
+        val identifier = "UKRAINIAN-CUSTOM-UNREGISTERED"
+        assertNull(TransliterationProfileRegistry.lookup(identifier))
+        IcaoCyrillicLanguageProfiles.withOverrides(IcaoCyrillicLanguageProfiles.ukrainian, identifier, mapOf('Ь' to ""))
+        assertNull(TransliterationProfileRegistry.lookup(identifier))
+    }
+
+    @Test
+    fun withOverrides_rejects_a_base_outside_the_language_profiles() {
+        val defaultBase =
+            assertFailsWith<IllegalArgumentException> {
+                IcaoCyrillicLanguageProfiles.withOverrides(IcaoDefaultTransliterationProfile, "X", emptyMap())
+            }
+        assertTrue(defaultBase.message!!.contains("IcaoCyrillicLanguageProfiles.all"))
+        assertTrue(defaultBase.message!!.contains("ICAO"))
+
+        assertFailsWith<IllegalArgumentException> {
+            IcaoCyrillicLanguageProfiles.withOverrides(AzeTransliterationProfile, "X", emptyMap())
+        }
+        val overriddenDefault =
+            IcaoDefaultTransliterationProfile.withOverrides(
+                "OVERRIDDEN-DEFAULT",
+                mapOf('Ь' to ""),
+            )
+        assertFailsWith<IllegalArgumentException> {
+            IcaoCyrillicLanguageProfiles.withOverrides(overriddenDefault, "X", emptyMap())
+        }
     }
 }

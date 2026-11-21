@@ -626,6 +626,7 @@ public final class io/lightine/tessera/mrz/transliteration/IcaoCyrillicLanguageP
 	public final fun getMacedonian ()Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;
 	public final fun getSerbian ()Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;
 	public final fun getUkrainian ()Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;
+	public final fun withOverrides (Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;Ljava/lang/String;Ljava/util/Map;)Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;
 }
 
 public final class io/lightine/tessera/mrz/transliteration/IcaoDefaultTransliterationProfile : io/lightine/tessera/mrz/transliteration/TransliterationProfile {

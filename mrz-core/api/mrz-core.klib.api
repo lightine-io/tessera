@@ -883,6 +883,8 @@ final object io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfile
         final fun <get-serbian>(): io.lightine.tessera.mrz.transliteration/TransliterationProfile // io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfiles.serbian.<get-serbian>|<get-serbian>(){}[0]
     final val ukrainian // io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfiles.ukrainian|{}ukrainian[0]
         final fun <get-ukrainian>(): io.lightine.tessera.mrz.transliteration/TransliterationProfile // io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfiles.ukrainian.<get-ukrainian>|<get-ukrainian>(){}[0]
+
+    final fun withOverrides(io.lightine.tessera.mrz.transliteration/TransliterationProfile, kotlin/String, kotlin.collections/Map<kotlin/Char, kotlin/String>): io.lightine.tessera.mrz.transliteration/TransliterationProfile // io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfiles.withOverrides|withOverrides(io.lightine.tessera.mrz.transliteration.TransliterationProfile;kotlin.String;kotlin.collections.Map<kotlin.Char,kotlin.String>){}[0]
 }
 
 final object io.lightine.tessera.mrz.transliteration/IcaoDefaultTransliterationProfile : io.lightine.tessera.mrz.transliteration/TransliterationProfile { // io.lightine.tessera.mrz.transliteration/IcaoDefaultTransliterationProfile|null[0]
