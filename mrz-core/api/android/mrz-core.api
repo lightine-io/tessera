@@ -625,6 +625,7 @@ public final class io/lightine/tessera/mrz/transliteration/IcaoDefaultTransliter
 	public static final field INSTANCE Lio/lightine/tessera/mrz/transliteration/IcaoDefaultTransliterationProfile;
 	public fun getIdentifier ()Ljava/lang/String;
 	public fun toMrzAlphabet (Ljava/lang/String;)Lio/lightine/tessera/mrz/transliteration/TransliterationResult;
+	public final fun withOverrides (Ljava/lang/String;Ljava/util/Map;)Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;
 }
 
 public final class io/lightine/tessera/mrz/transliteration/TransliterateKt {

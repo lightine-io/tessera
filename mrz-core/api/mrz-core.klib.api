@@ -881,6 +881,7 @@ final object io.lightine.tessera.mrz.transliteration/IcaoDefaultTransliterationP
         final fun <get-identifier>(): kotlin/String // io.lightine.tessera.mrz.transliteration/IcaoDefaultTransliterationProfile.identifier.<get-identifier>|<get-identifier>(){}[0]
 
     final fun toMrzAlphabet(kotlin/String): io.lightine.tessera.mrz.transliteration/TransliterationResult // io.lightine.tessera.mrz.transliteration/IcaoDefaultTransliterationProfile.toMrzAlphabet|toMrzAlphabet(kotlin.String){}[0]
+    final fun withOverrides(kotlin/String, kotlin.collections/Map<kotlin/Char, kotlin/String>): io.lightine.tessera.mrz.transliteration/TransliterationProfile // io.lightine.tessera.mrz.transliteration/IcaoDefaultTransliterationProfile.withOverrides|withOverrides(kotlin.String;kotlin.collections.Map<kotlin.Char,kotlin.String>){}[0]
 }
 
 final object io.lightine.tessera.mrz.transliteration/TransliterationProfileRegistry { // io.lightine.tessera.mrz.transliteration/TransliterationProfileRegistry|null[0]
