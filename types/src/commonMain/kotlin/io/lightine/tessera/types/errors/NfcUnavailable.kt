@@ -28,6 +28,9 @@ public data class NfcUnavailable(
 
         /** The app may not use NFC, for example because a permission or an entitlement is missing. */
         NOT_PERMITTED,
+
+        /** The transport was closed by the app, so it cannot send any more commands. */
+        CLOSED,
     }
 
     /** English text for logs: the reason. */
@@ -37,6 +40,7 @@ public data class NfcUnavailable(
                 Reason.NOT_SUPPORTED -> "This device has no NFC reader"
                 Reason.DISABLED -> "NFC is turned off on this device"
                 Reason.NOT_PERMITTED -> "The app may not use NFC on this device"
+                Reason.CLOSED -> "The connection to the chip was closed by the app"
             }
 
     /** `NfcUnavailable: ` followed by [description]. */

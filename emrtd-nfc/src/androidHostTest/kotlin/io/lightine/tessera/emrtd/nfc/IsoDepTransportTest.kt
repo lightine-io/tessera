@@ -191,7 +191,7 @@ class IsoDepTransportTest {
             transport.close()
 
             val error = errorOf { transport.transceive(byteArrayOf(0)) }
-            assertTrue(error is NfcUnavailable)
+            assertEquals(NfcUnavailable(NfcUnavailable.Reason.CLOSED), error)
             assertEquals(2, channel.closeCalls)
             assertEquals(1, channel.sent.size)
         }
@@ -212,7 +212,7 @@ class IsoDepTransportTest {
                 }
             transport = IsoDepTransport(channel, 4_000, StandardTestDispatcher(testScheduler))
 
-            assertTrue(errorOf { transport.transceive(byteArrayOf(0)) } is NfcUnavailable)
+            assertEquals(NfcUnavailable(NfcUnavailable.Reason.CLOSED), errorOf { transport.transceive(byteArrayOf(0)) })
         }
 
     @Test

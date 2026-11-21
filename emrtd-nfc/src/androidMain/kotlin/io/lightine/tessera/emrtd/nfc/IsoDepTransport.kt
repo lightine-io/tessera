@@ -40,7 +40,7 @@ import java.io.IOException
  *   tag left), and for any other I/O failure that is not a timeout;
  * - [NfcTimeout] when Android reports that the chip did not answer within the time limit (an
  *   `IOException` whose message says so);
- * - [NfcUnavailable] when the transport was closed with [close].
+ * - [NfcUnavailable] with reason `CLOSED` when the transport was closed with [close].
  *
  * Android gives no failure code, so the kind of a plain `IOException` is read from its message,
  * and an unknown failure is reported as [NfcTagLost], the most common cause.
@@ -103,7 +103,7 @@ public class IsoDepTransport internal constructor(
     override suspend fun transceive(command: ByteArray): ByteArray =
         lock.withLock {
             withContext(ioDispatcher) {
-                if (closed) throw ApduTransportException(NfcUnavailable(NfcUnavailable.Reason.DISABLED))
+                if (closed) throw ApduTransportException(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
                 try {
                     if (!channel.isConnected) {
                         channel.connect()
@@ -138,7 +138,7 @@ public class IsoDepTransport internal constructor(
     private fun classify(e: IOException): NfcError =
         when {
             e is TagLostException -> NfcTagLost
-            closed -> NfcUnavailable(NfcUnavailable.Reason.DISABLED)
+            closed -> NfcUnavailable(NfcUnavailable.Reason.CLOSED)
             isTimeoutMessage(e.message) -> NfcTimeout(timeoutMillis.toLong())
             else -> NfcTagLost
         }
