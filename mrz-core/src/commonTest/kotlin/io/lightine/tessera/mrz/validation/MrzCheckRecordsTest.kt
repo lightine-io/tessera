@@ -94,7 +94,7 @@ class MrzCheckRecordsTest {
     private fun expectedOutcome(
         format: MrzFormat,
         check: MrzCheck,
-    ): CheckOutcome = if (check in notApplicable(format)) CheckOutcome.NotApplicable else CheckOutcome.Passed
+    ): CheckOutcome = if (check in notApplicable(format)) CheckOutcome.NotApplicable() else CheckOutcome.Passed
 
     // --- A clean generated document reports its full set of checks, all Passed (or NotApplicable) ---
 
@@ -151,7 +151,7 @@ class MrzCheckRecordsTest {
             for (record in result.checks) {
                 val expected =
                     if (record.check == MrzCheck.DOCUMENT_NUMBER_CHECK_DIGIT) {
-                        CheckOutcome.Failed
+                        CheckOutcome.Failed()
                     } else {
                         expectedOutcome(format, record.check)
                     }
@@ -172,7 +172,7 @@ class MrzCheckRecordsTest {
         val tampered = lines.overwrite(spec.compositeCheckDigit, wrong.toString())
         val result = MrzValidator.validate(tampered, ref2026)
         for (record in result.checks) {
-            val expected = if (record.check == MrzCheck.COMPOSITE_CHECK_DIGIT) CheckOutcome.Failed else CheckOutcome.Passed
+            val expected = if (record.check == MrzCheck.COMPOSITE_CHECK_DIGIT) CheckOutcome.Failed() else CheckOutcome.Passed
             assertEquals(expected, record.outcome, "TD3 ${record.check}")
         }
         assertEquals(listOf(MrzField.COMPOSITE), result.validationFailures.filterIsInstance<MrzCheckDigitMismatch>().map { it.field })
@@ -184,8 +184,8 @@ class MrzCheckRecordsTest {
     fun visa_formats_report_composite_and_optional_data_checks_not_applicable() {
         for ((format, specimen) in listOf(MrzFormat.MRV_A to Specimens.MRV_A, MrzFormat.MRV_B to Specimens.MRV_B)) {
             val result = MrzValidator.validate(generatedLines(specimen), ref2026)
-            assertEquals(CheckOutcome.NotApplicable, outcomeOf(result, MrzCheck.COMPOSITE_CHECK_DIGIT), format.name)
-            assertEquals(CheckOutcome.NotApplicable, outcomeOf(result, MrzCheck.OPTIONAL_DATA_CHECK_DIGIT), format.name)
+            assertEquals(CheckOutcome.NotApplicable(), outcomeOf(result, MrzCheck.COMPOSITE_CHECK_DIGIT), format.name)
+            assertEquals(CheckOutcome.NotApplicable(), outcomeOf(result, MrzCheck.OPTIONAL_DATA_CHECK_DIGIT), format.name)
             assertEquals(6, result.checks.count { it.outcome == CheckOutcome.Passed }, format.name)
         }
     }
@@ -199,7 +199,7 @@ class MrzCheckRecordsTest {
         assertEquals(MrzCheck.entries.size, result.checks.size)
         for (record in result.checks) {
             val notRun = assertIs<CheckOutcome.NotRun>(record.outcome, "${record.check}")
-            assertTrue(notRun.reason.isNotBlank(), "reason for ${record.check}")
+            assertEquals(MrzNotRunReason.FORMAT_NOT_DETECTED, notRun.reason, "reason for ${record.check}")
         }
     }
 
@@ -208,7 +208,7 @@ class MrzCheckRecordsTest {
         val result = MrzValidator.validate(listOf("TOO", "SHORT"), MrzFormat.TD3, ref2026)
         assertIs<MrzInvalidLength>(result.structuralFailure)
         assertEquals(MrzCheck.entries.size, result.checks.size)
-        assertTrue(result.checks.all { it.outcome is CheckOutcome.NotRun })
+        assertTrue(result.checks.all { it.outcome is CheckOutcome.NotRun && it.outcome.reason == MrzNotRunReason.INVALID_LENGTH })
     }
 
     @Test
@@ -217,12 +217,12 @@ class MrzCheckRecordsTest {
         val wrongLineCount = MrzValidator.validate(document.copy(rawLines = listOf(document.rawLines[0])), ref2026)
         assertIs<MrzInvalidLength>(wrongLineCount.structuralFailure)
         assertEquals(MrzCheck.entries.size, wrongLineCount.checks.size)
-        assertTrue(wrongLineCount.checks.all { it.outcome is CheckOutcome.NotRun })
+        assertTrue(wrongLineCount.checks.all { it.outcome is CheckOutcome.NotRun && it.outcome.reason == MrzNotRunReason.INVALID_LENGTH })
 
         val badCharacter = document.copy(rawLines = listOf(document.rawLines[0].replace('A', 'a'), document.rawLines[1]))
         val result = MrzValidator.validate(badCharacter, ref2026)
         assertIs<io.lightine.tessera.types.errors.MrzCharacterSetViolation>(result.structuralFailure)
-        assertTrue(result.checks.all { it.outcome is CheckOutcome.NotRun })
+        assertTrue(result.checks.all { it.outcome is CheckOutcome.NotRun && it.outcome.reason == MrzNotRunReason.CHARACTER_SET_VIOLATION })
     }
 
     // --- The TD3 personal number check digit: filler where the standard allows it ---
@@ -236,7 +236,7 @@ class MrzCheckRecordsTest {
                 .overwrite(Td3FormatSpec.personalNumberCheckDigit, "<")
                 .withCompositeRecomputed(Td3FormatSpec)
         val result = MrzValidator.validate(tampered, ref2026)
-        assertEquals(CheckOutcome.NotApplicable, outcomeOf(result, MrzCheck.OPTIONAL_DATA_CHECK_DIGIT))
+        assertEquals(CheckOutcome.NotApplicable(), outcomeOf(result, MrzCheck.OPTIONAL_DATA_CHECK_DIGIT))
         for (record in result.checks) {
             if (record.check == MrzCheck.OPTIONAL_DATA_CHECK_DIGIT) continue
             assertEquals(CheckOutcome.Passed, record.outcome, "TD3 ${record.check}")
@@ -255,7 +255,7 @@ class MrzCheckRecordsTest {
         val result = MrzValidator.validate(tampered, ref2026)
         // The printed filler differs from the computed digit, so the check outcome is Failed;
         // the deviation itself stays a warning, not a validation failure.
-        assertEquals(CheckOutcome.Failed, outcomeOf(result, MrzCheck.OPTIONAL_DATA_CHECK_DIGIT))
+        assertEquals(CheckOutcome.Failed(), outcomeOf(result, MrzCheck.OPTIONAL_DATA_CHECK_DIGIT))
         assertTrue(result.validationFailures.isEmpty(), "failures: ${result.validationFailures}")
         assertTrue(result.warnings.any { it is MrzPersonalNumberCheckDigitFiller })
     }
@@ -267,7 +267,7 @@ class MrzCheckRecordsTest {
         val lines = generatedLines(Specimens.TD3)
         val tampered = lines.overwrite(Td3FormatSpec.dateOfBirth, "991399").withCheckDigitsRecomputed(Td3FormatSpec)
         val result = MrzValidator.validate(tampered, ref2026)
-        assertEquals(CheckOutcome.Failed, outcomeOf(result, MrzCheck.DATE_OF_BIRTH_CALENDAR_DATE))
+        assertEquals(CheckOutcome.Failed(), outcomeOf(result, MrzCheck.DATE_OF_BIRTH_CALENDAR_DATE))
         assertEquals(CheckOutcome.Passed, outcomeOf(result, MrzCheck.DATE_OF_BIRTH_CHECK_DIGIT))
         assertTrue(result.validationFailures.any { it is MrzDateNotInCalendar })
     }
@@ -278,7 +278,7 @@ class MrzCheckRecordsTest {
         // The sex character sits outside the composite input, so the composite still passes.
         val tampered = lines.overwrite(Td3FormatSpec.sex, "Z")
         val result = MrzValidator.validate(tampered, ref2026)
-        assertEquals(CheckOutcome.Failed, outcomeOf(result, MrzCheck.SEX_CHARACTER))
+        assertEquals(CheckOutcome.Failed(), outcomeOf(result, MrzCheck.SEX_CHARACTER))
         assertEquals(CheckOutcome.Passed, outcomeOf(result, MrzCheck.COMPOSITE_CHECK_DIGIT))
         assertTrue(result.validationFailures.any { it is MrzInvalidSexValue })
     }

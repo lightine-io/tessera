@@ -9,6 +9,7 @@ import io.lightine.tessera.mrz.model.TD2
 import io.lightine.tessera.mrz.model.TD3
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
+import io.lightine.tessera.types.vocabulary.CheckOutcome
 import io.lightine.tessera.types.vocabulary.MrzField
 import io.lightine.tessera.types.vocabulary.ReadMethod
 import kotlin.jvm.JvmStatic

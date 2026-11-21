@@ -48,6 +48,19 @@ final enum class io.lightine.tessera.mrz.validation/MrzCheck : kotlin/Enum<io.li
     final fun values(): kotlin/Array<io.lightine.tessera.mrz.validation/MrzCheck> // io.lightine.tessera.mrz.validation/MrzCheck.values|values#static(){}[0]
 }
 
+final enum class io.lightine.tessera.mrz.validation/MrzNotRunReason : io.lightine.tessera.types.vocabulary/CheckReason, kotlin/Enum<io.lightine.tessera.mrz.validation/MrzNotRunReason> { // io.lightine.tessera.mrz.validation/MrzNotRunReason|null[0]
+    enum entry CHARACTER_SET_VIOLATION // io.lightine.tessera.mrz.validation/MrzNotRunReason.CHARACTER_SET_VIOLATION|null[0]
+    enum entry FORMAT_NOT_DETECTED // io.lightine.tessera.mrz.validation/MrzNotRunReason.FORMAT_NOT_DETECTED|null[0]
+    enum entry INVALID_LENGTH // io.lightine.tessera.mrz.validation/MrzNotRunReason.INVALID_LENGTH|null[0]
+    enum entry NO_COMPOSITE_CHECK_DIGIT // io.lightine.tessera.mrz.validation/MrzNotRunReason.NO_COMPOSITE_CHECK_DIGIT|null[0]
+
+    final val entries // io.lightine.tessera.mrz.validation/MrzNotRunReason.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.mrz.validation/MrzNotRunReason> // io.lightine.tessera.mrz.validation/MrzNotRunReason.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.mrz.validation/MrzNotRunReason // io.lightine.tessera.mrz.validation/MrzNotRunReason.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.mrz.validation/MrzNotRunReason> // io.lightine.tessera.mrz.validation/MrzNotRunReason.values|values#static(){}[0]
+}
+
 abstract interface io.lightine.tessera.mrz.transliteration/TransliterationProfile { // io.lightine.tessera.mrz.transliteration/TransliterationProfile|null[0]
     abstract val identifier // io.lightine.tessera.mrz.transliteration/TransliterationProfile.identifier|{}identifier[0]
         abstract fun <get-identifier>(): kotlin/String // io.lightine.tessera.mrz.transliteration/TransliterationProfile.identifier.<get-identifier>|<get-identifier>(){}[0]

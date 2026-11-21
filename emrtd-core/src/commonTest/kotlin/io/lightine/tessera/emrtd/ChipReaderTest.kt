@@ -36,6 +36,7 @@ import io.lightine.tessera.types.errors.ChipSecureMessagingLost
 import io.lightine.tessera.types.errors.ChipUnexpectedAnswer
 import io.lightine.tessera.types.errors.ChipUnsupportedAlgorithm
 import io.lightine.tessera.types.errors.NfcTagLost
+import io.lightine.tessera.types.vocabulary.CheckOutcome
 import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
 import io.lightine.tessera.types.vocabulary.MrzField
 import io.lightine.tessera.types.vocabulary.ReadMethod

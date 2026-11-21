@@ -558,26 +558,40 @@ public abstract interface class io/lightine/tessera/types/vocabulary/CheckOutcom
 }
 
 public final class io/lightine/tessera/types/vocabulary/CheckOutcome$Failed : io/lightine/tessera/types/vocabulary/CheckOutcome {
-	public static final field INSTANCE Lio/lightine/tessera/types/vocabulary/CheckOutcome$Failed;
+	public fun <init> ()V
+	public fun <init> (Lio/lightine/tessera/types/vocabulary/CheckReason;)V
+	public synthetic fun <init> (Lio/lightine/tessera/types/vocabulary/CheckReason;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lio/lightine/tessera/types/vocabulary/CheckReason;
+	public final fun copy (Lio/lightine/tessera/types/vocabulary/CheckReason;)Lio/lightine/tessera/types/vocabulary/CheckOutcome$Failed;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/vocabulary/CheckOutcome$Failed;Lio/lightine/tessera/types/vocabulary/CheckReason;ILjava/lang/Object;)Lio/lightine/tessera/types/vocabulary/CheckOutcome$Failed;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Lio/lightine/tessera/types/vocabulary/CheckReason;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
 public final class io/lightine/tessera/types/vocabulary/CheckOutcome$NotApplicable : io/lightine/tessera/types/vocabulary/CheckOutcome {
-	public static final field INSTANCE Lio/lightine/tessera/types/vocabulary/CheckOutcome$NotApplicable;
+	public fun <init> ()V
+	public fun <init> (Lio/lightine/tessera/types/vocabulary/CheckReason;)V
+	public synthetic fun <init> (Lio/lightine/tessera/types/vocabulary/CheckReason;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lio/lightine/tessera/types/vocabulary/CheckReason;
+	public final fun copy (Lio/lightine/tessera/types/vocabulary/CheckReason;)Lio/lightine/tessera/types/vocabulary/CheckOutcome$NotApplicable;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/vocabulary/CheckOutcome$NotApplicable;Lio/lightine/tessera/types/vocabulary/CheckReason;ILjava/lang/Object;)Lio/lightine/tessera/types/vocabulary/CheckOutcome$NotApplicable;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Lio/lightine/tessera/types/vocabulary/CheckReason;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
 public final class io/lightine/tessera/types/vocabulary/CheckOutcome$NotRun : io/lightine/tessera/types/vocabulary/CheckOutcome {
-	public fun <init> (Ljava/lang/String;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;)Lio/lightine/tessera/types/vocabulary/CheckOutcome$NotRun;
-	public static synthetic fun copy$default (Lio/lightine/tessera/types/vocabulary/CheckOutcome$NotRun;Ljava/lang/String;ILjava/lang/Object;)Lio/lightine/tessera/types/vocabulary/CheckOutcome$NotRun;
+	public fun <init> ()V
+	public fun <init> (Lio/lightine/tessera/types/vocabulary/CheckReason;)V
+	public synthetic fun <init> (Lio/lightine/tessera/types/vocabulary/CheckReason;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lio/lightine/tessera/types/vocabulary/CheckReason;
+	public final fun copy (Lio/lightine/tessera/types/vocabulary/CheckReason;)Lio/lightine/tessera/types/vocabulary/CheckOutcome$NotRun;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/vocabulary/CheckOutcome$NotRun;Lio/lightine/tessera/types/vocabulary/CheckReason;ILjava/lang/Object;)Lio/lightine/tessera/types/vocabulary/CheckOutcome$NotRun;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getReason ()Ljava/lang/String;
+	public final fun getReason ()Lio/lightine/tessera/types/vocabulary/CheckReason;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -587,6 +601,9 @@ public final class io/lightine/tessera/types/vocabulary/CheckOutcome$Passed : io
 	public fun equals (Ljava/lang/Object;)Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class io/lightine/tessera/types/vocabulary/CheckReason {
 }
 
 public final class io/lightine/tessera/types/vocabulary/ChipAccessProtocol : java/lang/Enum {

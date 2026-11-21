@@ -30,8 +30,8 @@ public data class ValidationResult(
      * can tell "the document number check digit agreed" from "that check was not run". Every
      * format reports its full set of checks, including the ones it does not have as
      * [CheckOutcome.NotApplicable]; when [structuralFailure] is set, every check is
-     * [CheckOutcome.NotRun] with the failure as the reason. Empty only when this result was built
-     * without checks. Default: an empty list.
+     * [CheckOutcome.NotRun] with the failure named in the reason ([MrzNotRunReason]). Empty only
+     * when this result was built without checks. Default: an empty list.
      *
      * @since 1.0.0
      */

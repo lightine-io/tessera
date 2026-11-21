@@ -21,12 +21,15 @@ import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.mrz.recognition.CountryCode
 import io.lightine.tessera.mrz.recognition.DocumentType
+import io.lightine.tessera.types.errors.MrzCharacterSetViolation
 import io.lightine.tessera.types.errors.MrzCheckDigitMismatch
 import io.lightine.tessera.types.errors.MrzDateNotInCalendar
 import io.lightine.tessera.types.errors.MrzExpiryDateAfterNonHarmonizedPassportLimit
 import io.lightine.tessera.types.errors.MrzExpiryDateCenturyNotInferred
 import io.lightine.tessera.types.errors.MrzExpiryDateImplausiblyFar
 import io.lightine.tessera.types.errors.MrzExpiryDatePast
+import io.lightine.tessera.types.errors.MrzFormatNotDetected
+import io.lightine.tessera.types.errors.MrzInvalidLength
 import io.lightine.tessera.types.errors.MrzInvalidSexValue
 import io.lightine.tessera.types.errors.MrzNameTruncated
 import io.lightine.tessera.types.errors.MrzParseError
@@ -256,12 +259,19 @@ public object MrzValidator {
             }
         }
 
-    // A structural failure means no check could run: every check is NotRun, with the failure's own
-    // text (which carries no document values) as the reason.
-    private fun notRunChecks(problem: MrzParseError): List<MrzCheckRecord> =
-        MrzCheck.entries.map { check ->
-            MrzCheckRecord(check = check, field = check.field, outcome = CheckOutcome.NotRun(reason = problem.description))
+    // A structural failure means no check could run: every check is NotRun, with the failure
+    // itself as the reason.
+    private fun notRunChecks(problem: MrzParseError): List<MrzCheckRecord> {
+        val reason =
+            when (problem) {
+                is MrzInvalidLength -> MrzNotRunReason.INVALID_LENGTH
+                is MrzCharacterSetViolation -> MrzNotRunReason.CHARACTER_SET_VIOLATION
+                is MrzFormatNotDetected -> MrzNotRunReason.FORMAT_NOT_DETECTED
+            }
+        return MrzCheck.entries.map { check ->
+            MrzCheckRecord(check = check, field = check.field, outcome = CheckOutcome.NotRun(reason = reason))
         }
+    }
 
     private fun validateTD3(
         document: TD3,
@@ -320,7 +330,7 @@ public object MrzValidator {
                     MrzCheckRecord(
                         check = MrzCheck.OPTIONAL_DATA_CHECK_DIGIT,
                         field = MrzField.OPTIONAL_DATA,
-                        outcome = CheckOutcome.Failed,
+                        outcome = CheckOutcome.Failed(),
                     )
             }
 
@@ -334,7 +344,7 @@ public object MrzValidator {
                     MrzCheckRecord(
                         check = MrzCheck.OPTIONAL_DATA_CHECK_DIGIT,
                         field = MrzField.OPTIONAL_DATA,
-                        outcome = CheckOutcome.NotApplicable,
+                        outcome = CheckOutcome.NotApplicable(),
                     )
             }
 
@@ -368,7 +378,7 @@ public object MrzValidator {
                 MrzCheckRecord(
                     check = MrzCheck.COMPOSITE_CHECK_DIGIT,
                     field = MrzField.COMPOSITE,
-                    outcome = CheckOutcome.NotRun(reason = "the document carries no composite check digit"),
+                    outcome = CheckOutcome.NotRun(reason = MrzNotRunReason.NO_COMPOSITE_CHECK_DIGIT),
                 )
         }
 
@@ -475,7 +485,7 @@ public object MrzValidator {
             MrzCheckRecord(
                 check = MrzCheck.OPTIONAL_DATA_CHECK_DIGIT,
                 field = MrzField.OPTIONAL_DATA,
-                outcome = CheckOutcome.NotApplicable,
+                outcome = CheckOutcome.NotApplicable(),
             )
 
         // TD2 always carries a composite check digit per ICAO Doc 9303 Part 6; the parser
@@ -496,7 +506,7 @@ public object MrzValidator {
                 MrzCheckRecord(
                     check = MrzCheck.COMPOSITE_CHECK_DIGIT,
                     field = MrzField.COMPOSITE,
-                    outcome = CheckOutcome.NotRun(reason = "the document carries no composite check digit"),
+                    outcome = CheckOutcome.NotRun(reason = MrzNotRunReason.NO_COMPOSITE_CHECK_DIGIT),
                 )
         }
 
@@ -598,13 +608,13 @@ public object MrzValidator {
             MrzCheckRecord(
                 check = MrzCheck.OPTIONAL_DATA_CHECK_DIGIT,
                 field = MrzField.OPTIONAL_DATA,
-                outcome = CheckOutcome.NotApplicable,
+                outcome = CheckOutcome.NotApplicable(),
             )
         checks +=
             MrzCheckRecord(
                 check = MrzCheck.COMPOSITE_CHECK_DIGIT,
                 field = MrzField.COMPOSITE,
-                outcome = CheckOutcome.NotApplicable,
+                outcome = CheckOutcome.NotApplicable(),
             )
 
         checkSexCharacter(
@@ -705,7 +715,7 @@ public object MrzValidator {
             MrzCheckRecord(
                 check = MrzCheck.OPTIONAL_DATA_CHECK_DIGIT,
                 field = MrzField.OPTIONAL_DATA,
-                outcome = CheckOutcome.NotApplicable,
+                outcome = CheckOutcome.NotApplicable(),
             )
 
         // TD1 always carries a composite check digit per ICAO Doc 9303 Part 5; the parser
@@ -726,7 +736,7 @@ public object MrzValidator {
                 MrzCheckRecord(
                     check = MrzCheck.COMPOSITE_CHECK_DIGIT,
                     field = MrzField.COMPOSITE,
-                    outcome = CheckOutcome.NotRun(reason = "the document carries no composite check digit"),
+                    outcome = CheckOutcome.NotRun(reason = MrzNotRunReason.NO_COMPOSITE_CHECK_DIGIT),
                 )
         }
 
@@ -828,13 +838,13 @@ public object MrzValidator {
             MrzCheckRecord(
                 check = MrzCheck.OPTIONAL_DATA_CHECK_DIGIT,
                 field = MrzField.OPTIONAL_DATA,
-                outcome = CheckOutcome.NotApplicable,
+                outcome = CheckOutcome.NotApplicable(),
             )
         checks +=
             MrzCheckRecord(
                 check = MrzCheck.COMPOSITE_CHECK_DIGIT,
                 field = MrzField.COMPOSITE,
-                outcome = CheckOutcome.NotApplicable,
+                outcome = CheckOutcome.NotApplicable(),
             )
 
         checkSexCharacter(
@@ -937,11 +947,11 @@ public object MrzValidator {
         val outcome =
             when (date.componentsFormCalendarDate) {
                 true -> CheckOutcome.Passed
-                false -> CheckOutcome.Failed
-                null -> CheckOutcome.NotApplicable
+                false -> CheckOutcome.Failed()
+                null -> CheckOutcome.NotApplicable()
             }
         checks += MrzCheckRecord(check = check, field = check.field, outcome = outcome)
-        if (outcome == CheckOutcome.Failed) {
+        if (outcome is CheckOutcome.Failed) {
             failures +=
                 MrzDateNotInCalendar(
                     field = check.field,
@@ -965,7 +975,7 @@ public object MrzValidator {
             MrzCheckRecord(
                 check = MrzCheck.SEX_CHARACTER,
                 field = MrzField.SEX,
-                outcome = if (accepted) CheckOutcome.Passed else CheckOutcome.Failed,
+                outcome = if (accepted) CheckOutcome.Passed else CheckOutcome.Failed(),
             )
         if (!accepted) {
             failures += MrzInvalidSexValue(observed = rawSex, position = position)
@@ -992,7 +1002,7 @@ public object MrzValidator {
             MrzCheckRecord(
                 check = check,
                 field = check.field,
-                outcome = if (passed) CheckOutcome.Passed else CheckOutcome.Failed,
+                outcome = if (passed) CheckOutcome.Passed else CheckOutcome.Failed(),
             )
         if (!passed) {
             failures += MrzCheckDigitMismatch(field = check.field, expected = expected, observed = observed, position = position)
