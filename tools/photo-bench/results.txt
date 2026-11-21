@@ -1,0 +1,54 @@
+Full-page photo benchmark, Android saved-image reading (TES-131)
+
+Run 2026-11-21 on the Pixel_9_API37_Play emulator, ML Kit text-recognition 16.0.1 (bundled Latin
+model). SDK path: SavedImageMrzReader over mlKitSavedImageRecognizer, which includes the existing
+short-row rescue (MlKitRowRescue).
+Set: 8 synthetic TD3 passport pages and 8 TD1 ID cards (generator seed 131), 3024 x 4032 JPEG, OCR-B
+MRZ at the real position and character pitch, grey portrait placeholder, invented labels, wood desk.
+Grade: read = decoded and the raw MRZ lines equal the generated ones; partly = decoded with at least
+one wrong character; none = no MRZ found. Variants are defined in render.swift; mrzcrop is the
+control (a tight crop around the MRZ). Eight images per cell: read it as a pattern, not a rate.
+
+| Variant | TD3 passport page | TD1 ID card |
+|---|---|---|
+| mrzcrop (control) | 5 read / 3 partly / 0 none | 5 read / 3 partly / 0 none |
+| flat | 6 read / 2 partly / 0 none | 5 read / 3 partly / 0 none |
+| clutter | 1 read / 3 partly / 4 none | 2 read / 0 partly / 6 none |
+| tilt | 1 read / 3 partly / 4 none | 1 read / 5 partly / 2 none |
+| perspective | 2 read / 1 partly / 5 none | 0 read / 6 partly / 2 none |
+| blur | 0 read / 2 partly / 6 none | 4 read / 4 partly / 0 none |
+| lowlight | 0 read / 1 partly / 7 none | 1 read / 6 partly / 1 none |
+| glare | 4 read / 3 partly / 1 none | 2 read / 5 partly / 1 none |
+| far | 1 read / 1 partly / 6 none | 0 read / 4 partly / 4 none |
+| landscape | 0 read / 1 partly / 7 none | 2 read / 6 partly / 0 none |
+| combined | 0 read / 2 partly / 6 none | 0 read / 7 partly / 1 none |
+
+Rescue experiment (RescueExperiment.kt, not SDK code): exact MRZ lines present in ML Kit's text,
+first pass against first pass plus a per-row tight crop (1x and 2x) read again.
+
+| Variant | images with every line, first pass | after crop and re-read | lines exact, first pass | after re-read |
+|---|---|---|---|---|
+| flat | 3/16 | 9/16 | 21/40 | 30/40 |
+| mrzcrop | 5/16 | 8/16 | 23/40 | 29/40 |
+| clutter | 0/16 | 0/16 | 5/40 | 5/40 |
+| tilt | 0/16 | 0/16 | 8/40 | 8/40 |
+| perspective | 0/16 | 0/16 | 4/40 | 4/40 |
+| blur | 0/16 | 0/16 | 1/40 | 1/40 |
+| lowlight | 0/16 | 0/16 | 1/40 | 1/40 |
+| glare | 0/16 | 0/16 | 12/40 | 12/40 |
+| far | 0/16 | 0/16 | 3/40 | 3/40 |
+| landscape | 0/16 | 0/16 | 8/40 | 8/40 |
+| combined | 0/16 | 0/16 | 0/40 | 0/40 |
+
+Reading the tables
+- On a flat full page the SDK reads about as well as on the tight crop (11 of 16 against 10 of 16),
+  so the page itself does not break reading. Both are well below 16 of 16: most misses are ML Kit's
+  filler collapse (long filler runs come back split, shortened, or turned into guillemets).
+- Every other variant loses most reads. In most "none" cases ML Kit did return the right number of
+  MRZ-like rows, but with the wrong length, so the reader reports no MRZ. This is the failure the
+  iOS photo reader had (TES-130).
+- The existing short-row rescue only helps when one row reads at exact width. The naive per-row
+  crop and re-read helps only the flat page and the crop, and nothing elsewhere. Copying the iOS
+  rescue as is would not be enough; the open question is the rows' tilt and the neighbouring
+  fragments, not the crop itself.
+- Synthetic limits: no real print, lens, or paper. A real device and real photos are the owner's check.
