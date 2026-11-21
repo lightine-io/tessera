@@ -22,6 +22,11 @@ maintainer. Record the results as a comment on the release card.
    - Which API commitments would this release lock in that deserve a second look?
    - Has any tool reached end of life since the last dependency cadence?
    A significant change of direction becomes an ADR in the internal KB (TES-A-17).
+   A release that adds a new reading method (chip reading over NFC is the first) needs
+   more than these lines: a written technology review, done before the first code of
+   that method, in the internal KB under History (the NFC one is "Tech-stack review
+   before NFC", TES-209), and a requirements map written from the standard's text
+   (TES-301). The gate checks that both exist and that the release matches them.
 2. **Review agents.** Launch `qa-coverage-reviewer` and `security-reviewer` in parallel
    on the release diff (last tag to HEAD). Triage each finding with the maintainer: fix
    it or accept it with a recorded reason. A finding to fix before the tag becomes its
