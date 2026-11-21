@@ -112,6 +112,7 @@ internal class FakeCa(
     val setKatSupported: Boolean = true,
     val contexts: Set<CaContext> = setOf(CaContext.MASTER_FILE, CaContext.EMRTD_APPLICATION),
     var refuseGeneralAuthenticate: Int? = null,
+    var refuseSetAt: Int? = null,
 ) : FakeCommandHandler {
     private var pending: Pair<FakeCaOffer, FakeCaKey>? = null
 
@@ -161,6 +162,7 @@ internal class FakeCa(
 
     private fun setAt(c: CommandApdu): ResponseApdu {
         pending = null
+        refuseSetAt?.let { return status(it) }
         val objects = parse(c.data) ?: return status(StatusWord.WRONG_DATA)
         val mechanism = objects[0x80] ?: return status(StatusWord.WRONG_DATA)
         val key = keyFor(objects[0x84]) ?: return status(REFERENCED_DATA_NOT_FOUND)

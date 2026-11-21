@@ -12,6 +12,7 @@ import io.lightine.tessera.emrtd.internal.apdu.CommandApdu
 import io.lightine.tessera.emrtd.internal.apdu.LdsIds
 import io.lightine.tessera.emrtd.internal.apdu.PlainApduSender
 import io.lightine.tessera.emrtd.internal.apdu.ResponseApdu
+import io.lightine.tessera.emrtd.internal.apdu.StatusWord
 import io.lightine.tessera.emrtd.internal.files.FileNotFound
 import io.lightine.tessera.emrtd.internal.files.FileSecurityStatusNotSatisfied
 import io.lightine.tessera.emrtd.internal.files.FileStatusFailure
@@ -25,6 +26,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -231,6 +233,45 @@ class FileReaderTest {
             val over = FileReader(plain(chip(mapOf(LdsIds.EF_DG1 to exact))), maxFileLength = exact.size - 1)
             over.selectApplication()
             assertEquals(TlvFailure.LENGTH_TOO_LONG, assertFailsWith<MalformedFile> { over.readFile(LdsIds.EF_DG1) }.failure)
+        }
+
+    @Test
+    fun empty_read_binary_with_9000_mid_file_is_a_protocol_failure() =
+        runTest {
+            val bytes = TlvWriter.encode(0x61, ByteArray(300) { it.toByte() })
+            var reads = 0
+            val emptyHandler =
+                FakeCommandHandler { _, command ->
+                    if (command.ins == ChipCommands.INS_READ_BINARY && reads++ > 0) {
+                        ResponseApdu(ByteArray(0), StatusWord.SUCCESS)
+                    } else {
+                        null
+                    }
+                }
+            val chip = chip(mapOf(LdsIds.EF_DG1 to bytes), listOf(emptyHandler, FakeFiles))
+            val reader = FileReader(plain(chip))
+            reader.selectApplication()
+
+            assertFailsWith<FileProtocolFailure> { reader.readFile(LdsIds.EF_DG1) }
+        }
+
+    @Test
+    fun an_answer_longer_than_requested_is_a_malformed_file() =
+        runTest {
+            val overHandler =
+                FakeCommandHandler { _, command ->
+                    if (command.ins == ChipCommands.INS_READ_BINARY) {
+                        ResponseApdu(ByteArray((command.ne ?: 0) + 5) { it.toByte() }, StatusWord.SUCCESS)
+                    } else {
+                        null
+                    }
+                }
+            val chip = chip(mapOf(LdsIds.EF_DG1 to TlvWriter.encode(0x61, byteArrayOf(1))), listOf(overHandler, FakeFiles))
+            val reader = FileReader(plain(chip))
+            reader.selectApplication()
+
+            val failure = assertFailsWith<MalformedFile> { reader.readFile(LdsIds.EF_DG1) }
+            assertNull(failure.failure)
         }
 
     private fun plain(chip: FakeChip): ApduSender = ApduChannel(PlainApduSender(chip))

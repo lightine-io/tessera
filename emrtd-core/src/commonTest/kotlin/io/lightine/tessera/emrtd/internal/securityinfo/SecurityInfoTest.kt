@@ -320,6 +320,13 @@ class SecurityInfoTest {
         assertFailsWith<SecurityInfoException> { ChipSecurityFiles.parseDg14(set(hex(G1_PACE_INFO))) }
     }
 
+    @Test
+    fun a_truncated_dg14_wrapper_is_malformed_tlv() {
+        // Tag 6E with a two-byte length whose second length byte is missing.
+        val e = assertFailsWith<SecurityInfoException> { ChipSecurityFiles.parseDg14(byteArrayOf(0x6E, 0x82.toByte(), 0x01)) }
+        assertEquals(SecurityInfoFailure.MALFORMED_TLV, e.failure)
+    }
+
     private fun cardSecurity(
         contentType: String,
         content: ByteArray,
