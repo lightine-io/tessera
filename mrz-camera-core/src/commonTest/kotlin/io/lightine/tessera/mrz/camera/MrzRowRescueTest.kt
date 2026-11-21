@@ -9,13 +9,13 @@ import kotlin.test.assertTrue
 
 /**
  * Host tests for [MrzRowRescue], the short-row rescue rules shared by the Android and iOS recognizers.
- * Fixture text is the ICAO Doc 9303 Utopia TD3 specimen (as in [MrzFrameAnalyzerTest]); a short line is made
+ * Fixture text is the project's TD3 specimen (as in [MrzFrameAnalyzerTest]); a short line is made
  * by collapsing its filler run, the way the OCR engines do.
  */
 @OptIn(InternalTesseraApi::class)
 class MrzRowRescueTest {
-    private val td3Line1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-    private val td3Line2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
+    private val td3Line1 = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+    private val td3Line2 = "T220001293UTO9003152F3403141S98765432<<<<<20"
 
     // Line 1 with 9 filler chevrons lost (35 chars), split into two fragments the way ML Kit returned it.
     private val shortLine1 = td3Line1.dropLast(9)
@@ -93,7 +93,7 @@ class MrzRowRescueTest {
     fun a_collapsed_filler_line_is_a_near_miss_and_an_exact_line_is_not() {
         assertTrue(MrzRowRescue.isNearMiss(shortLine1, 44))
         assertFalse(MrzRowRescue.isNearMiss(td3Line1, 44), "already exact width")
-        assertFalse(MrzRowRescue.isNearMiss("ERIKSSON ANNA MARIA".filterNot(Char::isWhitespace), 44), "no filler")
+        assertFalse(MrzRowRescue.isNearMiss("SPECIMEN ALEX MORGAN".filterNot(Char::isWhitespace), 44), "no filler")
         // ML Kit's `«` stands for one `<`: still a near miss after glyph recovery.
         assertTrue(MrzRowRescue.isNearMiss(shortLine1.replace('<', '«'), 44))
     }
@@ -103,7 +103,7 @@ class MrzRowRescueTest {
         assertTrue(MrzRowRescue.isExactMrzLine(td3Line2))
         assertTrue(MrzRowRescue.isExactMrzLine(td3Line2.replace('<', '«')))
         assertFalse(MrzRowRescue.isExactMrzLine(shortLine1))
-        assertFalse(MrzRowRescue.isExactMrzLine("L898902C,3UTO6908061F9406236ZE184226B<<<<<14"), "out of alphabet")
+        assertFalse(MrzRowRescue.isExactMrzLine(td3Line2.replaceFirst('<', ',')), "out of alphabet")
     }
 
     // --- row grouping ---

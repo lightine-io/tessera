@@ -223,10 +223,10 @@ class MrzScannerScreenTest {
     // ----------------------------------------------------------------------------------------------------
 
     private fun fakeDecoded(): MrzScanResult.Decoded {
-        val line1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-        val line2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
+        val line1 = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+        val line2 = "T220001293UTO9003152F3403141S98765432<<<<<20"
         return MrzScanResult.Decoded(
-            parse = MrzParser.parse(listOf(line1, line2), referenceTime = Instant.parse("1994-01-01T00:00:00Z")),
+            parse = MrzParser.parse(listOf(line1, line2), referenceTime = Instant.parse("2026-05-04T12:00:00Z")),
             recognizedText = RecognizedText(listOf(RecognizedLine(line1, null), RecognizedLine(line2, null))),
             quality = ScanQuality(mrzRegionFound = true, ocrConfidence = null, recognizedLineCount = 2),
         )
@@ -308,8 +308,8 @@ class MrzScannerScreenTest {
         }
 
         composeRule.onNodeWithText("Manual").performClick()
-        val line1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-        val line2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
+        val line1 = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+        val line2 = "T220001293UTO9003152F3403141S98765432<<<<<20"
         composeRule.onNodeWithTag(MANUAL_RAW_FIELD_TEST_TAG).performTextInput("$line1\n$line2")
         // Scroll the primary action into view before clicking — with the field focused (and imePadding
         // shrinking the scroll viewport), it can sit outside the current viewport.

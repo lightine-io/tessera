@@ -33,7 +33,7 @@ import kotlin.time.Instant
  * read is device-only (the picker launches the system photo picker and the recognizer runs ML Kit), so it is
  * not exercised here — per the testing-layers rule, the pure mapping and the composables are covered on host.
  *
- * The fixtures use the ICAO TD3 specimen the parser tests use (synthetic; UTO = Utopia), parsed at a fixed
+ * The fixtures use the project's TD3 specimen (synthetic; UTO = Utopia), parsed at a fixed
  * [referenceTime] so date inference is deterministic.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -42,11 +42,11 @@ class SavedImageScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    // Fixed so 2-digit year inference is deterministic; at 1994 the specimen parses cleanly to Success.
-    private val referenceTime = Instant.parse("1994-01-01T00:00:00Z")
+    // Fixed so 2-digit year inference is deterministic; at 2026-05-04 the specimen parses cleanly to Success.
+    private val referenceTime = Instant.parse("2026-05-04T12:00:00Z")
 
-    private val line1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-    private val line2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
+    private val line1 = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+    private val line2 = "T220001293UTO9003152F3403141S98765432<<<<<20"
 
     private fun scanResult(scan: MrzScanResult): SavedImageScanResult =
         SavedImageScanResult(scan = scan, candidates = emptyList(), captureMetadata = null)

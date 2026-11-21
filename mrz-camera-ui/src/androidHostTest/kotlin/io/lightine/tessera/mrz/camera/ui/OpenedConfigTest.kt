@@ -31,7 +31,7 @@ import kotlin.time.Duration.Companion.seconds
  *
  * On the host the CAMERA permission is not held, so the camera method shows the permission-grant screen;
  * the tests use that and manual entry, neither of which needs a live camera. The fixture MRZ is the
- * synthetic ICAO TD3 specimen used across the module (UTO, a reserved ICAO test issuer).
+ * project's synthetic TD3 specimen used across the module (UTO, a reserved ICAO test issuer).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -240,7 +240,7 @@ class OpenedConfigTest {
     }
 
     private companion object {
-        const val SPECIMEN_LINE_1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-        const val SPECIMEN_LINE_2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
+        const val SPECIMEN_LINE_1 = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+        const val SPECIMEN_LINE_2 = "T220001293UTO9003152F3403141S98765432<<<<<20"
     }
 }

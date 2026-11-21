@@ -47,8 +47,9 @@ import kotlin.time.Instant
  * and the photo screen are rendered through their own composables, because the live preview and the photo
  * picker cannot run under Robolectric.
  *
- * Fixtures: the published ICAO TD3 specimen (UTO, the reserved test issuer) as the passport, and lines built
- * with the SDK's own [MrzGenerator] for an ID card (TD1, code `I`) and for a code with no category (`X`).
+ * Fixtures: the project's TD3 specimen (UTO, the reserved test issuer) as the passport, and lines built with
+ * the SDK's own [MrzGenerator] from the same specimen person for an ID card (TD1, code `I`; this is the project's
+ * TD1 specimen) and for a code with no category (`X`).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -56,12 +57,12 @@ class AcceptedDocumentTypesTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    private val referenceTime = Instant.parse("1994-01-01T00:00:00Z")
+    private val referenceTime = Instant.parse("2026-05-04T12:00:00Z")
 
     private val passportLines =
         listOf(
-            "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-            "L898902C<3UTO6908061F9406236ZE184226B<<<<<14",
+            "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<",
+            "T220001293UTO9003152F3403141S98765432<<<<<20",
         )
 
     private val idCardLines: List<String> =
@@ -69,13 +70,13 @@ class AcceptedDocumentTypesTest {
             MrzGenerator.generateTD1(
                 documentType = "I",
                 issuingState = "UTO",
-                documentNumber = "D23145890",
+                documentNumber = "T42000137",
                 primaryIdentifier = "SPECIMEN",
-                secondaryIdentifier = "TEST",
+                secondaryIdentifier = "ALEX MORGAN",
                 nationality = "UTO",
-                dateOfBirth = LocalDate(1974, 8, 12),
+                dateOfBirth = LocalDate(1990, 3, 15),
                 sex = Sex.FEMALE,
-                dateOfExpiry = LocalDate(2032, 4, 15),
+                dateOfExpiry = LocalDate(2034, 3, 14),
                 optionalData1 = "",
                 optionalData2 = "",
             ),
@@ -87,13 +88,13 @@ class AcceptedDocumentTypesTest {
             MrzGenerator.generateTD3(
                 documentType = "X",
                 issuingState = "UTO",
-                documentNumber = "L898902C",
+                documentNumber = "T22000129",
                 primaryIdentifier = "SPECIMEN",
-                secondaryIdentifier = "TEST",
+                secondaryIdentifier = "ALEX MORGAN",
                 nationality = "UTO",
-                dateOfBirth = LocalDate(1969, 8, 6),
+                dateOfBirth = LocalDate(1990, 3, 15),
                 sex = Sex.FEMALE,
-                dateOfExpiry = LocalDate(2032, 6, 23),
+                dateOfExpiry = LocalDate(2034, 3, 14),
                 personalNumber = "",
             ),
         )
