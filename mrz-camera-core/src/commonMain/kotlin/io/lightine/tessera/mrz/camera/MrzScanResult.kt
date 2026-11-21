@@ -22,13 +22,32 @@ public sealed interface MrzScanResult {
      * @property parse the parser's result for the candidate.
      * @property recognizedText the raw OCR text the candidate came from.
      * @property quality the quality signals for this frame.
+     * @property fillerPadding the `<` the reader added at the end of a name line that was read short,
+     *   or `null` when every line was read at full width. When it is set, [parse] was made from the
+     *   padded lines, and [recognizedText] still holds the line as read. See [MrzFillerPadding]. Added
+     *   in 1.0.0.
      * @since 0.2.0
      */
     public data class Decoded(
         public val parse: ParseResult,
         public val recognizedText: RecognizedText,
         override val quality: ScanQuality,
-    ) : MrzScanResult
+        public val fillerPadding: MrzFillerPadding?,
+    ) : MrzScanResult {
+        /**
+         * Creates a result with no filler padding.
+         *
+         * @param parse the parser's result for the candidate.
+         * @param recognizedText the raw OCR text the candidate came from.
+         * @param quality the quality signals for this frame.
+         * @since 0.2.0
+         */
+        public constructor(
+            parse: ParseResult,
+            recognizedText: RecognizedText,
+            quality: ScanQuality,
+        ) : this(parse, recognizedText, quality, fillerPadding = null)
+    }
 
     /**
      * OCR ran and found no MRZ-shaped candidate.

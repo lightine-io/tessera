@@ -1,10 +1,14 @@
 package io.lightine.tessera.mrz.camera
 
+import io.lightine.tessera.mrz.checkdigit.computeCheckDigit
 import io.lightine.tessera.mrz.formats.MrvAFormatSpec
 import io.lightine.tessera.mrz.formats.MrvBFormatSpec
+import io.lightine.tessera.mrz.formats.MrzFormatSpec
 import io.lightine.tessera.mrz.formats.Td1FormatSpec
 import io.lightine.tessera.mrz.formats.Td2FormatSpec
 import io.lightine.tessera.mrz.formats.Td3FormatSpec
+import io.lightine.tessera.mrz.formats.extractCharFrom
+import io.lightine.tessera.mrz.formats.extractFrom
 import io.lightine.tessera.mrz.parsing.isMrzAlphabetCharacter
 
 /**
@@ -24,9 +28,9 @@ internal object MrzLineDetection {
      * equal-length *run* to itself be the shape - tolerates the printed noise a live camera OCRs around the
      * zone (place-of-birth, blood group, the legal paragraph, device-observed): a stray line of the same width
      * no longer inflates the run past L and breaks the match, and the shape is still found among longer output.
-     * Width stays EXACT (never padded to fit) so every candidate is parseable and no data is inferred
-     * (Principle 1) - a frame where OCR genuinely dropped or split an MRZ line does not match. Larger
-     * shapes first (more lines => more specific) for a deterministic pick.
+     * Width stays EXACT here (never padded to fit) - a frame where OCR genuinely dropped or split an MRZ line
+     * does not match. The one padding rule lives in [detect] and is tried only after this finds nothing.
+     * Larger shapes first (more lines => more specific) for a deterministic pick.
      */
     fun findMrzWindow(normalizedLines: List<String>): List<String>? {
         for (shape in MRZ_SHAPES_BY_SPECIFICITY) {
@@ -38,6 +42,80 @@ internal object MrzLineDetection {
         }
         return null
     }
+
+    /**
+     * The MRZ lines for [normalizedLines]: an exact-width window from [findMrzWindow] when there is one;
+     * otherwise the first pair of consecutive lines whose name line (line 1) was read short and qualifies for
+     * padding ([padShortNameLine], TES-264), reported as [MrzFillerPadding]. Null when neither matches.
+     */
+    fun detect(normalizedLines: List<String>): DetectedMrz? {
+        findMrzWindow(normalizedLines)?.let { return DetectedMrz(it, fillerPadding = null) }
+        for (start in 0 until normalizedLines.size - 1) {
+            padShortNameLine(normalizedLines[start], normalizedLines[start + 1])?.let { return it }
+        }
+        return null
+    }
+
+    /**
+     * Pads [line1] with `<` at the end to the width of [line2], as ICAO Doc 9303 Part 3 fills every position
+     * after the name, or returns null when the pair does not qualify. The rules and their limit are on
+     * [MrzFillerPadding]:
+     * - [line2] is exactly a two-line format's width (36 or 44), all MRZ alphabet, and at least one of its
+     *   document number, birth date and expiry date check digits agrees with its field. That is the "rest of the
+     *   reading matches a known format" gate: the parser fails only on shape and alphabet, which padding always
+     *   satisfies, so without it a stray line ending in `<` above a full-width line 1 could be padded into a pair
+     *   that is no MRZ at all. One agreeing digit is enough: a name line or printed text has letters or filler in
+     *   those places, and a data line with one misread digit is still the parser's to report.
+     * - [line1] is all MRZ alphabet, shorter than [line2], holds a name character after the document code and
+     *   issuing state, and ends with the filler as read. That last rule keeps every added `<` after the last name
+     *   character the camera saw: a line that stops on a letter or digit may have lost the end of the name, and
+     *   padding it would shorten the name without a trace.
+     *
+     * Nothing else is changed; a TD1 card (three lines, name on line 3) is never padded.
+     */
+    fun padShortNameLine(
+        line1: String,
+        line2: String,
+    ): DetectedMrz? {
+        val width = line2.length
+        if (width !in TWO_LINE_WIDTHS || !line2.all(::isMrzAlphabetCharacter)) return null
+        if (line1.length >= width || line1.length < MIN_PADDABLE_NAME_LINE) return null
+        if (!line1.all(::isMrzAlphabetCharacter) || line1.last() != '<') return null
+        if (line1.substring(NAME_START).all { it == '<' }) return null
+        val lines = listOf(line1.padEnd(width, '<'), line2)
+        if (!anyLine2CheckDigitAgrees(lines)) return null
+        return DetectedMrz(
+            lines = lines,
+            fillerPadding = MrzFillerPadding(lineIndex = 0, recognizedLength = line1.length, paddedLength = width),
+        )
+    }
+
+    // Line 2 of every two-line format starts with the same three checked fields; the spec is picked as the parser
+    // picks it (width, and a leading `V` for a visa), though the positions are the same either way.
+    private fun anyLine2CheckDigitAgrees(lines: List<String>): Boolean {
+        val visa = lines[0].startsWith('V')
+        val spec: MrzFormatSpec =
+            when (lines[1].length) {
+                Td2FormatSpec.lineLength -> if (visa) MrvBFormatSpec else Td2FormatSpec
+                else -> if (visa) MrvAFormatSpec else Td3FormatSpec
+            }
+        return listOf(
+            spec.documentNumber to spec.documentNumberCheckDigit,
+            spec.dateOfBirth to spec.dateOfBirthCheckDigit,
+            spec.dateOfExpiry to spec.dateOfExpiryCheckDigit,
+        ).any { (field, checkDigit) -> computeCheckDigit(field.extractFrom(lines)) == checkDigit.extractCharFrom(lines) }
+    }
+
+    /** MRZ lines ready to parse, and the filler padding added to them, if any. */
+    internal data class DetectedMrz(
+        val lines: List<String>,
+        val fillerPadding: MrzFillerPadding?,
+    )
+
+    // On every two-line format the name starts after the two-character document code and the three-character
+    // issuing state. A paddable line holds that prefix, at least one name character and a trailing filler.
+    private const val NAME_START: Int = 5
+    private const val MIN_PADDABLE_NAME_LINE: Int = NAME_START + 2
 
     /**
      * Case is folded to upper (the MRZ alphabet is uppercase-only), and out-of-alphabet chevron glyphs an OCR
@@ -78,6 +156,13 @@ internal object MrzLineDetection {
     // Deliberately narrow — only unambiguous chevron look-alikes, never an in-alphabet character. Also used by
     // MrzRowRescue's glyph recovery, so the two cannot drift apart.
     internal val MRZ_CHEVRON_GLYPHS: Set<Char> = setOf('«', '»', '‹', '›', '＜', '＞', '〈', '〉', '⟨', '⟩')
+
+    // The widths of the two-line formats (TD2/MRV-B 36, TD3/MRV-A 44), whose line 1 is the name line.
+    private val TWO_LINE_WIDTHS: Set<Int> =
+        listOf(Td1FormatSpec, Td2FormatSpec, Td3FormatSpec, MrvAFormatSpec, MrvBFormatSpec)
+            .filter { it.lineCount == 2 }
+            .map { it.lineLength }
+            .toSet()
 
     // The distinct ICAO line shapes, sourced from mrz-core's format specs rather than restated as magic
     // numbers: TD1 3×30, TD2/MRV-B 2×36, TD3/MRV-A 2×44. Ordered by line count descending so the window search

@@ -202,13 +202,16 @@ public abstract interface class io/lightine/tessera/mrz/camera/MrzCameraScanner 
 
 public final class io/lightine/tessera/mrz/camera/MrzCandidate {
 	public fun <init> (Ljava/util/List;Lio/lightine/tessera/mrz/parsing/ParseResult;Ljava/util/List;)V
+	public fun <init> (Ljava/util/List;Lio/lightine/tessera/mrz/parsing/ParseResult;Ljava/util/List;Lio/lightine/tessera/mrz/camera/MrzFillerPadding;)V
 	public final fun component1 ()Ljava/util/List;
 	public final fun component2 ()Lio/lightine/tessera/mrz/parsing/ParseResult;
 	public final fun component3 ()Ljava/util/List;
-	public final fun copy (Ljava/util/List;Lio/lightine/tessera/mrz/parsing/ParseResult;Ljava/util/List;)Lio/lightine/tessera/mrz/camera/MrzCandidate;
-	public static synthetic fun copy$default (Lio/lightine/tessera/mrz/camera/MrzCandidate;Ljava/util/List;Lio/lightine/tessera/mrz/parsing/ParseResult;Ljava/util/List;ILjava/lang/Object;)Lio/lightine/tessera/mrz/camera/MrzCandidate;
+	public final fun component4 ()Lio/lightine/tessera/mrz/camera/MrzFillerPadding;
+	public final fun copy (Ljava/util/List;Lio/lightine/tessera/mrz/parsing/ParseResult;Ljava/util/List;Lio/lightine/tessera/mrz/camera/MrzFillerPadding;)Lio/lightine/tessera/mrz/camera/MrzCandidate;
+	public static synthetic fun copy$default (Lio/lightine/tessera/mrz/camera/MrzCandidate;Ljava/util/List;Lio/lightine/tessera/mrz/parsing/ParseResult;Ljava/util/List;Lio/lightine/tessera/mrz/camera/MrzFillerPadding;ILjava/lang/Object;)Lio/lightine/tessera/mrz/camera/MrzCandidate;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getDisambiguations ()Ljava/util/List;
+	public final fun getFillerPadding ()Lio/lightine/tessera/mrz/camera/MrzFillerPadding;
 	public final fun getMrzLines ()Ljava/util/List;
 	public final fun getParse ()Lio/lightine/tessera/mrz/parsing/ParseResult;
 	public fun hashCode ()I
@@ -227,6 +230,22 @@ public final class io/lightine/tessera/mrz/camera/MrzDecodeConsensus {
 }
 
 public final class io/lightine/tessera/mrz/camera/MrzDecodeConsensus$Companion {
+}
+
+public final class io/lightine/tessera/mrz/camera/MrzFillerPadding {
+	public fun <init> (III)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun copy (III)Lio/lightine/tessera/mrz/camera/MrzFillerPadding;
+	public static synthetic fun copy$default (Lio/lightine/tessera/mrz/camera/MrzFillerPadding;IIIILjava/lang/Object;)Lio/lightine/tessera/mrz/camera/MrzFillerPadding;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAddedCount ()I
+	public final fun getLineIndex ()I
+	public final fun getPaddedLength ()I
+	public final fun getRecognizedLength ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class io/lightine/tessera/mrz/camera/MrzFrameAnalyzer {
@@ -261,12 +280,15 @@ public final class io/lightine/tessera/mrz/camera/MrzScanResult$CaptureError : i
 
 public final class io/lightine/tessera/mrz/camera/MrzScanResult$Decoded : io/lightine/tessera/mrz/camera/MrzScanResult {
 	public fun <init> (Lio/lightine/tessera/mrz/parsing/ParseResult;Lio/lightine/tessera/mrz/camera/RecognizedText;Lio/lightine/tessera/mrz/camera/ScanQuality;)V
+	public fun <init> (Lio/lightine/tessera/mrz/parsing/ParseResult;Lio/lightine/tessera/mrz/camera/RecognizedText;Lio/lightine/tessera/mrz/camera/ScanQuality;Lio/lightine/tessera/mrz/camera/MrzFillerPadding;)V
 	public final fun component1 ()Lio/lightine/tessera/mrz/parsing/ParseResult;
 	public final fun component2 ()Lio/lightine/tessera/mrz/camera/RecognizedText;
 	public final fun component3 ()Lio/lightine/tessera/mrz/camera/ScanQuality;
-	public final fun copy (Lio/lightine/tessera/mrz/parsing/ParseResult;Lio/lightine/tessera/mrz/camera/RecognizedText;Lio/lightine/tessera/mrz/camera/ScanQuality;)Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;
-	public static synthetic fun copy$default (Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;Lio/lightine/tessera/mrz/parsing/ParseResult;Lio/lightine/tessera/mrz/camera/RecognizedText;Lio/lightine/tessera/mrz/camera/ScanQuality;ILjava/lang/Object;)Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;
+	public final fun component4 ()Lio/lightine/tessera/mrz/camera/MrzFillerPadding;
+	public final fun copy (Lio/lightine/tessera/mrz/parsing/ParseResult;Lio/lightine/tessera/mrz/camera/RecognizedText;Lio/lightine/tessera/mrz/camera/ScanQuality;Lio/lightine/tessera/mrz/camera/MrzFillerPadding;)Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;
+	public static synthetic fun copy$default (Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;Lio/lightine/tessera/mrz/parsing/ParseResult;Lio/lightine/tessera/mrz/camera/RecognizedText;Lio/lightine/tessera/mrz/camera/ScanQuality;Lio/lightine/tessera/mrz/camera/MrzFillerPadding;ILjava/lang/Object;)Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFillerPadding ()Lio/lightine/tessera/mrz/camera/MrzFillerPadding;
 	public final fun getParse ()Lio/lightine/tessera/mrz/parsing/ParseResult;
 	public fun getQuality ()Lio/lightine/tessera/mrz/camera/ScanQuality;
 	public final fun getRecognizedText ()Lio/lightine/tessera/mrz/camera/RecognizedText;

@@ -21,6 +21,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import io.lightine.tessera.mrz.camera.MrzFillerPadding
 import io.lightine.tessera.mrz.camera.MrzScanResult
 import io.lightine.tessera.mrz.camera.RecognizedLine
 import io.lightine.tessera.mrz.camera.RecognizedText
@@ -289,6 +290,35 @@ class ReviewScreenTest {
         composeRule.onAllNodesWithText("country list", substring = true).assertCountEquals(0)
         composeRule.onAllNodesWithText("isn't in our", substring = true).assertCountEquals(0)
         composeRule.onNodeWithText("Read by live camera").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun a_padded_name_line_shows_a_note_after_provenance_in_the_summary() {
+        val padded =
+            decoded(specimenLine1, specimenLine2).copy(
+                fillerPadding = MrzFillerPadding(lineIndex = 0, recognizedLength = 27, paddedLength = 44),
+            )
+        var texts: List<String> = emptyList()
+
+        composeRule.setContent {
+            texts = reviewSummaryObservations(padded).map { it.text }
+        }
+        composeRule.waitForIdle()
+
+        val note = "The end of the name line wasn't read, so it was left blank. Please compare the name with your document."
+        assertEquals(texts.indexOf("Read by live camera") + 1, texts.indexOf(note), "the note follows provenance: $texts")
+    }
+
+    @Test
+    fun a_full_width_read_shows_no_padding_note() {
+        var texts: List<String> = emptyList()
+
+        composeRule.setContent {
+            texts = reviewObservations(decoded(specimenLine1, specimenLine2)).map { it.text }
+        }
+        composeRule.waitForIdle()
+
+        assertTrue(texts.none { it.startsWith("The end of the name line") }, "no padding note: $texts")
     }
 
     @Test

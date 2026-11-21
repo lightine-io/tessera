@@ -31,7 +31,27 @@ public data class MrzCandidate(
      * as-recognized candidate.
      */
     public val disambiguations: List<CharacterDisambiguation>,
-)
+    /**
+     * The `<` the reader added at the end of a name line that was read short, the same for every
+     * candidate of one read and for its scan result; `null` when every line was read at full width.
+     * See [MrzFillerPadding]. Added in 1.0.0.
+     */
+    public val fillerPadding: MrzFillerPadding?,
+) {
+    /**
+     * Creates a candidate with no filler padding.
+     *
+     * @param mrzLines the reconstructed MRZ lines.
+     * @param parse the parser's result for this reconstruction.
+     * @param disambiguations the glyph changes that produce this candidate.
+     * @since 0.3.0
+     */
+    public constructor(
+        mrzLines: List<String>,
+        parse: ParseResult,
+        disambiguations: List<CharacterDisambiguation>,
+    ) : this(mrzLines, parse, disambiguations, fillerPadding = null)
+}
 
 /**
  * One glyph change in an [MrzCandidate]: the [recognized] glyph at ([lineIndex], [columnIndex]) was

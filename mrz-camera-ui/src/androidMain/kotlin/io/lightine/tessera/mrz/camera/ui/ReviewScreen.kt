@@ -185,8 +185,9 @@ internal fun reviewAllFieldRows(document: MrzDocument): List<FieldRow> {
 /**
  * The observation set for a decoded reading (mockups 03 / 03b) - the check-digit / expiry / advisory
  * observations for its [`parse`][MrzScanResult.Decoded.parse] verdict (via [parseObservations]) plus a
- * **provenance** INFO line naming the read method (live camera / photo / manual). A parse failure carries no
- * document, so it yields no observations.
+ * **provenance** INFO line naming the read method (live camera / photo / manual), followed by an INFO note when
+ * the reader padded a name line read short ([`fillerPadding`][MrzScanResult.Decoded.fillerPadding]). A parse
+ * failure carries no document, so it yields no observations.
  *
  * The parse-derived part is factored out into [parseObservations] - a bare-[ParseResult] verdict with no
  * provenance to render - kept as its own pure step so this function stays a thin wrapper: the shared
@@ -207,7 +208,21 @@ internal fun reviewObservations(decoded: MrzScanResult.Decoded): List<Observatio
             tone = ObservationTone.INFO,
         )
     val advisoryIndex = observations.indexOfFirst { it.tone == ObservationTone.INFO }
-    if (advisoryIndex >= 0) observations.add(advisoryIndex, provenance) else observations += provenance
+    val provenanceIndex = if (advisoryIndex >= 0) advisoryIndex else observations.size
+    observations.add(provenanceIndex, provenance)
+
+    // The reader padded a name line read short with filler (TES-264): also decode-specific, right after
+    // provenance, so the person knows the name was not read whole and compares it with the document.
+    if (decoded.fillerPadding != null) {
+        observations.add(
+            provenanceIndex + 1,
+            Observation(
+                symbol = SYMBOL_INFO,
+                text = stringResource(R.string.tessera_scanner_obs_name_line_padded),
+                tone = ObservationTone.INFO,
+            ),
+        )
+    }
     return observations
 }
 

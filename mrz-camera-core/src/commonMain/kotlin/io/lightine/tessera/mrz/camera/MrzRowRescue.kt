@@ -22,6 +22,10 @@ import kotlin.math.ceil
  * re-read of exact width is kept (an exact multiple is split into its rows); a short re-read is dropped.
  * Nothing is padded, guessed, or corrected: every kept line is a string the recognizer actually produced,
  * and the parser's check digits remain the judge of it.
+ *
+ * **What comes after.** When a name line is still short after the rescue, line detection in the shared
+ * analyse-frame core may pad it with `<` at the end and report it on the result ([MrzFillerPadding], TES-264).
+ * That step is separate from this one, and the rescue itself never pads.
  */
 @InternalTesseraApi
 public object MrzRowRescue {
