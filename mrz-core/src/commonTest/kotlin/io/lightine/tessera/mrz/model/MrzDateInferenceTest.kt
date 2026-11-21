@@ -16,7 +16,6 @@ class MrzDateInferenceTest {
         assertNull(date.computedYear)
         assertNull(date.computedDate)
         assertNull(date.componentsFormCalendarDate)
-        assertNull(date.componentsExceedBirthAgeLimit)
     }
 
     // --- parseBirth ---
@@ -219,75 +218,26 @@ class MrzDateInferenceTest {
         assertEquals(true, date.componentsFormCalendarDate)
     }
 
-    // --- componentsExceedBirthAgeLimit signal ---
+    // --- Birth dates no century can place ---
 
     @Test
-    fun parse_birth_sets_componentsExceedBirthAgeLimit_false_on_successful_inference() {
-        val date = MrzDate.parseBirth(rawYear = "80", rawMonth = "06", rawDay = "15", referenceTime = ref2026)
-        assertEquals(MrzDateInferenceMethod.SLIDING_WINDOW_BIRTH, date.inferenceMethod)
-        assertEquals(false, date.componentsExceedBirthAgeLimit)
-    }
-
-    @Test
-    fun parse_birth_sets_componentsExceedBirthAgeLimit_null_for_non_numeric_components() {
-        val date = MrzDate.parseBirth(rawYear = "ab", rawMonth = "08", rawDay = "06", referenceTime = ref2026)
-        assertEquals(MrzDateInferenceMethod.RAW_ONLY, date.inferenceMethod)
-        assertNull(date.componentsExceedBirthAgeLimit)
-    }
-
-    @Test
-    fun parse_birth_sets_componentsExceedBirthAgeLimit_null_when_components_do_not_form_calendar_date() {
-        // Feb 30 is not a real calendar date in any century — the age question does not apply.
-        val date = MrzDate.parseBirth(rawYear = "90", rawMonth = "02", rawDay = "30", referenceTime = ref2026)
-        assertEquals(MrzDateInferenceMethod.RAW_ONLY, date.inferenceMethod)
-        assertEquals(false, date.componentsFormCalendarDate)
-        assertNull(date.componentsExceedBirthAgeLimit)
-    }
-
-    @Test
-    fun parse_birth_sets_componentsExceedBirthAgeLimit_true_when_every_past_candidate_exceeds_age_cap() {
+    fun parse_birth_returns_raw_only_when_every_past_candidate_exceeds_age_cap() {
         // ref=2200-01-01, YY=00, June 15: 2000-06-15 in past, age=200, > 130; 1900-06-15 in past, age=300, > 130.
         // Both calendar-valid past candidates exceed the 130-year cap; parser falls to RAW_ONLY for age.
         val ref2200 = Instant.parse("2200-01-01T00:00:00Z")
         val date = MrzDate.parseBirth(rawYear = "00", rawMonth = "06", rawDay = "15", referenceTime = ref2200)
         assertEquals(MrzDateInferenceMethod.RAW_ONLY, date.inferenceMethod)
         assertEquals(true, date.componentsFormCalendarDate)
-        assertEquals(true, date.componentsExceedBirthAgeLimit)
     }
 
     @Test
-    fun parse_birth_sets_componentsExceedBirthAgeLimit_false_when_calendar_valid_but_every_candidate_is_in_future() {
+    fun parse_birth_returns_raw_only_when_calendar_valid_but_every_candidate_is_in_future() {
         // ref=1850-01-01, YY=00, June 15: 2000-06-15 future, 1900-06-15 future. anyCenturyFormsCalendarDate=true,
         // but no past calendar-valid candidate exists, so the parser's failure is "no past candidate" not "age cap."
         val refDistantPast = Instant.parse("1850-01-01T00:00:00Z")
         val date = MrzDate.parseBirth(rawYear = "00", rawMonth = "06", rawDay = "15", referenceTime = refDistantPast)
         assertEquals(MrzDateInferenceMethod.RAW_ONLY, date.inferenceMethod)
         assertEquals(true, date.componentsFormCalendarDate)
-        assertEquals(false, date.componentsExceedBirthAgeLimit)
-    }
-
-    @Test
-    fun parse_expiry_leaves_componentsExceedBirthAgeLimit_null_on_successful_inference() {
-        val date = MrzDate.parseExpiry(rawYear = "30", rawMonth = "06", rawDay = "01", referenceTime = ref2026)
-        assertEquals(MrzDateInferenceMethod.SLIDING_WINDOW_EXPIRY, date.inferenceMethod)
-        assertNull(date.componentsExceedBirthAgeLimit)
-    }
-
-    @Test
-    fun parse_expiry_leaves_componentsExceedBirthAgeLimit_null_for_calendar_invalid_components() {
-        val date = MrzDate.parseExpiry(rawYear = "30", rawMonth = "13", rawDay = "01", referenceTime = ref2026)
-        assertEquals(MrzDateInferenceMethod.RAW_ONLY, date.inferenceMethod)
-        assertNull(date.componentsExceedBirthAgeLimit)
-    }
-
-    @Test
-    fun parse_expiry_leaves_componentsExceedBirthAgeLimit_null_for_out_of_window_calendar_valid_components() {
-        // YY=80 with ref=2026: 2080 beyond +50, 1980 beyond -10. Calendar-valid but out-of-window.
-        // The age-cap signal is birth-only; expiry must leave it null regardless.
-        val date = MrzDate.parseExpiry(rawYear = "80", rawMonth = "08", rawDay = "15", referenceTime = ref2026)
-        assertEquals(MrzDateInferenceMethod.RAW_ONLY, date.inferenceMethod)
-        assertEquals(true, date.componentsFormCalendarDate)
-        assertNull(date.componentsExceedBirthAgeLimit)
     }
 
     // --- Partial-unknown-date components (filler `<` per Part 3 §4.8) ---
@@ -305,7 +255,6 @@ class MrzDateInferenceTest {
         assertNull(date.computedYear)
         assertNull(date.computedDate)
         assertNull(date.componentsFormCalendarDate)
-        assertNull(date.componentsExceedBirthAgeLimit)
         assertEquals("<<", date.rawYear)
     }
 
@@ -328,7 +277,6 @@ class MrzDateInferenceTest {
         val date = MrzDate.parseBirth(rawYear = "<<", rawMonth = "<<", rawDay = "<<", referenceTime = ref2026)
         assertEquals(MrzDateInferenceMethod.RAW_ONLY, date.inferenceMethod)
         assertNull(date.componentsFormCalendarDate)
-        assertNull(date.componentsExceedBirthAgeLimit)
     }
 
     @Test

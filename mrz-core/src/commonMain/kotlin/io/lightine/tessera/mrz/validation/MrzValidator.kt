@@ -1,6 +1,5 @@
 // Swift label for the line-list overloads (TES-224). ObjCName is still experimental in Kotlin.
 @file:OptIn(kotlin.experimental.ExperimentalObjCName::class)
-@file:Suppress("DEPRECATION") // MrzBirthDateImplausiblyOld is deprecated, never reported (TES-202)
 
 package io.lightine.tessera.mrz.validation
 
@@ -22,7 +21,6 @@ import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.mrz.recognition.CountryCode
 import io.lightine.tessera.mrz.recognition.DocumentType
-import io.lightine.tessera.types.errors.MrzBirthDateImplausiblyOld
 import io.lightine.tessera.types.errors.MrzCheckDigitMismatch
 import io.lightine.tessera.types.errors.MrzDateNotInCalendar
 import io.lightine.tessera.types.errors.MrzExpiryDateAfterSingleLetterPassportLimit
@@ -55,7 +53,7 @@ import kotlin.time.Instant
  * Reports `MrzCheckDigitMismatch`, `MrzDateNotInCalendar`, and `MrzInvalidSexValue` as validation
  * failures. Reports `MrzExpiryDatePast`, `MrzExpiryDateImplausiblyFar`,
  * `MrzExpiryDateCenturyNotInferred`, `MrzExpiryDateAfterSingleLetterPassportLimit`,
- * `MrzBirthDateImplausiblyOld`, `MrzNameTruncated`, `MrzUnknownCountryCode`,
+ * `MrzNameTruncated`, `MrzUnknownCountryCode`,
  * `MrzUnknownDocumentTypeCode`, `MrzSexCharacterX`, and `MrzPersonalNumberCheckDigitFiller` as
  * warnings. Visa formats have no composite check digit and no optional-data check digit.
  *
@@ -351,11 +349,6 @@ public object MrzValidator {
             rawDocumentCode = Td3FormatSpec.documentType.extractFrom(rawLines),
             expiryDate = document.commonFields.dateOfExpiry,
         )
-        addBirthAgeWarningIfApplicable(
-            into = warnings,
-            birthDate = document.commonFields.dateOfBirth,
-            referenceTime = referenceTime,
-        )
         addUnknownDocumentTypeCodeWarningIfApplicable(
             into = warnings,
             documentType = document.commonFields.documentType,
@@ -453,11 +446,6 @@ public object MrzValidator {
             expiryDate = document.commonFields.dateOfExpiry,
             referenceTime = referenceTime,
         )
-        addBirthAgeWarningIfApplicable(
-            into = warnings,
-            birthDate = document.commonFields.dateOfBirth,
-            referenceTime = referenceTime,
-        )
         addUnknownDocumentTypeCodeWarningIfApplicable(
             into = warnings,
             documentType = document.commonFields.documentType,
@@ -540,11 +528,6 @@ public object MrzValidator {
         addExpiryWarningsIfApplicable(
             into = warnings,
             expiryDate = document.commonFields.dateOfExpiry,
-            referenceTime = referenceTime,
-        )
-        addBirthAgeWarningIfApplicable(
-            into = warnings,
-            birthDate = document.commonFields.dateOfBirth,
             referenceTime = referenceTime,
         )
         addUnknownDocumentTypeCodeWarningIfApplicable(
@@ -644,11 +627,6 @@ public object MrzValidator {
             expiryDate = document.commonFields.dateOfExpiry,
             referenceTime = referenceTime,
         )
-        addBirthAgeWarningIfApplicable(
-            into = warnings,
-            birthDate = document.commonFields.dateOfBirth,
-            referenceTime = referenceTime,
-        )
         addUnknownDocumentTypeCodeWarningIfApplicable(
             into = warnings,
             documentType = document.commonFields.documentType,
@@ -733,11 +711,6 @@ public object MrzValidator {
             expiryDate = document.commonFields.dateOfExpiry,
             referenceTime = referenceTime,
         )
-        addBirthAgeWarningIfApplicable(
-            into = warnings,
-            birthDate = document.commonFields.dateOfBirth,
-            referenceTime = referenceTime,
-        )
         addUnknownDocumentTypeCodeWarningIfApplicable(
             into = warnings,
             documentType = document.commonFields.documentType,
@@ -792,23 +765,6 @@ public object MrzValidator {
     ) {
         if (countryCode.isRecognized) return
         into += MrzUnknownCountryCode(field = field, rawCode = countryCode.rawCode, position = position)
-    }
-
-    private fun addBirthAgeWarningIfApplicable(
-        into: MutableList<MrzWarning>,
-        birthDate: MrzDate,
-        referenceTime: Instant,
-    ) {
-        if (birthDate.componentsExceedBirthAgeLimit != true) return
-        val referenceDate = referenceTime.toLocalDateTime(TimeZone.UTC).date
-        into +=
-            MrzBirthDateImplausiblyOld(
-                rawYear = birthDate.rawYear,
-                rawMonth = birthDate.rawMonth,
-                rawDay = birthDate.rawDay,
-                referenceDate = referenceDate,
-                thresholdYears = MrzDate.MAX_PLAUSIBLE_AGE_YEARS,
-            )
     }
 
     private fun addDateNotInCalendarFailureIfApplicable(

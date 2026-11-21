@@ -20,9 +20,6 @@ import kotlin.time.Instant
  * @property componentsFormCalendarDate `true` if the components form a real date in the 2000s or
  *   the 1900s, `false` if they form none, `null` if they are not two-digit numbers. Default:
  *   `null`.
- * @property componentsExceedBirthAgeLimit Birth dates only. `true` if the date is real and not
- *   after the reference time but more than 130 years before it, `false` if inference succeeded or
- *   the date is after the reference time, `null` otherwise. Default: `null`.
  * @since 0.1.0
  */
 public data class MrzDate(
@@ -33,7 +30,6 @@ public data class MrzDate(
     val computedDate: LocalDate? = null,
     val inferenceMethod: MrzDateInferenceMethod = MrzDateInferenceMethod.RAW_ONLY,
     val componentsFormCalendarDate: Boolean? = null,
-    val componentsExceedBirthAgeLimit: Boolean? = null,
 ) {
     /** Factories that parse printed date components. */
     public companion object {
@@ -62,30 +58,13 @@ public data class MrzDate(
         ): MrzDate {
             val parsed =
                 parseRawComponents(rawYear, rawMonth, rawDay)
-                    ?: return rawOnly(
-                        rawYear,
-                        rawMonth,
-                        rawDay,
-                        componentsFormCalendarDate = null,
-                        componentsExceedBirthAgeLimit = null,
-                    )
+                    ?: return rawOnly(rawYear, rawMonth, rawDay, componentsFormCalendarDate = null)
             val componentsFormCalendar = anyCenturyFormsCalendarDate(parsed)
             val refDate = referenceTime.toLocalDateTime(TimeZone.UTC).date
             val pickedYear =
                 pickBirthYear(parsed, centuryBase = 2000, ref = refDate)
                     ?: pickBirthYear(parsed, centuryBase = 1900, ref = refDate)
-                    ?: return rawOnly(
-                        rawYear,
-                        rawMonth,
-                        rawDay,
-                        componentsFormCalendarDate = componentsFormCalendar,
-                        componentsExceedBirthAgeLimit =
-                            if (componentsFormCalendar) {
-                                anyBirthCandidateInPast(parsed, refDate)
-                            } else {
-                                null
-                            },
-                    )
+                    ?: return rawOnly(rawYear, rawMonth, rawDay, componentsFormCalendarDate = componentsFormCalendar)
             return MrzDate(
                 rawYear = rawYear,
                 rawMonth = rawMonth,
@@ -94,7 +73,6 @@ public data class MrzDate(
                 computedDate = LocalDate(pickedYear, parsed.month, parsed.day),
                 inferenceMethod = MrzDateInferenceMethod.SLIDING_WINDOW_BIRTH,
                 componentsFormCalendarDate = true,
-                componentsExceedBirthAgeLimit = false,
             )
         }
 
@@ -143,7 +121,6 @@ public data class MrzDate(
             rawMonth: String,
             rawDay: String,
             componentsFormCalendarDate: Boolean?,
-            componentsExceedBirthAgeLimit: Boolean? = null,
         ): MrzDate =
             MrzDate(
                 rawYear = rawYear,
@@ -153,7 +130,6 @@ public data class MrzDate(
                 computedDate = null,
                 inferenceMethod = MrzDateInferenceMethod.RAW_ONLY,
                 componentsFormCalendarDate = componentsFormCalendarDate,
-                componentsExceedBirthAgeLimit = componentsExceedBirthAgeLimit,
             )
 
         private data class ParsedComponents(
@@ -177,18 +153,6 @@ public data class MrzDate(
         private fun anyCenturyFormsCalendarDate(parsed: ParsedComponents): Boolean =
             tryConstructDate(2000 + parsed.twoDigitYear, parsed.month, parsed.day) != null ||
                 tryConstructDate(1900 + parsed.twoDigitYear, parsed.month, parsed.day) != null
-
-        private fun anyBirthCandidateInPast(
-            parsed: ParsedComponents,
-            ref: LocalDate,
-        ): Boolean {
-            for (centuryBase in listOf(2000, 1900)) {
-                val candidateYear = centuryBase + parsed.twoDigitYear
-                val candidateDate = tryConstructDate(candidateYear, parsed.month, parsed.day) ?: continue
-                if (candidateDate <= ref) return true
-            }
-            return false
-        }
 
         private fun pickBirthYear(
             parsed: ParsedComponents,

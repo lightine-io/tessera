@@ -94,33 +94,6 @@ final enum class io.lightine.tessera.types.vocabulary/Sex : kotlin/Enum<io.light
     final fun values(): kotlin/Array<io.lightine.tessera.types.vocabulary/Sex> // io.lightine.tessera.types.vocabulary/Sex.values|values#static(){}[0]
 }
 
-final class io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld : io.lightine.tessera.types.errors/MrzWarning { // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld|null[0]
-    constructor <init>(kotlin/String, kotlin/String, kotlin/String, kotlinx.datetime/LocalDate, kotlin/Int) // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlinx.datetime.LocalDate;kotlin.Int){}[0]
-
-    final val description // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.description|{}description[0]
-        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.description.<get-description>|<get-description>(){}[0]
-    final val rawDay // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.rawDay|{}rawDay[0]
-        final fun <get-rawDay>(): kotlin/String // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.rawDay.<get-rawDay>|<get-rawDay>(){}[0]
-    final val rawMonth // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.rawMonth|{}rawMonth[0]
-        final fun <get-rawMonth>(): kotlin/String // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.rawMonth.<get-rawMonth>|<get-rawMonth>(){}[0]
-    final val rawYear // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.rawYear|{}rawYear[0]
-        final fun <get-rawYear>(): kotlin/String // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.rawYear.<get-rawYear>|<get-rawYear>(){}[0]
-    final val referenceDate // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.referenceDate|{}referenceDate[0]
-        final fun <get-referenceDate>(): kotlinx.datetime/LocalDate // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.referenceDate.<get-referenceDate>|<get-referenceDate>(){}[0]
-    final val thresholdYears // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.thresholdYears|{}thresholdYears[0]
-        final fun <get-thresholdYears>(): kotlin/Int // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.thresholdYears.<get-thresholdYears>|<get-thresholdYears>(){}[0]
-
-    final fun component1(): kotlin/String // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.component1|component1(){}[0]
-    final fun component2(): kotlin/String // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.component2|component2(){}[0]
-    final fun component3(): kotlin/String // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.component3|component3(){}[0]
-    final fun component4(): kotlinx.datetime/LocalDate // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.component4|component4(){}[0]
-    final fun component5(): kotlin/Int // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.component5|component5(){}[0]
-    final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlinx.datetime/LocalDate = ..., kotlin/Int = ...): io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.copy|copy(kotlin.String;kotlin.String;kotlin.String;kotlinx.datetime.LocalDate;kotlin.Int){}[0]
-    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.equals|equals(kotlin.Any?){}[0]
-    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.hashCode|hashCode(){}[0]
-    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzBirthDateImplausiblyOld.toString|toString(){}[0]
-}
-
 final class io.lightine.tessera.types.errors/MrzCharacterSetViolation : io.lightine.tessera.types.errors/MrzParseError { // io.lightine.tessera.types.errors/MrzCharacterSetViolation|null[0]
     constructor <init>(kotlin/Char, kotlin/Int) // io.lightine.tessera.types.errors/MrzCharacterSetViolation.<init>|<init>(kotlin.Char;kotlin.Int){}[0]
 

@@ -1,5 +1,3 @@
-@file:Suppress("DEPRECATION") // MrzBirthDateImplausiblyOld is deprecated, never reported (TES-202)
-
 package io.lightine.tessera.types.errors
 
 import io.lightine.tessera.types.vocabulary.MrzField
@@ -32,7 +30,6 @@ class ErrorTextCarriesNoDocumentValuesTest {
 
     private val warnings: List<MrzWarning> =
         listOf(
-            MrzBirthDateImplausiblyOld(sentinelYear, sentinelMonth, sentinelDay, sentinelDate, 131),
             MrzExpiryDateAfterSingleLetterPassportLimit(text, sentinelDate),
             MrzExpiryDateCenturyNotInferred(sentinelYear, sentinelMonth, sentinelDay, sentinelDate),
             MrzExpiryDateImplausiblyFar(sentinelDate, sentinelDate, 11),
@@ -100,7 +97,6 @@ class ErrorTextCarriesNoDocumentValuesTest {
     // Exhaustive `when`s: a new subtype is a compile error until it is listed here and in the samples.
     private fun exhaustive(w: MrzWarning): Boolean =
         when (w) {
-            is MrzBirthDateImplausiblyOld,
             is MrzExpiryDateAfterSingleLetterPassportLimit,
             is MrzExpiryDateCenturyNotInferred,
             is MrzExpiryDateImplausiblyFar,

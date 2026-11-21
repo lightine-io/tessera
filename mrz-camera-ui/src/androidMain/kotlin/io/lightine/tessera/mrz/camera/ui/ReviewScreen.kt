@@ -52,7 +52,6 @@ import io.lightine.tessera.mrz.model.TD3
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.mrz.recognition.CountryCode
 import io.lightine.tessera.mrz.recognition.DocumentType
-import io.lightine.tessera.types.errors.MrzBirthDateImplausiblyOld
 import io.lightine.tessera.types.errors.MrzCheckDigitMismatch
 import io.lightine.tessera.types.errors.MrzExpiryDateAfterSingleLetterPassportLimit
 import io.lightine.tessera.types.errors.MrzExpiryDateCenturyNotInferred
@@ -343,9 +342,7 @@ internal fun parseObservations(parse: ParseResult): List<Observation> {
 /**
  * The plain-language note for one parser [warning], or null when it has no row. Exhaustive over the sealed
  * [MrzWarning], so a new warning subtype fails to compile here until it is given a note (or a deliberate null).
- * The suppression is for [MrzBirthDateImplausiblyOld]: deprecated and never reported (removed at 1.0), so no row.
  */
-@Suppress("DEPRECATION")
 @Composable
 private fun warningText(warning: MrzWarning): String? =
     when (warning) {
@@ -388,10 +385,6 @@ private fun warningText(warning: MrzWarning): String? =
 
         is MrzSexCharacterX -> {
             stringResource(R.string.tessera_scanner_obs_warning_sex_x)
-        }
-
-        is MrzBirthDateImplausiblyOld -> {
-            null
         }
     }
 
