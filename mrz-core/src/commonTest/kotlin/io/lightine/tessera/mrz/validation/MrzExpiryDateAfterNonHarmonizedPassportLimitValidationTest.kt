@@ -51,7 +51,7 @@ class MrzExpiryDateAfterNonHarmonizedPassportLimitValidationTest {
     }
 
     @Test
-    fun a_one_letter_passport_expiring_in_2040_is_reported_on_every_entry_point() {
+    fun a_non_harmonized_passport_expiring_in_2040_is_reported_on_every_entry_point() {
         val lines = td3(expiry = "400314")
         val expected = listOf(MrzExpiryDateAfterNonHarmonizedPassportLimit(rawDocumentCode = "P<", expiryDate = LocalDate(2040, 3, 14)))
         val parsed = MrzParser.parse(lines, referenceTime)
