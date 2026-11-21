@@ -15,7 +15,7 @@ import kotlinx.datetime.LocalDate
  * @property rawMonth The two month digits as printed.
  * @property rawDay The two day digits as printed.
  * @property referenceDate The UTC date the expiry year was compared with.
- * @since 0.8.0
+ * @since 1.0.0
  */
 public data class MrzExpiryDateCenturyNotInferred(
     val rawYear: String,
