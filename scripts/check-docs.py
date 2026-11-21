@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Documentation checks for Tessera. Python 3 stdlib only.
 
-Reads files, writes nothing, needs no secret, and uses the network only in `shelf --live`. Run from the repo root
+Reads files, writes nothing, needs no secret, and uses the network only in `shelf --live` and
+`samples --live`. Run from the repo root
 with `python3 -I scripts/check-docs.py <command>`. Rule: .claude/rules/documentation.md.
 
 Commands and where they run:
@@ -21,6 +22,11 @@ Commands and where they run:
                    how-to by its exact title, with the page's KB article URL.
   shelf DIR        The same rules over a local folder of exported pages. Offline: this is
                    how the rules are tested.
+  samples --live   Release gate. Reads every public tutorial and how-to from the live KB
+                   (anonymous HTTPS, like shelf --live). Each Kotlin code block of a page
+                   matches, whitespace aside, its region `// region TES-A-<n> block <k>` in
+                   the :samples module (samples/kotlin), which CI compiles. A block with no
+                   region, or a region with no block, is a finding too.
 
 Exit 0: clean. Exit 1: findings (listed as path:line: message). Exit 2: could not run.
 """
@@ -493,7 +499,8 @@ def swift_findings(rel, text):
 
 def main_sources(root):
     for rel in tracked_files(root):
-        if rel.endswith(".kt") and re.search(r"(^|/)src/[A-Za-z]*Main/", rel):
+        # samples/ holds the documentation examples (the `samples` command checks them), not SDK API.
+        if rel.endswith(".kt") and re.search(r"(^|/)src/[A-Za-z]*Main/", rel) and not rel.startswith("samples/"):
             yield rel
 
 
@@ -770,6 +777,146 @@ def cmd_shelf(root, shelf, matrix_rel, llms_rel, live=False, fetch=http_get_json
     return report(findings, "shelf")
 
 
+# ------------------------------------------------------------------ samples
+
+SAMPLES_DIR = "samples/kotlin"   # the :samples module: compiled sources plus build-scripts/
+SAMPLE_LANGS = {"kotlin", "kt", "kts"}
+FENCE_RE = re.compile(r"^(\s*)(`{3,}|~{3,})\s*([\w+-]*)")
+LABEL_RE = re.compile(r"^\s*`([^`\s]+)`\s*$")
+REGION_RE = re.compile(r"^\s*//\s*region\s+(TES-A-\d+)\s+block\s+(\d+)(?:\s+part\s+(\d+))?\s*$")
+ENDREGION_RE = re.compile(r"^\s*//\s*endregion\b")
+
+
+def kotlin_blocks(text):
+    """The Kotlin code blocks of a page, in order: [(number, label, code)]. The label is the
+    backticked file path on the line above the block (the page's own label), or ''."""
+    blocks, lines, i = [], text.splitlines(), 0
+    while i < len(lines):
+        m = FENCE_RE.match(lines[i])
+        if not m:
+            i += 1
+            continue
+        indent, fence, lang = len(m.group(1)), m.group(2), m.group(3).lower()
+        j, body = i + 1, []
+        while j < len(lines) and not re.match(r"^\s*" + re.escape(fence[0]) + "{%d,}\\s*$" % len(fence), lines[j]):
+            body.append(lines[j][indent:] if lines[j][:indent].strip() == "" else lines[j].lstrip())
+            j += 1
+        if lang in SAMPLE_LANGS:
+            k = i - 1
+            while k >= 0 and not lines[k].strip():
+                k -= 1
+            label = LABEL_RE.match(lines[k]) if k >= 0 else None
+            blocks.append((len(blocks) + 1, label.group(1) if label else "", "\n".join(body)))
+        i = j + 1
+    return blocks
+
+
+def sample_regions(files):
+    """files: {rel path: text}. Returns ({(page id, block no): (rel, line, code)}, findings).
+    A block whose imports must sit at the top of the file while its code sits in a function is
+    split into parts (`// region TES-A-<n> block <k> part <p>`); the parts join in part order."""
+    parts, findings = {}, []
+    for rel in sorted(files):
+        open_at = None
+        for no, line in enumerate(files[rel].splitlines(), 1):
+            m = REGION_RE.match(line)
+            if m:
+                if open_at:
+                    findings.append("%s:%d: region inside the region opened on line %d" % (rel, no, open_at[2]))
+                open_at = ((m.group(1), int(m.group(2)), int(m.group(3) or 0)), [], no)
+            elif ENDREGION_RE.match(line) and open_at:
+                (aid, block, part), body, start = open_at
+                got = parts.setdefault((aid, block), {})
+                name = "%s block %d%s" % (aid, block, " part %d" % part if part else "")
+                if part in got:
+                    findings.append("%s:%d: second region for %s (first in %s:%d)"
+                                    % (rel, start, name, got[part][0], got[part][1]))
+                elif got and (0 in got or part == 0):
+                    findings.append("%s:%d: %s mixes a whole region with parts" % (rel, start, name))
+                else:
+                    got[part] = (rel, start, "\n".join(body))
+                open_at = None
+            elif open_at:
+                open_at[1].append(line)
+        if open_at:
+            findings.append("%s:%d: region has no endregion" % (rel, open_at[2]))
+    regions = {}
+    for key, got in parts.items():
+        first = got[min(got)]
+        regions[key] = (first[0], first[1], "\n".join(got[p][2] for p in sorted(got)))
+    return regions, findings
+
+
+def code_key(code):
+    """Whitespace-normalized code: each line trimmed, blank lines dropped."""
+    return [ln.strip() for ln in code.splitlines() if ln.strip()]
+
+
+def samples_findings(pages, regions):
+    """pages: {page id: (title, page text)}. Compares every Kotlin block with its sample region."""
+    findings, seen = [], set()
+    for aid in sorted(pages, key=lambda a: int(a.rsplit("-", 1)[1])):
+        title, text = pages[aid]
+        for no, label, code in kotlin_blocks(text):
+            seen.add((aid, no))
+            where = "%s block %d%s" % (aid, no, " (%s)" % label if label else "")
+            if (aid, no) not in regions:
+                findings.append("%s: no sample region '// region %s block %d' (%s)" % (where, aid, no, title))
+                continue
+            rel, line, sample = regions[(aid, no)]
+            page_lines, sample_lines = code_key(code), code_key(sample)
+            if page_lines != sample_lines:
+                k = next((i for i, (a, b) in enumerate(zip(page_lines, sample_lines)) if a != b),
+                         min(len(page_lines), len(sample_lines)))
+                findings.append("%s:%d: %s differs from the page at line %d of the block: page '%s', sample '%s'"
+                                % (rel, line, where, k + 1,
+                                   page_lines[k] if k < len(page_lines) else "(end)",
+                                   sample_lines[k] if k < len(sample_lines) else "(end)"))
+    for key in sorted(set(regions) - seen):
+        rel, line, _ = regions[key]
+        findings.append("%s:%d: region for %s block %d has no such block on a public page" % (rel, line, key[0], key[1]))
+    return findings
+
+
+def local_sample_files(root):
+    base = os.path.join(root, SAMPLES_DIR)
+    files = {}
+    for dirpath, dirnames, filenames in os.walk(base):
+        dirnames[:] = [d for d in dirnames if d not in ("build", ".gradle")]
+        for name in filenames:
+            if name.endswith((".kt", ".kts")):
+                path = os.path.join(dirpath, name)
+                files[os.path.relpath(path, root)] = read(path)
+    return files
+
+
+def fetch_live_pages(fetch):
+    """Every public tutorial and how-to: {page id: (title, page text)}. Any failure raises."""
+    pages, _ = fetch_live(fetch)
+    out = {}
+    for aid, page in pages.items():
+        if not page["kind"]:
+            continue
+        art = fetch("%s/api/articles/%s?fields=content" % (KB_BASE, aid))
+        content = art.get("content") if isinstance(art, dict) else None
+        if not isinstance(content, str):
+            raise ValueError("%s came back without content" % aid)
+        out[aid] = (page["title"], content)
+    return out
+
+
+def cmd_samples(root, fetch=http_get_json):
+    if not os.path.isdir(os.path.join(root, SAMPLES_DIR)):
+        fail("no samples module at %s" % os.path.join(root, SAMPLES_DIR))
+    regions, findings = sample_regions(local_sample_files(root))
+    try:
+        pages = fetch_live_pages(fetch)
+    except Exception as exc:  # network, HTTP, JSON, or shape: the check cannot run
+        fail("cannot read the live KB at %s: %s: %s" % (KB_BASE, type(exc).__name__, exc))
+    findings += samples_findings(pages, regions)
+    return report(findings, "samples")
+
+
 # ------------------------------------------------------------------ entry point
 
 def main(argv=None):
@@ -789,6 +936,9 @@ def main(argv=None):
                     help="read the live public KB anonymously over HTTPS (release gate only)")
     sh.add_argument("--matrix", default="start/capability-matrix.md", help="matrix page, relative to the folder")
     sh.add_argument("--llms", default="llms.txt", help="llms.txt, relative to the repo root")
+    sa = sub.add_parser("samples")
+    sa.add_argument("--live", action="store_true", required=True,
+                    help="read the live public KB anonymously over HTTPS (release gate only)")
     args = ap.parse_args(argv)
     root = os.path.abspath(args.root)
     if args.cmd == "pointers":
@@ -797,6 +947,8 @@ def main(argv=None):
         return cmd_style(root, args.files, args.kdoc, args.swift)
     if args.cmd == "code-docs":
         return cmd_code_docs(root, args.swift)
+    if args.cmd == "samples":
+        return cmd_samples(root)
     if not args.live and not args.shelf:
         ap.error("shelf needs a folder, or --live")
     if args.live and args.shelf:

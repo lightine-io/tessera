@@ -54,7 +54,7 @@ issue, and the handoff points at the issue.
 - One platform per page. Kotlin pages cover JVM and Android; Swift pages cover iOS.
 - Code in a page comes from a compiled sample: Kotlin in the `:samples` module, Swift
   in tessera-swift `Samples/`. The page names the sample file above the block. Until
-  `:samples` exists, check every symbol against the source and list the files in the
+  a page's code has its sample, check every symbol against the source and list the files in the
   page's `sources:` header.
 - Across homes, link by URL. The link text is the page title, never a file path.
 - Pages for a feature are written with the feature and published to the public KB at
@@ -81,3 +81,12 @@ Tick each item or say why it does not apply.
   pages are the consumer pages, and pages under "Contribute to Tessera" need no listing.
   `shelf <folder>` applies the same rules to a local folder of exported pages (offline; the
   tests use it). It runs at the release gate only, because a PR cannot change the pages.
+- Release gate: `check-docs.py samples --live` reads every public tutorial and how-to the
+  same way. Each Kotlin code block matches, whitespace aside, its region in the `:samples`
+  module (`samples/kotlin`): `// region TES-A-<n> block <k>` up to `// endregion`, with any
+  wrapper the code needs outside the region. A block whose imports go at the top of the file
+  splits into `part 1` and `part 2`. A block with no region, or a region with no block, is a
+  finding. Build-script blocks sit as text in `samples/kotlin/build-scripts/`; everything
+  else compiles in CI (`check` for the JVM, `compileAndroidMain` for Android). A network or
+  HTTP error stops it with exit 2. `scripts/fetch-doc-samples.py` writes a page's blocks,
+  already wrapped in region lines, to a folder for writing a new sample.

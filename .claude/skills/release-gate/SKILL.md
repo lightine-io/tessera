@@ -36,6 +36,11 @@ maintainer. Record the results as a comment on the release card.
      page, and the repo-root `llms.txt` lists every consumer tutorial and how-to by exact
      title with its KB article URL. Publish the release's pages first. Exit 2 means the KB
      could not be read (network or HTTP error): rerun, never skip it.
+   - `python3 -I scripts/check-docs.py samples --live` exits 0. It reads every public
+     tutorial and how-to the same way and compares each Kotlin code block with its region
+     in the `:samples` module (`samples/kotlin`), which CI compiles. A changed block, a
+     block with no region, or a region with no block is a finding: fix the page or the
+     sample so they match again. Exit 2 means the KB could not be read: rerun, never skip it.
    - Scope against reality: everything `[Unreleased]` and the release's pages claim
      exists and is tested. Implement the gap or narrow the claim; never tag before they
      match.

@@ -1,0 +1,12 @@
+// Build-script blocks of the page TES-A-98 (https://lightine.youtrack.cloud/articles/TES-A-98).
+// Kept as text for the samples check; never compiled or applied. Labels as on the page.
+
+// region TES-A-98 block 1
+dependencies {
+    implementation(platform("io.lightine.tessera:tessera-bom:0.7.0"))
+    implementation("io.lightine.tessera:tessera-mrz-camera")
+    implementation("androidx.camera:camera-compose:1.6.2")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+    implementation("androidx.compose.foundation:foundation:1.12.1")
+}
+// endregion
