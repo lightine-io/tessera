@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import io.lightine.tessera.mrz.camera.RecognizedLine
 import io.lightine.tessera.mrz.camera.RecognizedText
 import io.lightine.tessera.mrz.parsing.ParseResult
+import io.lightine.tessera.types.vocabulary.DocumentCategory
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -340,13 +341,20 @@ class ScannerUiStateSaverTest {
     /** One representative, fully-populated instance per [ScannerUiState] variant, keyed by [KClass]. */
     private fun representativeStates(): Map<KClass<out ScannerUiState>, ScannerUiState> =
         mapOf(
-            ScannerUiState.Scanning::class to ScannerUiState.Scanning(struggling = true, gathering = true),
+            ScannerUiState.Scanning::class to
+                ScannerUiState.Scanning(
+                    struggling = true,
+                    gathering = true,
+                    notAccepted = DocumentCategory.PASSPORT,
+                ),
             ScannerUiState.CameraInUse::class to ScannerUiState.CameraInUse,
             ScannerUiState.CameraUnavailable::class to ScannerUiState.CameraUnavailable,
             ScannerUiState.AwaitingSavedImagePick::class to ScannerUiState.AwaitingSavedImagePick,
             ScannerUiState.SavedImageAnalyzing::class to ScannerUiState.SavedImageAnalyzing,
             ScannerUiState.SavedImageEmpty::class to ScannerUiState.SavedImageEmpty,
-            ScannerUiState.ManualRaw::class to typed,
+            ScannerUiState.SavedImageNotAccepted::class to
+                ScannerUiState.SavedImageNotAccepted(DocumentCategory.PASSPORT),
+            ScannerUiState.ManualRaw::class to typed.copy(notAccepted = DocumentCategory.VISA),
             ScannerUiState.ReadFailed::class to readFailed,
             ScannerUiState.Review::class to review(ScanMethod.CAMERA),
         )
@@ -365,6 +373,8 @@ class ScannerUiStateSaverTest {
             ScannerUiState.SavedImageAnalyzing::class -> ScannerUiState.AwaitingSavedImagePick
 
             ScannerUiState.SavedImageEmpty::class -> ScannerUiState.SavedImageEmpty
+
+            ScannerUiState.SavedImageNotAccepted::class -> ScannerUiState.AwaitingSavedImagePick
 
             ScannerUiState.ManualRaw::class -> ScannerUiState.ManualRaw()
 

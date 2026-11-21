@@ -225,6 +225,23 @@
     <string name="tessera_scanner_category_visa">visa</string>
     <string name="tessera_scanner_category_other">other</string>
 
+    <!-- ============================ Not accepted (the app's intake rule) ============================ -->
+    <!-- Shown when a reading is of a kind of document the app does not accept (MrzScannerConfig
+         acceptedDocumentTypes): over the live camera preview, on its own screen after a photo, and as a note on
+         the manual-entry screen. Two facts only: what kind was read, and what kinds the app accepts. Never
+         "invalid", "wrong" or "rejected" - the SDK does not judge the document. One title per category, so a
+         translation can get the article and grammar right. -->
+    <string name="tessera_scanner_not_accepted_title_passport">This looks like a passport</string>
+    <string name="tessera_scanner_not_accepted_title_identity_card">This looks like an ID card</string>
+    <string name="tessera_scanner_not_accepted_title_residence_permit">This looks like a residence permit</string>
+    <string name="tessera_scanner_not_accepted_title_visa">This looks like a visa</string>
+    <string name="tessera_scanner_not_accepted_title_other">This looks like another kind of document</string>
+    <!-- The kinds the app accepts. "%1$s" is the list of category names above (tessera_scanner_category_*),
+         joined with tessera_scanner_not_accepted_separator. -->
+    <string name="tessera_scanner_not_accepted_body">This app accepts: %1$s.</string>
+    <!-- Goes between two category names in tessera_scanner_not_accepted_body. Quoted to keep the space. -->
+    <string name="tessera_scanner_not_accepted_separator">", "</string>
+
     <!-- ================================ Observations (per check digit / date / provenance) ================================ -->
     <!-- These are stated observations, never a "valid" verdict. -->
 

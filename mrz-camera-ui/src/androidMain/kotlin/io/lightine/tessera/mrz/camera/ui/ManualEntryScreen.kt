@@ -37,6 +37,7 @@ import io.lightine.tessera.mrz.camera.RecognizedText
 import io.lightine.tessera.mrz.camera.ScanQuality
 import io.lightine.tessera.mrz.parsing.ManualMrzReader
 import io.lightine.tessera.mrz.parsing.ParseResult
+import io.lightine.tessera.types.vocabulary.DocumentCategory
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -143,12 +144,15 @@ internal fun manualObservationParts(text: String): List<ManualLengthNote> =
  * @param state the in-progress input ([ScannerUiState.ManualRaw.text]).
  * @param onTextChange called with the new text on every edit.
  * @param onRead called when the user taps "Read".
+ * @param acceptedDocumentTypes the app's intake rule, named in the not-accepted note (TES-103) when
+ *   [ScannerUiState.ManualRaw.notAccepted] is set.
  */
 @Composable
 internal fun ManualRawContent(
     state: ScannerUiState.ManualRaw,
     onTextChange: (String) -> Unit,
     onRead: () -> Unit,
+    acceptedDocumentTypes: Set<DocumentCategory> = DocumentCategory.entries.toSet(),
 ) {
     // The whole screen is ONE scroll: title → field → observations → action. imePadding shrinks the scroll
     // viewport when the keyboard opens, so the focused field scrolls into view and the user scrolls down to
@@ -217,6 +221,12 @@ internal fun ManualRawContent(
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.liveRegionOf(LiveRegionMode.Polite),
             )
+        }
+
+        // TES-103: the typed lines read as a kind of document the app does not accept. The text stays; the note
+        // states what kind was read and what kinds the app accepts, and clears on the next edit.
+        state.notAccepted?.let { read ->
+            ManualNotAcceptedNote(read = read, acceptedDocumentTypes = acceptedDocumentTypes)
         }
 
         // Disabled while the field is blank — there is nothing to read, and attempting an empty parse would

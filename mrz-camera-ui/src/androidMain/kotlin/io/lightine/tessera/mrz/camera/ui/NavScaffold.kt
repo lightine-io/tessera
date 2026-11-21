@@ -87,7 +87,8 @@ internal fun switcherMethods(enabledMethods: Set<ScanMethod>): List<ScanMethod> 
  * appears on. Those are the ones a user is actively *reading from* and might want to switch away from:
  * [`Scanning`][ScannerUiState.Scanning], [`ManualRaw`][ScannerUiState.ManualRaw], and the saved-image entry
  * points ([`AwaitingSavedImagePick`][ScannerUiState.AwaitingSavedImagePick] /
- * [`SavedImageEmpty`][ScannerUiState.SavedImageEmpty]). It is deliberately NOT shown on outcome / gate screens
+ * [`SavedImageEmpty`][ScannerUiState.SavedImageEmpty] / [`SavedImageNotAccepted`][ScannerUiState.SavedImageNotAccepted]).
+ * It is deliberately NOT shown on outcome / gate screens
  * (review, expanded, read-failed, the camera-error notices, analyzing, and the permission faces),
  * where switching method mid-outcome would be a confusing detour. Pure so the rule is host-testable.
  */
@@ -97,6 +98,7 @@ internal fun showsMethodSwitcher(state: ScannerUiState): Boolean =
         is ScannerUiState.ManualRaw,
         ScannerUiState.AwaitingSavedImagePick,
         ScannerUiState.SavedImageEmpty,
+        is ScannerUiState.SavedImageNotAccepted,
         -> true
 
         else -> false
@@ -325,7 +327,13 @@ private fun methodLabel(method: ScanMethod): String =
 internal fun activeMethod(state: ScannerUiState): ScanMethod? =
     when (state) {
         is ScannerUiState.Scanning -> ScanMethod.CAMERA
+
         is ScannerUiState.ManualRaw -> ScanMethod.MANUAL_ENTRY
-        ScannerUiState.AwaitingSavedImagePick, ScannerUiState.SavedImageEmpty -> ScanMethod.SAVED_IMAGE
+
+        ScannerUiState.AwaitingSavedImagePick,
+        ScannerUiState.SavedImageEmpty,
+        is ScannerUiState.SavedImageNotAccepted,
+        -> ScanMethod.SAVED_IMAGE
+
         else -> null
     }

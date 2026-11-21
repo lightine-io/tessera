@@ -97,7 +97,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import io.lightine.tessera.mrz.camera.CameraError
 import io.lightine.tessera.mrz.camera.CameraXMrzScanner
-import io.lightine.tessera.mrz.camera.ConsensusVerdict
 import io.lightine.tessera.mrz.camera.MlKitMrzTextRecognizer
 import io.lightine.tessera.mrz.camera.MrzDecodeConsensus
 import io.lightine.tessera.mrz.camera.MrzScanResult
@@ -106,6 +105,7 @@ import io.lightine.tessera.mrz.camera.SavedImageMrzReader
 import io.lightine.tessera.mrz.camera.SavedImageReadingAcknowledgement
 import io.lightine.tessera.mrz.camera.mlKitSavedImageRecognizer
 import io.lightine.tessera.mrz.parsing.ParseResult
+import io.lightine.tessera.types.vocabulary.DocumentCategory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -269,6 +269,11 @@ private fun ScannerFlow(
     // state) so updating it never triggers recomposition. `elapsedRealtime` is monotonic (no wall-clock jumps).
     val lastDecodeAtMs = remember { longArrayOf(0L) }
 
+    // TES-103: wall-clock of the last frame that read a document the app does not accept, so the live notice
+    // stays while that document is in view and drops NOT_ACCEPTED_NOTICE_LINGER_MS after it leaves. Same
+    // non-state holder as lastDecodeAtMs.
+    val lastNotAcceptedAtMs = remember { longArrayOf(0L) }
+
     // TES-93: the in-progress manual-entry text, hoisted here (survives the flow's lifetime) rather than
     // living only inside ScannerUiState.ManualRaw — which onSelectMethod / rescan used to rebuild from scratch
     // (an empty ManualRaw()), silently discarding whatever the user had typed on a Manual→other→Manual
@@ -301,11 +306,29 @@ private fun ScannerFlow(
     // Routing the moment the reader decodes an MRZ, delegated to the pure decision in routeDecode: a parse
     // failure shows the "couldn't read" screen, instant-return hands the decode straight back, and review
     // mode parks it on the review screen. Kept pure (no camera, no Compose) so it is host-unit-testable.
+    //
+    // TES-103: a reading of a kind the app does not accept (config.acceptedDocumentTypes) is never reviewed or
+    // returned; each method states it in its own place and lets the person go on: the photo method shows its
+    // not-accepted screen, manual entry stays on the entry screen with a note, and the camera shows a notice
+    // over the preview (the camera path filters before it gets here, in stepLiveDecode, so the CAMERA branch is
+    // only a fallback).
     val routeDecoded = { decoded: MrzScanResult.Decoded, source: ScanMethod ->
-        when (val route = routeDecode(decoded, config.reviewMode)) {
-            is DecodeRoute.ShowReadFailed -> uiState = ScannerUiState.ReadFailed(route.capturedText)
-            is DecodeRoute.ReturnConfirmed -> onResult(MrzScannerResult.Confirmed(route.decoded))
-            is DecodeRoute.ShowReview -> uiState = ScannerUiState.Review(route.decoded, source)
+        when (val route = routeDecode(decoded, config.reviewMode, config.acceptedDocumentTypes)) {
+            is DecodeRoute.ShowReadFailed -> {
+                uiState = ScannerUiState.ReadFailed(route.capturedText)
+            }
+
+            is DecodeRoute.ReturnConfirmed -> {
+                onResult(MrzScannerResult.Confirmed(route.decoded))
+            }
+
+            is DecodeRoute.ShowReview -> {
+                uiState = ScannerUiState.Review(route.decoded, source)
+            }
+
+            is DecodeRoute.NotAccepted -> {
+                uiState = notAcceptedStateFor(source, route.read, uiState, manualDraft)
+            }
         }
     }
 
@@ -332,29 +355,55 @@ private fun ScannerFlow(
                 // only once consensusReads frames agree on the same document, so a transient misread the MRZ
                 // has no check digit for (a filler `<` read as a letter in the name — ASGAR<→ASGARK) can't win
                 // on one frame. Gathering → keep scanning; Confirmed → route once (the latch stops repeats).
-                if (!decodeRouted && effect.decoded.parse !is ParseResult.Failure) {
-                    val verdict = consensus.offer(effect.decoded)
-                    when (verdict) {
-                        is ConsensusVerdict.Confirmed -> {
-                            decodeRouted = true
-                            if (config.hapticFeedback) haptics.performHapticFeedback(HapticFeedbackType.Confirm)
-                            routeDecoded(effect.decoded, ScanMethod.CAMERA)
-                        }
+                //
+                // TES-103: the pure stepLiveDecode also applies the app's intake rule. A reading the frames agree
+                // on but the app does not accept never trips the latch and never counts as the confirmed reading:
+                // the consensus is reset, the preview shows a notice, and the session keeps scanning, so a later
+                // document of an accepted kind still routes. With every kind accepted (the default) it behaves
+                // exactly as before.
+                when (
+                    val step =
+                        stepLiveDecode(
+                            decoded = effect.decoded,
+                            alreadyRouted = decodeRouted,
+                            consensus = consensus,
+                            acceptedDocumentTypes = config.acceptedDocumentTypes,
+                        )
+                ) {
+                    LiveDecodeStep.Ignore -> {}
 
-                        // Frames are agreeing but the threshold isn't met yet — surface the "hold steady" cue so
-                        // the consensus wait reads as active feedback. Only while actually scanning, and getting a
-                        // decode means we're making progress, so it supersedes any struggling hint.
-                        is ConsensusVerdict.Gathering -> {
-                            lastDecodeAtMs[0] = SystemClock.elapsedRealtime()
-                            val current = uiState
-                            if (current is ScannerUiState.Scanning && !current.gathering) {
-                                // copy() so a struggling flag already latched is preserved UNDER the gathering
-                                // cue — the two are render-precedence, not mutually exclusive; the one-shot
-                                // struggle timer never re-fires, so overwriting it here would kill the "still
-                                // looking / Enter details manually" escape for the rest of the session.
-                                uiState = current.copy(gathering = true)
-                            }
+                    is LiveDecodeStep.Route -> {
+                        decodeRouted = true
+                        if (config.hapticFeedback) haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+                        routeDecoded(step.decoded, ScanMethod.CAMERA)
+                    }
+
+                    // Frames are agreeing but the threshold isn't met yet — surface the "hold steady" cue so
+                    // the consensus wait reads as active feedback. Only while actually scanning, and getting a
+                    // decode means we're making progress, so it supersedes any struggling hint.
+                    LiveDecodeStep.Gathering -> {
+                        lastDecodeAtMs[0] = SystemClock.elapsedRealtime()
+                        val current = uiState
+                        if (current is ScannerUiState.Scanning && (!current.gathering || current.notAccepted != null)) {
+                            // copy() so a struggling flag already latched is preserved UNDER the gathering
+                            // cue — the two are render-precedence, not mutually exclusive; the one-shot
+                            // struggle timer never re-fires, so overwriting it here would kill the "still
+                            // looking / Enter details manually" escape for the rest of the session. A new
+                            // reading gathering also replaces a not-accepted notice (TES-103).
+                            uiState = current.copy(gathering = true, notAccepted = null)
                         }
+                    }
+
+                    // TES-103: a not-accepted document is still in view. No "hold steady" cue (it is not heading
+                    // for review); only keep the notice alive while it shows.
+                    is LiveDecodeStep.NotAcceptedGathering -> {
+                        lastNotAcceptedAtMs[0] = SystemClock.elapsedRealtime()
+                    }
+
+                    is LiveDecodeStep.NotAccepted -> {
+                        lastNotAcceptedAtMs[0] = SystemClock.elapsedRealtime()
+                        val next = showNotAcceptedNotice(uiState, step.read)
+                        if (next != uiState) uiState = next
                     }
                 }
             }
@@ -383,6 +432,13 @@ private fun ScannerFlow(
                     // left the frame stops producing decodes and clears within GATHERING_CUE_LINGER_MS.
                     if (next.gathering && SystemClock.elapsedRealtime() - lastDecodeAtMs[0] > GATHERING_CUE_LINGER_MS) {
                         next = next.copy(gathering = false)
+                    }
+                    // TES-103: the not-accepted notice drops a while after that document left the view, so the
+                    // framing guide (or the struggling hint) comes back.
+                    if (next.notAccepted != null &&
+                        SystemClock.elapsedRealtime() - lastNotAcceptedAtMs[0] > NOT_ACCEPTED_NOTICE_LINGER_MS
+                    ) {
+                        next = next.copy(notAccepted = null)
                     }
                     if (next != current) uiState = next
                 }
@@ -642,6 +698,7 @@ private fun ScannerBody(
                 config = config,
                 struggling = state.struggling,
                 gathering = state.gathering,
+                notAccepted = state.notAccepted,
                 onCameraResult = onCameraResult,
                 onStruggling = onStruggling,
                 onManualEntry = onManualEntry,
@@ -694,7 +751,7 @@ private fun ScannerBody(
                 // a method switch away and back, or a rescan back into manual entry.
                 onTextChange = {
                     onManualDraftChange(it)
-                    setState(state.copy(text = it, parseFailed = false))
+                    setState(state.copy(text = it, parseFailed = false, notAccepted = null))
                 },
                 // Assemble a Decoded from the typed text (pure, host-tested; format auto-detected, TES-100). A
                 // Success / PartialSuccess routes to review (or straight back under INSTANT_RETURN). A parse
@@ -710,6 +767,7 @@ private fun ScannerBody(
                         onDecoded(decoded, ScanMethod.MANUAL_ENTRY)
                     }
                 },
+                acceptedDocumentTypes = config.acceptedDocumentTypes,
             )
         }
 
@@ -726,6 +784,16 @@ private fun ScannerBody(
 
         ScannerUiState.SavedImageEmpty -> {
             SavedImageEmptyContent(
+                onChooseDifferent = enterSavedImage,
+                onManualEntry = onManualEntry,
+                showManualEntry = showManualEntry,
+            )
+        }
+
+        is ScannerUiState.SavedImageNotAccepted -> {
+            SavedImageNotAcceptedContent(
+                read = state.read,
+                acceptedDocumentTypes = config.acceptedDocumentTypes,
                 onChooseDifferent = enterSavedImage,
                 onManualEntry = onManualEntry,
                 showManualEntry = showManualEntry,
@@ -758,6 +826,15 @@ internal sealed interface DecodeRoute {
     data class ShowReview(
         val decoded: MrzScanResult.Decoded,
     ) : DecodeRoute
+
+    /**
+     * TES-103: the reading is of category [read], which the app's
+     * [`acceptedDocumentTypes`][MrzScannerConfig.acceptedDocumentTypes] does not include. Not reviewed, not
+     * returned; the screen states what was read and what the app accepts.
+     */
+    data class NotAccepted(
+        val read: DocumentCategory,
+    ) : DecodeRoute
 }
 
 /**
@@ -766,16 +843,21 @@ internal sealed interface DecodeRoute {
  * [DecodeRoute.ReturnConfirmed] and [ReviewMode.REVIEW] to [DecodeRoute.ShowReview]. A `PartialSuccess`
  * (check-digit mismatch) is a non-failure and follows the same path as `Success` - the UI never treats a
  * mismatch as a failure or diverts it (Principle 1).
+ *
+ * TES-103: a non-failure reading whose category the app does not accept ([notAcceptedCategory] under
+ * [acceptedDocumentTypes]) routes to [DecodeRoute.NotAccepted] in BOTH modes, so it is never returned under
+ * instant-return. A reading with no category (`broadCategory` is `null`) is not filtered. With every category
+ * accepted (the default) the routing is exactly as before.
  */
 internal fun routeDecode(
     decoded: MrzScanResult.Decoded,
     reviewMode: ReviewMode,
-): DecodeRoute =
-    when {
-        decoded.parse is ParseResult.Failure -> DecodeRoute.ShowReadFailed(decoded.recognizedText)
-        reviewMode == ReviewMode.INSTANT_RETURN -> DecodeRoute.ReturnConfirmed(decoded)
-        else -> DecodeRoute.ShowReview(decoded)
-    }
+    acceptedDocumentTypes: Set<DocumentCategory> = DocumentCategory.entries.toSet(),
+): DecodeRoute {
+    if (decoded.parse is ParseResult.Failure) return DecodeRoute.ShowReadFailed(decoded.recognizedText)
+    notAcceptedCategory(decoded, acceptedDocumentTypes)?.let { return DecodeRoute.NotAccepted(it) }
+    return if (reviewMode == ReviewMode.INSTANT_RETURN) DecodeRoute.ReturnConfirmed(decoded) else DecodeRoute.ShowReview(decoded)
+}
 
 /**
  * What the system Back key should do from the current [ScannerUiState] - the pure decision behind
@@ -809,7 +891,8 @@ internal sealed interface BackEffect {
  *  * [`ReadFailed`][ScannerUiState.ReadFailed] (reached only from the saved-image flow) →
  *    [BackEffect.ReenterSavedImagePick];
  *  * the saved-image prompts ([`AwaitingSavedImagePick`][ScannerUiState.AwaitingSavedImagePick] /
- *    [`SavedImageEmpty`][ScannerUiState.SavedImageEmpty]) → back to the live camera when it is enabled
+ *    [`SavedImageEmpty`][ScannerUiState.SavedImageEmpty] /
+ *    [`SavedImageNotAccepted`][ScannerUiState.SavedImageNotAccepted]) → back to the live camera when it is enabled
  *    ([BackEffect.ReturnToCamera] - this is how a user who switched Camera→Photo gets back), otherwise
  *    [BackEffect.Cancel] (saved-image is the actual entry point here, so there is nowhere else to go);
  *  * every other state (the root capture screens - [`Scanning`][ScannerUiState.Scanning],
@@ -829,7 +912,7 @@ internal fun backEffect(
             BackEffect.ReenterSavedImagePick
         }
 
-        ScannerUiState.AwaitingSavedImagePick, ScannerUiState.SavedImageEmpty -> {
+        ScannerUiState.AwaitingSavedImagePick, ScannerUiState.SavedImageEmpty, is ScannerUiState.SavedImageNotAccepted -> {
             if (cameraEnabled) BackEffect.ReturnToCamera else BackEffect.Cancel
         }
 
@@ -1058,6 +1141,8 @@ internal fun formatCountdown(remaining: Duration): String {
  * @param struggling whether the "still looking / type it instead" hint is overlaid on the preview.
  * @param gathering whether the "hold steady" gathering cue is overlaid on the preview (a read is being
  *   confirmed across frames); takes render precedence over [struggling].
+ * @param notAccepted the category of the last agreed reading the app does not accept, shown as a notice over
+ *   the preview (TES-103); `null` when there is none.
  * @param onCameraResult every scanner result off the stream, for the flow's continuous reducer.
  * @param onStruggling fired once the struggle timeout elapses with no decode (flips the flow to struggling).
  * @param onManualEntry the "type it instead" escape into manual entry.
@@ -1072,6 +1157,7 @@ private fun CameraCapture(
     config: MrzScannerConfig,
     struggling: Boolean,
     gathering: Boolean,
+    notAccepted: DocumentCategory?,
     onCameraResult: (MrzScanResult) -> Unit,
     onStruggling: () -> Unit,
     onManualEntry: () -> Unit,
@@ -1124,6 +1210,8 @@ private fun CameraCapture(
                 struggleTimeout = config.struggleTimeout,
                 struggling = struggling,
                 gathering = gathering,
+                notAccepted = notAccepted,
+                acceptedDocumentTypes = config.acceptedDocumentTypes,
                 showTorchButton = config.showTorchButton,
                 torchOnByDefault = config.torchOnByDefault,
                 onCameraResult = onCameraResult,
@@ -1237,6 +1325,8 @@ private fun CameraPreview(
     struggleTimeout: Duration,
     struggling: Boolean,
     gathering: Boolean,
+    notAccepted: DocumentCategory?,
+    acceptedDocumentTypes: Set<DocumentCategory>,
     showTorchButton: Boolean,
     torchOnByDefault: Boolean,
     onCameraResult: (MrzScanResult) -> Unit,
@@ -1369,6 +1459,8 @@ private fun CameraPreview(
                 MrzGuideOverlay(
                     gathering = gathering,
                     struggling = struggling,
+                    notAccepted = notAccepted,
+                    acceptedDocumentTypes = acceptedDocumentTypes,
                     onManualEntry = onManualEntry,
                     showManualEntry = showManualEntry,
                 )
@@ -1632,6 +1724,8 @@ internal fun MrzGuideOverlay(
     struggling: Boolean = false,
     onManualEntry: () -> Unit = {},
     showManualEntry: Boolean = true,
+    notAccepted: DocumentCategory? = null,
+    acceptedDocumentTypes: Set<DocumentCategory> = DocumentCategory.entries.toSet(),
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         // One shared geometry for the cut-out window: horizontally inset, a fixed band height, vertically
@@ -1705,6 +1799,13 @@ internal fun MrzGuideOverlay(
             when {
                 gathering -> {
                     GatheringHint()
+                }
+
+                // TES-103: what kind was read and what kinds the app accepts. Below gathering (a new reading
+                // takes over), above struggling (the person is pointing a document at the camera, so the
+                // notice is the more useful message).
+                notAccepted != null -> {
+                    NotAcceptedHint(read = notAccepted, acceptedDocumentTypes = acceptedDocumentTypes)
                 }
 
                 struggling -> {
