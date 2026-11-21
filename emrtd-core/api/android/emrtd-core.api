@@ -22,7 +22,13 @@ public final class io/lightine/tessera/emrtd/ChipAccessKey$Can : io/lightine/tes
 }
 
 public final class io/lightine/tessera/emrtd/ChipAccessKey$Mrz : io/lightine/tessera/emrtd/ChipAccessKey {
+	public static final field Companion Lio/lightine/tessera/emrtd/ChipAccessKey$Mrz$Companion;
 	public fun <init> (Ljava/lang/String;CLjava/lang/String;CLjava/lang/String;C)V
+	public static final fun fromPrintedFields (Ljava/lang/String;CLjava/lang/String;Ljava/lang/String;CLjava/lang/String;C)Lio/lightine/tessera/emrtd/ChipAccessKey$Mrz;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/ChipAccessKey$Mrz$Companion {
+	public final fun fromPrintedFields (Ljava/lang/String;CLjava/lang/String;Ljava/lang/String;CLjava/lang/String;C)Lio/lightine/tessera/emrtd/ChipAccessKey$Mrz;
 }
 
