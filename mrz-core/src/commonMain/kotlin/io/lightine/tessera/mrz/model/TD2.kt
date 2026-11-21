@@ -5,6 +5,8 @@ import io.lightine.tessera.types.vocabulary.MrzFormat
 /**
  * A parsed TD2 (smaller identity document) MRZ: two lines of 36 characters.
  *
+ * `toString()` shows no document values; they are in the properties.
+ *
  * @property rawLines The MRZ lines the document was read from.
  * @property commonFields The fields every format carries.
  * @property optionalData Optional data as printed: line 2, characters 29-35.
@@ -17,4 +19,7 @@ public data class TD2(
 ) : MrzDocument() {
     /** Always [MrzFormat.TD2]. */
     override val format: MrzFormat = MrzFormat.TD2
+
+    /** The format and the line count; never a document value. */
+    override fun toString(): String = "TD2(format=$format, lines=${rawLines.size})"
 }

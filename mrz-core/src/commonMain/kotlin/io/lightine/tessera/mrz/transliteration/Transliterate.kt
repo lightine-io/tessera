@@ -20,6 +20,8 @@ public fun TransliterationProfile.transliterate(input: String): TransliterationO
 /**
  * The outcome of [transliterate].
  *
+ * `toString()` shows no document values; they are in the properties.
+ *
  * @property profileIdentifier Identifier of the profile that ran.
  * @property originalInput The text as passed in.
  * @property normalizedInput The text after Unicode NFC normalization, as the profile saw it.
@@ -31,4 +33,7 @@ public data class TransliterationOutcome(
     val originalInput: String,
     val normalizedInput: String,
     val result: TransliterationResult,
-)
+) {
+    /** The profile and whether it succeeded; never a document value. */
+    override fun toString(): String = "TransliterationOutcome(profileIdentifier=$profileIdentifier, result=${result::class.simpleName})"
+}

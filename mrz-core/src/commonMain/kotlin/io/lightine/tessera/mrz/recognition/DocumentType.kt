@@ -6,6 +6,8 @@ import kotlin.jvm.JvmInline
 /**
  * A document type code as printed in an MRZ: one or two characters.
  *
+ * `toString()` shows no document values; the code is in [rawCode].
+ *
  * @property rawCode The code exactly as printed.
  * @since 0.1.0
  */
@@ -33,6 +35,9 @@ public value class DocumentType(
      */
     public val broadCategory: DocumentCategory?
         get() = category ?: firstLetterCategory(rawCode)
+
+    /** `DocumentType`, without the code. */
+    override fun toString(): String = "DocumentType"
 }
 
 /**

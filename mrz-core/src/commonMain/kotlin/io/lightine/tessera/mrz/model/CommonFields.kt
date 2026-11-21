@@ -7,6 +7,8 @@ import io.lightine.tessera.types.vocabulary.Sex
 /**
  * The MRZ fields that every format carries.
  *
+ * `toString()` shows no document values; they are in the properties.
+ *
  * @property documentType Document type code as printed, with trailing `<` removed.
  * @property issuingState Issuing state code as printed.
  * @property primaryIdentifier Name before the first `<<`. Each `<` reads as a space.
@@ -39,4 +41,7 @@ public data class CommonFields(
     val rawSex: Char,
     val dateOfExpiry: MrzDate,
     val checkDigits: MrzCheckDigits,
-)
+) {
+    /** That the name fills its whole line; never a document value. */
+    override fun toString(): String = "CommonFields(nameTruncated=$nameTruncated)"
+}

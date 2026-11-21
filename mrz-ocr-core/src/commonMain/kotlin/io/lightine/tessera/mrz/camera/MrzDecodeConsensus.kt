@@ -89,6 +89,9 @@ public class MrzDecodeConsensus
 /**
  * The outcome of offering one decoded frame to a [MrzDecodeConsensus].
  *
+ * [Confirmed] holds the decoded reading, and `toString()` on it shows no document values; they are
+ * in the properties.
+ *
  * @since 0.5.0
  */
 public sealed interface ConsensusVerdict {
@@ -112,5 +115,8 @@ public sealed interface ConsensusVerdict {
      */
     public data class Confirmed(
         public val decoded: MrzScanResult.Decoded,
-    ) : ConsensusVerdict
+    ) : ConsensusVerdict {
+        /** That a reading was agreed on; never a document value. */
+        override fun toString(): String = "Confirmed"
+    }
 }

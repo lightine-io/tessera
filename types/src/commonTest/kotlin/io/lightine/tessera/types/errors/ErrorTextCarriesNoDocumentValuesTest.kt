@@ -28,6 +28,9 @@ class ErrorTextCarriesNoDocumentValuesTest {
     private val sentinels: List<String> =
         listOf(text, "1987", "06-05", sentinelChar.toString(), sentinelYear, sentinelMonth, sentinelDay, "7")
 
+    private val unmappedCharacters: List<UnmappedCharacter> =
+        listOf(UnmappedCharacter(sentinelChar, 3), UnmappedCharacter('Q', 12))
+
     private val warnings: List<MrzWarning> =
         listOf(
             MrzExpiryDateAfterNonHarmonizedPassportLimit(text, sentinelDate),
@@ -77,6 +80,17 @@ class ErrorTextCarriesNoDocumentValuesTest {
                 assertFalse(sentinel in string, "toString carries '$sentinel': $string")
             }
         }
+    }
+
+    @Test
+    fun unmapped_character_to_string_shows_no_character() {
+        unmappedCharacters.forEach { character ->
+            sentinels.forEach { sentinel ->
+                assertFalse(sentinel in character.toString(), "toString carries '$sentinel': $character")
+            }
+        }
+        assertEquals("UnmappedCharacter(position=3)", unmappedCharacters[0].toString())
+        assertEquals("UnmappedCharacter(position=12)", unmappedCharacters[1].toString())
     }
 
     @Test

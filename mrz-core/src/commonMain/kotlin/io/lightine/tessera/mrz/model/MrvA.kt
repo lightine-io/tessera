@@ -5,6 +5,8 @@ import io.lightine.tessera.types.vocabulary.MrzFormat
 /**
  * A parsed MRV-A (Type-A visa) MRZ: two lines of 44 characters.
  *
+ * `toString()` shows no document values; they are in the properties.
+ *
  * @property rawLines The MRZ lines the document was read from.
  * @property commonFields The fields every format carries.
  * @property optionalData Optional data as printed: line 2, characters 29-44.
@@ -17,4 +19,7 @@ public data class MrvA(
 ) : MrzDocument() {
     /** Always [MrzFormat.MRV_A]. */
     override val format: MrzFormat = MrzFormat.MRV_A
+
+    /** The format and the line count; never a document value. */
+    override fun toString(): String = "MrvA(format=$format, lines=${rawLines.size})"
 }

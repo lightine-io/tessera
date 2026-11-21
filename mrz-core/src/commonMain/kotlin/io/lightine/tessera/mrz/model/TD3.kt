@@ -5,6 +5,8 @@ import io.lightine.tessera.types.vocabulary.MrzFormat
 /**
  * A parsed TD3 (passport) MRZ: two lines of 44 characters.
  *
+ * `toString()` shows no document values; they are in the properties.
+ *
  * @property rawLines The MRZ lines the document was read from.
  * @property commonFields The fields every format carries.
  * @property personalNumber Personal number as printed: line 2, characters 29-42.
@@ -22,4 +24,7 @@ public data class TD3(
 ) : MrzDocument() {
     /** Always [MrzFormat.TD3]. */
     override val format: MrzFormat = MrzFormat.TD3
+
+    /** The format and the line count; never a document value. */
+    override fun toString(): String = "TD3(format=$format, lines=${rawLines.size})"
 }
