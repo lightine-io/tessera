@@ -24,6 +24,19 @@ mavenPublishing {
     }
 }
 
+// Dokka 2 rejects a source file that two source sets both list, and the shared
+// src/bouncyCastleMain folder (see below) is compiled into jvmMain and androidMain. Everything in
+// it is `internal`, so it never belongs in the API docs: the Android source set drops it from its
+// Dokka roots (the JVM one keeps it, still hidden by Dokka's visibility filter). Compilation is
+// unchanged. The roots are filled by the Kotlin plugin, so this runs after evaluation.
+afterEvaluate {
+    dokka {
+        dokkaSourceSets.matching { it.name == "androidMain" }.configureEach {
+            sourceRoots.setFrom(sourceRoots.files.filterNot { it.path.contains("bouncyCastleMain") })
+        }
+    }
+}
+
 kotlin {
     // The JVM target carries the host tests for this platform-agnostic core, so they run on the
     // JVM `check` runner with no Android SDK and no device. It is also a published artifact
