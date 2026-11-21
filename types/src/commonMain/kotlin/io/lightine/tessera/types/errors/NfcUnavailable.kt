@@ -31,6 +31,22 @@ public data class NfcUnavailable(
 
         /** The transport was closed by the app, so it cannot send any more commands. */
         CLOSED,
+
+        /**
+         * The person ended the reading, for example with the Cancel button of the system's NFC
+         * sheet on iPhone.
+         *
+         * @since 1.0.0
+         */
+        CANCELLED_BY_USER,
+
+        /**
+         * The system's NFC reader is busy with something else for now, such as a payment, so it
+         * cannot be used at this moment.
+         *
+         * @since 1.0.0
+         */
+        BUSY,
     }
 
     /** English text for logs: the reason. */
@@ -41,6 +57,8 @@ public data class NfcUnavailable(
                 Reason.DISABLED -> "NFC is turned off on this device"
                 Reason.NOT_PERMITTED -> "The app may not use NFC on this device"
                 Reason.CLOSED -> "The connection to the chip was closed by the app"
+                Reason.CANCELLED_BY_USER -> "The person ended the NFC reading"
+                Reason.BUSY -> "The NFC reader is busy with another task"
             }
 
     /** `NfcUnavailable: ` followed by [description]. */
