@@ -1,0 +1,28 @@
+public abstract interface class io/lightine/tessera/emrtd/ApduTransport {
+	public abstract fun getMaxCommandLength ()I
+	public abstract fun getSupportsExtendedLength ()Z
+	public abstract fun transceive ([BLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class io/lightine/tessera/emrtd/ApduTransportException : java/lang/Exception {
+	public fun <init> (Lio/lightine/tessera/types/errors/NfcError;)V
+	public fun <init> (Lio/lightine/tessera/types/errors/NfcError;Ljava/lang/Throwable;)V
+	public synthetic fun <init> (Lio/lightine/tessera/types/errors/NfcError;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getError ()Lio/lightine/tessera/types/errors/NfcError;
+}
+
+public abstract class io/lightine/tessera/emrtd/ChipAccessKey {
+	public final fun clear ()V
+	public final fun isCleared ()Z
+}
+
+public final class io/lightine/tessera/emrtd/ChipAccessKey$Can : io/lightine/tessera/emrtd/ChipAccessKey {
+	public fun <init> (Ljava/lang/String;)V
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/ChipAccessKey$Mrz : io/lightine/tessera/emrtd/ChipAccessKey {
+	public fun <init> (Ljava/lang/String;CLjava/lang/String;CLjava/lang/String;C)V
+	public fun toString ()Ljava/lang/String;
+}
+

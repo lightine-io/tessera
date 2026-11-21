@@ -1,3 +1,10 @@
+public abstract interface annotation class io/lightine/tessera/types/ExperimentalTesseraChipApi : java/lang/annotation/Annotation {
+}
+
+public abstract class io/lightine/tessera/types/errors/ChipError {
+	public abstract fun getDescription ()Ljava/lang/String;
+}
+
 public final class io/lightine/tessera/types/errors/MrzCharacterSetViolation : io/lightine/tessera/types/errors/MrzParseError {
 	public fun <init> (CI)V
 	public final fun component1 ()C
@@ -336,6 +343,50 @@ public abstract class io/lightine/tessera/types/errors/MrzValidationError {
 
 public abstract class io/lightine/tessera/types/errors/MrzWarning {
 	public abstract fun getDescription ()Ljava/lang/String;
+}
+
+public abstract class io/lightine/tessera/types/errors/NfcError : io/lightine/tessera/types/errors/ChipError {
+}
+
+public final class io/lightine/tessera/types/errors/NfcTagLost : io/lightine/tessera/types/errors/NfcError {
+	public static final field INSTANCE Lio/lightine/tessera/types/errors/NfcTagLost;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/NfcTimeout : io/lightine/tessera/types/errors/NfcError {
+	public fun <init> (Ljava/lang/Long;)V
+	public final fun component1 ()Ljava/lang/Long;
+	public final fun copy (Ljava/lang/Long;)Lio/lightine/tessera/types/errors/NfcTimeout;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/NfcTimeout;Ljava/lang/Long;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/NfcTimeout;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getTimeoutMillis ()Ljava/lang/Long;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/NfcUnavailable : io/lightine/tessera/types/errors/NfcError {
+	public fun <init> (Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;)V
+	public final fun component1 ()Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+	public final fun copy (Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;)Lio/lightine/tessera/types/errors/NfcUnavailable;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/NfcUnavailable;Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/NfcUnavailable;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getReason ()Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/NfcUnavailable$Reason : java/lang/Enum {
+	public static final field DISABLED Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+	public static final field NOT_PERMITTED Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+	public static final field NOT_SUPPORTED Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+	public static fun values ()[Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 }
 
 public final class io/lightine/tessera/types/vocabulary/CountryCodeCategory : java/lang/Enum {

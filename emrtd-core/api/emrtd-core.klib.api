@@ -1,0 +1,42 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.lightine.tessera:emrtd-core>
+abstract interface io.lightine.tessera.emrtd/ApduTransport { // io.lightine.tessera.emrtd/ApduTransport|null[0]
+    abstract val maxCommandLength // io.lightine.tessera.emrtd/ApduTransport.maxCommandLength|{}maxCommandLength[0]
+        abstract fun <get-maxCommandLength>(): kotlin/Int // io.lightine.tessera.emrtd/ApduTransport.maxCommandLength.<get-maxCommandLength>|<get-maxCommandLength>(){}[0]
+    abstract val supportsExtendedLength // io.lightine.tessera.emrtd/ApduTransport.supportsExtendedLength|{}supportsExtendedLength[0]
+        abstract fun <get-supportsExtendedLength>(): kotlin/Boolean // io.lightine.tessera.emrtd/ApduTransport.supportsExtendedLength.<get-supportsExtendedLength>|<get-supportsExtendedLength>(){}[0]
+
+    abstract suspend fun transceive(kotlin/ByteArray): kotlin/ByteArray // io.lightine.tessera.emrtd/ApduTransport.transceive|transceive(kotlin.ByteArray){}[0]
+}
+
+final class io.lightine.tessera.emrtd/ApduTransportException : kotlin/Exception { // io.lightine.tessera.emrtd/ApduTransportException|null[0]
+    constructor <init>(io.lightine.tessera.types.errors/NfcError, kotlin/Throwable? = ...) // io.lightine.tessera.emrtd/ApduTransportException.<init>|<init>(io.lightine.tessera.types.errors.NfcError;kotlin.Throwable?){}[0]
+
+    final val error // io.lightine.tessera.emrtd/ApduTransportException.error|{}error[0]
+        final fun <get-error>(): io.lightine.tessera.types.errors/NfcError // io.lightine.tessera.emrtd/ApduTransportException.error.<get-error>|<get-error>(){}[0]
+}
+
+sealed class io.lightine.tessera.emrtd/ChipAccessKey { // io.lightine.tessera.emrtd/ChipAccessKey|null[0]
+    final val isCleared // io.lightine.tessera.emrtd/ChipAccessKey.isCleared|{}isCleared[0]
+        final fun <get-isCleared>(): kotlin/Boolean // io.lightine.tessera.emrtd/ChipAccessKey.isCleared.<get-isCleared>|<get-isCleared>(){}[0]
+
+    final fun clear() // io.lightine.tessera.emrtd/ChipAccessKey.clear|clear(){}[0]
+
+    final class Can : io.lightine.tessera.emrtd/ChipAccessKey { // io.lightine.tessera.emrtd/ChipAccessKey.Can|null[0]
+        constructor <init>(kotlin/String) // io.lightine.tessera.emrtd/ChipAccessKey.Can.<init>|<init>(kotlin.String){}[0]
+
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipAccessKey.Can.toString|toString(){}[0]
+    }
+
+    final class Mrz : io.lightine.tessera.emrtd/ChipAccessKey { // io.lightine.tessera.emrtd/ChipAccessKey.Mrz|null[0]
+        constructor <init>(kotlin/String, kotlin/Char, kotlin/String, kotlin/Char, kotlin/String, kotlin/Char) // io.lightine.tessera.emrtd/ChipAccessKey.Mrz.<init>|<init>(kotlin.String;kotlin.Char;kotlin.String;kotlin.Char;kotlin.String;kotlin.Char){}[0]
+
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipAccessKey.Mrz.toString|toString(){}[0]
+    }
+}
