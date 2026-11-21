@@ -15,11 +15,242 @@ abstract interface io.lightine.tessera.emrtd/ApduTransport { // io.lightine.tess
     abstract suspend fun transceive(kotlin/ByteArray): kotlin/ByteArray // io.lightine.tessera.emrtd/ApduTransport.transceive|transceive(kotlin.ByteArray){}[0]
 }
 
+final class io.lightine.tessera.emrtd.lds/ChipDataElement { // io.lightine.tessera.emrtd.lds/ChipDataElement|null[0]
+    final val tag // io.lightine.tessera.emrtd.lds/ChipDataElement.tag|{}tag[0]
+        final fun <get-tag>(): kotlin/Int // io.lightine.tessera.emrtd.lds/ChipDataElement.tag.<get-tag>|<get-tag>(){}[0]
+    final val text // io.lightine.tessera.emrtd.lds/ChipDataElement.text|{}text[0]
+        final fun <get-text>(): kotlin/String? // io.lightine.tessera.emrtd.lds/ChipDataElement.text.<get-text>|<get-text>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd.lds/ChipDataElement.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd.lds/ChipDataElement.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/ChipDataElement.toString|toString(){}[0]
+    final fun value(): kotlin/ByteArray // io.lightine.tessera.emrtd.lds/ChipDataElement.value|value(){}[0]
+}
+
+final class io.lightine.tessera.emrtd.lds/ChipDate { // io.lightine.tessera.emrtd.lds/ChipDate|null[0]
+    constructor <init>(kotlin/Int?, kotlin/Int?, kotlin/Int?) // io.lightine.tessera.emrtd.lds/ChipDate.<init>|<init>(kotlin.Int?;kotlin.Int?;kotlin.Int?){}[0]
+
+    final val day // io.lightine.tessera.emrtd.lds/ChipDate.day|{}day[0]
+        final fun <get-day>(): kotlin/Int? // io.lightine.tessera.emrtd.lds/ChipDate.day.<get-day>|<get-day>(){}[0]
+    final val month // io.lightine.tessera.emrtd.lds/ChipDate.month|{}month[0]
+        final fun <get-month>(): kotlin/Int? // io.lightine.tessera.emrtd.lds/ChipDate.month.<get-month>|<get-month>(){}[0]
+    final val year // io.lightine.tessera.emrtd.lds/ChipDate.year|{}year[0]
+        final fun <get-year>(): kotlin/Int? // io.lightine.tessera.emrtd.lds/ChipDate.year.<get-year>|<get-year>(){}[0]
+
+    final fun component1(): kotlin/Int? // io.lightine.tessera.emrtd.lds/ChipDate.component1|component1(){}[0]
+    final fun component2(): kotlin/Int? // io.lightine.tessera.emrtd.lds/ChipDate.component2|component2(){}[0]
+    final fun component3(): kotlin/Int? // io.lightine.tessera.emrtd.lds/ChipDate.component3|component3(){}[0]
+    final fun copy(kotlin/Int? = ..., kotlin/Int? = ..., kotlin/Int? = ...): io.lightine.tessera.emrtd.lds/ChipDate // io.lightine.tessera.emrtd.lds/ChipDate.copy|copy(kotlin.Int?;kotlin.Int?;kotlin.Int?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd.lds/ChipDate.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd.lds/ChipDate.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/ChipDate.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.emrtd.lds/ChipDateTime { // io.lightine.tessera.emrtd.lds/ChipDateTime|null[0]
+    constructor <init>(io.lightine.tessera.emrtd.lds/ChipDate, kotlin/Int, kotlin/Int, kotlin/Int) // io.lightine.tessera.emrtd.lds/ChipDateTime.<init>|<init>(io.lightine.tessera.emrtd.lds.ChipDate;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+
+    final val date // io.lightine.tessera.emrtd.lds/ChipDateTime.date|{}date[0]
+        final fun <get-date>(): io.lightine.tessera.emrtd.lds/ChipDate // io.lightine.tessera.emrtd.lds/ChipDateTime.date.<get-date>|<get-date>(){}[0]
+    final val hour // io.lightine.tessera.emrtd.lds/ChipDateTime.hour|{}hour[0]
+        final fun <get-hour>(): kotlin/Int // io.lightine.tessera.emrtd.lds/ChipDateTime.hour.<get-hour>|<get-hour>(){}[0]
+    final val minute // io.lightine.tessera.emrtd.lds/ChipDateTime.minute|{}minute[0]
+        final fun <get-minute>(): kotlin/Int // io.lightine.tessera.emrtd.lds/ChipDateTime.minute.<get-minute>|<get-minute>(){}[0]
+    final val second // io.lightine.tessera.emrtd.lds/ChipDateTime.second|{}second[0]
+        final fun <get-second>(): kotlin/Int // io.lightine.tessera.emrtd.lds/ChipDateTime.second.<get-second>|<get-second>(){}[0]
+
+    final fun component1(): io.lightine.tessera.emrtd.lds/ChipDate // io.lightine.tessera.emrtd.lds/ChipDateTime.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // io.lightine.tessera.emrtd.lds/ChipDateTime.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // io.lightine.tessera.emrtd.lds/ChipDateTime.component3|component3(){}[0]
+    final fun component4(): kotlin/Int // io.lightine.tessera.emrtd.lds/ChipDateTime.component4|component4(){}[0]
+    final fun copy(io.lightine.tessera.emrtd.lds/ChipDate = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...): io.lightine.tessera.emrtd.lds/ChipDateTime // io.lightine.tessera.emrtd.lds/ChipDateTime.copy|copy(io.lightine.tessera.emrtd.lds.ChipDate;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd.lds/ChipDateTime.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd.lds/ChipDateTime.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/ChipDateTime.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.emrtd.lds/Dg11View { // io.lightine.tessera.emrtd.lds/Dg11View|null[0]
+    final val address // io.lightine.tessera.emrtd.lds/Dg11View.address|{}address[0]
+        final fun <get-address>(): kotlin/String? // io.lightine.tessera.emrtd.lds/Dg11View.address.<get-address>|<get-address>(){}[0]
+    final val custodyInformation // io.lightine.tessera.emrtd.lds/Dg11View.custodyInformation|{}custodyInformation[0]
+        final fun <get-custodyInformation>(): kotlin/String? // io.lightine.tessera.emrtd.lds/Dg11View.custodyInformation.<get-custodyInformation>|<get-custodyInformation>(){}[0]
+    final val dateOfBirth // io.lightine.tessera.emrtd.lds/Dg11View.dateOfBirth|{}dateOfBirth[0]
+        final fun <get-dateOfBirth>(): io.lightine.tessera.emrtd.lds/ChipDate? // io.lightine.tessera.emrtd.lds/Dg11View.dateOfBirth.<get-dateOfBirth>|<get-dateOfBirth>(){}[0]
+    final val elements // io.lightine.tessera.emrtd.lds/Dg11View.elements|{}elements[0]
+        final fun <get-elements>(): kotlin.collections/List<io.lightine.tessera.emrtd.lds/ChipDataElement> // io.lightine.tessera.emrtd.lds/Dg11View.elements.<get-elements>|<get-elements>(){}[0]
+    final val fullName // io.lightine.tessera.emrtd.lds/Dg11View.fullName|{}fullName[0]
+        final fun <get-fullName>(): kotlin/String? // io.lightine.tessera.emrtd.lds/Dg11View.fullName.<get-fullName>|<get-fullName>(){}[0]
+    final val otherNames // io.lightine.tessera.emrtd.lds/Dg11View.otherNames|{}otherNames[0]
+        final fun <get-otherNames>(): kotlin.collections/List<io.lightine.tessera.emrtd.lds/ChipDataElement> // io.lightine.tessera.emrtd.lds/Dg11View.otherNames.<get-otherNames>|<get-otherNames>(){}[0]
+    final val otherTravelDocuments // io.lightine.tessera.emrtd.lds/Dg11View.otherTravelDocuments|{}otherTravelDocuments[0]
+        final fun <get-otherTravelDocuments>(): kotlin/String? // io.lightine.tessera.emrtd.lds/Dg11View.otherTravelDocuments.<get-otherTravelDocuments>|<get-otherTravelDocuments>(){}[0]
+    final val personalNumber // io.lightine.tessera.emrtd.lds/Dg11View.personalNumber|{}personalNumber[0]
+        final fun <get-personalNumber>(): kotlin/String? // io.lightine.tessera.emrtd.lds/Dg11View.personalNumber.<get-personalNumber>|<get-personalNumber>(){}[0]
+    final val personalSummary // io.lightine.tessera.emrtd.lds/Dg11View.personalSummary|{}personalSummary[0]
+        final fun <get-personalSummary>(): kotlin/String? // io.lightine.tessera.emrtd.lds/Dg11View.personalSummary.<get-personalSummary>|<get-personalSummary>(){}[0]
+    final val placeOfBirth // io.lightine.tessera.emrtd.lds/Dg11View.placeOfBirth|{}placeOfBirth[0]
+        final fun <get-placeOfBirth>(): kotlin/String? // io.lightine.tessera.emrtd.lds/Dg11View.placeOfBirth.<get-placeOfBirth>|<get-placeOfBirth>(){}[0]
+    final val profession // io.lightine.tessera.emrtd.lds/Dg11View.profession|{}profession[0]
+        final fun <get-profession>(): kotlin/String? // io.lightine.tessera.emrtd.lds/Dg11View.profession.<get-profession>|<get-profession>(){}[0]
+    final val tagList // io.lightine.tessera.emrtd.lds/Dg11View.tagList|{}tagList[0]
+        final fun <get-tagList>(): kotlin.collections/List<kotlin/Int> // io.lightine.tessera.emrtd.lds/Dg11View.tagList.<get-tagList>|<get-tagList>(){}[0]
+    final val telephone // io.lightine.tessera.emrtd.lds/Dg11View.telephone|{}telephone[0]
+        final fun <get-telephone>(): kotlin/String? // io.lightine.tessera.emrtd.lds/Dg11View.telephone.<get-telephone>|<get-telephone>(){}[0]
+    final val title // io.lightine.tessera.emrtd.lds/Dg11View.title|{}title[0]
+        final fun <get-title>(): kotlin/String? // io.lightine.tessera.emrtd.lds/Dg11View.title.<get-title>|<get-title>(){}[0]
+
+    final fun element(kotlin/Int): io.lightine.tessera.emrtd.lds/ChipDataElement? // io.lightine.tessera.emrtd.lds/Dg11View.element|element(kotlin.Int){}[0]
+    final fun raw(): kotlin/ByteArray // io.lightine.tessera.emrtd.lds/Dg11View.raw|raw(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/Dg11View.toString|toString(){}[0]
+
+    final object Companion { // io.lightine.tessera.emrtd.lds/Dg11View.Companion|null[0]
+        final const val TAG // io.lightine.tessera.emrtd.lds/Dg11View.Companion.TAG|{}TAG[0]
+            final fun <get-TAG>(): kotlin/Int // io.lightine.tessera.emrtd.lds/Dg11View.Companion.TAG.<get-TAG>|<get-TAG>(){}[0]
+
+        final fun parse(kotlin/ByteArray): io.lightine.tessera.emrtd.lds/LdsParseResult<io.lightine.tessera.emrtd.lds/Dg11View> // io.lightine.tessera.emrtd.lds/Dg11View.Companion.parse|parse(kotlin.ByteArray){}[0]
+    }
+}
+
+final class io.lightine.tessera.emrtd.lds/Dg12View { // io.lightine.tessera.emrtd.lds/Dg12View|null[0]
+    final val dateOfIssue // io.lightine.tessera.emrtd.lds/Dg12View.dateOfIssue|{}dateOfIssue[0]
+        final fun <get-dateOfIssue>(): io.lightine.tessera.emrtd.lds/ChipDate? // io.lightine.tessera.emrtd.lds/Dg12View.dateOfIssue.<get-dateOfIssue>|<get-dateOfIssue>(){}[0]
+    final val elements // io.lightine.tessera.emrtd.lds/Dg12View.elements|{}elements[0]
+        final fun <get-elements>(): kotlin.collections/List<io.lightine.tessera.emrtd.lds/ChipDataElement> // io.lightine.tessera.emrtd.lds/Dg12View.elements.<get-elements>|<get-elements>(){}[0]
+    final val endorsements // io.lightine.tessera.emrtd.lds/Dg12View.endorsements|{}endorsements[0]
+        final fun <get-endorsements>(): kotlin/String? // io.lightine.tessera.emrtd.lds/Dg12View.endorsements.<get-endorsements>|<get-endorsements>(){}[0]
+    final val issuingAuthority // io.lightine.tessera.emrtd.lds/Dg12View.issuingAuthority|{}issuingAuthority[0]
+        final fun <get-issuingAuthority>(): kotlin/String? // io.lightine.tessera.emrtd.lds/Dg12View.issuingAuthority.<get-issuingAuthority>|<get-issuingAuthority>(){}[0]
+    final val otherPersons // io.lightine.tessera.emrtd.lds/Dg12View.otherPersons|{}otherPersons[0]
+        final fun <get-otherPersons>(): kotlin.collections/List<io.lightine.tessera.emrtd.lds/ChipDataElement> // io.lightine.tessera.emrtd.lds/Dg12View.otherPersons.<get-otherPersons>|<get-otherPersons>(){}[0]
+    final val personalizationSystemSerial // io.lightine.tessera.emrtd.lds/Dg12View.personalizationSystemSerial|{}personalizationSystemSerial[0]
+        final fun <get-personalizationSystemSerial>(): kotlin/String? // io.lightine.tessera.emrtd.lds/Dg12View.personalizationSystemSerial.<get-personalizationSystemSerial>|<get-personalizationSystemSerial>(){}[0]
+    final val personalizationTime // io.lightine.tessera.emrtd.lds/Dg12View.personalizationTime|{}personalizationTime[0]
+        final fun <get-personalizationTime>(): io.lightine.tessera.emrtd.lds/ChipDateTime? // io.lightine.tessera.emrtd.lds/Dg12View.personalizationTime.<get-personalizationTime>|<get-personalizationTime>(){}[0]
+    final val tagList // io.lightine.tessera.emrtd.lds/Dg12View.tagList|{}tagList[0]
+        final fun <get-tagList>(): kotlin.collections/List<kotlin/Int> // io.lightine.tessera.emrtd.lds/Dg12View.tagList.<get-tagList>|<get-tagList>(){}[0]
+    final val taxOrExitRequirements // io.lightine.tessera.emrtd.lds/Dg12View.taxOrExitRequirements|{}taxOrExitRequirements[0]
+        final fun <get-taxOrExitRequirements>(): kotlin/String? // io.lightine.tessera.emrtd.lds/Dg12View.taxOrExitRequirements.<get-taxOrExitRequirements>|<get-taxOrExitRequirements>(){}[0]
+
+    final fun element(kotlin/Int): io.lightine.tessera.emrtd.lds/ChipDataElement? // io.lightine.tessera.emrtd.lds/Dg12View.element|element(kotlin.Int){}[0]
+    final fun raw(): kotlin/ByteArray // io.lightine.tessera.emrtd.lds/Dg12View.raw|raw(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/Dg12View.toString|toString(){}[0]
+
+    final object Companion { // io.lightine.tessera.emrtd.lds/Dg12View.Companion|null[0]
+        final const val TAG // io.lightine.tessera.emrtd.lds/Dg12View.Companion.TAG|{}TAG[0]
+            final fun <get-TAG>(): kotlin/Int // io.lightine.tessera.emrtd.lds/Dg12View.Companion.TAG.<get-TAG>|<get-TAG>(){}[0]
+
+        final fun parse(kotlin/ByteArray): io.lightine.tessera.emrtd.lds/LdsParseResult<io.lightine.tessera.emrtd.lds/Dg12View> // io.lightine.tessera.emrtd.lds/Dg12View.Companion.parse|parse(kotlin.ByteArray){}[0]
+    }
+}
+
+final class io.lightine.tessera.emrtd.lds/Dg13View { // io.lightine.tessera.emrtd.lds/Dg13View|null[0]
+    final fun content(): kotlin/ByteArray // io.lightine.tessera.emrtd.lds/Dg13View.content|content(){}[0]
+    final fun raw(): kotlin/ByteArray // io.lightine.tessera.emrtd.lds/Dg13View.raw|raw(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/Dg13View.toString|toString(){}[0]
+
+    final object Companion { // io.lightine.tessera.emrtd.lds/Dg13View.Companion|null[0]
+        final const val TAG // io.lightine.tessera.emrtd.lds/Dg13View.Companion.TAG|{}TAG[0]
+            final fun <get-TAG>(): kotlin/Int // io.lightine.tessera.emrtd.lds/Dg13View.Companion.TAG.<get-TAG>|<get-TAG>(){}[0]
+
+        final fun parse(kotlin/ByteArray): io.lightine.tessera.emrtd.lds/LdsParseResult<io.lightine.tessera.emrtd.lds/Dg13View> // io.lightine.tessera.emrtd.lds/Dg13View.Companion.parse|parse(kotlin.ByteArray){}[0]
+    }
+}
+
+final class io.lightine.tessera.emrtd.lds/Dg16View { // io.lightine.tessera.emrtd.lds/Dg16View|null[0]
+    final val declaredCount // io.lightine.tessera.emrtd.lds/Dg16View.declaredCount|{}declaredCount[0]
+        final fun <get-declaredCount>(): kotlin/Int? // io.lightine.tessera.emrtd.lds/Dg16View.declaredCount.<get-declaredCount>|<get-declaredCount>(){}[0]
+    final val persons // io.lightine.tessera.emrtd.lds/Dg16View.persons|{}persons[0]
+        final fun <get-persons>(): kotlin.collections/List<io.lightine.tessera.emrtd.lds/PersonToNotify> // io.lightine.tessera.emrtd.lds/Dg16View.persons.<get-persons>|<get-persons>(){}[0]
+
+    final fun raw(): kotlin/ByteArray // io.lightine.tessera.emrtd.lds/Dg16View.raw|raw(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/Dg16View.toString|toString(){}[0]
+
+    final object Companion { // io.lightine.tessera.emrtd.lds/Dg16View.Companion|null[0]
+        final const val TAG // io.lightine.tessera.emrtd.lds/Dg16View.Companion.TAG|{}TAG[0]
+            final fun <get-TAG>(): kotlin/Int // io.lightine.tessera.emrtd.lds/Dg16View.Companion.TAG.<get-TAG>|<get-TAG>(){}[0]
+
+        final fun parse(kotlin/ByteArray): io.lightine.tessera.emrtd.lds/LdsParseResult<io.lightine.tessera.emrtd.lds/Dg16View> // io.lightine.tessera.emrtd.lds/Dg16View.Companion.parse|parse(kotlin.ByteArray){}[0]
+    }
+}
+
+final class io.lightine.tessera.emrtd.lds/Dg1View { // io.lightine.tessera.emrtd.lds/Dg1View|null[0]
+    final val document // io.lightine.tessera.emrtd.lds/Dg1View.document|{}document[0]
+        final fun <get-document>(): io.lightine.tessera.mrz.model/MrzDocument // io.lightine.tessera.emrtd.lds/Dg1View.document.<get-document>|<get-document>(){}[0]
+    final val mrzText // io.lightine.tessera.emrtd.lds/Dg1View.mrzText|{}mrzText[0]
+        final fun <get-mrzText>(): kotlin/String // io.lightine.tessera.emrtd.lds/Dg1View.mrzText.<get-mrzText>|<get-mrzText>(){}[0]
+    final val parseResult // io.lightine.tessera.emrtd.lds/Dg1View.parseResult|{}parseResult[0]
+        final fun <get-parseResult>(): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.emrtd.lds/Dg1View.parseResult.<get-parseResult>|<get-parseResult>(){}[0]
+
+    final fun raw(): kotlin/ByteArray // io.lightine.tessera.emrtd.lds/Dg1View.raw|raw(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/Dg1View.toString|toString(){}[0]
+
+    final object Companion { // io.lightine.tessera.emrtd.lds/Dg1View.Companion|null[0]
+        final const val TAG // io.lightine.tessera.emrtd.lds/Dg1View.Companion.TAG|{}TAG[0]
+            final fun <get-TAG>(): kotlin/Int // io.lightine.tessera.emrtd.lds/Dg1View.Companion.TAG.<get-TAG>|<get-TAG>(){}[0]
+
+        final fun parse(kotlin/ByteArray, kotlin.time/Instant = ...): io.lightine.tessera.emrtd.lds/LdsParseResult<io.lightine.tessera.emrtd.lds/Dg1View> // io.lightine.tessera.emrtd.lds/Dg1View.Companion.parse|parse(kotlin.ByteArray;kotlin.time.Instant){}[0]
+    }
+}
+
+final class io.lightine.tessera.emrtd.lds/EfComView { // io.lightine.tessera.emrtd.lds/EfComView|null[0]
+    final val dataGroups // io.lightine.tessera.emrtd.lds/EfComView.dataGroups|{}dataGroups[0]
+        final fun <get-dataGroups>(): kotlin.collections/List<kotlin/Int> // io.lightine.tessera.emrtd.lds/EfComView.dataGroups.<get-dataGroups>|<get-dataGroups>(){}[0]
+    final val elements // io.lightine.tessera.emrtd.lds/EfComView.elements|{}elements[0]
+        final fun <get-elements>(): kotlin.collections/List<io.lightine.tessera.emrtd.lds/ChipDataElement> // io.lightine.tessera.emrtd.lds/EfComView.elements.<get-elements>|<get-elements>(){}[0]
+    final val ldsVersion // io.lightine.tessera.emrtd.lds/EfComView.ldsVersion|{}ldsVersion[0]
+        final fun <get-ldsVersion>(): kotlin/String? // io.lightine.tessera.emrtd.lds/EfComView.ldsVersion.<get-ldsVersion>|<get-ldsVersion>(){}[0]
+    final val tagList // io.lightine.tessera.emrtd.lds/EfComView.tagList|{}tagList[0]
+        final fun <get-tagList>(): kotlin.collections/List<kotlin/Int> // io.lightine.tessera.emrtd.lds/EfComView.tagList.<get-tagList>|<get-tagList>(){}[0]
+    final val unicodeVersion // io.lightine.tessera.emrtd.lds/EfComView.unicodeVersion|{}unicodeVersion[0]
+        final fun <get-unicodeVersion>(): kotlin/String? // io.lightine.tessera.emrtd.lds/EfComView.unicodeVersion.<get-unicodeVersion>|<get-unicodeVersion>(){}[0]
+
+    final fun raw(): kotlin/ByteArray // io.lightine.tessera.emrtd.lds/EfComView.raw|raw(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/EfComView.toString|toString(){}[0]
+
+    final object Companion { // io.lightine.tessera.emrtd.lds/EfComView.Companion|null[0]
+        final const val TAG // io.lightine.tessera.emrtd.lds/EfComView.Companion.TAG|{}TAG[0]
+            final fun <get-TAG>(): kotlin/Int // io.lightine.tessera.emrtd.lds/EfComView.Companion.TAG.<get-TAG>|<get-TAG>(){}[0]
+
+        final fun parse(kotlin/ByteArray): io.lightine.tessera.emrtd.lds/LdsParseResult<io.lightine.tessera.emrtd.lds/EfComView> // io.lightine.tessera.emrtd.lds/EfComView.Companion.parse|parse(kotlin.ByteArray){}[0]
+    }
+}
+
+final class io.lightine.tessera.emrtd.lds/PersonToNotify { // io.lightine.tessera.emrtd.lds/PersonToNotify|null[0]
+    final val address // io.lightine.tessera.emrtd.lds/PersonToNotify.address|{}address[0]
+        final fun <get-address>(): kotlin/String? // io.lightine.tessera.emrtd.lds/PersonToNotify.address.<get-address>|<get-address>(){}[0]
+    final val dateRecorded // io.lightine.tessera.emrtd.lds/PersonToNotify.dateRecorded|{}dateRecorded[0]
+        final fun <get-dateRecorded>(): io.lightine.tessera.emrtd.lds/ChipDate? // io.lightine.tessera.emrtd.lds/PersonToNotify.dateRecorded.<get-dateRecorded>|<get-dateRecorded>(){}[0]
+    final val elements // io.lightine.tessera.emrtd.lds/PersonToNotify.elements|{}elements[0]
+        final fun <get-elements>(): kotlin.collections/List<io.lightine.tessera.emrtd.lds/ChipDataElement> // io.lightine.tessera.emrtd.lds/PersonToNotify.elements.<get-elements>|<get-elements>(){}[0]
+    final val name // io.lightine.tessera.emrtd.lds/PersonToNotify.name|{}name[0]
+        final fun <get-name>(): kotlin/String? // io.lightine.tessera.emrtd.lds/PersonToNotify.name.<get-name>|<get-name>(){}[0]
+    final val telephone // io.lightine.tessera.emrtd.lds/PersonToNotify.telephone|{}telephone[0]
+        final fun <get-telephone>(): kotlin/String? // io.lightine.tessera.emrtd.lds/PersonToNotify.telephone.<get-telephone>|<get-telephone>(){}[0]
+
+    final fun element(kotlin/Int): io.lightine.tessera.emrtd.lds/ChipDataElement? // io.lightine.tessera.emrtd.lds/PersonToNotify.element|element(kotlin.Int){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/PersonToNotify.toString|toString(){}[0]
+}
+
 final class io.lightine.tessera.emrtd/ApduTransportException : kotlin/Exception { // io.lightine.tessera.emrtd/ApduTransportException|null[0]
     constructor <init>(io.lightine.tessera.types.errors/NfcError, kotlin/Throwable? = ...) // io.lightine.tessera.emrtd/ApduTransportException.<init>|<init>(io.lightine.tessera.types.errors.NfcError;kotlin.Throwable?){}[0]
 
     final val error // io.lightine.tessera.emrtd/ApduTransportException.error|{}error[0]
         final fun <get-error>(): io.lightine.tessera.types.errors/NfcError // io.lightine.tessera.emrtd/ApduTransportException.error.<get-error>|<get-error>(){}[0]
+}
+
+sealed class <#A: out kotlin/Any?> io.lightine.tessera.emrtd.lds/LdsParseResult { // io.lightine.tessera.emrtd.lds/LdsParseResult|null[0]
+    final class <#A1: out kotlin/Any?> Success : io.lightine.tessera.emrtd.lds/LdsParseResult<#A1> { // io.lightine.tessera.emrtd.lds/LdsParseResult.Success|null[0]
+        constructor <init>(#A1) // io.lightine.tessera.emrtd.lds/LdsParseResult.Success.<init>|<init>(1:0){}[0]
+
+        final val view // io.lightine.tessera.emrtd.lds/LdsParseResult.Success.view|{}view[0]
+            final fun <get-view>(): #A1 // io.lightine.tessera.emrtd.lds/LdsParseResult.Success.view.<get-view>|<get-view>(){}[0]
+    }
+
+    final class Failure : io.lightine.tessera.emrtd.lds/LdsParseResult<kotlin/Nothing> { // io.lightine.tessera.emrtd.lds/LdsParseResult.Failure|null[0]
+        constructor <init>(io.lightine.tessera.types.errors/ChipMalformedFile) // io.lightine.tessera.emrtd.lds/LdsParseResult.Failure.<init>|<init>(io.lightine.tessera.types.errors.ChipMalformedFile){}[0]
+
+        final val error // io.lightine.tessera.emrtd.lds/LdsParseResult.Failure.error|{}error[0]
+            final fun <get-error>(): io.lightine.tessera.types.errors/ChipMalformedFile // io.lightine.tessera.emrtd.lds/LdsParseResult.Failure.error.<get-error>|<get-error>(){}[0]
+    }
 }
 
 sealed class io.lightine.tessera.emrtd/ChipAccessKey { // io.lightine.tessera.emrtd/ChipAccessKey|null[0]

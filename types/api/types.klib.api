@@ -98,6 +98,37 @@ final enum class io.lightine.tessera.types.vocabulary/Sex : kotlin/Enum<io.light
     final fun values(): kotlin/Array<io.lightine.tessera.types.vocabulary/Sex> // io.lightine.tessera.types.vocabulary/Sex.values|values#static(){}[0]
 }
 
+final class io.lightine.tessera.types.errors/ChipMalformedFile : io.lightine.tessera.types.errors/ChipError { // io.lightine.tessera.types.errors/ChipMalformedFile|null[0]
+    constructor <init>(kotlin/Int?, io.lightine.tessera.types.errors/ChipMalformedFile.Reason) // io.lightine.tessera.types.errors/ChipMalformedFile.<init>|<init>(kotlin.Int?;io.lightine.tessera.types.errors.ChipMalformedFile.Reason){}[0]
+
+    final val description // io.lightine.tessera.types.errors/ChipMalformedFile.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/ChipMalformedFile.description.<get-description>|<get-description>(){}[0]
+    final val fileId // io.lightine.tessera.types.errors/ChipMalformedFile.fileId|{}fileId[0]
+        final fun <get-fileId>(): kotlin/Int? // io.lightine.tessera.types.errors/ChipMalformedFile.fileId.<get-fileId>|<get-fileId>(){}[0]
+    final val reason // io.lightine.tessera.types.errors/ChipMalformedFile.reason|{}reason[0]
+        final fun <get-reason>(): io.lightine.tessera.types.errors/ChipMalformedFile.Reason // io.lightine.tessera.types.errors/ChipMalformedFile.reason.<get-reason>|<get-reason>(){}[0]
+
+    final fun component1(): kotlin/Int? // io.lightine.tessera.types.errors/ChipMalformedFile.component1|component1(){}[0]
+    final fun component2(): io.lightine.tessera.types.errors/ChipMalformedFile.Reason // io.lightine.tessera.types.errors/ChipMalformedFile.component2|component2(){}[0]
+    final fun copy(kotlin/Int? = ..., io.lightine.tessera.types.errors/ChipMalformedFile.Reason = ...): io.lightine.tessera.types.errors/ChipMalformedFile // io.lightine.tessera.types.errors/ChipMalformedFile.copy|copy(kotlin.Int?;io.lightine.tessera.types.errors.ChipMalformedFile.Reason){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/ChipMalformedFile.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/ChipMalformedFile.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/ChipMalformedFile.toString|toString(){}[0]
+
+    final enum class Reason : kotlin/Enum<io.lightine.tessera.types.errors/ChipMalformedFile.Reason> { // io.lightine.tessera.types.errors/ChipMalformedFile.Reason|null[0]
+        enum entry INVALID_ELEMENT // io.lightine.tessera.types.errors/ChipMalformedFile.Reason.INVALID_ELEMENT|null[0]
+        enum entry MISSING_ELEMENT // io.lightine.tessera.types.errors/ChipMalformedFile.Reason.MISSING_ELEMENT|null[0]
+        enum entry NOT_VALID_TLV // io.lightine.tessera.types.errors/ChipMalformedFile.Reason.NOT_VALID_TLV|null[0]
+        enum entry UNEXPECTED_FILE_TAG // io.lightine.tessera.types.errors/ChipMalformedFile.Reason.UNEXPECTED_FILE_TAG|null[0]
+
+        final val entries // io.lightine.tessera.types.errors/ChipMalformedFile.Reason.entries|#static{}entries[0]
+            final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.types.errors/ChipMalformedFile.Reason> // io.lightine.tessera.types.errors/ChipMalformedFile.Reason.entries.<get-entries>|<get-entries>#static(){}[0]
+
+        final fun valueOf(kotlin/String): io.lightine.tessera.types.errors/ChipMalformedFile.Reason // io.lightine.tessera.types.errors/ChipMalformedFile.Reason.valueOf|valueOf#static(kotlin.String){}[0]
+        final fun values(): kotlin/Array<io.lightine.tessera.types.errors/ChipMalformedFile.Reason> // io.lightine.tessera.types.errors/ChipMalformedFile.Reason.values|values#static(){}[0]
+    }
+}
+
 final class io.lightine.tessera.types.errors/MrzCharacterSetViolation : io.lightine.tessera.types.errors/MrzParseError { // io.lightine.tessera.types.errors/MrzCharacterSetViolation|null[0]
     constructor <init>(kotlin/Char, kotlin/Int) // io.lightine.tessera.types.errors/MrzCharacterSetViolation.<init>|<init>(kotlin.Char;kotlin.Int){}[0]
 
