@@ -997,8 +997,8 @@ public object MrzGenerator {
         secondary: String,
         profile: TransliterationProfile?,
     ): IdentifierProcessing {
-        // Per ICAO Doc 9303 Part 3 §4.6: "Numeric characters shall not be used in the
-        // name fields of the MRZ." Reject before applying any profile so the error
+        // ICAO Doc 9303 Part 3 §4.6: digits are not allowed in the MRZ name fields.
+        // Reject before applying any profile so the error
         // references the consumer's original input rather than a transliterated form.
         rejectIfNameFieldContainsDigits(format, primary)?.let { return IdentifierProcessing.Failure(it) }
         rejectIfNameFieldContainsDigits(format, secondary)?.let { return IdentifierProcessing.Failure(it) }

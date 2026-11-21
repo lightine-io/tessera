@@ -292,8 +292,8 @@ class MrzDateInferenceTest {
 
     // --- Partial-unknown-date components (filler `<` per Part 3 §4.8) ---
     //
-    // ICAO Doc 9303 Part 3 §4.8: "If all or part of the date of birth is unknown, the relevant
-    // character positions shall be completed with filler characters (`<`)." These tests verify
+    // ICAO Doc 9303 Part 3 §4.8: an unknown date of birth, or an unknown part of it, is written
+    // with filler characters (`<`) in those positions. These tests verify
     // that filler-character components route to RAW_ONLY without crashing, alongside the
     // existing non-digit-component coverage above. Behaviorally identical (toIntOrNull returns
     // null for both `<<` and alphabetic input), but the spec specifically names the filler form.

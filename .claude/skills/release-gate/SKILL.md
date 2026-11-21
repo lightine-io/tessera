@@ -99,5 +99,12 @@ maintainer. Record the results as a comment on the release card.
     "Written for Tessera" footer, or a "current release" sentence on the old number is
     updated with the release's pages, and only after the page's code was checked against
     this release. By hand until the shelf check can do it.
+14. **Size.** Build the release locally,
+    `./gradlew publishToMavenLocal -Ptessera.skipSigning=true -Dmaven.repo.local=<temp dir>`,
+    and record on the release card the size of every `.jar`, `.aar` and `.klib`, and of
+    each new runtime dependency's main file. After the release run, add the size of
+    `Tessera.xcframework.zip`. Compare with the previous release card (the first baseline,
+    for 0.7.0, is on TES-29). There is no fixed limit: explain in one line on the card any
+    growth of more than 10% in the SDK's own files, and every new runtime dependency.
 
 **The maintainer pushes the tag. The session never does.**
