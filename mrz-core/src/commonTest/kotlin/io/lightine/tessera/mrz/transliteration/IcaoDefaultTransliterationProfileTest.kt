@@ -185,8 +185,8 @@ class IcaoDefaultTransliterationProfileTest {
 
     @Test
     fun unmapped_character_falls_back_to_filler() {
-        // Cyrillic letter outside the starter table.
-        val result = IcaoDefaultTransliterationProfile.toMrzAlphabet("Я")
+        // Greek letter: Doc 9303 Part 3 Section 6 has no Greek table.
+        val result = IcaoDefaultTransliterationProfile.toMrzAlphabet("Ω")
         assertEquals(TransliterationResult.Success("<"), result)
     }
 

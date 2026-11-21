@@ -99,16 +99,26 @@ private const val FILLER: Char = '<'
 internal fun mapToMrzAlphabet(
     input: String,
     mapChar: (Char) -> String,
+): String = mapToMrzAlphabetAt(input) { index -> mapChar(input[index]) }
+
+/**
+ * Like [mapToMrzAlphabet], but [mapAt] gets the index of the character in [input], so a rule can
+ * look at the characters around it.
+ */
+internal fun mapToMrzAlphabetAt(
+    input: String,
+    mapAt: (Int) -> String,
 ): String {
     val output = StringBuilder(input.length)
     var commaPending = false
-    for (char in input) {
+    for (index in input.indices) {
+        val char = input[index]
         if (char == COMMA) {
             commaPending = output.isNotEmpty()
             continue
         }
         if (commaPending && char.isWhitespace()) continue
-        val mapped = mapChar(char)
+        val mapped = mapAt(index)
         if (mapped.isEmpty()) continue
         if (commaPending && output.last() != FILLER) output.append(FILLER)
         commaPending = false

@@ -3,7 +3,8 @@ package io.lightine.tessera.mrz.transliteration
 /**
  * The transliteration profiles known to the SDK, keyed by identifier.
  *
- * The `ICAO` and `AZE` profiles are registered at startup. The registry is not thread-safe:
+ * The `ICAO` and `AZE` profiles and the five [IcaoCyrillicLanguageProfiles] are registered at
+ * startup. The registry is not thread-safe:
  * register profiles before any concurrent use.
  *
  * @since 0.1.0
@@ -14,6 +15,7 @@ public object TransliterationProfileRegistry {
     init {
         register(IcaoDefaultTransliterationProfile)
         register(AzeTransliterationProfile)
+        IcaoCyrillicLanguageProfiles.all.forEach(::register)
     }
 
     /**

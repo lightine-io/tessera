@@ -3,7 +3,8 @@ package io.lightine.tessera.mrz.transliteration
 import io.lightine.tessera.mrz.parsing.isMrzAlphabetCharacter
 
 /**
- * The default profile: the ICAO Doc 9303 Part 3 Annex G Latin table, no expansion.
+ * The default profile: the tables of ICAO Doc 9303 Part 3 Section 6 for Latin (6.A, no expansion),
+ * Cyrillic (6.B, main values) and Arabic script (6.C).
  *
  * @since 0.1.0
  */
@@ -14,9 +15,7 @@ public object IcaoDefaultTransliterationProfile : TransliterationProfile {
     /** The profile identifier: [IDENTIFIER]. */
     public override val identifier: String = IDENTIFIER
 
-    private const val FILLER: Char = '<'
-
-    private val mappings: Map<Char, String> = buildIcaoLatinMappings()
+    private val rules: IcaoNameRules = IcaoNameRules()
 
     /**
      * Maps text to the MRZ alphabet and always succeeds.
@@ -26,16 +25,26 @@ public object IcaoDefaultTransliterationProfile : TransliterationProfile {
      * becomes `OE`, `ß` becomes `SS`, `Þ` becomes `TH`, `Ð` becomes `D`, and `Ĳ` becomes `IJ`.
      * Apostrophes and other punctuation are dropped. A comma between two name parts becomes one
      * `<`, with or without a space next to it (`ANNA, MARIA` and `ANNA,MARIA` both give
-     * `ANNA<MARIA`); a comma at the start or the end is dropped. Every other character, including
-     * space, hyphen, the schwa `Ə`, and non-Latin letters, becomes `<`.
+     * `ANNA<MARIA`); a comma at the start or the end is dropped.
+     *
+     * Cyrillic letters follow the main values of Section 6.B, capital and small alike (`Ж` becomes
+     * `ZH`, `Щ` becomes `SHCH`). The table's language exceptions are not applied here; they are in
+     * the profiles of [IcaoCyrillicLanguageProfiles]. Letters the table does not list, such as the
+     * soft sign `Ь`, become `<`.
+     *
+     * Arabic-script letters follow Section 6.C, plus veh and feh with 3 dots below from Appendix B.
+     * Short vowels, sukun, superscript alef, tatweel and the four letters the table marks "not
+     * encoded" produce nothing. Teh marbuta is `XTA`, or `XAH` at the end of a name part. Shadda
+     * repeats the letter before it (`XDZ` becomes `XDZXDZ`).
+     *
+     * Every other character, including space, hyphen, the schwa `Ə`, and Greek letters, becomes
+     * `<`.
      *
      * @param normalizedInput The text, already in Unicode NFC.
      * @return [TransliterationResult.Success] with the mapped text.
      */
-    public override fun toMrzAlphabet(normalizedInput: String): TransliterationResult {
-        val output = mapToMrzAlphabet(normalizedInput, ::mapCharacter)
-        return TransliterationResult.Success(output)
-    }
+    public override fun toMrzAlphabet(normalizedInput: String): TransliterationResult =
+        TransliterationResult.Success(rules.convert(normalizedInput))
 
     /**
      * Builds a profile that applies [overrides] first and follows this profile for every other
@@ -72,7 +81,4 @@ public object IcaoDefaultTransliterationProfile : TransliterationProfile {
         }
         return OverriddenTransliterationProfile(identifier, overrides.toMap())
     }
-
-    internal fun mapCharacter(char: Char): String =
-        if (isMrzAlphabetCharacter(char)) char.toString() else mappings[char] ?: FILLER.toString()
 }

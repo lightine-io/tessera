@@ -1304,6 +1304,103 @@ internal val P3_T_1: ConventionVector =
     )
 
 // ---------------------------------------------------------------------------------------------
+// Script examples: Part 3 Section 6.C and Appendix B, Arabic script to MRZ text.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * A printed example of the Arabic-script table: script in, MRZ text out.
+ *
+ * The script is written by us, letter by letter, from the letters Doc 9303 names (B.5.7 spells them
+ * out) or that its printed MRZ and VIZ show. It is not copied from the PDF: the text layer has no
+ * shadda marks and uses look-alike code points (06BE for heh, 06A7 for feh), and one word comes out
+ * in visual order.
+ *
+ * @property script The name in Arabic script, as written by us.
+ * @property printed The MRZ text as printed, trailing fillers included.
+ * @property sdkOutput What the ICAO default profile gives. Equal to [printed] without its trailing
+ *   fillers unless [whyDifferent] says otherwise.
+ * @property whyDifferent Why the SDK's documented output differs from the printed text, or `null`.
+ */
+internal data class ScriptVector(
+    override val id: String,
+    override val source: IcaoSource,
+    val script: String,
+    val printed: String,
+    val sdkOutput: String = printed.trimEnd('<'),
+    val whyDifferent: String? = null,
+    override val knownFinding: String? = null,
+) : IcaoVector
+
+internal val SCRIPT_VECTORS: List<ScriptVector> =
+    listOf(
+        ScriptVector(
+            id = "P3-S-1",
+            source = IcaoSource(part = 3, where = "6.C, note 3 (shadda)", pdfPage = 38),
+            script = "\u0639\u0628\u0651\u0627\u0633",
+            printed = "EBBAS",
+        ),
+        ScriptVector(
+            id = "P3-S-2",
+            source = IcaoSource(part = 3, where = "6.C, note 3 (shadda)", pdfPage = 38),
+            script = "\u0641\u0636\u0651\u0629",
+            printed = "FXDZXDZXAH",
+        ),
+        ScriptVector(
+            id = "P3-AR-3",
+            source = IcaoSource(part = 3, where = "Appendix B.5.7", pdfPage = 69),
+            script =
+                "\u0627\u0628\u0648 \u0628\u0643\u0631 \u0645\u062D\u0645\u062F \u0628\u0646 " +
+                    "\u0632\u0643\u0631\u064A\u0627 \u0627\u0644\u0631\u0627\u0632\u064A",
+            printed = "ABW<BKR<MXHMD<BN<ZKRYA<ALRAZY",
+        ),
+        ScriptVector(
+            id = "P3-S-3",
+            source = IcaoSource(part = 3, where = "B.5.9, further examples (the script of P3-AR-4)", pdfPage = 70),
+            script = "\u0647\u0627\u0631\u064A \u0627\u0644\u0634\u0645\u0627\u0639",
+            printed = "HARY<ALXSHMAE<<<<<<<<<<<<<<<<<<<<<<<<<<",
+        ),
+        ScriptVector(
+            id = "P3-S-4",
+            source = IcaoSource(part = 3, where = "B.5.9, further examples (the script of P3-AR-5)", pdfPage = 70),
+            script = "\u0633\u0645\u064A\u0631 \u0628\u0627\u062F\u0645\u0643\u062F\u0648\u0630\u064A\u0644",
+            printed = "SMYR<BADMKDWXDHYL<<<<<<<<<<<<<<<<<<<<<<",
+        ),
+        ScriptVector(
+            id = "P3-S-5",
+            source = IcaoSource(part = 3, where = "B.5.9, further examples (the script of P3-AR-6)", pdfPage = 70),
+            script = "\u062C\u0645\u0627\u0644 \u0639\u0628\u062F \u0627\u0644\u0646\u0627\u0635\u0631",
+            printed = "JMAL<EBD<ALNAXSSR<<<<<<<<<<<<<<<<<<<<<<<",
+        ),
+        ScriptVector(
+            id = "P3-S-6",
+            source = IcaoSource(part = 3, where = "B.5.9, further examples (the script of P3-AR-7)", pdfPage = 70),
+            script =
+                "\u0627\u0644\u0639\u0628\u0627\u0633 \u0639\u0628\u062F \u0627\u0644\u0644\u0647 " +
+                    "\u0628\u0646 \u0645\u062D\u0645\u062F \u0627\u0644\u0633\u0641\u0627\u062D",
+            printed = "ALEBAS<EBD<ALLXH<BN<MXHMD<ALSFAXH<<<<<<",
+            sdkOutput = "ALEBAS<EBD<ALLH<BN<MXHMD<ALSFAXH",
+            whyDifferent =
+                "The printed ALLXH writes the last letter of the word for God, heh, as XH. Section 6.C and " +
+                    "B.5.5.7 make heh H and hah XH, and B.5.5.11 names this word as a special case without " +
+                    "a rule. The SDK follows the table.",
+        ),
+        ScriptVector(
+            id = "P3-S-7",
+            source = IcaoSource(part = 3, where = "B.5.9, further examples (the script of P3-AR-10)", pdfPage = 70),
+            script =
+                "\u0625\u0633\u0645\u0627\u0639\u064A\u0644 \u0639\u0632\u0651 " +
+                    "\u0627\u0644\u062F\u064A\u0646",
+            printed = "ISMAEYL<EZZ<ALDYN<<<<<<<<<<<<<<<<<<<<<<",
+        ),
+        ScriptVector(
+            id = "P3-S-8",
+            source = IcaoSource(part = 3, where = "B.5.9, further examples (the script of P3-AR-11)", pdfPage = 70),
+            script = "\u062C\u0645\u064A\u0644\u0629 \u0646\u0639\u064A\u0645\u0629",
+            printed = "JMYLXAH<NEYMXAH<<<<<<<<<<<<<<<<<<<<<<<<",
+        ),
+    )
+
+// ---------------------------------------------------------------------------------------------
 // Listed, not asserted.
 // ---------------------------------------------------------------------------------------------
 
@@ -1322,19 +1419,13 @@ internal val LISTED_VECTORS: List<ListedVector> =
             id = "P3-AR-1",
             source = IcaoSource(part = 3, where = "Appendix B.2.2", pdfPage = 59),
             printed = "ABU<BAKR<MOHAMMED<IBN<ZAKARIA<AL<RAZI",
-            reason = "A free transcription of an Arabic-script name, not a whole name field; the SDK has no Arabic profile.",
+            reason = "A free transcription of an Arabic-script name, not the output of the table; P3-AR-3 is the table's output.",
         ),
         ListedVector(
             id = "P3-AR-2",
             source = IcaoSource(part = 3, where = "Appendix B.2.2, Buckwalter", pdfPage = 59),
             printed = "Abw<bAkr<mHmd<bn<zkryAY<AlrAzY",
             reason = "Shown by Doc 9303 as unsuitable for the MRZ (lower case).",
-        ),
-        ListedVector(
-            id = "P3-AR-3",
-            source = IcaoSource(part = 3, where = "Appendix B.5.7", pdfPage = 69),
-            printed = "ABW<BKR<MXHMD<BN<ZKRYA<ALRAZY",
-            reason = "Output of the recommended Arabic table, not a whole name field; the SDK has no Arabic profile.",
         ),
     )
 

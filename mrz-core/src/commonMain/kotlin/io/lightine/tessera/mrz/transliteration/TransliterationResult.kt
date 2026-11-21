@@ -5,7 +5,7 @@ import io.lightine.tessera.types.vocabulary.UnmappedCharacter
 /**
  * The result of applying a transliteration profile: [Success] or [Failure].
  *
- * The `ICAO` and `AZE` profiles map unmapped characters to `<` and always return [Success].
+ * The profiles the SDK ships map unmapped characters to `<` and always return [Success].
  *
  * @since 0.1.0
  */
