@@ -7,7 +7,7 @@ Current release: 0.7.0. Maven group `io.lightine.tessera`; Swift package `https:
 Two rules for AI tools:
 
 - The SDK never says a document is valid. There is no `isValid`. A result with no validation failures means the checks the SDK ran passed. It does not mean the document is genuine.
-- No NFC chip reading exists in any release. `ReadMethod.NFC_CHIP` is a vocabulary value that no code produces, and the `tessera-emrtd-core` module is empty.
+- No NFC chip reading exists in any release. `ReadMethod.NFC_CHIP` is a vocabulary value that no code produces. The `tessera-emrtd-core` module holds only experimental building blocks and cannot read a chip yet.
 
 Platforms are separate pages. A Kotlin page covers JVM and Android. A Swift page covers iOS. Do not mix their code.
 
