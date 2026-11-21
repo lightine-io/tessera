@@ -126,6 +126,27 @@ final enum class io.lightine.tessera.types.vocabulary/Sex : kotlin/Enum<io.light
     final fun values(): kotlin/Array<io.lightine.tessera.types.vocabulary/Sex> // io.lightine.tessera.types.vocabulary/Sex.values|values#static(){}[0]
 }
 
+final class io.lightine.tessera.types.errors/ChipImageGroupMalformed : io.lightine.tessera.types.errors/ChipError { // io.lightine.tessera.types.errors/ChipImageGroupMalformed|null[0]
+    constructor <init>(io.lightine.tessera.types.errors/ChipImageGroup, io.lightine.tessera.types.errors/ChipImageGroupProblem, kotlin/Int?) // io.lightine.tessera.types.errors/ChipImageGroupMalformed.<init>|<init>(io.lightine.tessera.types.errors.ChipImageGroup;io.lightine.tessera.types.errors.ChipImageGroupProblem;kotlin.Int?){}[0]
+
+    final val description // io.lightine.tessera.types.errors/ChipImageGroupMalformed.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/ChipImageGroupMalformed.description.<get-description>|<get-description>(){}[0]
+    final val group // io.lightine.tessera.types.errors/ChipImageGroupMalformed.group|{}group[0]
+        final fun <get-group>(): io.lightine.tessera.types.errors/ChipImageGroup // io.lightine.tessera.types.errors/ChipImageGroupMalformed.group.<get-group>|<get-group>(){}[0]
+    final val offset // io.lightine.tessera.types.errors/ChipImageGroupMalformed.offset|{}offset[0]
+        final fun <get-offset>(): kotlin/Int? // io.lightine.tessera.types.errors/ChipImageGroupMalformed.offset.<get-offset>|<get-offset>(){}[0]
+    final val problem // io.lightine.tessera.types.errors/ChipImageGroupMalformed.problem|{}problem[0]
+        final fun <get-problem>(): io.lightine.tessera.types.errors/ChipImageGroupProblem // io.lightine.tessera.types.errors/ChipImageGroupMalformed.problem.<get-problem>|<get-problem>(){}[0]
+
+    final fun component1(): io.lightine.tessera.types.errors/ChipImageGroup // io.lightine.tessera.types.errors/ChipImageGroupMalformed.component1|component1(){}[0]
+    final fun component2(): io.lightine.tessera.types.errors/ChipImageGroupProblem // io.lightine.tessera.types.errors/ChipImageGroupMalformed.component2|component2(){}[0]
+    final fun component3(): kotlin/Int? // io.lightine.tessera.types.errors/ChipImageGroupMalformed.component3|component3(){}[0]
+    final fun copy(io.lightine.tessera.types.errors/ChipImageGroup = ..., io.lightine.tessera.types.errors/ChipImageGroupProblem = ..., kotlin/Int? = ...): io.lightine.tessera.types.errors/ChipImageGroupMalformed // io.lightine.tessera.types.errors/ChipImageGroupMalformed.copy|copy(io.lightine.tessera.types.errors.ChipImageGroup;io.lightine.tessera.types.errors.ChipImageGroupProblem;kotlin.Int?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/ChipImageGroupMalformed.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/ChipImageGroupMalformed.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/ChipImageGroupMalformed.toString|toString(){}[0]
+}
+
 final class io.lightine.tessera.types.errors/ChipMalformedFile : io.lightine.tessera.types.errors/ChipError { // io.lightine.tessera.types.errors/ChipMalformedFile|null[0]
     constructor <init>(kotlin/Int?, io.lightine.tessera.types.errors/ChipMalformedFile.Reason) // io.lightine.tessera.types.errors/ChipMalformedFile.<init>|<init>(kotlin.Int?;io.lightine.tessera.types.errors.ChipMalformedFile.Reason){}[0]
 
@@ -610,6 +631,7 @@ final class io.lightine.tessera.types.errors/NfcUnavailable : io.lightine.tesser
     final fun toString(): kotlin/String // io.lightine.tessera.types.errors/NfcUnavailable.toString|toString(){}[0]
 
     final enum class Reason : kotlin/Enum<io.lightine.tessera.types.errors/NfcUnavailable.Reason> { // io.lightine.tessera.types.errors/NfcUnavailable.Reason|null[0]
+        enum entry CLOSED // io.lightine.tessera.types.errors/NfcUnavailable.Reason.CLOSED|null[0]
         enum entry DISABLED // io.lightine.tessera.types.errors/NfcUnavailable.Reason.DISABLED|null[0]
         enum entry NOT_PERMITTED // io.lightine.tessera.types.errors/NfcUnavailable.Reason.NOT_PERMITTED|null[0]
         enum entry NOT_SUPPORTED // io.lightine.tessera.types.errors/NfcUnavailable.Reason.NOT_SUPPORTED|null[0]
