@@ -361,10 +361,32 @@ class MrzFrameAnalyzerTest {
             assertEquals(MrzFormat.TD3, event.detectedFormat)
             assertTrue(event.mrzRegionFound)
             assertEquals(3, event.recognizedLineCount)
+            assertEquals(0, event.fillerPaddingAdded, "a full-width read adds no filler")
             // No document data must leak into telemetry (PII guard).
             val rendered = event.toString()
             assertFalse(rendered.contains("SPECIMEN"), "telemetry leaked the name field")
             assertFalse(rendered.contains("T22000129"), "telemetry leaked the document number")
+        }
+
+    @Test
+    fun telemetry_reports_how_many_fillers_were_added_to_a_short_name_line() =
+        runTest {
+            // A text reader shortens the long filler run after the name, so line 1 comes back short
+            // and the analyzer pads it with `<`. The frame event reports the count only, never the
+            // line itself (PII guard).
+            val short = td3Line1.trimEnd('<') + "<"
+            val sink = RecordingSink()
+
+            val decoded =
+                assertIs<MrzScanResult.Decoded>(
+                    analyzer(recognizerReturning(textOf(short, td3Line2)), telemetry = sink).analyse(FakeFrame()),
+                )
+            val padding = assertNotNull(decoded.fillerPadding)
+
+            val event = assertIs<CameraFrameEvent>(sink.events.single())
+            assertEquals(CameraFrameOutcome.DECODED, event.outcome)
+            assertEquals(padding.addedCount, event.fillerPaddingAdded)
+            assertEquals(44 - short.length, event.fillerPaddingAdded)
         }
 
     @Test
