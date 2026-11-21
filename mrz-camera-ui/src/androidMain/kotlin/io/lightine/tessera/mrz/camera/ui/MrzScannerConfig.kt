@@ -7,6 +7,7 @@ package io.lightine.tessera.mrz.camera.ui
 
 import androidx.compose.runtime.Immutable
 import io.lightine.tessera.mrz.camera.MrzDecodeConsensus
+import io.lightine.tessera.types.vocabulary.DocumentCategory
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -125,6 +126,15 @@ public class MrzScannerTheme internal constructor(
  *   [IllegalArgumentException] otherwise.
  * @property hapticFeedback Plays a short haptic when a live-camera read is accepted. Default `true`.
  * @property theme Brand and appearance options. See [MrzScannerTheme].
+ * @property acceptedDocumentTypes The kinds of document the app takes, as [DocumentCategory]
+ *   values. This is the app's intake rule; the SDK does not judge the document. Default: every
+ *   category. A reading whose category is not in the set does not go to review and is not
+ *   returned; the screen says what kind it read and what kinds the app accepts, and lets the person
+ *   go on (the camera keeps scanning, a photo can be swapped, typed lines stay on the entry screen).
+ *   The category comes from `DocumentType.broadCategory`. When that is `null` (a document type code
+ *   the SDK cannot place), the reading is not filtered and goes on as usual: the SDK filters only on
+ *   a category it has. Applies to all three reading methods. Must not be empty; [Builder.build]
+ *   throws [IllegalArgumentException] otherwise. Added in 0.8.0.
  * @property onRequestPermission Called when the user taps the grant button on the permission
  *   screen. The screen never requests the permission itself. With `null` (default) the screen
  *   shows no grant button.
@@ -142,6 +152,7 @@ public class MrzScannerConfig internal constructor(
     public val hapticFeedback: Boolean,
     public val theme: MrzScannerTheme,
     public val onRequestPermission: (() -> Unit)?,
+    public val acceptedDocumentTypes: Set<DocumentCategory>,
 ) {
     /**
      * Collects [MrzScannerConfig] options. Use the [MrzScannerConfig] function instead of calling it directly.
@@ -176,6 +187,14 @@ public class MrzScannerConfig internal constructor(
         /** Sets [MrzScannerConfig.onRequestPermission]. Default `null`. */
         public var onRequestPermission: (() -> Unit)? = null
 
+        /**
+         * Sets [MrzScannerConfig.acceptedDocumentTypes], the app's intake rule. Default: every
+         * [DocumentCategory]. Must not be empty.
+         *
+         * @since 0.8.0
+         */
+        public var acceptedDocumentTypes: Set<DocumentCategory> = DocumentCategory.entries.toSet()
+
         private val themeBuilder: MrzScannerTheme.Builder = MrzScannerTheme.Builder()
 
         /** Sets the [MrzScannerConfig.theme] options in [configure]. */
@@ -186,10 +205,11 @@ public class MrzScannerConfig internal constructor(
         /**
          * Builds the immutable [MrzScannerConfig].
          *
-         * @throws IllegalArgumentException if [consensusReads] is below 1.
+         * @throws IllegalArgumentException if [consensusReads] is below 1 or [acceptedDocumentTypes] is empty.
          */
         public fun build(): MrzScannerConfig {
             require(consensusReads >= 1) { "consensusReads must be >= 1, was $consensusReads" }
+            require(acceptedDocumentTypes.isNotEmpty()) { "acceptedDocumentTypes must not be empty" }
             return MrzScannerConfig(
                 enabledMethods = enabledMethods,
                 reviewMode = reviewMode,
@@ -201,6 +221,7 @@ public class MrzScannerConfig internal constructor(
                 hapticFeedback = hapticFeedback,
                 theme = themeBuilder.build(),
                 onRequestPermission = onRequestPermission,
+                acceptedDocumentTypes = acceptedDocumentTypes.toSet(),
             )
         }
     }
@@ -211,7 +232,7 @@ public class MrzScannerConfig internal constructor(
  *
  * @param configure Sets options on the [MrzScannerConfig.Builder].
  * @return The immutable configuration.
- * @throws IllegalArgumentException if `consensusReads` is below 1.
+ * @throws IllegalArgumentException if `consensusReads` is below 1 or `acceptedDocumentTypes` is empty.
  */
 public fun MrzScannerConfig(configure: MrzScannerConfig.Builder.() -> Unit = {}): MrzScannerConfig =
     MrzScannerConfig.Builder().apply(configure).build()

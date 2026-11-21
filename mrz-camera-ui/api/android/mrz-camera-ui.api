@@ -19,6 +19,7 @@ public final class io/lightine/tessera/mrz/camera/ui/DismissReason : java/lang/E
 
 public final class io/lightine/tessera/mrz/camera/ui/MrzScannerConfig {
 	public static final field $stable I
+	public final fun getAcceptedDocumentTypes ()Ljava/util/Set;
 	public final fun getConsensusReads ()I
 	public final fun getEnabledMethods ()Ljava/util/Set;
 	public final fun getHapticFeedback ()Z
@@ -35,6 +36,7 @@ public final class io/lightine/tessera/mrz/camera/ui/MrzScannerConfig$Builder {
 	public static final field $stable I
 	public fun <init> ()V
 	public final fun build ()Lio/lightine/tessera/mrz/camera/ui/MrzScannerConfig;
+	public final fun getAcceptedDocumentTypes ()Ljava/util/Set;
 	public final fun getConsensusReads ()I
 	public final fun getEnabledMethods ()Ljava/util/Set;
 	public final fun getHapticFeedback ()Z
@@ -44,6 +46,7 @@ public final class io/lightine/tessera/mrz/camera/ui/MrzScannerConfig$Builder {
 	public final fun getShowTorchButton ()Z
 	public final fun getStruggleTimeout-UwyO8pc ()J
 	public final fun getTorchOnByDefault ()Z
+	public final fun setAcceptedDocumentTypes (Ljava/util/Set;)V
 	public final fun setConsensusReads (I)V
 	public final fun setEnabledMethods (Ljava/util/Set;)V
 	public final fun setHapticFeedback (Z)V

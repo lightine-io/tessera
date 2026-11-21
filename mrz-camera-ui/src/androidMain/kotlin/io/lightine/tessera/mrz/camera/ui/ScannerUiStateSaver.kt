@@ -32,6 +32,8 @@ import androidx.compose.runtime.saveable.listSaver
 //    only ever reached from the saved-image flow, so the reader picks a photo again).
 //  * Review restores as the start screen of its own source method (TES-240: camera -> Scanning, photo ->
 //    AwaitingSavedImagePick, manual -> an empty ManualRaw), so the reader scans or types again.
+//  * SavedImageNotAccepted restores as AwaitingSavedImagePick (TES-103: the category it names was read from
+//    the document, so it is document data; the reader picks a photo again).
 //  * CameraInUse, CameraUnavailable, AwaitingSavedImagePick and SavedImageEmpty restore as themselves.
 //
 // On top of the codec, [scannerUiStateSaver] re-validates every decoded state against the `enabledMethods`
@@ -73,6 +75,8 @@ internal fun withoutDocumentData(state: ScannerUiState): ScannerUiState =
 
         is ScannerUiState.ReadFailed -> ScannerUiState.AwaitingSavedImagePick
 
+        is ScannerUiState.SavedImageNotAccepted -> ScannerUiState.AwaitingSavedImagePick
+
         is ScannerUiState.Review -> startScreenFor(state.source)
 
         is ScannerUiState.Scanning,
@@ -88,10 +92,11 @@ internal fun withoutDocumentData(state: ScannerUiState): ScannerUiState =
  * What a state becomes when the composition that showed it is rebuilt - on BOTH paths: the retained
  * in-memory state after a configuration change (ScannerFlowState.kt), and the decoded state after process
  * death ([decodeScannerUiState]). Only session-bound parts change:
- *  * [ScannerUiState.Scanning] drops both overlays. `gathering` describes the frame-agreement consensus over
+ *  * [ScannerUiState.Scanning] drops its overlays. `gathering` describes the frame-agreement consensus over
  *    the (now-dead) camera stream, and `struggling` is driven by the struggle timer of the live camera
  *    session, which restarts with the camera on every recreation; showing either over a brand-new session
  *    would claim something that is not happening. The fresh session's own gates show them again if needed.
+ *    The not-accepted notice (TES-103) is dropped for the same reason: it describes the old session's frames.
  *  * [ScannerUiState.SavedImageAnalyzing] becomes [ScannerUiState.AwaitingSavedImagePick]: the analysis
  *    coroutine died with the old composition, so nothing would ever finish the "Analyzing..." screen.
  *
@@ -100,7 +105,7 @@ internal fun withoutDocumentData(state: ScannerUiState): ScannerUiState =
  */
 internal fun settleAfterRecreation(state: ScannerUiState): ScannerUiState =
     when (state) {
-        is ScannerUiState.Scanning -> ScannerUiState.Scanning(struggling = false, gathering = false)
+        is ScannerUiState.Scanning -> ScannerUiState.Scanning(struggling = false, gathering = false, notAccepted = null)
         ScannerUiState.SavedImageAnalyzing -> ScannerUiState.AwaitingSavedImagePick
         else -> state
     }
@@ -137,6 +142,8 @@ internal fun encodeScannerUiState(state: ScannerUiState): List<Any?> =
         // Unreachable: withoutDocumentData never returns these. Encoded as the same start screens it maps them
         // to, so the `when` stays exhaustive without a throw.
         is ScannerUiState.ReadFailed -> listOf(TAG_AWAITING_SAVED_IMAGE_PICK)
+
+        is ScannerUiState.SavedImageNotAccepted -> listOf(TAG_AWAITING_SAVED_IMAGE_PICK)
 
         is ScannerUiState.Review -> encodeScannerUiState(startScreenFor(dataFree.source))
     }
@@ -224,6 +231,7 @@ internal fun gateRestoredState(
             ScannerUiState.AwaitingSavedImagePick,
             ScannerUiState.SavedImageEmpty,
             is ScannerUiState.ReadFailed,
+            is ScannerUiState.SavedImageNotAccepted,
             -> ScanMethod.SAVED_IMAGE
 
             is ScannerUiState.ManualRaw -> ScanMethod.MANUAL_ENTRY

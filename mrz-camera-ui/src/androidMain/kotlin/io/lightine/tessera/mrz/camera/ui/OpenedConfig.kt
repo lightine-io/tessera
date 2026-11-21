@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import io.lightine.tessera.types.vocabulary.DocumentCategory
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.nanoseconds
 
@@ -56,6 +57,7 @@ internal fun encodeOpenedConfig(config: MrzScannerConfig): List<Any?> =
         config.theme.brandColor,
         config.theme.darkMode.name,
         config.theme.useDynamicColor,
+        ArrayList(config.acceptedDocumentTypes.map { it.name }),
     )
 
 /** Rebuilds a config from [encodeOpenedConfig]'s list, with [onRequestPermission] supplied fresh; `null` if malformed. */
@@ -63,7 +65,7 @@ internal fun decodeOpenedConfig(
     saved: List<Any?>,
     onRequestPermission: (() -> Unit)?,
 ): MrzScannerConfig? {
-    if (saved.size != 11) return null
+    if (saved.size != 12) return null
     val methodNames = saved[0] as? List<*> ?: return null
     val enabledMethods =
         methodNames
@@ -79,6 +81,12 @@ internal fun decodeOpenedConfig(
     val brandColor = saved[8]?.let { it as? Long ?: return null }
     val darkMode = DarkMode.entries.find { it.name == saved[9] } ?: return null
     val useDynamicColor = saved[10] as? Boolean ?: return null
+    val categoryNames = saved[11] as? List<*> ?: return null
+    val acceptedDocumentTypes =
+        categoryNames
+            .map { name -> DocumentCategory.entries.find { it.name == name } ?: return null }
+            .toSet()
+    if (acceptedDocumentTypes.isEmpty()) return null
     return MrzScannerConfig(
         enabledMethods = enabledMethods,
         reviewMode = reviewMode,
@@ -90,6 +98,7 @@ internal fun decodeOpenedConfig(
         hapticFeedback = hapticFeedback,
         theme = MrzScannerTheme(brandColor = brandColor, darkMode = darkMode, useDynamicColor = useDynamicColor),
         onRequestPermission = onRequestPermission,
+        acceptedDocumentTypes = acceptedDocumentTypes,
     )
 }
 
