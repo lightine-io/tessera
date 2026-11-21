@@ -34,6 +34,9 @@ internal object SecurityOids {
     const val EC_PUBLIC_KEY = "1.2.840.10045.2.1"
     const val PRIME_FIELD = "1.2.840.10045.1.1"
 
+    /** rsaEncryption (RFC 5280): the active-authentication key of EF.DG15 (Part 11, 6.1.5). */
+    const val RSA_ENCRYPTION = "1.2.840.113549.1.1.1"
+
     /** CMS ContentInfo type signedData. */
     const val CMS_SIGNED_DATA = "1.2.840.113549.1.7.2"
 
@@ -128,7 +131,7 @@ internal object StandardizedParameters {
             StandardizedParameter(2, "2048-bit MODP group with 256-bit prime order subgroup", KeyAgreement.DH, 2048),
             StandardizedParameter(8, "NIST P-192", KeyAgreement.ECDH, 192),
             StandardizedParameter(9, "BrainpoolP192r1", KeyAgreement.ECDH, 192),
-            StandardizedParameter(10, "NIST P-224", KeyAgreement.ECDH, 224),
+            StandardizedParameter(10, "NIST P-224", KeyAgreement.ECDH, 224, usableWithIntegratedMapping = false),
             StandardizedParameter(11, "BrainpoolP224r1", KeyAgreement.ECDH, 224),
             StandardizedParameter(12, "NIST P-256", KeyAgreement.ECDH, 256),
             StandardizedParameter(13, "BrainpoolP256r1", KeyAgreement.ECDH, 256),

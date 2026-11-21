@@ -36,12 +36,12 @@ public class BiometricGroup internal constructor(
          * group template (`7F61`) with its nested biometric information templates (`7F60`).
          *
          * Bytes after the `75` object are ignored (a file read is cut to the length the first
-         * object declares). Bad bytes give [ImageGroupParse.Malformed]; this never throws for
+         * object declares). Bad bytes give [LdsParseResult.Failure] with a [io.lightine.tessera.types.errors.ChipMalformedFile]; this never throws for
          * chip data.
          *
          * @param bytes the whole content of the file
          */
-        public fun parse(bytes: ByteArray): ImageGroupParse<BiometricGroup> = ImageGroupReader.readDg2(bytes)
+        public fun parse(bytes: ByteArray): LdsParseResult<BiometricGroup> = ImageGroupReader.readDg2(bytes)
     }
 }
 

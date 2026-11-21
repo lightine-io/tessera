@@ -50,7 +50,8 @@ internal class PaceSuite private constructor(
         /**
          * The suite for a PACE protocol [oid] and standardized [parameterId]. Throws
          * [PaceException] with [PaceFailure.UNSUPPORTED_SUITE] when the OID is not a PACE protocol
-         * or the ID is not a standardized set of the OID's key agreement.
+         * or the ID is not a standardized set of the OID's key agreement (or one Table 12 rules out
+         * for the OID's mapping: NIST P-224 with the integrated mapping).
          */
         fun of(
             oid: String,
@@ -61,6 +62,10 @@ internal class PaceSuite private constructor(
                 throw PaceException(PaceFailure.UNSUPPORTED_SUITE)
             }
             val parameter = StandardizedParameters.byId(parameterId) ?: throw PaceException(PaceFailure.UNSUPPORTED_SUITE)
+            // Table 12: NIST P-224 cannot be used with the integrated mapping.
+            if (protocol.mapping == PaceMapping.INTEGRATED && !parameter.usableWithIntegratedMapping) {
+                throw PaceException(PaceFailure.UNSUPPORTED_SUITE)
+            }
             val group =
                 when (val values = StandardDomainParameterValues.forId(parameterId)) {
                     is DhDomainParameters -> PaceGroup.Dh(values)

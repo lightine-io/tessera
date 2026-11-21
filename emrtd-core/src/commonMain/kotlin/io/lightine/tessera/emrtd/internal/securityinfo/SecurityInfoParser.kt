@@ -199,6 +199,15 @@ internal object DomainParameterReader {
                 }
             }
 
+            SecurityOids.RSA_ENCRYPTION -> {
+                // RFC 5280: rsaEncryption parameters are NULL or absent; nothing is read from
+                // either. The key itself is the DER RSAPublicKey sequence in the BIT STRING, which
+                // the caller reads from `publicValue` (the active-authentication key of Part 11, 6.1.5).
+                alg.readOptional(DerTag.universal(DerTag.NULL))
+                alg.finish()
+                DomainParameters.Unsupported(oid)
+            }
+
             SecurityOids.DH_PUBLIC_NUMBER -> {
                 val dh = alg.readSequence()
                 val p = dh.readUnsignedInteger()

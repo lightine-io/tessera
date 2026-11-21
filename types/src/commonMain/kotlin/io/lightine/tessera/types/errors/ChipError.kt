@@ -6,8 +6,9 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  * Root of the errors that stop reading a document's chip.
  *
  * [NfcError] holds the errors of the connection to the chip: the tag was lost, the chip did not
- * answer in time, or NFC cannot be used. Errors of the chip protocol and of the chip's content are
- * added beside it as the chip-reading API grows.
+ * answer in time, or NFC cannot be used. Beside it are the errors of the chip protocol
+ * ([ChipAccessDenied], [ChipSecureMessagingLost], [ChipUnsupportedAlgorithm], [ChipUnexpectedAnswer])
+ * and of the chip's content ([ChipMalformedFile], [ChipFileNotFound], [ChipBlank]).
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *

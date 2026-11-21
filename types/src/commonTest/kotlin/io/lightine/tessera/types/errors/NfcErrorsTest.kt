@@ -3,6 +3,7 @@
 package io.lightine.tessera.types.errors
 
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
+import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -58,8 +59,18 @@ class ChipErrorTextTest {
     private val errors: List<ChipError> =
         listOf(NfcTagLost, NfcTimeout(1234), NfcTimeout(null)) +
             NfcUnavailable.Reason.entries.map { NfcUnavailable(it) } +
-            listOf(ChipMalformedFile(null, ChipMalformedFile.Reason.NOT_VALID_TLV)) +
-            ChipMalformedFile.Reason.entries.map { ChipMalformedFile(0x0101, it) }
+            listOf(
+                ChipMalformedFile(null, ChipMalformedFile.Reason.NOT_VALID_TLV),
+                ChipMalformedFile(0x0102, ChipMalformedFile.Reason.NOT_VALID_TLV, 17),
+            ) +
+            ChipMalformedFile.Reason.entries.map { ChipMalformedFile(0x0101, it) } +
+            ChipAccessDenied.Reason.entries.map { ChipAccessDenied(ChipAccessProtocol.PACE, it, 0x6300) } +
+            listOf(ChipAccessDenied(ChipAccessProtocol.BAC, ChipAccessDenied.Reason.KEY_NOT_MATCHED)) +
+            ChipSecureMessagingLost.Reason.entries.map { ChipSecureMessagingLost(it) } +
+            listOf(ChipSecureMessagingLost(ChipSecureMessagingLost.Reason.CHIP_ENDED_SESSION, 0x6988)) +
+            ChipUnsupportedAlgorithm.Reason.entries.map { ChipUnsupportedAlgorithm(ChipAccessProtocol.PACE, it) } +
+            listOf(ChipFileNotFound(0x0102, true), ChipFileNotFound(0x010B, false), ChipBlank) +
+            ChipUnexpectedAnswer.Reason.entries.map { ChipUnexpectedAnswer(it, 0x6F00) }
 
     @Test
     fun to_string_is_the_class_name_then_the_description() {
@@ -77,7 +88,7 @@ class ChipErrorTextTest {
     @Test
     fun sample_list_covers_every_concrete_type() {
         assertEquals(errors.size, errors.count { exhaustive(it) })
-        assertEquals(4, errors.map { it::class }.toSet().size)
+        assertEquals(10, errors.map { it::class }.toSet().size)
     }
 
     private fun exhaustive(e: ChipError): Boolean =
@@ -86,7 +97,12 @@ class ChipErrorTextTest {
             is NfcTimeout,
             is NfcUnavailable,
             is ChipMalformedFile,
-            is ChipImageGroupMalformed,
+            is ChipAccessDenied,
+            is ChipSecureMessagingLost,
+            is ChipUnsupportedAlgorithm,
+            is ChipFileNotFound,
+            is ChipUnexpectedAnswer,
+            is ChipBlank,
             -> true
         }
 }
@@ -104,5 +120,51 @@ class ChipMalformedFileTest {
     fun each_reason_has_its_own_text() {
         val texts = ChipMalformedFile.Reason.entries.map { ChipMalformedFile(null, it).description }
         assertEquals(texts.size, texts.toSet().size)
+    }
+}
+
+class ChipMalformedFileOffsetTest {
+    @Test
+    fun names_the_offset_when_known() {
+        val error = ChipMalformedFile(0x0102, ChipMalformedFile.Reason.NESTING_TOO_DEEP, 42)
+        assertEquals(42, error.offset)
+        assertTrue("offset 42" in error.description, error.description)
+        assertFalse("offset" in ChipMalformedFile(0x0102, ChipMalformedFile.Reason.NESTING_TOO_DEEP).description)
+    }
+}
+
+class ChipProtocolErrorsTest {
+    @Test
+    fun access_denied_names_protocol_reason_and_status_word() {
+        val error = ChipAccessDenied(ChipAccessProtocol.BAC, ChipAccessDenied.Reason.KEY_NOT_MATCHED, 0x6300)
+        assertTrue("BAC" in error.description && "6300" in error.description, error.description)
+        val texts = ChipAccessDenied.Reason.entries.map { ChipAccessDenied(ChipAccessProtocol.PACE, it).description }
+        assertEquals(texts.size, texts.toSet().size)
+    }
+
+    @Test
+    fun secure_messaging_lost_has_one_text_per_reason() {
+        val texts = ChipSecureMessagingLost.Reason.entries.map { ChipSecureMessagingLost(it).description }
+        assertEquals(texts.size, texts.toSet().size)
+        assertTrue("6988" in ChipSecureMessagingLost(ChipSecureMessagingLost.Reason.CHIP_ENDED_SESSION, 0x6988).description)
+    }
+
+    @Test
+    fun unsupported_algorithm_has_one_text_per_reason() {
+        val texts = ChipUnsupportedAlgorithm.Reason.entries.map { ChipUnsupportedAlgorithm(ChipAccessProtocol.PACE, it).description }
+        assertEquals(texts.size, texts.toSet().size)
+    }
+
+    @Test
+    fun file_not_found_names_the_file_and_whether_it_was_asked_for() {
+        assertTrue("0102" in ChipFileNotFound(0x0102, true).description)
+        assertTrue("not read" in ChipFileNotFound(0x0102, false).description)
+    }
+
+    @Test
+    fun unexpected_answer_and_blank_chip_texts() {
+        val texts = ChipUnexpectedAnswer.Reason.entries.map { ChipUnexpectedAnswer(it).description }
+        assertEquals(texts.size, texts.toSet().size)
+        assertTrue("blank" in ChipBlank.description)
     }
 }

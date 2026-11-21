@@ -43,7 +43,7 @@ public class DisplayedImageGroup internal constructor(
          *
          * @param bytes the whole content of the file
          */
-        public fun parseDg5(bytes: ByteArray): ImageGroupParse<DisplayedImageGroup> = ImageGroupReader.readDisplayed(bytes, dg7 = false)
+        public fun parseDg5(bytes: ByteArray): LdsParseResult<DisplayedImageGroup> = ImageGroupReader.readDisplayed(bytes, dg7 = false)
 
         /**
          * Reads the content of EF.DG7: one or more `67` templates, each with the displayed
@@ -51,6 +51,6 @@ public class DisplayedImageGroup internal constructor(
          *
          * @param bytes the whole content of the file
          */
-        public fun parseDg7(bytes: ByteArray): ImageGroupParse<DisplayedImageGroup> = ImageGroupReader.readDisplayed(bytes, dg7 = true)
+        public fun parseDg7(bytes: ByteArray): LdsParseResult<DisplayedImageGroup> = ImageGroupReader.readDisplayed(bytes, dg7 = true)
     }
 }
