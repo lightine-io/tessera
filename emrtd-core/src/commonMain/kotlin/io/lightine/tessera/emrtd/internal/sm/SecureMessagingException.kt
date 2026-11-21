@@ -24,6 +24,13 @@ internal enum class SmFailure {
     CHIP_ENDED_SESSION,
 
     /**
+     * The chip answered a protected command with a plain answer-length hint (61xx "bytes remaining"
+     * or 6Cxx "wrong Le"). Those hints are plain ISO/IEC 7816-4 protocol; inside a session the
+     * answer must be protected, so the chip is not following the session.
+     */
+    PLAIN_ANSWER_LENGTH_HINT,
+
+    /**
      * The session had already ended (by one of the failures above, a lost connection, or
      * [SecureChannel.close]); nothing was sent.
      */

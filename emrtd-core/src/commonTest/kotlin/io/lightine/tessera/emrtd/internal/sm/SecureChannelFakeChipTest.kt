@@ -6,14 +6,18 @@ import io.lightine.tessera.emrtd.fakechip.FakeBac
 import io.lightine.tessera.emrtd.fakechip.FakeChip
 import io.lightine.tessera.emrtd.fakechip.FakeChipData
 import io.lightine.tessera.emrtd.fakechip.FakeSm
+import io.lightine.tessera.emrtd.internal.apdu.ApduChannel
+import io.lightine.tessera.emrtd.internal.apdu.ApduSender
 import io.lightine.tessera.emrtd.internal.apdu.ChipCommands
 import io.lightine.tessera.emrtd.internal.apdu.LdsIds
+import io.lightine.tessera.emrtd.internal.apdu.PlainApduSender
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
 import io.lightine.tessera.emrtd.internal.bac.Bac
 import io.lightine.tessera.emrtd.internal.bac.BacException
 import io.lightine.tessera.emrtd.internal.bac.BacFailure
 import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
 import io.lightine.tessera.emrtd.internal.crypto.withCrypto
+import io.lightine.tessera.emrtd.internal.files.FileReader
 import io.lightine.tessera.emrtd.internal.tlv.TlvParser
 import io.lightine.tessera.types.errors.NfcTagLost
 import kotlinx.coroutines.test.runTest
@@ -45,13 +49,13 @@ class SecureChannelFakeChipTest {
     private class Setup(
         val chip: FakeChip,
         val sm: FakeSm,
-        val exchange: PlainExchange,
+        val exchange: PlainApduSender,
     )
 
     private fun setup(c: ChipCrypto): Setup {
         val sm = FakeSm(c)
         val chip = FakeChip(files, handlers = listOf(sm, FakeBac(mrzInformation, sm, c)))
-        return Setup(chip, sm, PlainExchange(chip))
+        return Setup(chip, sm, PlainApduSender(chip))
     }
 
     private suspend fun openBac(
@@ -63,7 +67,7 @@ class SecureChannelFakeChipTest {
     }
 
     private suspend fun readFile(
-        channel: ApduExchange,
+        channel: ApduSender,
         fid: Int,
     ): ByteArray {
         assertEquals(StatusWord.SUCCESS, channel.send(ChipCommands.selectFile(fid)).sw)
@@ -91,6 +95,25 @@ class SecureChannelFakeChipTest {
                 assertContentEquals(dg1, readFile(channel, LdsIds.EF_DG1))
                 // Every command after BAC went protected (CLA 0C).
                 val afterBac = s.chip.received.drop(4)
+                assertTrue(afterBac.all { it[0] == 0x0C.toByte() })
+            }
+        }
+
+    @Test
+    fun fileReaderReadsFilesThroughBacAndSecureMessaging() =
+        withCrypto { c ->
+            runTest {
+                val s = setup(c)
+                // Plain: select the application, then open BAC over the raw sender.
+                FileReader(ApduChannel(PlainApduSender(s.chip))).selectApplication()
+                val channel = Bac.open(s.exchange, c, key())
+                // The same FileReader reads protected files through the secure channel.
+                val reader = FileReader(channel)
+                assertContentEquals(efCom, reader.readFile(LdsIds.EF_COM))
+                assertContentEquals(dg1, reader.readFile(LdsIds.EF_DG1))
+                assertTrue(channel.isOpen)
+                // Every command after the plain SELECT and the two BAC commands went protected (CLA 0C).
+                val afterBac = s.chip.received.drop(3)
                 assertTrue(afterBac.all { it[0] == 0x0C.toByte() })
             }
         }
@@ -183,6 +206,24 @@ class SecureChannelFakeChipTest {
                 assertEquals(StatusWord.FILE_NOT_FOUND, channel.send(ChipCommands.selectFile(LdsIds.EF_COM)).sw)
                 assertTrue(channel.isOpen)
                 assertContentEquals(efCom, readFile(channel, LdsIds.EF_COM))
+            }
+        }
+
+    @Test
+    fun aPlainAnswerLengthHintInsideTheSessionEndsIt() =
+        withCrypto { c ->
+            runTest {
+                // 61xx and 6Cxx are plain ISO/IEC 7816-4 hints; a chip must not answer a protected
+                // command with them. Each one ends the session as a typed failure.
+                for (hint in listOf(0x6102, 0x6C05)) {
+                    val s = setup(c)
+                    val channel = openBac(s, c)
+                    s.sm.answerNextBare = hint
+                    val e = assertFailsWith<SecureMessagingException> { channel.send(ChipCommands.selectFile(LdsIds.EF_COM)) }
+                    assertEquals(SmFailure.PLAIN_ANSWER_LENGTH_HINT, e.failure)
+                    assertEquals(hint, e.sw)
+                    assertFalse(channel.isOpen)
+                }
             }
         }
 

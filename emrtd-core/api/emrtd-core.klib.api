@@ -91,6 +91,15 @@ final class io.lightine.tessera.emrtd.lds/ChipDateTime { // io.lightine.tessera.
     final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/ChipDateTime.toString|toString(){}[0]
 }
 
+final class io.lightine.tessera.emrtd.lds/DataGroupHash { // io.lightine.tessera.emrtd.lds/DataGroupHash|null[0]
+    final val hash // io.lightine.tessera.emrtd.lds/DataGroupHash.hash|{}hash[0]
+        final fun <get-hash>(): kotlin/ByteArray // io.lightine.tessera.emrtd.lds/DataGroupHash.hash.<get-hash>|<get-hash>(){}[0]
+    final val number // io.lightine.tessera.emrtd.lds/DataGroupHash.number|{}number[0]
+        final fun <get-number>(): kotlin/Int // io.lightine.tessera.emrtd.lds/DataGroupHash.number.<get-number>|<get-number>(){}[0]
+
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/DataGroupHash.toString|toString(){}[0]
+}
+
 final class io.lightine.tessera.emrtd.lds/Dg11View { // io.lightine.tessera.emrtd.lds/Dg11View|null[0]
     final val address // io.lightine.tessera.emrtd.lds/Dg11View.address|{}address[0]
         final fun <get-address>(): kotlin/String? // io.lightine.tessera.emrtd.lds/Dg11View.address.<get-address>|<get-address>(){}[0]
@@ -211,6 +220,20 @@ final class io.lightine.tessera.emrtd.lds/Dg1View { // io.lightine.tessera.emrtd
             final fun <get-TAG>(): kotlin/Int // io.lightine.tessera.emrtd.lds/Dg1View.Companion.TAG.<get-TAG>|<get-TAG>(){}[0]
 
         final fun parse(kotlin/ByteArray, kotlin.time/Instant = ...): io.lightine.tessera.emrtd.lds/LdsParseResult<io.lightine.tessera.emrtd.lds/Dg1View> // io.lightine.tessera.emrtd.lds/Dg1View.Companion.parse|parse(kotlin.ByteArray;kotlin.time.Instant){}[0]
+    }
+}
+
+final class io.lightine.tessera.emrtd.lds/DisplayedImageGroup { // io.lightine.tessera.emrtd.lds/DisplayedImageGroup|null[0]
+    final val declaredInstances // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.declaredInstances|{}declaredInstances[0]
+        final fun <get-declaredInstances>(): kotlin/Int? // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.declaredInstances.<get-declaredInstances>|<get-declaredInstances>(){}[0]
+    final val images // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.images|{}images[0]
+        final fun <get-images>(): kotlin.collections/List<kotlin/ByteArray> // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.images.<get-images>|<get-images>(){}[0]
+
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.toString|toString(){}[0]
+
+    final object Companion { // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.Companion|null[0]
+        final fun parseDg5(kotlin/ByteArray): io.lightine.tessera.emrtd.lds/ImageGroupParse<io.lightine.tessera.emrtd.lds/DisplayedImageGroup> // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.Companion.parseDg5|parseDg5(kotlin.ByteArray){}[0]
+        final fun parseDg7(kotlin/ByteArray): io.lightine.tessera.emrtd.lds/ImageGroupParse<io.lightine.tessera.emrtd.lds/DisplayedImageGroup> // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.Companion.parseDg7|parseDg7(kotlin.ByteArray){}[0]
     }
 }
 

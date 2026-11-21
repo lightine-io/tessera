@@ -27,7 +27,8 @@ import io.lightine.tessera.emrtd.internal.tlv.TlvWriter
  *   DO'85' for an odd one (9.8.4); CLA gets the secure-messaging bits `0C`.
  *
  * One instance is one session. It is not thread-safe: commands of a session are sequential anyway.
- * [SecureChannel] wraps it into an [ApduExchange] and ends the session on the first failure.
+ * [SecureChannel] wraps it into an [io.lightine.tessera.emrtd.internal.apdu.ApduSender] and ends the
+ * session on the first failure.
  */
 internal class SecureMessaging(
     private val crypto: ChipCrypto,
@@ -120,6 +121,11 @@ internal class SecureMessaging(
      */
     fun unprotect(response: ResponseApdu): ResponseApdu {
         increment(ssc)
+        // A plain 61xx/6Cxx at the APDU level means the chip answered outside its protection: those
+        // hints are plain protocol, and a protected answer carries its status in DO'99' instead.
+        if (response.sw1 == StatusWord.SW1_BYTES_REMAINING || response.sw1 == StatusWord.SW1_WRONG_LE) {
+            throw SecureMessagingException(SmFailure.PLAIN_ANSWER_LENGTH_HINT, response.sw)
+        }
         if (response.data.isEmpty()) {
             when (response.sw) {
                 StatusWord.SUCCESS -> {

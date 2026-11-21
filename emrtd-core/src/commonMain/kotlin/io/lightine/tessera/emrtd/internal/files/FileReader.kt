@@ -1,6 +1,7 @@
 package io.lightine.tessera.emrtd.internal.files
 
 import io.lightine.tessera.emrtd.ApduTransportException
+import io.lightine.tessera.emrtd.internal.apdu.ApduSender
 import io.lightine.tessera.emrtd.internal.apdu.ChipCommands
 import io.lightine.tessera.emrtd.internal.apdu.CommandApdu
 import io.lightine.tessera.emrtd.internal.apdu.LdsIds

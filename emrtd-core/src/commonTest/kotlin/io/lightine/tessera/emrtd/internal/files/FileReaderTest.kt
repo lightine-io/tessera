@@ -5,9 +5,12 @@ import io.lightine.tessera.emrtd.fakechip.FakeChip
 import io.lightine.tessera.emrtd.fakechip.FakeCommandHandler
 import io.lightine.tessera.emrtd.fakechip.FakeFileSystem
 import io.lightine.tessera.emrtd.fakechip.FakeFiles
+import io.lightine.tessera.emrtd.internal.apdu.ApduChannel
+import io.lightine.tessera.emrtd.internal.apdu.ApduSender
 import io.lightine.tessera.emrtd.internal.apdu.ChipCommands
 import io.lightine.tessera.emrtd.internal.apdu.CommandApdu
 import io.lightine.tessera.emrtd.internal.apdu.LdsIds
+import io.lightine.tessera.emrtd.internal.apdu.PlainApduSender
 import io.lightine.tessera.emrtd.internal.apdu.ResponseApdu
 import io.lightine.tessera.emrtd.internal.files.FileNotFound
 import io.lightine.tessera.emrtd.internal.files.FileSecurityStatusNotSatisfied
@@ -38,7 +41,7 @@ class FileReaderTest {
                     ),
                     handlers = listOf(FakeFiles),
                 )
-            val reader = FileReader(PlainApduSender(chip))
+            val reader = FileReader(plain(chip))
 
             reader.selectApplication()
             reader.selectMasterFile()
@@ -55,7 +58,7 @@ class FileReaderTest {
         runTest {
             val bytes = TlvWriter.encode(0x61, byteArrayOf(9, 8, 7))
             val chip = chip(mapOf(LdsIds.EF_COM to bytes))
-            val reader = FileReader(PlainApduSender(chip))
+            val reader = FileReader(plain(chip))
             reader.selectApplication()
 
             assertContentEquals(bytes, reader.readFileBySfi(LdsIds.sfi(LdsIds.EF_COM)))
@@ -68,7 +71,7 @@ class FileReaderTest {
         runTest {
             val bytes = TlvWriter.encode(0x61, ByteArray(40_000) { (it % 251).toByte() })
             val chip = chip(mapOf(LdsIds.EF_DG1 to bytes))
-            val reader = FileReader(PlainApduSender(chip))
+            val reader = FileReader(plain(chip))
             reader.selectApplication()
 
             assertContentEquals(bytes, reader.readFile(LdsIds.EF_DG1, extendedLengthAllowed = true))
@@ -87,7 +90,7 @@ class FileReaderTest {
         runTest {
             val bytes = TlvWriter.encode(0x61, ByteArray(700) { it.toByte() })
             val chip = chip(mapOf(LdsIds.EF_DG1 to bytes))
-            val reader = FileReader(PlainApduSender(chip))
+            val reader = FileReader(plain(chip))
             reader.selectApplication()
 
             assertContentEquals(bytes, reader.readFile(LdsIds.EF_DG1, extendedLengthAllowed = true))
@@ -105,7 +108,7 @@ class FileReaderTest {
             val bytes = TlvWriter.encode(0x61, ByteArray(900) { it.toByte() })
             val files = FakeFileSystem(applications = mapOf(LdsIds.LDS1_AID.toList() to mapOf(LdsIds.EF_DG1 to bytes)))
             val deniedChip = FakeChip(files, supportsExtendedLength = true, handlers = listOf(FakeFiles))
-            val deniedReader = FileReader(PlainApduSender(deniedChip))
+            val deniedReader = FileReader(plain(deniedChip))
             deniedReader.selectApplication()
             assertContentEquals(bytes, deniedReader.readFile(LdsIds.EF_DG1, extendedLengthAllowed = false))
             val deniedReads =
@@ -115,7 +118,7 @@ class FileReaderTest {
             assertTrue(deniedReads.all { it.fitsShort && (it.ne ?: 0) <= 0xDF })
 
             val allowedChip = FakeChip(files, supportsExtendedLength = true, handlers = listOf(FakeFiles))
-            val allowedReader = FileReader(PlainApduSender(allowedChip))
+            val allowedReader = FileReader(plain(allowedChip))
             allowedReader.selectApplication()
             assertContentEquals(bytes, allowedReader.readFile(LdsIds.EF_DG1, extendedLengthAllowed = true))
             val allowedReads =
@@ -130,7 +133,7 @@ class FileReaderTest {
         runTest {
             val truncated = byteArrayOf(0x61, 0x82.toByte(), 0x01, 0xF4.toByte(), 1, 2, 3)
             val chip = chip(mapOf(LdsIds.EF_DG1 to truncated))
-            val reader = FileReader(PlainApduSender(chip))
+            val reader = FileReader(plain(chip))
             reader.selectApplication()
 
             assertContentEquals(truncated, reader.readFile(LdsIds.EF_DG1))
@@ -140,7 +143,7 @@ class FileReaderTest {
     @Test
     fun missing_file_is_typed() =
         runTest {
-            val reader = FileReader(PlainApduSender(chip(emptyMap())))
+            val reader = FileReader(plain(chip(emptyMap())))
             reader.selectApplication()
 
             val failure = assertFailsWith<FileNotFound> { reader.readFile(0x0102) }
@@ -159,7 +162,7 @@ class FileReaderTest {
                     }
                 }
             val chip = FakeChip(FakeFileSystem(), handlers = listOf(securityHandler, FakeFiles))
-            val reader = FileReader(PlainApduSender(chip))
+            val reader = FileReader(plain(chip))
 
             val failure = assertFailsWith<FileSecurityStatusNotSatisfied> { reader.readFile(0x0101) }
             assertEquals(0x0101, failure.fid)
@@ -173,7 +176,7 @@ class FileReaderTest {
                     if (command.ins == ChipCommands.INS_READ_BINARY) ResponseApdu(ByteArray(0), 0x6A86) else null
                 }
             val wrapped = chip(mapOf(LdsIds.EF_DG1 to TlvWriter.encode(0x61, byteArrayOf(1))), listOf(statusHandler, FakeFiles))
-            val failingReader = FileReader(PlainApduSender(wrapped))
+            val failingReader = FileReader(plain(wrapped))
             failingReader.selectApplication()
 
             val failure = assertFailsWith<FileStatusFailure> { failingReader.readFile(LdsIds.EF_DG1) }
@@ -185,7 +188,7 @@ class FileReaderTest {
         runTest {
             val chip = chip(mapOf(LdsIds.EF_DG1 to TlvWriter.encode(0x61, ByteArray(700) { it.toByte() })))
             chip.loseTagAtCommand = 3
-            val reader = FileReader(PlainApduSender(chip))
+            val reader = FileReader(plain(chip))
             reader.selectApplication()
 
             val failure = assertFailsWith<ApduTransportException> { reader.readFile(LdsIds.EF_DG1) }
@@ -196,12 +199,14 @@ class FileReaderTest {
     fun malformed_tlv_header_is_a_typed_file_failure() =
         runTest {
             val chip = chip(mapOf(LdsIds.EF_DG1 to byteArrayOf(0x61, 0x82.toByte(), 0x01)))
-            val reader = FileReader(PlainApduSender(chip))
+            val reader = FileReader(plain(chip))
             reader.selectApplication()
 
             val failure = assertFailsWith<MalformedFile> { reader.readFile(LdsIds.EF_DG1) }
             assertEquals(TlvFailure.TRUNCATED_LENGTH, failure.failure)
         }
+
+    private fun plain(chip: FakeChip): ApduSender = ApduChannel(PlainApduSender(chip))
 
     private fun chip(
         files: Map<Int, ByteArray>,
