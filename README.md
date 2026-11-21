@@ -6,7 +6,7 @@
 
 Tessera is a free, open-source SDK that reads, validates, and generates the data in the MRZ (machine-readable zone) of passports, ID cards, and visas. It runs on Android, iOS, and the JVM. It reports what it read and checked; your app decides what to do with that.
 
-It is for developers adding document reading to apps or backends. Documentation: [Start here](https://lightine.youtrack.cloud/articles/TES-A-16).
+It is for developers adding document reading to apps or backends. Documentation: [Start here](https://lightine.youtrack.cloud/articles/TES-A-16). API reference: [lightine-io.github.io/tessera](https://lightine-io.github.io/tessera/) (available from the 1.0.0 release).
 
 ## Common tasks
 

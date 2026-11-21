@@ -18,8 +18,10 @@ Ask in order. The first yes is its one home.
    Claude harness.) Machinery: `CLAUDE.md`, `.claude/`, `.github/`, `scripts/`. A check
    beats a sentence (CLAUDE.md "Judgment principles", 7).
 3. **Does it describe one public declaration?** Code docs: the KDoc or Swift doc
-   comment on that declaration. The generated API reference is the Dokka javadoc jar the
-   publish build makes from them; there are no per-type pages.
+   comment on that declaration. The generated API reference is the one combined docs
+   site for every published module, built by `./gradlew dokkaGenerate` and published on
+   each release tag (https://lightine-io.github.io/tessera/), plus the per-module
+   javadoc jars on Maven Central that the publish build makes from the same comments.
 4. **Is it a release note, the GitHub front page, the way in for contributors, the
    vulnerability policy, or the index for AI tools?** Repo files: `CHANGELOG.md`,
    `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, and `llms.txt` in the repo root.
