@@ -18,10 +18,12 @@ import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
  *
  * - [Complete]: every step ran. Some requested files may still be missing or unreadable; they are
  *   listed in [ChipRead.fileErrors].
- * - [Partial]: the read stopped part way, for example because the document left the reader's field.
- *   What was read before is kept.
- * - [Failed]: nothing could be read from the eMRTD application, for example because the access key
- *   does not match.
+ * - [Partial]: access was granted, then the read stopped part way, for example because the document
+ *   left the reader's field or the session ended after a chip-authentication key switch. What was
+ *   read before is kept, and the checks are run over it.
+ * - [Failed]: access was not granted (for example the access key does not match), or the chip is
+ *   blank ([io.lightine.tessera.types.errors.ChipBlank]). Nothing was read from the eMRTD
+ *   application.
  *
  * None of them is a judgment on the document: a chip that cannot be read, or that is blank, does
  * not by itself make a document unusable (ICAO Doc 9303 Part 11, section 2).
@@ -53,7 +55,7 @@ public sealed class ChipReadResult {
     }
 
     /**
-     * Nothing could be read from the eMRTD application, because of [error]. [access] says how far
+     * Access was not granted, or the chip is blank, because of [error]. [access] says how far
      * access got: `null` when no access protocol completed.
      */
     public class Failed internal constructor(
@@ -77,9 +79,12 @@ public sealed class ChipReadResult {
  * @property access How the reader got access to the chip.
  * @property files Every file read, in the order it was read, as the chip sent it.
  * @property fileErrors Files that were asked for and could not be read or parsed: not found,
- *   protected, malformed. A file missing here and in [files] was not asked for.
+ *   protected, malformed, each with the file it is about. A file missing here and in [files] was
+ *   not asked for.
  * @property efCom EF.COM, when read and parsed.
- * @property dg1 DG1, the chip's MRZ: its document has `ReadMethod.NFC_CHIP`.
+ * @property dg1 DG1, the chip's MRZ: its document has `ReadMethod.NFC_CHIP`. Its dates are read
+ *   against [ChipReadOptions.checkTime]; with no check time it is `null` (the SDK reads no clock),
+ *   and the raw DG1 is still in [files] for `Dg1View.parse` with a time your app picks.
  * @property dg2 DG2, the face containers; image bytes untouched.
  * @property dg5 DG5, the displayed portrait.
  * @property dg7 DG7, the displayed signature or usual mark.
@@ -96,7 +101,7 @@ public sealed class ChipReadResult {
 public class ChipRead internal constructor(
     public val access: AccessReport,
     public val files: List<ChipFile>,
-    public val fileErrors: List<ChipError>,
+    public val fileErrors: List<ChipFileError>,
     public val efCom: EfComView?,
     public val dg1: Dg1View?,
     public val dg2: BiometricGroup?,
@@ -109,8 +114,11 @@ public class ChipRead internal constructor(
     public val securityObject: SecurityObjectView?,
     public val checks: List<ChipCheck>,
 ) {
-    /** The file with identifier [fileId] (for example `0x0101` for DG1), or `null` when it was not read. */
-    public fun file(fileId: Int): ChipFile? = files.firstOrNull { it.fileId == fileId }
+    /** The eMRTD application's file [fileId] (for example `0x011D` EF.SOD), or `null` when it was not read. */
+    public fun applicationFile(fileId: Int): ChipFile? = files.firstOrNull { it.fileId == fileId && !it.inMasterFile }
+
+    /** The master file's file [fileId] (for example `0x011D` EF.CardSecurity), or `null` when it was not read. */
+    public fun masterFile(fileId: Int): ChipFile? = files.firstOrNull { it.fileId == fileId && it.inMasterFile }
 
     /** Data group [number] (1 to 16) of the eMRTD application, or `null` when it was not read. */
     public fun dataGroup(number: Int): ChipFile? = files.firstOrNull { it.dataGroup == number }
@@ -169,8 +177,9 @@ public class ChipFile internal constructor(
  * @property paceParameterId The PACE standardized domain parameter ID used, with PACE.
  * @property cardAccessRead Whether EF.CardAccess was read.
  * @property offeredPace The PACE suites EF.CardAccess lists, usable or not.
- * @property extendedLengthUsed Whether extended-length APDUs were allowed for this read: your
- *   option, the transport and the chip's own statement in EF.ATR/INFO all said yes.
+ * @property extendedLengthAllowed Whether the reader allowed itself extended-length APDUs in this
+ *   read: [ChipReadOptions.allowExtendedLength], the transport and the chip's own statement in
+ *   EF.ATR/INFO all said yes. Commands that fit a short APDU are still sent short.
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
@@ -182,7 +191,7 @@ public class AccessReport internal constructor(
     public val paceParameterId: Int?,
     public val cardAccessRead: Boolean,
     public val offeredPace: List<ChipPaceOffer>,
-    public val extendedLengthUsed: Boolean,
+    public val extendedLengthAllowed: Boolean,
 ) {
     /** The protocol, mapping and parameter ID. */
     override fun toString(): String = "AccessReport($protocol, $paceMapping, $paceParameterId)"
@@ -243,4 +252,36 @@ public class ChipPaceOffer internal constructor(
 ) {
     /** The identifier, the parameter ID and whether the reader runs it. */
     override fun toString(): String = "ChipPaceOffer($protocolOid, $parameterId, readerCanRun=$readerCanRun)"
+}
+
+/**
+ * A file that was asked for and could not be read or parsed, and why.
+ *
+ * Experimental: see [ExperimentalTesseraChipApi].
+ *
+ * @property fileId The two-byte file identifier. `0x011D` is EF.CardSecurity in the master file and
+ *   EF.SOD in the application; [inMasterFile] tells them apart.
+ * @property inMasterFile `true` for a master-file EF, `false` for an application EF.
+ * @property error What went wrong: [io.lightine.tessera.types.errors.ChipFileNotFound],
+ *   [io.lightine.tessera.types.errors.ChipMalformedFile],
+ *   [io.lightine.tessera.types.errors.ChipAccessDenied] or
+ *   [io.lightine.tessera.types.errors.ChipUnexpectedAnswer].
+ * @since 1.0.0
+ */
+@ExperimentalTesseraChipApi
+public class ChipFileError internal constructor(
+    public val fileId: Int,
+    public val inMasterFile: Boolean,
+    public val error: ChipError,
+) {
+    /** Equal when the file, its place and the error are equal. */
+    override fun equals(other: Any?): Boolean =
+        other is ChipFileError && other.fileId == fileId && other.inMasterFile == inMasterFile && other.error == error
+
+    /** Hash of the file, its place and the error. */
+    override fun hashCode(): Int = (fileId * 31 + inMasterFile.hashCode()) * 31 + error.hashCode()
+
+    /** The file identifier, its place and the error. */
+    override fun toString(): String =
+        "ChipFileError(${fileId.toString(16).uppercase().padStart(4, '0')}, ${if (inMasterFile) "master file" else "application"}, $error)"
 }

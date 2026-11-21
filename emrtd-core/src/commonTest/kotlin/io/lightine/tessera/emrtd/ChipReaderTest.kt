@@ -100,7 +100,7 @@ class ChipReaderTest {
         assertEquals(CheckOutcome.Passed, read.outcomeOf(ChipCheckKind.SignatureVerifies(sod)))
         assertEquals(CheckOutcome.Passed, read.outcomeOf(ChipCheckKind.SignerChainsToSuppliedRoot(sod)))
         assertEquals(CheckOutcome.Passed, read.outcomeOf(ChipCheckKind.SignerWithinValidityPeriod(sod)))
-        assertEquals(CheckOutcome.NotRun(ChipCheckReason.NOT_SUPPORTED), read.outcomeOf(ChipCheckKind.RevocationChecked))
+        assertEquals(CheckOutcome.NotRun(ChipCheckReason.NOT_SUPPORTED), read.outcomeOf(ChipCheckKind.SignerNotRevoked))
         assertTrue(read.fileErrors.isEmpty(), "${read.fileErrors}")
     }
 
@@ -391,13 +391,15 @@ class ChipReaderTest {
         }
 
     @Test
-    fun aLostSessionIsSecureMessagingLost() =
+    fun aLostSessionAfterAccessIsPartialWithSecureMessagingLost() =
         runTest {
             withChips { c, keys ->
                 val flow = FakeReadFlowChip.build(c, keys, FlowAccess.BAC)
                 flow.sm!!.corruptNextResponseMac = true
-                val error = failed(read(flow)).error
-                assertEquals(ChipSecureMessagingLost(ChipSecureMessagingLost.Reason.WRONG_CHECKSUM), error)
+                val partial = assertIs<ChipReadResult.Partial>(read(flow))
+                assertEquals(ChipSecureMessagingLost(ChipSecureMessagingLost.Reason.WRONG_CHECKSUM), partial.stoppedBy)
+                assertEquals(ChipAccessProtocol.BAC, partial.read.access.protocol)
+                assertTrue(partial.read.files.isEmpty())
             }
         }
 
@@ -464,9 +466,19 @@ class ChipReaderTest {
                         extraApplicationFiles = mapOf(0x011E to com, 0x0102 to badDg2),
                     )
                 val read = complete(read(flow, options(flow, dataGroups = setOf(1, 2, 5, 11))))
-                assertTrue(ChipFileNotFound(0x0105, listedByChip = true) in read.fileErrors, "${read.fileErrors}")
-                assertTrue(ChipFileNotFound(0x010B, listedByChip = false) in read.fileErrors, "${read.fileErrors}")
-                val malformed = read.fileErrors.filterIsInstance<ChipMalformedFile>().single()
+                assertTrue(
+                    ChipFileError(0x0105, false, ChipFileNotFound(0x0105, listedByChip = true)) in read.fileErrors,
+                    "${read.fileErrors}",
+                )
+                assertTrue(
+                    ChipFileError(0x010B, false, ChipFileNotFound(0x010B, listedByChip = false)) in read.fileErrors,
+                    "${read.fileErrors}",
+                )
+                val malformed =
+                    read.fileErrors
+                        .map { it.error }
+                        .filterIsInstance<ChipMalformedFile>()
+                        .single()
                 assertEquals(0x0102, malformed.fileId)
                 assertEquals(ChipMalformedFile.Reason.MISSING_ELEMENT, malformed.reason)
                 assertNull(read.dg2)
@@ -495,7 +507,13 @@ class ChipReaderTest {
                     )
                 val read = complete(read(flow, options(flow, dataGroups = setOf(1, 2, 3))))
                 assertEquals(
-                    listOf<ChipError>(ChipAccessDenied(ChipAccessProtocol.BAC, ChipAccessDenied.Reason.FILE_PROTECTED, 0x6982)),
+                    listOf(
+                        ChipFileError(
+                            0x0103,
+                            false,
+                            ChipAccessDenied(ChipAccessProtocol.BAC, ChipAccessDenied.Reason.FILE_PROTECTED, 0x6982),
+                        ),
+                    ),
                     read.fileErrors,
                 )
                 assertNotNull(read.dg2)
@@ -538,7 +556,11 @@ class ChipReaderTest {
                         extraApplicationFiles = mapOf(0x011D to TlvWriter.encode(0x77, byteArrayOf(0x30, 0x03, 0x02, 0x01))),
                     )
                 val read = complete(read(flow))
-                val error = read.fileErrors.filterIsInstance<ChipMalformedFile>().single()
+                val error =
+                    read.fileErrors
+                        .map { it.error }
+                        .filterIsInstance<ChipMalformedFile>()
+                        .single()
                 assertEquals(0x011D, error.fileId)
                 assertNull(read.securityObject)
                 assertEquals(
@@ -595,11 +617,12 @@ class ChipReaderTest {
                     ChipCheckKind.SignerKeyUsageIsDigitalSignatureOnly,
                     ChipCheckKind.SignerCountryMatchesRootCountry,
                     ChipCheckKind.IssueDateInSignerUsagePeriod,
-                    ChipCheckKind.RevocationChecked,
+                    ChipCheckKind.SignerNotRevoked,
                     ChipCheckKind.ChipAuthentication(null),
                     ChipCheckKind.PaceChipAuthenticationMapping,
                     ChipCheckKind.ActiveAuthentication,
                     ChipCheckKind.Dg1MatchesPrintedMrz,
+                    ChipCheckKind.PaceOfferMatchesSignedCopy(null),
                 ).map { it::class.simpleName ?: "" } +
                 listOf("CheckOutcome", "ChipCheck", "ChipRead", "ChipReadResult", "AccessReport", "CombinedMrzRead")
         val banned = setOf("GENUINE", "VALID", "TRUSTED", "TRUST", "ACCEPT", "ACCEPTED", "AUTHENTIC", "ISVALID")

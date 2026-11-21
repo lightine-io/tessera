@@ -107,6 +107,7 @@ public final class io/lightine/tessera/types/errors/ChipSecureMessagingLost$Reas
 	public static final field MISSING_CHECKSUM Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;
 	public static final field PLAIN_LENGTH_HINT Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;
 	public static final field SESSION_CLOSED Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;
+	public static final field UNAUTHENTICATED_STATUS Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;
 	public static final field WRONG_CHECKSUM Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;
 	public static final field WRONG_PADDING Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
@@ -157,6 +158,7 @@ public final class io/lightine/tessera/types/errors/ChipUnsupportedAlgorithm : i
 
 public final class io/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason : java/lang/Enum {
 	public static final field CHIP_REFUSED_SUITE Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason;
+	public static final field CRYPTOGRAPHY_FAILED Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason;
 	public static final field EXTENDED_LENGTH_REQUIRED Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason;
 	public static final field NO_CRYPTOGRAPHY_ON_PLATFORM Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason;
 	public static final field NO_SUPPORTED_SUITE Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason;

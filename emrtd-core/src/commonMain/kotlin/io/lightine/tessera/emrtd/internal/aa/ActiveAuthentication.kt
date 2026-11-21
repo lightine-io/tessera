@@ -5,6 +5,7 @@ import io.lightine.tessera.emrtd.internal.apdu.CommandApdu
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
 import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
 import io.lightine.tessera.emrtd.internal.crypto.ChipCryptoException
+import io.lightine.tessera.emrtd.internal.crypto.CryptoBytes
 import io.lightine.tessera.emrtd.internal.crypto.EcdsaSignatureFormat
 import io.lightine.tessera.emrtd.internal.crypto.HashAlgorithm
 import io.lightine.tessera.emrtd.internal.crypto.SignatureScheme
@@ -124,6 +125,10 @@ internal class ActiveAuthentication(
             ecdsaHash =
                 AaSignatureOids.ecdsaPlainHash(info.signatureAlgorithm)
                     ?: return ActiveAuthenticationResult.Failed(ActiveAuthenticationFailure.UNSUPPORTED_SIGNATURE_ALGORITHM)
+            // Section 6.1.2.3: the hash's output must not be longer than the key (the group order).
+            if (ecdsaHash.outputLength > CryptoBytes.stripLeadingZeros(key.parameters.n).size) {
+                return ActiveAuthenticationResult.Failed(ActiveAuthenticationFailure.UNSUPPORTED_SIGNATURE_ALGORITHM)
+            }
         }
 
         // RND.IFD: 8 fresh bytes (section 6.1.2.1), drawn here and nowhere else.

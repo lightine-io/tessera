@@ -2,10 +2,14 @@ package io.lightine.tessera.emrtd
 
 import io.lightine.tessera.emrtd.trust.TrustAnchor
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
+import kotlin.jvm.JvmOverloads
 import kotlin.time.Instant
 
 /**
  * What [ChipReader.read] should do.
+ *
+ * Kotlin callers use the constructor with named arguments; Java and Swift callers can use
+ * [Builder].
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -17,8 +21,9 @@ import kotlin.time.Instant
  *   [io.lightine.tessera.types.errors.ChipAccessDenied] entry in [ChipRead.fileErrors].
  * @property trustAnchors The root certificates your app chose for the signer checks. The SDK never
  *   bundles or downloads any; with none, the root checks report that they did not run.
- * @property checkTime The time at which certificate validity is checked. The SDK never reads a
- *   clock for this; with `null`, the validity checks report that they did not run.
+ * @property checkTime The time at which certificate validity is checked and DG1's dates are read.
+ *   The SDK never reads a clock: with `null`, the validity checks report that they did not run and
+ *   [ChipRead.dg1] is `null` (the raw DG1 is still read).
  * @property allowExtendedLength Whether the reader may use extended-length APDUs. They are used only
  *   when this is `true`, the transport carries them and the chip states it accepts them.
  * @throws IllegalArgumentException when a data group number is outside 1 to 16.
@@ -26,6 +31,7 @@ import kotlin.time.Instant
  */
 @ExperimentalTesseraChipApi
 public class ChipReadOptions
+    @JvmOverloads
     @Throws(IllegalArgumentException::class)
     constructor(
         public val accessKey: ChipAccessKey,
@@ -41,4 +47,40 @@ public class ChipReadOptions
         /** The data groups and counts, never the key. */
         override fun toString(): String =
             "ChipReadOptions(dataGroups=${dataGroups.sorted()}, trustAnchors=${trustAnchors.size}, checkTime=${checkTime != null})"
+
+        /**
+         * Builds [ChipReadOptions] step by step, with the constructor's defaults.
+         *
+         * @param accessKey The key that opens the chip.
+         * @since 1.0.0
+         */
+        @ExperimentalTesseraChipApi
+        public class Builder(
+            private val accessKey: ChipAccessKey,
+        ) {
+            private var dataGroups: Set<Int> = setOf(1, 2)
+            private var trustAnchors: List<TrustAnchor> = emptyList()
+            private var checkTime: Instant? = null
+            private var allowExtendedLength: Boolean = true
+
+            /** The data groups to read, by number (1 to 16). */
+            public fun dataGroups(numbers: Set<Int>): Builder = apply { dataGroups = numbers.toSet() }
+
+            /** The root certificates for the signer checks. */
+            public fun trustAnchors(anchors: List<TrustAnchor>): Builder = apply { trustAnchors = anchors.toList() }
+
+            /** The time at which validity is checked and DG1's dates are read. */
+            public fun checkTime(time: Instant?): Builder = apply { checkTime = time }
+
+            /** Whether extended-length APDUs may be used. */
+            public fun allowExtendedLength(allow: Boolean): Builder = apply { allowExtendedLength = allow }
+
+            /**
+             * The options.
+             *
+             * @throws IllegalArgumentException when a data group number is outside 1 to 16.
+             */
+            @Throws(IllegalArgumentException::class)
+            public fun build(): ChipReadOptions = ChipReadOptions(accessKey, dataGroups, trustAnchors, checkTime, allowExtendedLength)
+        }
     }

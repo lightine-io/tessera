@@ -1,6 +1,6 @@
 public final class io/lightine/tessera/emrtd/AccessReport {
 	public final fun getCardAccessRead ()Z
-	public final fun getExtendedLengthUsed ()Z
+	public final fun getExtendedLengthAllowed ()Z
 	public final fun getOfferedPace ()Ljava/util/List;
 	public final fun getPaceMapping ()Lio/lightine/tessera/emrtd/ChipPaceMapping;
 	public final fun getPaceParameterId ()Ljava/lang/Integer;
@@ -157,9 +157,13 @@ public final class io/lightine/tessera/emrtd/ChipCheckKind$PaceChipAuthenticatio
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class io/lightine/tessera/emrtd/ChipCheckKind$RevocationChecked : io/lightine/tessera/emrtd/ChipCheckKind {
-	public static final field INSTANCE Lio/lightine/tessera/emrtd/ChipCheckKind$RevocationChecked;
+public final class io/lightine/tessera/emrtd/ChipCheckKind$PaceOfferMatchesSignedCopy : io/lightine/tessera/emrtd/ChipCheckKind {
+	public fun <init> (Lio/lightine/tessera/emrtd/ChipSignedCopy;)V
+	public final fun component1 ()Lio/lightine/tessera/emrtd/ChipSignedCopy;
+	public final fun copy (Lio/lightine/tessera/emrtd/ChipSignedCopy;)Lio/lightine/tessera/emrtd/ChipCheckKind$PaceOfferMatchesSignedCopy;
+	public static synthetic fun copy$default (Lio/lightine/tessera/emrtd/ChipCheckKind$PaceOfferMatchesSignedCopy;Lio/lightine/tessera/emrtd/ChipSignedCopy;ILjava/lang/Object;)Lio/lightine/tessera/emrtd/ChipCheckKind$PaceOfferMatchesSignedCopy;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCopy ()Lio/lightine/tessera/emrtd/ChipSignedCopy;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -218,6 +222,13 @@ public final class io/lightine/tessera/emrtd/ChipCheckKind$SignerKeyUsageIsDigit
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/lightine/tessera/emrtd/ChipCheckKind$SignerNotRevoked : io/lightine/tessera/emrtd/ChipCheckKind {
+	public static final field INSTANCE Lio/lightine/tessera/emrtd/ChipCheckKind$SignerNotRevoked;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class io/lightine/tessera/emrtd/ChipCheckKind$SignerWithinValidityPeriod : io/lightine/tessera/emrtd/ChipCheckKind {
 	public fun <init> (Lio/lightine/tessera/emrtd/ChipSignedFile;)V
 	public final fun component1 ()Lio/lightine/tessera/emrtd/ChipSignedFile;
@@ -237,6 +248,7 @@ public final class io/lightine/tessera/emrtd/ChipCheckReason : java/lang/Enum {
 	public static final field CONTENT_TYPE_ATTRIBUTE_DIFFERS Lio/lightine/tessera/emrtd/ChipCheckReason;
 	public static final field COUNTRY_DIFFERS Lio/lightine/tessera/emrtd/ChipCheckReason;
 	public static final field COUNTRY_NAME_ABSENT Lio/lightine/tessera/emrtd/ChipCheckReason;
+	public static final field CRYPTOGRAPHY_FAILED Lio/lightine/tessera/emrtd/ChipCheckReason;
 	public static final field CRYPTO_UNAVAILABLE Lio/lightine/tessera/emrtd/ChipCheckReason;
 	public static final field DATA_GROUP_NOT_READ Lio/lightine/tessera/emrtd/ChipCheckReason;
 	public static final field DIFFERS_FROM_SIGNED_COPY Lio/lightine/tessera/emrtd/ChipCheckReason;
@@ -249,6 +261,7 @@ public final class io/lightine/tessera/emrtd/ChipCheckReason : java/lang/Enum {
 	public static final field HAS_DOCUMENT_TYPE_EXTENSION Lio/lightine/tessera/emrtd/ChipCheckReason;
 	public static final field INVALID_PUBLIC_KEY Lio/lightine/tessera/emrtd/ChipCheckReason;
 	public static final field ISSUER_NAME_DIFFERS Lio/lightine/tessera/emrtd/ChipCheckReason;
+	public static final field KEY_AGREEMENT_FAILED Lio/lightine/tessera/emrtd/ChipCheckReason;
 	public static final field KEY_DOES_NOT_FIT_SIGNATURE_ALGORITHM Lio/lightine/tessera/emrtd/ChipCheckReason;
 	public static final field KEY_FILE_CHECKS_NOT_PASSED Lio/lightine/tessera/emrtd/ChipCheckReason;
 	public static final field KEY_USAGE_NOT_DIGITAL_SIGNATURE_ONLY Lio/lightine/tessera/emrtd/ChipCheckReason;
@@ -280,6 +293,8 @@ public final class io/lightine/tessera/emrtd/ChipCheckReason : java/lang/Enum {
 	public static final field OTHER_CHIP_AUTHENTICATION_USED Lio/lightine/tessera/emrtd/ChipCheckReason;
 	public static final field OUTSIDE_USAGE_PERIOD Lio/lightine/tessera/emrtd/ChipCheckReason;
 	public static final field OUTSIDE_VALIDITY Lio/lightine/tessera/emrtd/ChipCheckReason;
+	public static final field PACE_MISSING_FROM_CARD_ACCESS Lio/lightine/tessera/emrtd/ChipCheckReason;
+	public static final field PACE_OFFERED_BUT_NOT_USED Lio/lightine/tessera/emrtd/ChipCheckReason;
 	public static final field READ_STOPPED Lio/lightine/tessera/emrtd/ChipCheckReason;
 	public static final field SIGNATURE_DOES_NOT_VERIFY Lio/lightine/tessera/emrtd/ChipCheckReason;
 	public static final field UNREADABLE_FILE Lio/lightine/tessera/emrtd/ChipCheckReason;
@@ -311,6 +326,15 @@ public final class io/lightine/tessera/emrtd/ChipFileContext : java/lang/Enum {
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/ChipFileContext;
 	public static fun values ()[Lio/lightine/tessera/emrtd/ChipFileContext;
+}
+
+public final class io/lightine/tessera/emrtd/ChipFileError {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getError ()Lio/lightine/tessera/types/errors/ChipError;
+	public final fun getFileId ()I
+	public final fun getInMasterFile ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class io/lightine/tessera/emrtd/ChipMrzComparison {
@@ -345,8 +369,8 @@ public final class io/lightine/tessera/emrtd/ChipPassword : java/lang/Enum {
 }
 
 public final class io/lightine/tessera/emrtd/ChipRead {
+	public final fun applicationFile (I)Lio/lightine/tessera/emrtd/ChipFile;
 	public final fun dataGroup (I)Lio/lightine/tessera/emrtd/ChipFile;
-	public final fun file (I)Lio/lightine/tessera/emrtd/ChipFile;
 	public final fun getAccess ()Lio/lightine/tessera/emrtd/AccessReport;
 	public final fun getChecks ()Ljava/util/List;
 	public final fun getDg1 ()Lio/lightine/tessera/emrtd/lds/Dg1View;
@@ -361,6 +385,7 @@ public final class io/lightine/tessera/emrtd/ChipRead {
 	public final fun getFileErrors ()Ljava/util/List;
 	public final fun getFiles ()Ljava/util/List;
 	public final fun getSecurityObject ()Lio/lightine/tessera/emrtd/lds/SecurityObjectView;
+	public final fun masterFile (I)Lio/lightine/tessera/emrtd/ChipFile;
 	public final fun outcomeOf (Lio/lightine/tessera/emrtd/ChipCheckKind;)Lio/lightine/tessera/emrtd/CheckOutcome;
 	public fun toString ()Ljava/lang/String;
 }
@@ -368,17 +393,6 @@ public final class io/lightine/tessera/emrtd/ChipRead {
 public final class io/lightine/tessera/emrtd/ChipReadEvent : io/lightine/tessera/telemetry/TelemetryEvent {
 	public static final field Companion Lio/lightine/tessera/emrtd/ChipReadEvent$Companion;
 	public static final field EVENT_NAME Ljava/lang/String;
-	public fun <init> (Lio/lightine/tessera/emrtd/ChipReadStep;Lio/lightine/tessera/emrtd/ChipReadStepOutcome;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/Integer;J)V
-	public final fun component1 ()Lio/lightine/tessera/emrtd/ChipReadStep;
-	public final fun component2 ()Lio/lightine/tessera/emrtd/ChipReadStepOutcome;
-	public final fun component3 ()Ljava/lang/String;
-	public final fun component4 ()Ljava/lang/Integer;
-	public final fun component5 ()Ljava/lang/Integer;
-	public final fun component6 ()Ljava/lang/Integer;
-	public final fun component7 ()J
-	public final fun copy (Lio/lightine/tessera/emrtd/ChipReadStep;Lio/lightine/tessera/emrtd/ChipReadStepOutcome;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/Integer;J)Lio/lightine/tessera/emrtd/ChipReadEvent;
-	public static synthetic fun copy$default (Lio/lightine/tessera/emrtd/ChipReadEvent;Lio/lightine/tessera/emrtd/ChipReadStep;Lio/lightine/tessera/emrtd/ChipReadStepOutcome;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/Integer;JILjava/lang/Object;)Lio/lightine/tessera/emrtd/ChipReadEvent;
-	public fun equals (Ljava/lang/Object;)Z
 	public final fun getByteCount ()Ljava/lang/Integer;
 	public final fun getDurationMillis ()J
 	public final fun getFileId ()Ljava/lang/Integer;
@@ -387,7 +401,6 @@ public final class io/lightine/tessera/emrtd/ChipReadEvent : io/lightine/tessera
 	public final fun getProtocol ()Ljava/lang/String;
 	public final fun getStatusWord ()Ljava/lang/Integer;
 	public final fun getStep ()Lio/lightine/tessera/emrtd/ChipReadStep;
-	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -395,6 +408,10 @@ public final class io/lightine/tessera/emrtd/ChipReadEvent$Companion {
 }
 
 public final class io/lightine/tessera/emrtd/ChipReadOptions {
+	public fun <init> (Lio/lightine/tessera/emrtd/ChipAccessKey;)V
+	public fun <init> (Lio/lightine/tessera/emrtd/ChipAccessKey;Ljava/util/Set;)V
+	public fun <init> (Lio/lightine/tessera/emrtd/ChipAccessKey;Ljava/util/Set;Ljava/util/List;)V
+	public fun <init> (Lio/lightine/tessera/emrtd/ChipAccessKey;Ljava/util/Set;Ljava/util/List;Lkotlin/time/Instant;)V
 	public fun <init> (Lio/lightine/tessera/emrtd/ChipAccessKey;Ljava/util/Set;Ljava/util/List;Lkotlin/time/Instant;Z)V
 	public synthetic fun <init> (Lio/lightine/tessera/emrtd/ChipAccessKey;Ljava/util/Set;Ljava/util/List;Lkotlin/time/Instant;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getAccessKey ()Lio/lightine/tessera/emrtd/ChipAccessKey;
@@ -403,6 +420,15 @@ public final class io/lightine/tessera/emrtd/ChipReadOptions {
 	public final fun getDataGroups ()Ljava/util/Set;
 	public final fun getTrustAnchors ()Ljava/util/List;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/ChipReadOptions$Builder {
+	public fun <init> (Lio/lightine/tessera/emrtd/ChipAccessKey;)V
+	public final fun allowExtendedLength (Z)Lio/lightine/tessera/emrtd/ChipReadOptions$Builder;
+	public final fun build ()Lio/lightine/tessera/emrtd/ChipReadOptions;
+	public final fun checkTime (Lkotlin/time/Instant;)Lio/lightine/tessera/emrtd/ChipReadOptions$Builder;
+	public final fun dataGroups (Ljava/util/Set;)Lio/lightine/tessera/emrtd/ChipReadOptions$Builder;
+	public final fun trustAnchors (Ljava/util/List;)Lio/lightine/tessera/emrtd/ChipReadOptions$Builder;
 }
 
 public abstract class io/lightine/tessera/emrtd/ChipReadResult {

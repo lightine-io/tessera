@@ -22,7 +22,7 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
-public data class ChipReadEvent(
+public class ChipReadEvent internal constructor(
     public val step: ChipReadStep,
     public val outcome: ChipReadStepOutcome,
     public val protocol: String?,
@@ -31,8 +31,15 @@ public data class ChipReadEvent(
     public val statusWord: Int?,
     public val durationMillis: Long,
 ) : TelemetryEvent {
+    // Only the SDK makes these events, so new fields can be added later without breaking callers.
+
     /** Event name: `emrtd.chip.step`. */
     override val name: String get() = EVENT_NAME
+
+    /** The fields; no document data. */
+    override fun toString(): String =
+        "ChipReadEvent($step, $outcome, protocol=$protocol, fileId=${fileId?.toString(16)}, byteCount=$byteCount, " +
+            "statusWord=${statusWord?.toString(16)}, durationMillis=$durationMillis)"
 
     /** Constants for [ChipReadEvent]. */
     public companion object {

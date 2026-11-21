@@ -92,12 +92,17 @@ internal object RsaMessageRecovery {
         m2: ByteArray,
         signature: ByteArray,
     ): ActiveAuthenticationResult {
-        val recovered =
+        val representative =
             try {
-                parse(crypto.rsaPublic(key.modulus, key.publicExponent, signature))
+                crypto.rsaPublic(key.modulus, key.publicExponent, signature)
             } catch (e: ChipCryptoException) {
                 null
-            } ?: return ActiveAuthenticationResult.Failed(ActiveAuthenticationFailure.MALFORMED_SIGNATURE)
+            }
+        // Appendix F, step 16: the representative F is as long as the modulus.
+        if (representative == null || representative.size != CryptoBytes.stripLeadingZeros(key.modulus).size) {
+            return ActiveAuthenticationResult.Failed(ActiveAuthenticationFailure.MALFORMED_SIGNATURE)
+        }
+        val recovered = parse(representative) ?: return ActiveAuthenticationResult.Failed(ActiveAuthenticationFailure.MALFORMED_SIGNATURE)
         return if (matches(crypto, recovered, m2)) {
             ActiveAuthenticationResult.Passed
         } else {

@@ -56,7 +56,7 @@ internal object FlowMappings {
             PaCheckKind.SignerKeyUsageIsDigitalSignatureOnly -> ChipCheckKind.SignerKeyUsageIsDigitalSignatureOnly
             PaCheckKind.SignerCountryMatchesRootCountry -> ChipCheckKind.SignerCountryMatchesRootCountry
             PaCheckKind.IssueDateInSignerUsagePeriod -> ChipCheckKind.IssueDateInSignerUsagePeriod
-            PaCheckKind.RevocationChecked -> ChipCheckKind.RevocationChecked
+            PaCheckKind.RevocationChecked -> ChipCheckKind.SignerNotRevoked
         }
 
     // The flow never runs passive authentication over a master list, so MASTER_LIST does not reach here.
@@ -161,17 +161,22 @@ internal object FlowMappings {
             }
         }
 
-    fun aaFailure(f: ActiveAuthenticationFailure): ChipCheckReason =
+    /**
+     * An active-authentication failure as a public outcome. What the reader cannot check (a key it
+     * cannot read or use, an algorithm it does not run, no named algorithm) is NotRun: nothing is
+     * known about the chip then. What the chip answered wrongly is Failed.
+     */
+    fun aaOutcome(f: ActiveAuthenticationFailure): CheckOutcome =
         when (f) {
-            ActiveAuthenticationFailure.PUBLIC_KEY_UNREADABLE -> ChipCheckReason.UNREADABLE_KEY
-            ActiveAuthenticationFailure.UNSUPPORTED_PUBLIC_KEY -> ChipCheckReason.UNSUPPORTED_ALGORITHM
-            ActiveAuthenticationFailure.INVALID_PUBLIC_KEY -> ChipCheckReason.INVALID_PUBLIC_KEY
-            ActiveAuthenticationFailure.MISSING_SIGNATURE_ALGORITHM -> ChipCheckReason.MISSING_SIGNATURE_ALGORITHM
-            ActiveAuthenticationFailure.UNSUPPORTED_SIGNATURE_ALGORITHM -> ChipCheckReason.UNSUPPORTED_ALGORITHM
-            ActiveAuthenticationFailure.CHIP_REFUSED -> ChipCheckReason.CHIP_REFUSED
-            ActiveAuthenticationFailure.WRONG_SIGNATURE_LENGTH -> ChipCheckReason.WRONG_SIGNATURE_LENGTH
-            ActiveAuthenticationFailure.MALFORMED_SIGNATURE -> ChipCheckReason.MALFORMED_SIGNATURE
-            ActiveAuthenticationFailure.WRONG_SIGNATURE -> ChipCheckReason.SIGNATURE_DOES_NOT_VERIFY
+            ActiveAuthenticationFailure.PUBLIC_KEY_UNREADABLE -> CheckOutcome.NotRun(ChipCheckReason.UNREADABLE_KEY)
+            ActiveAuthenticationFailure.UNSUPPORTED_PUBLIC_KEY -> CheckOutcome.NotRun(ChipCheckReason.UNSUPPORTED_ALGORITHM)
+            ActiveAuthenticationFailure.INVALID_PUBLIC_KEY -> CheckOutcome.NotRun(ChipCheckReason.INVALID_PUBLIC_KEY)
+            ActiveAuthenticationFailure.MISSING_SIGNATURE_ALGORITHM -> CheckOutcome.NotRun(ChipCheckReason.MISSING_SIGNATURE_ALGORITHM)
+            ActiveAuthenticationFailure.UNSUPPORTED_SIGNATURE_ALGORITHM -> CheckOutcome.NotRun(ChipCheckReason.UNSUPPORTED_ALGORITHM)
+            ActiveAuthenticationFailure.CHIP_REFUSED -> CheckOutcome.Failed(ChipCheckReason.CHIP_REFUSED)
+            ActiveAuthenticationFailure.WRONG_SIGNATURE_LENGTH -> CheckOutcome.Failed(ChipCheckReason.WRONG_SIGNATURE_LENGTH)
+            ActiveAuthenticationFailure.MALFORMED_SIGNATURE -> CheckOutcome.Failed(ChipCheckReason.MALFORMED_SIGNATURE)
+            ActiveAuthenticationFailure.WRONG_SIGNATURE -> CheckOutcome.Failed(ChipCheckReason.SIGNATURE_DOES_NOT_VERIFY)
         }
 
     fun context(c: CaContext): ChipFileContext =
@@ -197,6 +202,7 @@ internal object FlowMappings {
                 SmFailure.CHIP_ENDED_SESSION -> ChipSecureMessagingLost.Reason.CHIP_ENDED_SESSION
                 SmFailure.PLAIN_ANSWER_LENGTH_HINT -> ChipSecureMessagingLost.Reason.PLAIN_LENGTH_HINT
                 SmFailure.SESSION_CLOSED -> ChipSecureMessagingLost.Reason.SESSION_CLOSED
+                SmFailure.UNAUTHENTICATED_STATUS -> ChipSecureMessagingLost.Reason.UNAUTHENTICATED_STATUS
             },
             e.sw,
         )

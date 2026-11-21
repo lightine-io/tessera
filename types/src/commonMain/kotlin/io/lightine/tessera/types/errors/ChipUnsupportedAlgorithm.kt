@@ -37,6 +37,12 @@ public data class ChipUnsupportedAlgorithm(
 
         /** This platform has no cryptography for the protocol yet (iOS until its backend lands). */
         NO_CRYPTOGRAPHY_ON_PLATFORM,
+
+        /**
+         * The platform's cryptography could not carry out a step of the protocol with the values the
+         * chip sent, for example a key the backend does not take.
+         */
+        CRYPTOGRAPHY_FAILED,
     }
 
     /** English text for logs: the protocol, the reason and the status word, when known. */
@@ -48,6 +54,7 @@ public data class ChipUnsupportedAlgorithm(
                     Reason.CHIP_REFUSED_SUITE -> "the chip refused every suite the reader tried"
                     Reason.EXTENDED_LENGTH_REQUIRED -> "the commands need extended length, which is not allowed"
                     Reason.NO_CRYPTOGRAPHY_ON_PLATFORM -> "this platform has no cryptography for it yet"
+                    Reason.CRYPTOGRAPHY_FAILED -> "the cryptography could not run a step with the chip's values"
                 }
             val sw = statusWord?.let { " (status ${it.toString(16).uppercase().padStart(4, '0')})" } ?: ""
             return "No common algorithm for $protocol: $what$sw"

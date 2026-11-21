@@ -45,6 +45,12 @@ public data class ChipSecureMessagingLost(
 
         /** The session had already ended; nothing was sent. */
         SESSION_CLOSED,
+
+        /**
+         * An answer's status word came without the checksum that covers it, and it was not the one
+         * plain answer a session allows (an empty `9000`): the chip's answer cannot be relied on.
+         */
+        UNAUTHENTICATED_STATUS,
     }
 
     /** English text for logs: the reason and the status word, when known. */
@@ -59,6 +65,7 @@ public data class ChipSecureMessagingLost(
                     Reason.CHIP_ENDED_SESSION -> "the chip ended the session"
                     Reason.PLAIN_LENGTH_HINT -> "the chip answered with a plain length hint"
                     Reason.SESSION_CLOSED -> "the session had already ended"
+                    Reason.UNAUTHENTICATED_STATUS -> "an answer's status word was not covered by its checksum"
                 }
             val sw = statusWord?.let { " (status ${it.toString(16).uppercase().padStart(4, '0')})" } ?: ""
             return "The secure-messaging session with the chip ended: $what$sw"

@@ -224,6 +224,7 @@ final class io.lightine.tessera.types.errors/ChipSecureMessagingLost : io.lighti
         enum entry MISSING_CHECKSUM // io.lightine.tessera.types.errors/ChipSecureMessagingLost.Reason.MISSING_CHECKSUM|null[0]
         enum entry PLAIN_LENGTH_HINT // io.lightine.tessera.types.errors/ChipSecureMessagingLost.Reason.PLAIN_LENGTH_HINT|null[0]
         enum entry SESSION_CLOSED // io.lightine.tessera.types.errors/ChipSecureMessagingLost.Reason.SESSION_CLOSED|null[0]
+        enum entry UNAUTHENTICATED_STATUS // io.lightine.tessera.types.errors/ChipSecureMessagingLost.Reason.UNAUTHENTICATED_STATUS|null[0]
         enum entry WRONG_CHECKSUM // io.lightine.tessera.types.errors/ChipSecureMessagingLost.Reason.WRONG_CHECKSUM|null[0]
         enum entry WRONG_PADDING // io.lightine.tessera.types.errors/ChipSecureMessagingLost.Reason.WRONG_PADDING|null[0]
 
@@ -287,6 +288,7 @@ final class io.lightine.tessera.types.errors/ChipUnsupportedAlgorithm : io.light
 
     final enum class Reason : kotlin/Enum<io.lightine.tessera.types.errors/ChipUnsupportedAlgorithm.Reason> { // io.lightine.tessera.types.errors/ChipUnsupportedAlgorithm.Reason|null[0]
         enum entry CHIP_REFUSED_SUITE // io.lightine.tessera.types.errors/ChipUnsupportedAlgorithm.Reason.CHIP_REFUSED_SUITE|null[0]
+        enum entry CRYPTOGRAPHY_FAILED // io.lightine.tessera.types.errors/ChipUnsupportedAlgorithm.Reason.CRYPTOGRAPHY_FAILED|null[0]
         enum entry EXTENDED_LENGTH_REQUIRED // io.lightine.tessera.types.errors/ChipUnsupportedAlgorithm.Reason.EXTENDED_LENGTH_REQUIRED|null[0]
         enum entry NO_CRYPTOGRAPHY_ON_PLATFORM // io.lightine.tessera.types.errors/ChipUnsupportedAlgorithm.Reason.NO_CRYPTOGRAPHY_ON_PLATFORM|null[0]
         enum entry NO_SUPPORTED_SUITE // io.lightine.tessera.types.errors/ChipUnsupportedAlgorithm.Reason.NO_SUPPORTED_SUITE|null[0]

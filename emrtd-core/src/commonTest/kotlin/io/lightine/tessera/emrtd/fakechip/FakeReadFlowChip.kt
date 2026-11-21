@@ -79,6 +79,31 @@ internal class FakeProtectedFile(
 }
 
 /**
+ * Misbehaves on the first SELECT of the application after a chip-authentication key switch:
+ * [bareStatus] answers it with that bare status word (no secure messaging); otherwise the answer's
+ * checksum is corrupted. Goes in `leadingHandlers`, before secure messaging.
+ */
+internal class FakeAfterKeySwitch(
+    private val bareStatus: Int?,
+) : FakeCommandHandler {
+    var flow: FlowChip? = null
+    private var fired = false
+
+    override fun handle(
+        chip: FakeChip,
+        command: CommandApdu,
+    ): ResponseApdu? {
+        val f = flow ?: return null
+        val selectAid = command.ins == ChipCommands.INS_SELECT && command.p1 == ChipCommands.SELECT_BY_AID && command.cla and 0x0C == 0x0C
+        if (fired || !selectAid || f.ca?.restarts != 1) return null
+        fired = true
+        if (bareStatus != null) return ResponseApdu(ByteArray(0), bareStatus)
+        f.sm!!.corruptNextResponseMac = true
+        return null
+    }
+}
+
+/**
  * Builds fake chips for the end-to-end read tests from the project specimen (SPECIMEN, ALEX MORGAN,
  * Utopia) and keys made at test time: EF.COM, DG1, a synthetic DG2, optional DG14 and DG15, an
  * EF.SOD signed by a fake Utopia signer, and in the master file EF.CardAccess and EF.CardSecurity
@@ -137,12 +162,26 @@ internal object FakeReadFlowChip {
         tagLoss: FakeTagLoss? = null,
         extraApplicationFiles: Map<Int, ByteArray> = emptyMap(),
         extraHandlers: List<FakeCommandHandler> = emptyList(),
+        /** PACE entries for the signed copy in DG14 (DG14 is written even without chip authentication). */
+        signedPaceSuites: List<FakePaceSuite>? = null,
+        /** The bytes of EF.CardAccess in place of the built ones (also on a BAC-only chip). */
+        cardAccessOverride: ByteArray? = null,
+        /** Handlers before secure messaging: they see protected commands and can answer bare. */
+        leadingHandlers: List<FakeCommandHandler> = emptyList(),
     ): FlowChip {
         val pki = Pki.rsa(keys)
         val groups = linkedMapOf(1 to FakeChipData.dg1(lines), 2 to dg2())
         val caKey = if (caInApplication || caInMasterFile) FakeCaKey.generate(c, 13) else null
         val caOffers = listOf(FakeCaOffer(dh = false, cipherCode = 2))
-        if (caInApplication) groups[14] = FakeCa.dg14(caOffers, listOf(caKey!!))
+        if (caInApplication || signedPaceSuites != null) {
+            val entries = ArrayList<ByteArray>()
+            if (caInApplication) {
+                entries +=
+                    TlvParser().parseSingle(FakeCa.securityInfos(caOffers, listOf(caKey!!))).children().map { it.encoded() }
+            }
+            signedPaceSuites?.forEach { entries += paceInfo(it.oid, it.parameterId) }
+            groups[14] = TlvWriter.encode(0x6E, DerWriter.set(*entries.toTypedArray()))
+        }
         val aa = if (activeAuthentication) FakeAa(FakeAaKey.rsa(c), c, HashAlgorithm.SHA256) else null
         if (aa != null) groups[15] = aa.dg15
         val efCom = FakeChipData.efCom(groups.keys.map { tagOf(it) })
@@ -156,6 +195,7 @@ internal object FakeReadFlowChip {
         val usesPace = access == FlowAccess.PACE_AND_BAC || access == FlowAccess.PACE_ONLY
         val paceInfos = cardAccessSuites.map { paceInfo(it.oid, it.parameterId) }
         if (usesPace) mf[LdsIds.EF_CARD_ACCESS] = DerWriter.set(*paceInfos.toTypedArray())
+        cardAccessOverride?.let { mf[LdsIds.EF_CARD_ACCESS] = it }
         val securityInfos = ArrayList<ByteArray>(paceInfos)
         if (cam != null) {
             val id = paceSuites.first().parameterId
@@ -187,11 +227,13 @@ internal object FakeReadFlowChip {
                 null
             }
         val bac = if (access == FlowAccess.BAC || access == FlowAccess.PACE_AND_BAC) FakeBac(mrzInformation, sm!!, c) else null
-        val ca = if (caKey != null) FakeCa(sm!!, c, listOf(caKey), caOffers) else null
+        val ca = if (caKey != null && sm != null) FakeCa(sm, c, listOf(caKey), caOffers) else null
         // The chip-authentication handler goes before PACE's: both answer GENERAL AUTHENTICATE, and only
         // the CA handler checks that its own MSE came first.
-        val handlers = listOfNotNull(sm, tagLoss) + extraHandlers + listOfNotNull(ca, pace, bac, aa)
-        return FlowChip(FakeChip(files, handlers = handlers), pki, groups, sm, pace, bac, ca, aa)
+        val handlers = leadingHandlers + listOfNotNull(sm, tagLoss) + extraHandlers + listOfNotNull(ca, pace, bac, aa)
+        val flow = FlowChip(FakeChip(files, handlers = handlers), pki, groups, sm, pace, bac, ca, aa)
+        leadingHandlers.filterIsInstance<FakeAfterKeySwitch>().forEach { it.flow = flow }
+        return flow
     }
 
     private fun tagOf(dataGroup: Int): Int =

@@ -38,8 +38,9 @@ public class ChipCheck internal constructor(
  * How a [ChipCheck] came out.
  *
  * [Passed] and [Failed] are results of a calculation. [NotApplicable] means the chip does not have
- * what the check is about. [NotRun] means the inputs were missing or could not be used, so nothing
- * is known either way.
+ * what the check is about. [NotRun] means the check did not run, or ran only in part: its reason
+ * says which. With [ChipCheckReason.KEY_FILE_CHECKS_NOT_PASSED] the chip's part held but the file
+ * that holds its key has not passed its own checks, so the fact is incomplete, never a pass.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -171,8 +172,22 @@ public sealed class ChipCheckKind {
     /** The issue date from DG12 is inside the signer's private-key usage period (Part 11, 5.1.1 best practice 3). */
     public data object IssueDateInSignerUsagePeriod : ChipCheckKind()
 
-    /** Whether the signer certificates are revoked. Always [CheckOutcome.NotRun]: the SDK takes no revocation lists yet. */
-    public data object RevocationChecked : ChipCheckKind()
+    /**
+     * The signer certificates are not on a revocation list. Always [CheckOutcome.NotRun]: the SDK
+     * takes no revocation lists yet.
+     */
+    public data object SignerNotRevoked : ChipCheckKind()
+
+    /**
+     * The PACE entries of the signed copy in [copy] (EF.CardSecurity, or DG14) all appear in the
+     * unsigned EF.CardAccess, and when the signed copy lists PACE the read used PACE. EF.CardAccess is
+     * not signed, so a chip or a reader in between can strip PACE from it and push the read down to
+     * BAC; this fact compares in that direction, beside [CardAccessMatchesSignedCopy], which compares
+     * EF.CardAccess's entries against the copy.
+     */
+    public data class PaceOfferMatchesSignedCopy(
+        public val copy: ChipSignedCopy?,
+    ) : ChipCheckKind()
 
     /**
      * Chip authentication (Part 11, section 6.2) in [context]: the chip agreed new session keys from
@@ -390,6 +405,18 @@ public enum class ChipCheckReason {
 
     /** At least one field of DG1 differs from the printed MRZ. */
     FIELDS_DIFFER,
+
+    /** The reader could not make its key pair or the shared secret on the chip's parameters. */
+    KEY_AGREEMENT_FAILED,
+
+    /** The platform's cryptography could not carry out a step with the values the chip sent. */
+    CRYPTOGRAPHY_FAILED,
+
+    /** The signed copy lists a PACE entry that EF.CardAccess lacks, or EF.CardAccess is missing. */
+    PACE_MISSING_FROM_CARD_ACCESS,
+
+    /** The signed copy lists PACE, and the read used another access protocol. */
+    PACE_OFFERED_BUT_NOT_USED,
 
     /** The chip's DG1 was not read or could not be parsed. */
     NO_CHIP_MRZ,
