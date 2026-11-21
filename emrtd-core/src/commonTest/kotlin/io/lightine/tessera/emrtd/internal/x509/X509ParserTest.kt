@@ -121,6 +121,21 @@ class X509ParserTest {
     }
 
     @Test
+    fun invalidVersionFails() {
+        val der = FakePki.certificate(version = 5)
+        assertEquals(X509Failure.INVALID_VERSION, assertFailsWith<X509Exception> { X509Parser.parse(der) }.failure)
+    }
+
+    @Test
+    fun eachKeyUsageBitDecodesOnItsOwn() {
+        for (bit in KeyUsageBit.entries) {
+            val idx = KeyUsageBit.entries.indexOf(bit)
+            val c = X509Parser.parse(FakePki.certificate(extensions = listOf(FakePki.keyUsage(idx))))
+            assertEquals(setOf(bit), c.decoded.keyUsage, "$bit")
+        }
+    }
+
+    @Test
     fun everyTruncationFailsWithATypedErrorOnly() {
         val der = FakePki.documentSignerCertificate()
         for (n in der.indices) {

@@ -3,10 +3,13 @@ package io.lightine.tessera.emrtd.internal.sm
 import io.lightine.tessera.emrtd.internal.apdu.CommandApdu
 import io.lightine.tessera.emrtd.internal.apdu.ResponseApdu
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
+import io.lightine.tessera.emrtd.internal.crypto.BlockCipher
+import io.lightine.tessera.emrtd.internal.crypto.CipherMode
 import io.lightine.tessera.emrtd.internal.crypto.CryptoBytes
 import io.lightine.tessera.emrtd.internal.crypto.hex
 import io.lightine.tessera.emrtd.internal.crypto.toHex
 import io.lightine.tessera.emrtd.internal.crypto.withCrypto
+import io.lightine.tessera.emrtd.internal.tlv.TlvWriter
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -134,6 +137,31 @@ class SecureMessagingTest {
             // Data with no DO'99' is refused even when the outer status says 9000.
             val withData = assertFailsWith<SecureMessagingException> { session().unprotect(answer("870901" + "00".repeat(8), "9000")) }
             assertEquals(SmFailure.UNAUTHENTICATED_STATUS, withData.failure)
+        }
+
+    @Test
+    fun wrongPaddingOnTheDecryptedDataIsTyped() =
+        withCrypto { c ->
+            val k = keys()
+            val sm = SecureMessaging(c, k, ssc)
+            sm.protect(CommandApdu(0x00, 0xB0, 0, 0, ne = 8))
+            // The answer's counter is the start value incremented twice: once by protect, once by unprotect.
+            val answerSsc =
+                ssc.copyOf().also {
+                    SecureMessaging.increment(it)
+                    SecureMessaging.increment(it)
+                }
+            // Eight bytes with no ISO 9797-1 method 2 padding terminator, encrypted and MAC'd correctly.
+            val padded = ByteArray(8) { (it + 1).toByte() }
+            val encrypted = c.encrypt(BlockCipher.DESEDE, CipherMode.CBC, k.encKey, ByteArray(8), padded)
+            val covered =
+                TlvWriter.encode(0x87, byteArrayOf(0x01) + encrypted) + TlvWriter.encode(0x99, byteArrayOf(0x90.toByte(), 0x00.toByte()))
+            val mac = c.retailMac(k.macKey, CryptoBytes.pad(answerSsc + covered, 8))
+            val e =
+                assertFailsWith<SecureMessagingException> {
+                    sm.unprotect(ResponseApdu.parse(covered + TlvWriter.encode(0x8E, mac) + hex("9000")))
+                }
+            assertEquals(SmFailure.WRONG_PADDING, e.failure)
         }
 
     @Test

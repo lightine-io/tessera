@@ -455,6 +455,50 @@ class PassiveAuthenticationTest {
         }
 
     @Test
+    fun noPrivateKeyUsagePeriodIsNotApplicable() =
+        withKeys { keys ->
+            val exts =
+                listOf(
+                    FakePki.authorityKeyIdentifier(Pki.CSCA_SKI),
+                    FakePki.subjectKeyIdentifier(Pki.DS_SKI),
+                    FakePki.keyUsage(0),
+                )
+            val pki = Pki.rsa(keys, dsExtensions = exts)
+            assertEquals(
+                PaOutcome.NotApplicable(PaNotApplicable.NO_PRIVATE_KEY_USAGE_PERIOD),
+                run(pki).outcome(PaCheckKind.IssueDateInSignerUsagePeriod),
+            )
+        }
+
+    @Test
+    fun anUnreadableSignedCopyDoesNotRun() =
+        withKeys { keys ->
+            val pki = Pki.rsa(keys)
+            val cardAccess = FakeGroups.securityInfos(FakeGroups.paceInfo)
+            // A CardSecurity whose signed content is not a SecurityInfos SET.
+            val cardSecurity = pki.cardSecurity(DerWriter.sequence(DerWriter.oid("1.2.3.4")))
+            assertEquals(
+                notRun(PaNotRun.UNREADABLE_SIGNED_COPY),
+                run(pki, cardAccess = cardAccess, cardSecurity = cardSecurity)
+                    .outcome(PaCheckKind.CardAccessMatchesSignedCopy(SignedCopy.CARD_SECURITY)),
+            )
+        }
+
+    @Test
+    fun anAbsentCountryNameDoesNotRun() =
+        withKeys { keys ->
+            val noCountry =
+                DerWriter.sequence(
+                    DerWriter.set(DerWriter.sequence(DerWriter.oid("2.5.4.3"), DerWriter.printableString("Utopia Document Signer 01"))),
+                )
+            val pki = Pki.rsa(keys, dsSubject = noCountry)
+            assertEquals(
+                notRun(PaNotRun.COUNTRY_NAME_ABSENT),
+                run(pki).outcome(PaCheckKind.SignerCountryMatchesRootCountry),
+            )
+        }
+
+    @Test
     fun revocationIsAlwaysReportedAsNotRun() =
         withKeys { keys ->
             assertEquals(notRun(PaNotRun.NOT_SUPPORTED), run(Pki.rsa(keys)).outcome(PaCheckKind.RevocationChecked))

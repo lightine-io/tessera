@@ -104,6 +104,12 @@ internal class FakePace(
     /** Flip one bit of the chip's token. */
     var corruptChipToken: Boolean = false
 
+    /** Answer MSE:Set AT with this status word instead of running it (any error word). */
+    var refuseSetAt: Int? = null
+
+    /** Answer step 1 with this encrypted nonce instead of the real one. */
+    var nonceOverride: ByteArray? = null
+
     /** How many reader tokens were refused (wrong password, usually). */
     var refusedTokens: Int = 0
         private set
@@ -124,6 +130,7 @@ internal class FakePace(
 
     private fun setAt(c: CommandApdu): ResponseApdu {
         run = null
+        refuseSetAt?.let { return status(it) }
         lastSetAtData = c.data.copyOf()
         val objects =
             try {
@@ -190,7 +197,9 @@ internal class FakePace(
         if (inner.isNotEmpty()) return fail(StatusWord.WRONG_DATA)
         val s = r.random(r.cipher.blockCipher.blockSize)
         r.nonce = s
-        val z = crypto.encrypt(r.cipher.blockCipher, CipherMode.CBC, r.passwordKey, ByteArray(r.cipher.blockCipher.blockSize), s)
+        val z =
+            nonceOverride
+                ?: crypto.encrypt(r.cipher.blockCipher, CipherMode.CBC, r.passwordKey, ByteArray(r.cipher.blockCipher.blockSize), s)
         r.nextStep = 2
         return answer(TlvWriter.encode(0x80, z))
     }

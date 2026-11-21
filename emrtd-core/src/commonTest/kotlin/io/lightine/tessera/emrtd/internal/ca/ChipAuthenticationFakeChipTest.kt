@@ -469,6 +469,37 @@ class ChipAuthenticationFakeChipTest {
             }
         }
 
+    @Test
+    fun aRefusedSetAtIsTyped() =
+        withCrypto { c ->
+            runTest {
+                val key = FakeCaKey.generate(c, 13)
+                val s = setup(c, listOf(key), listOf(FakeCaOffer(dh = false, cipherCode = 2)))
+                s.ca.refuseSetAt = 0x6A88
+                val outcome = assertIs<CaOutcome.Refused>(ChipAuthentication.run(s.channel, c, s.infos, CaContext.EMRTD_APPLICATION))
+                val refusal = outcome.refusals.single()
+                assertEquals(CaStep.SET_AT, refusal.step)
+                assertEquals(0x6A88, refusal.sw)
+                assertEquals(0, s.ca.restarts)
+                assertSessionWorks(s)
+            }
+        }
+
+    @Test
+    fun unknownStandardizedDomainParametersAreSkipped() =
+        withCrypto { c ->
+            val key = FakeCaKey.generate(c, 13, keyId = 5)
+            // The same EC key, but written into the infos with a reserved (unknown) standardized id 3.
+            val unknown = FakeCaKey(key.keyId, 3, key.parameters, key.privateKey, key.publicValue, FakeCaKeyEncoding.STANDARDIZED)
+            val infos =
+                SecurityInfoParser.parse(
+                    FakeCa.securityInfos(listOf(FakeCaOffer(dh = false, cipherCode = 2, keyId = 5)), listOf(unknown)),
+                )
+            val plan = ChipAuthentication.plan(c, infos)
+            assertEquals(CaSkipReason.UNSUPPORTED_DOMAIN_PARAMETERS, plan.skipped.single().reason)
+            assertTrue(plan.suites.isEmpty())
+        }
+
     private fun add(
         ssc: ByteArray,
         n: Int,

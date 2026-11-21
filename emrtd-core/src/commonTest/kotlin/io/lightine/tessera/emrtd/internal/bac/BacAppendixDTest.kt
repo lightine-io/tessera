@@ -6,7 +6,11 @@ import io.lightine.tessera.emrtd.ChipAccessKey
 import io.lightine.tessera.emrtd.internal.apdu.ChipCommands
 import io.lightine.tessera.emrtd.internal.apdu.LdsIds
 import io.lightine.tessera.emrtd.internal.apdu.PlainApduSender
+import io.lightine.tessera.emrtd.internal.apdu.ResponseApdu
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
+import io.lightine.tessera.emrtd.internal.crypto.BlockCipher
+import io.lightine.tessera.emrtd.internal.crypto.CipherMode
+import io.lightine.tessera.emrtd.internal.crypto.CryptoBytes
 import io.lightine.tessera.emrtd.internal.crypto.HashAlgorithm
 import io.lightine.tessera.emrtd.internal.crypto.hex
 import io.lightine.tessera.emrtd.internal.crypto.toHex
@@ -37,6 +41,26 @@ internal class ScriptedTransport(
     }
 
     fun assertDone() = assertEquals(script.size, step, "not every scripted command was sent")
+}
+
+/** A transport that answers GET CHALLENGE and EXTERNAL AUTHENTICATE with fixed responses, in order. */
+private class RespondingTransport(
+    private val challenge: ByteArray,
+    private val challengeSw: Int = StatusWord.SUCCESS,
+    private val authenticate: ByteArray = ByteArray(0),
+    private val authenticateSw: Int = StatusWord.SUCCESS,
+) : ApduTransport {
+    override val maxCommandLength: Int = 261
+    override val supportsExtendedLength: Boolean = false
+
+    override suspend fun transceive(command: ByteArray): ByteArray {
+        val ins = command[1].toInt() and 0xFF
+        return when (ins) {
+            0x84 -> ResponseApdu(challenge, challengeSw).encode()
+            0x82 -> ResponseApdu(authenticate, authenticateSw).encode()
+            else -> error("unexpected command INS $ins")
+        }
+    }
 }
 
 /**
@@ -151,6 +175,76 @@ class BacAppendixDTest {
                 }
                 assertEquals(2, drawn.size)
                 assertTrue(drawn.all { b -> b.all { it == 0.toByte() } }, "RND.IFD and K.IFD are wiped on the exception path")
+            }
+        }
+
+    /** Fixed reader nonce and key material (the Appendix D.3 values), in the order BAC asks for them. */
+    private fun scriptedRandom(): (Int) -> ByteArray {
+        val queue = ArrayDeque(listOf(hex("781723860C06C226"), hex("0B795240CB7049B01C19B33E32804F0B")))
+        return { n -> queue.removeFirst().also { assertEquals(n, it.size) } }
+    }
+
+    @Test
+    fun challengeRefusedIsTyped() =
+        withCrypto { c ->
+            runTest {
+                val transport = RespondingTransport(ByteArray(0), challengeSw = 0x6A86)
+                val e = assertFailsWith<BacException> { Bac.open(PlainApduSender(transport), c, nineCharacterKey(), scriptedRandom()) }
+                assertEquals(BacFailure.CHALLENGE_REFUSED, e.failure)
+                assertEquals(0x6A86, e.sw)
+            }
+        }
+
+    @Test
+    fun wrongChallengeLengthIsTyped() =
+        withCrypto { c ->
+            runTest {
+                val transport = RespondingTransport(ByteArray(7))
+                val e = assertFailsWith<BacException> { Bac.open(PlainApduSender(transport), c, nineCharacterKey(), scriptedRandom()) }
+                assertEquals(BacFailure.WRONG_CHALLENGE_LENGTH, e.failure)
+            }
+        }
+
+    @Test
+    fun wrongResponseLengthIsTyped() =
+        withCrypto { c ->
+            runTest {
+                val transport = RespondingTransport(hex("4608F91988702212"), authenticate = ByteArray(39))
+                val e = assertFailsWith<BacException> { Bac.open(PlainApduSender(transport), c, nineCharacterKey(), scriptedRandom()) }
+                assertEquals(BacFailure.WRONG_RESPONSE_LENGTH, e.failure)
+            }
+        }
+
+    @Test
+    fun wrongChipMacIsTyped() =
+        withCrypto { c ->
+            runTest {
+                // 40 bytes: 32 bytes of cryptogram and a MAC that does not match the one over it.
+                val transport = RespondingTransport(hex("4608F91988702212"), authenticate = ByteArray(32) { 1 } + ByteArray(8) { 2 })
+                val e = assertFailsWith<BacException> { Bac.open(PlainApduSender(transport), c, nineCharacterKey(), scriptedRandom()) }
+                assertEquals(BacFailure.WRONG_CHIP_MAC, e.failure)
+            }
+        }
+
+    @Test
+    fun nonceMismatchIsTyped() =
+        withCrypto { c ->
+            runTest {
+                val rndIc = hex("4608F91988702212")
+                val keys = Bac.documentKeys(c, nineCharacterKey())
+                // A valid MAC over a cryptogram whose nonce is not the challenge the chip sent.
+                val eIc =
+                    c.encrypt(
+                        BlockCipher.DESEDE,
+                        CipherMode.CBC,
+                        keys.encKey,
+                        ByteArray(8),
+                        hex("0000000000000001") + hex("781723860C06C226") + hex("0B795240CB7049B01C19B33E32804F0B"),
+                    )
+                val mIc = c.retailMac(keys.macKey, CryptoBytes.pad(eIc, 8))
+                val transport = RespondingTransport(rndIc, authenticate = eIc + mIc)
+                val e = assertFailsWith<BacException> { Bac.open(PlainApduSender(transport), c, nineCharacterKey(), scriptedRandom()) }
+                assertEquals(BacFailure.NONCE_MISMATCH, e.failure)
             }
         }
 }

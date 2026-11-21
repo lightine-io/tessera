@@ -16,7 +16,10 @@ import io.lightine.tessera.emrtd.internal.apdu.PlainApduSender
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
 import io.lightine.tessera.emrtd.internal.asn1.DerWriter
 import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
+import io.lightine.tessera.emrtd.internal.crypto.CryptoBytes
 import io.lightine.tessera.emrtd.internal.crypto.DomainParameters
+import io.lightine.tessera.emrtd.internal.crypto.EcPoint
+import io.lightine.tessera.emrtd.internal.crypto.EcPointCodec
 import io.lightine.tessera.emrtd.internal.crypto.withCrypto
 import io.lightine.tessera.emrtd.internal.securityinfo.KeyAgreement
 import io.lightine.tessera.emrtd.internal.securityinfo.PaceMapping
@@ -298,6 +301,56 @@ class PaceFakeChipTest {
                         .subList(1, 4)
                         .all { it[0].toInt() == 0x10 },
                 )
+            }
+        }
+
+    @Test
+    fun aSetAtRefusalWithAnotherStatusWordIsTyped() =
+        runTest {
+            withCrypto { c ->
+                val s = setup(c, setOf(FakePaceSuite(ECDH_GM_AES128, 13)))
+                s.pace.refuseSetAt = 0x6A86
+                val e = assertFailsWith<PaceException> { Pace.open(s.exchange, c, mrzKey(), PaceSuite.of(ECDH_GM_AES128, 13)) }
+                assertEquals(PaceFailure.SET_AUTHENTICATION_TEMPLATE_REFUSED, e.failure)
+                assertEquals(PaceStep.SET_AUTHENTICATION_TEMPLATE, e.step)
+                assertEquals(0x6A86, e.sw)
+            }
+        }
+
+    @Test
+    fun aWrongLengthEncryptedNonceIsTyped() =
+        runTest {
+            withCrypto { c ->
+                val s = setup(c, setOf(FakePaceSuite(ECDH_GM_AES128, 13)))
+                s.pace.nonceOverride = ByteArray(15)
+                val e = assertFailsWith<PaceException> { Pace.open(s.exchange, c, mrzKey(), PaceSuite.of(ECDH_GM_AES128, 13)) }
+                assertEquals(PaceFailure.WRONG_NONCE_LENGTH, e.failure)
+                assertEquals(PaceStep.ENCRYPTED_NONCE, e.step)
+            }
+        }
+
+    @Test
+    fun aDegenerateGeneratorIsTyped() =
+        runTest {
+            withCrypto { c ->
+                val suite = PaceSuite.of(ECDH_GM_AES128, 13)
+                val params = (suite.group as PaceGroup.Ec).parameters
+                // The negated generator, a valid point: with private key 1 and nonce 1 the mapping
+                // yields s*G + H = G + (-G), the point at infinity.
+                val negatedGenerator = EcPoint(params.generator.x, c.modSubtract(params.p, params.generator.y, params.p))
+                val context =
+                    MappingContext(
+                        c,
+                        suite,
+                        newPrivateKey = { CryptoBytes.ofInt(1) },
+                        randomBytes = { error("the generic mapping needs no random bytes") },
+                    )
+                val e =
+                    assertFailsWith<PaceException> {
+                        GenericMapping().map(context, CryptoBytes.ofInt(1)) { EcPointCodec.encode(params, negatedGenerator) }
+                    }
+                assertEquals(PaceFailure.DEGENERATE_GENERATOR, e.failure)
+                assertEquals(PaceStep.MAP_NONCE, e.step)
             }
         }
 
