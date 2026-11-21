@@ -9,8 +9,10 @@ import io.lightine.tessera.emrtd.fakechip.FakePaceMapping
 import io.lightine.tessera.emrtd.fakechip.FakePaceRun
 import io.lightine.tessera.emrtd.fakechip.FakePaceSuite
 import io.lightine.tessera.emrtd.fakechip.FakeSm
+import io.lightine.tessera.emrtd.internal.apdu.ApduSender
 import io.lightine.tessera.emrtd.internal.apdu.ChipCommands
 import io.lightine.tessera.emrtd.internal.apdu.LdsIds
+import io.lightine.tessera.emrtd.internal.apdu.PlainApduSender
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
 import io.lightine.tessera.emrtd.internal.asn1.DerWriter
 import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
@@ -19,8 +21,6 @@ import io.lightine.tessera.emrtd.internal.crypto.withCrypto
 import io.lightine.tessera.emrtd.internal.securityinfo.KeyAgreement
 import io.lightine.tessera.emrtd.internal.securityinfo.PaceMapping
 import io.lightine.tessera.emrtd.internal.securityinfo.StandardizedParameters
-import io.lightine.tessera.emrtd.internal.sm.ApduExchange
-import io.lightine.tessera.emrtd.internal.sm.PlainExchange
 import io.lightine.tessera.emrtd.internal.sm.SmCipher
 import io.lightine.tessera.emrtd.internal.tlv.TlvParser
 import kotlinx.coroutines.test.runTest
@@ -52,7 +52,7 @@ class PaceFakeChipTest {
         val chip: FakeChip,
         val sm: FakeSm,
         val pace: FakePace,
-        val exchange: PlainExchange,
+        val exchange: PlainApduSender,
     )
 
     private fun setup(
@@ -71,10 +71,10 @@ class PaceFakeChipTest {
                 supportsExtendedLength = extended,
                 handlers = listOf(sm, pace),
             )
-        return Setup(chip, sm, pace, PlainExchange(chip))
+        return Setup(chip, sm, pace, PlainApduSender(chip))
     }
 
-    private suspend fun readDg1(channel: ApduExchange): ByteArray {
+    private suspend fun readDg1(channel: ApduSender): ByteArray {
         assertEquals(StatusWord.SUCCESS, channel.send(ChipCommands.selectApplication(LdsIds.LDS1_AID)).sw)
         assertEquals(StatusWord.SUCCESS, channel.send(ChipCommands.selectFile(LdsIds.EF_DG1)).sw)
         var content = channel.send(ChipCommands.readBinary(0, 4)).data

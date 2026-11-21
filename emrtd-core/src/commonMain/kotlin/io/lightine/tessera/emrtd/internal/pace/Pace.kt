@@ -1,6 +1,7 @@
 package io.lightine.tessera.emrtd.internal.pace
 
 import io.lightine.tessera.emrtd.ChipAccessKey
+import io.lightine.tessera.emrtd.internal.apdu.ApduSender
 import io.lightine.tessera.emrtd.internal.apdu.CommandApdu
 import io.lightine.tessera.emrtd.internal.apdu.ExtendedLengthRequired
 import io.lightine.tessera.emrtd.internal.apdu.ResponseApdu
@@ -9,7 +10,6 @@ import io.lightine.tessera.emrtd.internal.crypto.BlockCipher
 import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
 import io.lightine.tessera.emrtd.internal.crypto.CipherMode
 import io.lightine.tessera.emrtd.internal.crypto.CryptoBytes
-import io.lightine.tessera.emrtd.internal.sm.ApduExchange
 import io.lightine.tessera.emrtd.internal.sm.SecureChannel
 import io.lightine.tessera.emrtd.internal.sm.SessionKeys
 import io.lightine.tessera.emrtd.internal.sm.SmCipher
@@ -110,7 +110,7 @@ internal object Pace {
      * @throws PaceException when the suite is not supported, the chip refuses, or an answer is wrong.
      */
     suspend fun open(
-        exchange: ApduExchange,
+        exchange: ApduSender,
         crypto: ChipCrypto,
         key: ChipAccessKey,
         suite: PaceSuite,
@@ -131,7 +131,7 @@ internal object Pace {
     }
 
     private class Run(
-        val exchange: ApduExchange,
+        val exchange: ApduSender,
         val crypto: ChipCrypto,
         val suite: PaceSuite,
         val options: PaceOptions,

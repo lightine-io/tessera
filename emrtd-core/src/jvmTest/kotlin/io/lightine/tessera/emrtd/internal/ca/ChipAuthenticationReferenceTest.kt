@@ -1,11 +1,11 @@
 package io.lightine.tessera.emrtd.internal.ca
 
 import io.lightine.tessera.emrtd.internal.apdu.ChipCommands
+import io.lightine.tessera.emrtd.internal.apdu.PlainApduSender
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
 import io.lightine.tessera.emrtd.internal.crypto.chipCrypto
 import io.lightine.tessera.emrtd.internal.crypto.dhParams
 import io.lightine.tessera.emrtd.internal.securityinfo.SecurityInfoParser
-import io.lightine.tessera.emrtd.internal.sm.PlainExchange
 import io.lightine.tessera.emrtd.internal.sm.SecureChannel
 import io.lightine.tessera.emrtd.internal.sm.SessionKeys
 import io.lightine.tessera.emrtd.internal.sm.SmCipher
@@ -96,7 +96,7 @@ class ChipAuthenticationReferenceTest {
         val ssc = Random.nextBytes(old.blockSize)
         val chip = CaReferenceChip(group, offered.map { it.code }, old, kEnc to kMac, ssc, file, setKatSupported)
         val crypto = chipCrypto()
-        val channel = SecureChannel(PlainExchange(chip), crypto, SessionKeys(smCipher(old), kEnc, kMac), ssc)
+        val channel = SecureChannel(PlainApduSender(chip), crypto, SessionKeys(smCipher(old), kEnc, kMac), ssc)
         val infos = SecurityInfoParser.parse(chip.securityInfos())
         val outcome = ChipAuthentication.run(channel, crypto, infos, CaContext.EMRTD_APPLICATION, extendedLengthAllowed = true)
         return Run(chip, channel, outcome)

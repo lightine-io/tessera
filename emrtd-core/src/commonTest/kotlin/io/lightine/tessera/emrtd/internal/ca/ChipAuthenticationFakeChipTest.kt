@@ -9,9 +9,11 @@ import io.lightine.tessera.emrtd.fakechip.FakeChip
 import io.lightine.tessera.emrtd.fakechip.FakeChipData
 import io.lightine.tessera.emrtd.fakechip.FakeFileSystem
 import io.lightine.tessera.emrtd.fakechip.FakeSm
+import io.lightine.tessera.emrtd.internal.apdu.ApduSender
 import io.lightine.tessera.emrtd.internal.apdu.ChipCommands
 import io.lightine.tessera.emrtd.internal.apdu.CommandApdu
 import io.lightine.tessera.emrtd.internal.apdu.LdsIds
+import io.lightine.tessera.emrtd.internal.apdu.PlainApduSender
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
 import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
 import io.lightine.tessera.emrtd.internal.crypto.CryptoBytes
@@ -19,8 +21,6 @@ import io.lightine.tessera.emrtd.internal.crypto.withCrypto
 import io.lightine.tessera.emrtd.internal.securityinfo.ChipSecurityFiles
 import io.lightine.tessera.emrtd.internal.securityinfo.SecurityInfoParser
 import io.lightine.tessera.emrtd.internal.securityinfo.SecurityInfos
-import io.lightine.tessera.emrtd.internal.sm.ApduExchange
-import io.lightine.tessera.emrtd.internal.sm.PlainExchange
 import io.lightine.tessera.emrtd.internal.sm.SecureChannel
 import io.lightine.tessera.emrtd.internal.sm.SecureMessaging
 import io.lightine.tessera.emrtd.internal.sm.SessionKeys
@@ -87,7 +87,7 @@ class ChipAuthenticationFakeChipTest {
         val kMac = Random.nextBytes(oldCipher.keyType.length)
         val ssc = Random.nextBytes(oldCipher.blockSize)
         sm.start(oldCipher, kEnc, kMac, ssc)
-        val channel = SecureChannel(PlainExchange(wrap(chip)), c, SessionKeys(oldCipher, kEnc, kMac), ssc)
+        val channel = SecureChannel(PlainApduSender(wrap(chip)), c, SessionKeys(oldCipher, kEnc, kMac), ssc)
         assertEquals(StatusWord.SUCCESS, channel.send(ChipCommands.selectApplication(LdsIds.LDS1_AID)).sw)
         val infos = ChipSecurityFiles.parseDg14(readFile(channel, DG14))
         if (!inApplication) assertEquals(StatusWord.SUCCESS, channel.send(ChipCommands.selectMasterFile()).sw)
@@ -95,7 +95,7 @@ class ChipAuthenticationFakeChipTest {
     }
 
     private suspend fun readFile(
-        channel: ApduExchange,
+        channel: ApduSender,
         fid: Int,
     ): ByteArray {
         assertEquals(StatusWord.SUCCESS, channel.send(ChipCommands.selectFile(fid)).sw)
@@ -379,7 +379,7 @@ class ChipAuthenticationFakeChipTest {
                     val plain = ChipAuthentication.generalAuthenticate(ByteArray(size) { 1 })
                     val keys = SessionKeys(cipher, ByteArray(cipher.keyType.length), ByteArray(cipher.keyType.length))
                     val protected = SecureMessaging(c, keys, cipher.zeroSsc()).protect(plain)
-                    val shortChannel = SecureChannel(PlainExchange(FakeChip(FakeFileSystem())), c, keys, cipher.zeroSsc())
+                    val shortChannel = SecureChannel(PlainApduSender(FakeChip(FakeFileSystem())), c, keys, cipher.zeroSsc())
                     assertEquals(protected.fitsShort, ChipAuthentication.protectedFits(plain, cipher, shortChannel, false), "$cipher $size")
                 }
             }
