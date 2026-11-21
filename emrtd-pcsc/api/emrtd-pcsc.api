@@ -1,0 +1,19 @@
+public final class io/lightine/tessera/emrtd/pcsc/PcscReaders {
+	public static final field INSTANCE Lio/lightine/tessera/emrtd/pcsc/PcscReaders;
+	public static final fun connect (Ljava/lang/String;)Lio/lightine/tessera/emrtd/pcsc/SmartCardTransport;
+	public static final fun connect (Ljava/lang/String;J)Lio/lightine/tessera/emrtd/pcsc/SmartCardTransport;
+	public static final fun connect (Ljava/lang/String;JZ)Lio/lightine/tessera/emrtd/pcsc/SmartCardTransport;
+	public static synthetic fun connect$default (Ljava/lang/String;JZILjava/lang/Object;)Lio/lightine/tessera/emrtd/pcsc/SmartCardTransport;
+	public static final fun listReaders ()Ljava/util/List;
+}
+
+public final class io/lightine/tessera/emrtd/pcsc/SmartCardTransport : io/lightine/tessera/emrtd/ApduTransport, java/lang/AutoCloseable {
+	public fun <init> (Ljavax/smartcardio/CardChannel;)V
+	public fun <init> (Ljavax/smartcardio/CardChannel;Z)V
+	public synthetic fun <init> (Ljavax/smartcardio/CardChannel;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun close ()V
+	public fun getMaxCommandLength ()I
+	public fun getSupportsExtendedLength ()Z
+	public fun transceive ([BLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
