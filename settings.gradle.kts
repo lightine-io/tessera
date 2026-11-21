@@ -51,6 +51,7 @@ rootProject.name = "tessera"
 include(":types")
 include(":mrz-core")
 include(":emrtd-core")
+include(":emrtd-nfc")
 include(":telemetry")
 include(":logging")
 include(":mrz-camera-core")
