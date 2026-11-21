@@ -37,6 +37,10 @@ androidx-activity-compose = "1.13.0"
 # the Android counterpart of the other modules' pure-JVM host tests, but with an Android runtime so a
 # composable can actually be laid out and queried by semantics. Test-only. Latest stable.
 robolectric = "4.17"
+# BouncyCastle lightweight API: the chip cryptography of emrtd-core on JVM and Android (ADR-031
+# point 2). `implementation` only, never `api`: its types stay out of the public API (CI checks the
+# ABI dumps). Licence: Bouncy Castle Licence (MIT). Latest stable, from Maven Central at write time.
+bouncycastle = "1.87"
 
 [libraries]
 kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest" }
@@ -81,6 +85,7 @@ androidx-compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4
 # rule launches — without it Robolectric cannot resolve the activity.
 androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "androidx-compose" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+bouncycastle-bcprov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

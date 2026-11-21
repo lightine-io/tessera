@@ -64,6 +64,21 @@ kotlin {
                 api(libs.kotlinx.coroutines.core)
             }
         }
+        // The chip cryptography (internal ChipCrypto) on BouncyCastle for JVM and Android. Kotlin
+        // does not support a source set shared by only a JVM and an Android target (Kotlin docs,
+        // "Hierarchical project structure"), so common code reaches the backend through an `expect
+        // fun chipCrypto()` with a one-line `actual` per target, and the one backend file lives in
+        // src/bouncyCastleMain, a plain folder compiled into both targets. iosMain's `actual` throws
+        // until the OpenSSL backend lands. BouncyCastle is `implementation`: none of its types may
+        // reach the public API (repo-rules checks the api/ dumps).
+        jvmMain {
+            kotlin.srcDir("src/bouncyCastleMain/kotlin")
+            dependencies { implementation(libs.bouncycastle.bcprov) }
+        }
+        androidMain {
+            kotlin.srcDir("src/bouncyCastleMain/kotlin")
+            dependencies { implementation(libs.bouncycastle.bcprov) }
+        }
         commonTest {
             dependencies {
                 implementation(kotlin("test"))
