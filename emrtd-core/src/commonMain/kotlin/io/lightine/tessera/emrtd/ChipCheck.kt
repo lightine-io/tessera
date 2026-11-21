@@ -1,6 +1,8 @@
 package io.lightine.tessera.emrtd
 
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
+import io.lightine.tessera.types.vocabulary.CheckOutcome
+import io.lightine.tessera.types.vocabulary.CheckReason
 
 /**
  * One fact from reading a chip: what was checked, and how it came out.
@@ -10,7 +12,7 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  * certificate". No check, and no combination of them, says that the chip or the document is
  * genuine: deciding what is enough stays with your app (ICAO Doc 9303 Part 11, section 2).
  *
- * The same record shape is meant for the printed MRZ's checks later, so MRZ and chip results read
+ * The MRZ validator reports its checks with the same [CheckOutcome], so MRZ and chip results read
  * alike.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
@@ -118,42 +120,6 @@ public enum class ChipCountrySource {
 
     /** A `directoryName` in the IssuerAltName extension. */
     ISSUER_ALT_NAME,
-}
-
-/**
- * How a [ChipCheck] came out.
- *
- * [Passed] and [Failed] are results of a calculation. [NotApplicable] means the chip does not have
- * what the check is about. [NotRun] means the check did not run, or ran only in part: its reason
- * says which. With [ChipCheckReason.KEY_FILE_CHECKS_NOT_PASSED] the chip's part held but the file
- * that holds its key has not passed its own checks, so the fact is incomplete, never a pass.
- *
- * Experimental: see [ExperimentalTesseraChipApi].
- *
- * @since 1.0.0
- */
-@ExperimentalTesseraChipApi
-public sealed class CheckOutcome {
-    /** The calculation gave the expected result. */
-    public data object Passed : CheckOutcome()
-
-    /** The calculation did not give the expected result, for [reason]. */
-    @ConsistentCopyVisibility
-    public data class Failed internal constructor(
-        public val reason: ChipCheckReason,
-    ) : CheckOutcome()
-
-    /** The check does not apply to this chip, for [reason]. */
-    @ConsistentCopyVisibility
-    public data class NotApplicable internal constructor(
-        public val reason: ChipCheckReason,
-    ) : CheckOutcome()
-
-    /** The check could not run, for [reason]. */
-    @ConsistentCopyVisibility
-    public data class NotRun internal constructor(
-        public val reason: ChipCheckReason,
-    ) : CheckOutcome()
 }
 
 /**
@@ -309,13 +275,18 @@ public sealed class ChipCheckKind {
 /**
  * Why a check came out [CheckOutcome.Failed], [CheckOutcome.NotApplicable] or
  * [CheckOutcome.NotRun]. Each value is a fact about the inputs, never a verdict on the document.
+ * With [ChipCheckReason.KEY_FILE_CHECKS_NOT_PASSED] the chip's part held but the file that holds
+ * its key has not passed its own checks, so the fact is incomplete, never a pass.
+ *
+ * Implements [CheckReason], the shared reason type of [CheckOutcome], so a chip check's outcome
+ * carries a typed reason.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
-public enum class ChipCheckReason {
+public enum class ChipCheckReason : CheckReason {
     /** A data group's hash differs from the one stored. */
     HASH_DIFFERS,
 

@@ -7,6 +7,7 @@ import io.lightine.tessera.emrtd.internal.crypto.HashAlgorithm
 import io.lightine.tessera.emrtd.internal.pa.Pki
 import io.lightine.tessera.emrtd.internal.pa.TestKeys
 import io.lightine.tessera.emrtd.internal.pa.withKeys
+import io.lightine.tessera.types.vocabulary.CheckOutcome
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -70,9 +71,9 @@ class TrustTest {
             assertEquals(0, read.version)
             assertEquals(2, read.anchors.size)
             assertEquals(1, read.unreadableCertificateCount)
-            assertEquals(MasterListCheckOutcome.Passed, read.outcomeOf(MasterListCheckKind.SIGNATURE_VERIFIES))
-            assertEquals(MasterListCheckOutcome.Passed, read.outcomeOf(MasterListCheckKind.SIGNER_CHAINS_TO_SUPPLIED_ROOT))
-            assertEquals(MasterListCheckOutcome.Passed, read.outcomeOf(MasterListCheckKind.SIGNER_CRITICAL_EXTENSIONS_RECOGNIZED))
+            assertEquals(CheckOutcome.Passed, read.outcomeOf(MasterListCheckKind.SIGNATURE_VERIFIES))
+            assertEquals(CheckOutcome.Passed, read.outcomeOf(MasterListCheckKind.SIGNER_CHAINS_TO_SUPPLIED_ROOT))
+            assertEquals(CheckOutcome.Passed, read.outcomeOf(MasterListCheckKind.SIGNER_CRITICAL_EXTENSIONS_RECOGNIZED))
 
             // The anchors read from the list work as roots for a chip's signer.
             assertTrue(read.anchors.any { it.encodedBytes().contentEquals(pki.csca) })
@@ -89,11 +90,11 @@ class TrustTest {
             tampered[at] = (tampered[at] + 1).toByte()
             val read = assertIs<MasterListRead.Read>(MasterListReader.read(tampered)).masterList
             assertEquals(
-                MasterListCheckOutcome.Failed(MasterListCheckReason.MESSAGE_DIGEST_DIFFERS),
+                CheckOutcome.Failed(MasterListCheckReason.MESSAGE_DIGEST_DIFFERS),
                 read.outcomeOf(MasterListCheckKind.SIGNATURE_VERIFIES),
             )
             assertEquals(
-                MasterListCheckOutcome.NotRun(MasterListCheckReason.NO_ROOTS_SUPPLIED),
+                CheckOutcome.NotRun(MasterListCheckReason.NO_ROOTS_SUPPLIED),
                 read.outcomeOf(MasterListCheckKind.SIGNER_CHAINS_TO_SUPPLIED_ROOT),
             )
             // A root that does not match the signer.
@@ -111,7 +112,7 @@ class TrustTest {
                 )
             val unmatched = assertIs<MasterListRead.Read>(MasterListReader.read(file, listOf(anchor(stranger)))).masterList
             assertEquals(
-                MasterListCheckOutcome.Failed(MasterListCheckReason.NO_SUPPLIED_ROOT_MATCHES),
+                CheckOutcome.Failed(MasterListCheckReason.NO_SUPPLIED_ROOT_MATCHES),
                 unmatched.outcomeOf(MasterListCheckKind.SIGNER_CHAINS_TO_SUPPLIED_ROOT),
             )
         }
@@ -178,10 +179,10 @@ class TrustTest {
             ).masterList
         assertEquals(1, read.anchors.size)
         assertEquals(
-            MasterListCheckOutcome.NotRun(MasterListCheckReason.CRYPTO_UNAVAILABLE),
+            CheckOutcome.NotRun(MasterListCheckReason.CRYPTO_UNAVAILABLE),
             read.outcomeOf(MasterListCheckKind.SIGNATURE_VERIFIES),
         )
-        assertEquals(MasterListCheckOutcome.Passed, read.outcomeOf(MasterListCheckKind.SIGNER_CRITICAL_EXTENSIONS_RECOGNIZED))
+        assertEquals(CheckOutcome.Passed, read.outcomeOf(MasterListCheckKind.SIGNER_CRITICAL_EXTENSIONS_RECOGNIZED))
     }
 
     @Test

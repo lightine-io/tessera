@@ -23,40 +23,6 @@ public final class io/lightine/tessera/emrtd/ApduTransportException : java/lang/
 	public final fun getError ()Lio/lightine/tessera/types/errors/NfcError;
 }
 
-public abstract class io/lightine/tessera/emrtd/CheckOutcome {
-}
-
-public final class io/lightine/tessera/emrtd/CheckOutcome$Failed : io/lightine/tessera/emrtd/CheckOutcome {
-	public final fun component1 ()Lio/lightine/tessera/emrtd/ChipCheckReason;
-	public fun equals (Ljava/lang/Object;)Z
-	public final fun getReason ()Lio/lightine/tessera/emrtd/ChipCheckReason;
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
-public final class io/lightine/tessera/emrtd/CheckOutcome$NotApplicable : io/lightine/tessera/emrtd/CheckOutcome {
-	public final fun component1 ()Lio/lightine/tessera/emrtd/ChipCheckReason;
-	public fun equals (Ljava/lang/Object;)Z
-	public final fun getReason ()Lio/lightine/tessera/emrtd/ChipCheckReason;
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
-public final class io/lightine/tessera/emrtd/CheckOutcome$NotRun : io/lightine/tessera/emrtd/CheckOutcome {
-	public final fun component1 ()Lio/lightine/tessera/emrtd/ChipCheckReason;
-	public fun equals (Ljava/lang/Object;)Z
-	public final fun getReason ()Lio/lightine/tessera/emrtd/ChipCheckReason;
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
-public final class io/lightine/tessera/emrtd/CheckOutcome$Passed : io/lightine/tessera/emrtd/CheckOutcome {
-	public static final field INSTANCE Lio/lightine/tessera/emrtd/CheckOutcome$Passed;
-	public fun equals (Ljava/lang/Object;)Z
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
 public abstract class io/lightine/tessera/emrtd/ChipAccessKey {
 	public final fun clear ()V
 	public final fun isCleared ()Z
@@ -82,7 +48,7 @@ public final class io/lightine/tessera/emrtd/ChipCheck {
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getDetail ()Lio/lightine/tessera/emrtd/ChipCheckDetail;
 	public final fun getKind ()Lio/lightine/tessera/emrtd/ChipCheckKind;
-	public final fun getOutcome ()Lio/lightine/tessera/emrtd/CheckOutcome;
+	public final fun getOutcome ()Lio/lightine/tessera/types/vocabulary/CheckOutcome;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -279,7 +245,7 @@ public final class io/lightine/tessera/emrtd/ChipCheckKind$SignerWithinValidityP
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class io/lightine/tessera/emrtd/ChipCheckReason : java/lang/Enum {
+public final class io/lightine/tessera/emrtd/ChipCheckReason : java/lang/Enum, io/lightine/tessera/types/vocabulary/CheckReason {
 	public static final field CHIP_AUTHENTICATION_DATA_ABSENT Lio/lightine/tessera/emrtd/ChipCheckReason;
 	public static final field CHIP_AUTHENTICATION_DATA_MALFORMED Lio/lightine/tessera/emrtd/ChipCheckReason;
 	public static final field CHIP_AUTHENTICATION_DATA_OUT_OF_RANGE Lio/lightine/tessera/emrtd/ChipCheckReason;
@@ -442,7 +408,7 @@ public final class io/lightine/tessera/emrtd/ChipRead {
 	public final fun getFiles ()Ljava/util/List;
 	public final fun getSecurityObject ()Lio/lightine/tessera/emrtd/lds/SecurityObjectView;
 	public final fun masterFile (I)Lio/lightine/tessera/emrtd/ChipFile;
-	public final fun outcomeOf (Lio/lightine/tessera/emrtd/ChipCheckKind;)Lio/lightine/tessera/emrtd/CheckOutcome;
+	public final fun outcomeOf (Lio/lightine/tessera/emrtd/ChipCheckKind;)Lio/lightine/tessera/types/vocabulary/CheckOutcome;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -937,13 +903,13 @@ public final class io/lightine/tessera/emrtd/trust/MasterList {
 	public final fun getChecks ()Ljava/util/List;
 	public final fun getUnreadableCertificateCount ()I
 	public final fun getVersion ()I
-	public final fun outcomeOf (Lio/lightine/tessera/emrtd/trust/MasterListCheckKind;)Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome;
+	public final fun outcomeOf (Lio/lightine/tessera/emrtd/trust/MasterListCheckKind;)Lio/lightine/tessera/types/vocabulary/CheckOutcome;
 	public fun toString ()Ljava/lang/String;
 }
 
 public final class io/lightine/tessera/emrtd/trust/MasterListCheck {
 	public final fun getKind ()Lio/lightine/tessera/emrtd/trust/MasterListCheckKind;
-	public final fun getOutcome ()Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome;
+	public final fun getOutcome ()Lio/lightine/tessera/types/vocabulary/CheckOutcome;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -956,33 +922,7 @@ public final class io/lightine/tessera/emrtd/trust/MasterListCheckKind : java/la
 	public static fun values ()[Lio/lightine/tessera/emrtd/trust/MasterListCheckKind;
 }
 
-public abstract class io/lightine/tessera/emrtd/trust/MasterListCheckOutcome {
-}
-
-public final class io/lightine/tessera/emrtd/trust/MasterListCheckOutcome$Failed : io/lightine/tessera/emrtd/trust/MasterListCheckOutcome {
-	public final fun component1 ()Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
-	public fun equals (Ljava/lang/Object;)Z
-	public final fun getReason ()Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
-public final class io/lightine/tessera/emrtd/trust/MasterListCheckOutcome$NotRun : io/lightine/tessera/emrtd/trust/MasterListCheckOutcome {
-	public final fun component1 ()Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
-	public fun equals (Ljava/lang/Object;)Z
-	public final fun getReason ()Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
-public final class io/lightine/tessera/emrtd/trust/MasterListCheckOutcome$Passed : io/lightine/tessera/emrtd/trust/MasterListCheckOutcome {
-	public static final field INSTANCE Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome$Passed;
-	public fun equals (Ljava/lang/Object;)Z
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
-public final class io/lightine/tessera/emrtd/trust/MasterListCheckReason : java/lang/Enum {
+public final class io/lightine/tessera/emrtd/trust/MasterListCheckReason : java/lang/Enum, io/lightine/tessera/types/vocabulary/CheckReason {
 	public static final field CONTENT_TYPE_ATTRIBUTE_DIFFERS Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
 	public static final field CRYPTO_UNAVAILABLE Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
 	public static final field ISSUER_NAME_DIFFERS Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;

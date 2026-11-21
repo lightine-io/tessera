@@ -3,7 +3,6 @@ package io.lightine.tessera.emrtd.internal.flow
 import io.lightine.tessera.emrtd.AccessReport
 import io.lightine.tessera.emrtd.ApduTransport
 import io.lightine.tessera.emrtd.ApduTransportException
-import io.lightine.tessera.emrtd.CheckOutcome
 import io.lightine.tessera.emrtd.ChipAccessKey
 import io.lightine.tessera.emrtd.ChipCheck
 import io.lightine.tessera.emrtd.ChipCheckKind
@@ -94,6 +93,7 @@ import io.lightine.tessera.types.errors.ChipFileNotFound
 import io.lightine.tessera.types.errors.ChipMalformedFile
 import io.lightine.tessera.types.errors.ChipUnexpectedAnswer
 import io.lightine.tessera.types.errors.ChipUnsupportedAlgorithm
+import io.lightine.tessera.types.vocabulary.CheckOutcome
 import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.TimeSource

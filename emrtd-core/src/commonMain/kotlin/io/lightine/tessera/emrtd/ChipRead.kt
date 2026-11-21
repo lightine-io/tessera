@@ -11,6 +11,7 @@ import io.lightine.tessera.emrtd.lds.EfComView
 import io.lightine.tessera.emrtd.lds.SecurityObjectView
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.ChipError
+import io.lightine.tessera.types.vocabulary.CheckOutcome
 import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
 
 /**

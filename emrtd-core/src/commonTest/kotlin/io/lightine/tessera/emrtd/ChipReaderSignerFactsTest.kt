@@ -12,6 +12,7 @@ import io.lightine.tessera.emrtd.internal.pa.withKeys
 import io.lightine.tessera.emrtd.trust.DocumentSignerCertificate
 import io.lightine.tessera.emrtd.trust.DocumentSignerCertificateParse
 import io.lightine.tessera.emrtd.trust.TrustAnchorProblem
+import io.lightine.tessera.types.vocabulary.CheckOutcome
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals

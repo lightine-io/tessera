@@ -1,6 +1,5 @@
 package io.lightine.tessera.emrtd.internal.flow
 
-import io.lightine.tessera.emrtd.CheckOutcome
 import io.lightine.tessera.emrtd.ChipCheck
 import io.lightine.tessera.emrtd.ChipCheckDetail
 import io.lightine.tessera.emrtd.ChipCheckKind
@@ -41,6 +40,7 @@ import io.lightine.tessera.types.errors.ChipAccessDenied
 import io.lightine.tessera.types.errors.ChipError
 import io.lightine.tessera.types.errors.ChipMalformedFile
 import io.lightine.tessera.types.errors.ChipSecureMessagingLost
+import io.lightine.tessera.types.vocabulary.CheckOutcome
 import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
 
 /**

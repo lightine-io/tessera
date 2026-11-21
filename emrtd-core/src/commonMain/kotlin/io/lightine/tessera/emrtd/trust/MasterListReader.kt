@@ -16,6 +16,8 @@ import io.lightine.tessera.emrtd.internal.pa.SignedObjectChecks
 import io.lightine.tessera.emrtd.internal.x509.X509Exception
 import io.lightine.tessera.emrtd.internal.x509.X509Parser
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
+import io.lightine.tessera.types.vocabulary.CheckOutcome
+import io.lightine.tessera.types.vocabulary.CheckReason
 
 /**
  * Reads a CSCA master list (Doc 9303 Part 12, 9) that the app obtained itself, for example a
@@ -39,7 +41,7 @@ public object MasterListReader {
      * Reads [file], a master list as CMS SignedData in DER (or BER), and checks its signature.
      *
      * @param roots roots to check the list's signer against; with none, that check is
-     * [MasterListCheckOutcome.NotRun] with [MasterListCheckReason.NO_ROOTS_SUPPLIED].
+     * [CheckOutcome.NotRun] with [MasterListCheckReason.NO_ROOTS_SUPPLIED].
      * @return [MasterListRead.Read] with the list, or [MasterListRead.Unreadable]. Never throws for
      * bad data.
      */
@@ -125,12 +127,12 @@ public object MasterListReader {
     private fun reason(name: String): MasterListCheckReason =
         MasterListCheckReason.entries.firstOrNull { it.name == name } ?: throw IllegalStateException("no public reason for $name")
 
-    private fun outcomeOf(o: PaOutcome): MasterListCheckOutcome =
+    private fun outcomeOf(o: PaOutcome): CheckOutcome =
         when (o) {
-            PaOutcome.Passed -> MasterListCheckOutcome.Passed
-            is PaOutcome.Failed -> MasterListCheckOutcome.Failed(reason(o.reason.name))
-            is PaOutcome.NotRun -> MasterListCheckOutcome.NotRun(reason(o.reason.name))
-            is PaOutcome.NotApplicable -> MasterListCheckOutcome.NotRun(reason(o.reason.name))
+            PaOutcome.Passed -> CheckOutcome.Passed
+            is PaOutcome.Failed -> CheckOutcome.Failed(reason(o.reason.name))
+            is PaOutcome.NotApplicable -> CheckOutcome.NotApplicable(reason(o.reason.name))
+            is PaOutcome.NotRun -> CheckOutcome.NotRun(reason(o.reason.name))
         }
 }
 
@@ -153,7 +155,7 @@ public class MasterList internal constructor(
     public val checks: List<MasterListCheck>,
 ) {
     /** The outcome of [kind]. */
-    public fun outcomeOf(kind: MasterListCheckKind): MasterListCheckOutcome = checks.first { it.kind == kind }.outcome
+    public fun outcomeOf(kind: MasterListCheckKind): CheckOutcome = checks.first { it.kind == kind }.outcome
 
     override fun toString(): String = "MasterList(version=$version, anchors=${anchors.size}, unreadable=$unreadableCertificateCount)"
 }
@@ -169,7 +171,7 @@ public class MasterList internal constructor(
 @ExperimentalTesseraChipApi
 public class MasterListCheck internal constructor(
     public val kind: MasterListCheckKind,
-    public val outcome: MasterListCheckOutcome,
+    public val outcome: CheckOutcome,
 ) {
     override fun toString(): String = "MasterListCheck($kind, $outcome)"
 }
@@ -194,40 +196,18 @@ public enum class MasterListCheckKind {
 }
 
 /**
- * How a master-list fact came out. Passed and Failed are results of a calculation; NotRun means the
- * inputs to it were missing or unusable. None of them says the list is trustworthy.
+ * Why a master-list fact failed or did not run. Each value is a fact about the inputs, never a
+ * verdict on the list.
+ *
+ * Implements [CheckReason], the shared reason type of [CheckOutcome], so a master-list check's
+ * outcome carries a typed reason like every other module's checks.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
-public sealed class MasterListCheckOutcome {
-    /** The calculation gave the expected result. */
-    public data object Passed : MasterListCheckOutcome()
-
-    /** The calculation did not give the expected result, for [reason]. */
-    @ConsistentCopyVisibility
-    public data class Failed internal constructor(
-        public val reason: MasterListCheckReason,
-    ) : MasterListCheckOutcome()
-
-    /** The check could not run, for [reason]. */
-    @ConsistentCopyVisibility
-    public data class NotRun internal constructor(
-        public val reason: MasterListCheckReason,
-    ) : MasterListCheckOutcome()
-}
-
-/**
- * Why a master-list fact failed or did not run.
- *
- * Experimental: see [ExperimentalTesseraChipApi].
- *
- * @since 1.0.0
- */
-@ExperimentalTesseraChipApi
-public enum class MasterListCheckReason {
+public enum class MasterListCheckReason : CheckReason {
     /** The signature does not verify under the key. */
     SIGNATURE_DOES_NOT_VERIFY,
 

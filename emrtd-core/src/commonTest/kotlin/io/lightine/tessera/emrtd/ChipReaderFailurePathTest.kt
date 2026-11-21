@@ -29,6 +29,7 @@ import io.lightine.tessera.types.errors.ChipMalformedFile
 import io.lightine.tessera.types.errors.ChipSecureMessagingLost
 import io.lightine.tessera.types.errors.ChipUnsupportedAlgorithm
 import io.lightine.tessera.types.errors.NfcTagLost
+import io.lightine.tessera.types.vocabulary.CheckOutcome
 import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test

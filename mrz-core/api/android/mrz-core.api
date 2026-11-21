@@ -758,6 +758,16 @@ public final class io/lightine/tessera/mrz/validation/MrzCheckRecord {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/lightine/tessera/mrz/validation/MrzNotRunReason : java/lang/Enum, io/lightine/tessera/types/vocabulary/CheckReason {
+	public static final field CHARACTER_SET_VIOLATION Lio/lightine/tessera/mrz/validation/MrzNotRunReason;
+	public static final field FORMAT_NOT_DETECTED Lio/lightine/tessera/mrz/validation/MrzNotRunReason;
+	public static final field INVALID_LENGTH Lio/lightine/tessera/mrz/validation/MrzNotRunReason;
+	public static final field NO_COMPOSITE_CHECK_DIGIT Lio/lightine/tessera/mrz/validation/MrzNotRunReason;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/mrz/validation/MrzNotRunReason;
+	public static fun values ()[Lio/lightine/tessera/mrz/validation/MrzNotRunReason;
+}
+
 public final class io/lightine/tessera/mrz/validation/MrzValidator {
 	public static final field INSTANCE Lio/lightine/tessera/mrz/validation/MrzValidator;
 	public final fun validate (Lio/lightine/tessera/mrz/model/MrzDocument;Lkotlin/time/Instant;)Lio/lightine/tessera/mrz/validation/ValidationResult;
