@@ -98,6 +98,11 @@ Open an issue before you change:
 API changes are expensive under strict backward compatibility, and small misalignments
 compound. The earlier the conversation, the cheaper the change.
 
+## Code taken from other projects
+
+Do not copy or port code from LGPL- or GPL-licensed eMRTD projects (such as JMRTD) into
+Tessera. Reading them as a reference is fine; the code you contribute must be your own.
+
 ## Code of conduct
 
 Be kind, be specific, assume good faith. A formal code of conduct may follow if the

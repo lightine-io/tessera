@@ -26,7 +26,9 @@ maintainer. Record the results as a comment on the release card.
    more than these lines: a written technology review, done before the first code of
    that method, in the internal KB under History (the NFC one is "Tech-stack review
    before NFC", TES-209), and a requirements map written from the standard's text
-   (TES-301). The gate checks that both exist and that the release matches them.
+   (TES-301). The gate checks that both exist and that the release matches them. Any
+   later new reading method (for example a USB reader) starts the same way: the review
+   comes before its first code, and the gate refuses the release without it (TES-209).
 2. **Review agents.** Launch `qa-coverage-reviewer` and `security-reviewer` in parallel
    on the release diff (last tag to HEAD). Triage each finding with the maintainer: fix
    it or accept it with a recorded reason. A finding to fix before the tag becomes its

@@ -23,7 +23,10 @@ paths:
 - **Tests ship with the feature.** Every public API and error type is exercised;
   inverse pairs get property-based coverage (`parse(generate(x)) == x`); fixtures are
   synthetic (SDK generator or the project's own specimen, fictional, Utopia), never real
-  document data. ICAO's published examples live only in the mrz-core conformance tests.
+  document data. ICAO's published examples live only in the conformance tests of
+  `mrz-core` (Doc 9303 Parts 3-6) and `emrtd-core` (Parts 10 and 11 worked examples);
+  chip test data is hex text or built at test time, never a committed binary file
+  (`repo · rules` checks this).
 - **Kotlin gotchas that bit us.** Don't name a constructor parameter `field` in a class
   whose custom getter uses string interpolation. Kotlin/Native and Cocoa: APIs that
   hold delegates, observers, or targets weakly need a strong Kotlin-side reference for
