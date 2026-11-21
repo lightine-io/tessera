@@ -167,8 +167,12 @@ internal object Pace {
                 ).getValue(TAG_ENCRYPTED_NONCE)
             if (z.isEmpty() || z.size % cipher.blockSize != 0) throw PaceException(PaceFailure.WRONG_NONCE_LENGTH, PaceStep.ENCRYPTED_NONCE)
             val kPi = PacePassword.derive(crypto, key, cipher)
-            val s = crypto.decrypt(cipher.blockCipher, CipherMode.CBC, kPi, ByteArray(cipher.blockSize), z)
-            CryptoBytes.wipe(kPi)
+            val s =
+                try {
+                    crypto.decrypt(cipher.blockCipher, CipherMode.CBC, kPi, ByteArray(cipher.blockSize), z)
+                } finally {
+                    CryptoBytes.wipe(kPi)
+                }
 
             // Step 2: the mapping.
             val ephemeral =
@@ -203,8 +207,12 @@ internal object Pace {
             } finally {
                 CryptoBytes.wipe(privateKey)
             }
-            val keys = SessionKeys.derive(crypto, secret, cipher)
-            CryptoBytes.wipe(secret)
+            val keys =
+                try {
+                    SessionKeys.derive(crypto, secret, cipher)
+                } finally {
+                    CryptoBytes.wipe(secret)
+                }
 
             // Step 4: the tokens.
             try {

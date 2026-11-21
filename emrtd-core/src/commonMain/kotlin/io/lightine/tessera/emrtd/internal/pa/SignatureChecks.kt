@@ -5,6 +5,7 @@ import io.lightine.tessera.emrtd.internal.cms.CmsSignedData
 import io.lightine.tessera.emrtd.internal.cms.CmsSignerInfo
 import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
 import io.lightine.tessera.emrtd.internal.crypto.ChipCryptoException
+import io.lightine.tessera.emrtd.internal.crypto.KeyLimits
 import io.lightine.tessera.emrtd.internal.crypto.SignatureScheme
 import io.lightine.tessera.emrtd.internal.crypto.VerificationKey
 import io.lightine.tessera.emrtd.internal.x509.CertTime
@@ -83,6 +84,14 @@ internal object SignatureChecks {
         signature: ByteArray,
     ): PaOutcome {
         if (!fits(scheme, key)) return PaOutcome.Failed(PaFailure.KEY_DOES_NOT_FIT_SIGNATURE_ALGORITHM)
+        // A PSS salt longer than the key can hold (RFC 8017, 9.1.1 step 3) is a parameter set no
+        // signer could have used; it never reaches the backend.
+        if (scheme is SignatureScheme.RsaPss &&
+            key is VerificationKey.Rsa &&
+            scheme.saltLength > KeyLimits.maxPssSaltLength(key.modulus, scheme.hash)
+        ) {
+            return PaOutcome.NotRun(PaNotRun.UNSUPPORTED_ALGORITHM)
+        }
         return try {
             if (crypto.verify(scheme, key, message, signature)) PaOutcome.Passed else PaOutcome.Failed(PaFailure.SIGNATURE_DOES_NOT_VERIFY)
         } catch (e: ChipCryptoException) {

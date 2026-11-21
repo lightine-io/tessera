@@ -149,46 +149,53 @@ internal object Bac {
 
         val rndIfd = random(NONCE_LENGTH)
         val kIfd = random(KEY_MATERIAL_LENGTH)
-        require(rndIfd.size == NONCE_LENGTH && kIfd.size == KEY_MATERIAL_LENGTH) { "random source returned the wrong length" }
-        val s = rndIfd + rndIc + kIfd
-        val eIfd = crypto.encrypt(BlockCipher.DESEDE, CipherMode.CBC, keys.encKey, ByteArray(NONCE_LENGTH), s)
-        val mIfd = crypto.retailMac(keys.macKey, CryptoBytes.pad(eIfd, NONCE_LENGTH))
-        CryptoBytes.wipe(s)
+        // Every secret below is wiped on every path, an exception included (a lost connection, a
+        // crypto failure): the finally block owns them.
+        var s: ByteArray? = null
+        var r: ByteArray? = null
+        var kIc: ByteArray? = null
+        var seed: ByteArray? = null
+        var ssc: ByteArray? = null
+        try {
+            require(rndIfd.size == NONCE_LENGTH && kIfd.size == KEY_MATERIAL_LENGTH) { "random source returned the wrong length" }
+            s = rndIfd + rndIc + kIfd
+            val eIfd = crypto.encrypt(BlockCipher.DESEDE, CipherMode.CBC, keys.encKey, ByteArray(NONCE_LENGTH), s)
+            val mIfd = crypto.retailMac(keys.macKey, CryptoBytes.pad(eIfd, NONCE_LENGTH))
+            CryptoBytes.wipe(s)
 
-        val answer =
-            plain.send(
-                CommandApdu(0x00, INS_EXTERNAL_AUTHENTICATE, 0x00, 0x00, eIfd + mIfd, CRYPTOGRAM_LENGTH + MAC_LENGTH),
-            )
-        if (answer.sw != StatusWord.SUCCESS) {
-            CryptoBytes.wipe(rndIfd, kIfd)
-            throw BacException(BacFailure.AUTHENTICATION_REFUSED, answer.sw)
+            val answer =
+                plain.send(
+                    CommandApdu(0x00, INS_EXTERNAL_AUTHENTICATE, 0x00, 0x00, eIfd + mIfd, CRYPTOGRAM_LENGTH + MAC_LENGTH),
+                )
+            if (answer.sw != StatusWord.SUCCESS) throw BacException(BacFailure.AUTHENTICATION_REFUSED, answer.sw)
+            val data = answer.data
+            if (data.size != CRYPTOGRAM_LENGTH + MAC_LENGTH) throw BacException(BacFailure.WRONG_RESPONSE_LENGTH)
+            val eIc = data.copyOf(CRYPTOGRAM_LENGTH)
+            val mIc = data.copyOfRange(CRYPTOGRAM_LENGTH, data.size)
+            if (!CryptoBytes.constantTimeEquals(crypto.retailMac(keys.macKey, CryptoBytes.pad(eIc, NONCE_LENGTH)), mIc)) {
+                throw BacException(BacFailure.WRONG_CHIP_MAC)
+            }
+            r = crypto.decrypt(BlockCipher.DESEDE, CipherMode.CBC, keys.encKey, ByteArray(NONCE_LENGTH), eIc)
+            val nonceOk =
+                CryptoBytes.constantTimeEquals(r.copyOfRange(0, NONCE_LENGTH), rndIc) and
+                    CryptoBytes.constantTimeEquals(r.copyOfRange(NONCE_LENGTH, 2 * NONCE_LENGTH), rndIfd)
+            if (!nonceOk) throw BacException(BacFailure.NONCE_MISMATCH)
+            val chipKey = r.copyOfRange(2 * NONCE_LENGTH, CRYPTOGRAM_LENGTH)
+            kIc = chipKey
+            val keySeed = ByteArray(KEY_MATERIAL_LENGTH) { (kIfd[it].toInt() xor chipKey[it].toInt()).toByte() }
+            seed = keySeed
+            val sessionKeys = SessionKeys.derive(crypto, keySeed, SmCipher.DESEDE)
+            val counter = rndIc.copyOfRange(4, NONCE_LENGTH) + rndIfd.copyOfRange(4, NONCE_LENGTH)
+            ssc = counter
+            // The channel owns the session keys from here and wipes them when the session ends.
+            return try {
+                SecureChannel(exchange, crypto, sessionKeys, counter)
+            } catch (e: Throwable) {
+                sessionKeys.wipe()
+                throw e
+            }
+        } finally {
+            CryptoBytes.wipe(s, r, kIc, seed, kIfd, rndIfd, ssc)
         }
-        val data = answer.data
-        if (data.size != CRYPTOGRAM_LENGTH + MAC_LENGTH) {
-            CryptoBytes.wipe(rndIfd, kIfd)
-            throw BacException(BacFailure.WRONG_RESPONSE_LENGTH)
-        }
-        val eIc = data.copyOf(CRYPTOGRAM_LENGTH)
-        val mIc = data.copyOfRange(CRYPTOGRAM_LENGTH, data.size)
-        if (!CryptoBytes.constantTimeEquals(crypto.retailMac(keys.macKey, CryptoBytes.pad(eIc, NONCE_LENGTH)), mIc)) {
-            CryptoBytes.wipe(rndIfd, kIfd)
-            throw BacException(BacFailure.WRONG_CHIP_MAC)
-        }
-        val r = crypto.decrypt(BlockCipher.DESEDE, CipherMode.CBC, keys.encKey, ByteArray(NONCE_LENGTH), eIc)
-        val nonceOk =
-            CryptoBytes.constantTimeEquals(r.copyOfRange(0, NONCE_LENGTH), rndIc) and
-                CryptoBytes.constantTimeEquals(r.copyOfRange(NONCE_LENGTH, 2 * NONCE_LENGTH), rndIfd)
-        if (!nonceOk) {
-            CryptoBytes.wipe(r, rndIfd, kIfd)
-            throw BacException(BacFailure.NONCE_MISMATCH)
-        }
-        val kIc = r.copyOfRange(2 * NONCE_LENGTH, CRYPTOGRAM_LENGTH)
-        val seed = ByteArray(KEY_MATERIAL_LENGTH) { (kIfd[it].toInt() xor kIc[it].toInt()).toByte() }
-        val sessionKeys = SessionKeys.derive(crypto, seed, SmCipher.DESEDE)
-        val ssc = rndIc.copyOfRange(4, NONCE_LENGTH) + rndIfd.copyOfRange(4, NONCE_LENGTH)
-        // The channel owns the session keys from here and wipes them when the session ends.
-        val channel = SecureChannel(exchange, crypto, sessionKeys, ssc)
-        CryptoBytes.wipe(r, kIc, seed, kIfd, rndIfd, ssc)
-        return channel
     }
 }

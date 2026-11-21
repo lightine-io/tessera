@@ -120,7 +120,7 @@ class ChipAuthenticationReferenceTest {
                     val old = if (runs % 2 == 0) CaReferenceChip.Cipher.TDES else CaReferenceChip.Cipher.AES128
                     val r = run(group, listOf(cipher), old)
                     val name = "$cipher on ${(group as? CaReferenceChip.Group.Ec)?.name ?: (group as CaReferenceChip.Group.Dh).name}"
-                    val outcome = assertIs<CaOutcome.Restarted>(r.outcome, name)
+                    val outcome = assertIs<CaOutcome.RestartedWithUnverifiedKey>(r.outcome, name)
                     assertEquals(smCipher(cipher), outcome.cipher, name)
                     val expected =
                         if (cipher == CaReferenceChip.Cipher.TDES) {
@@ -142,7 +142,7 @@ class ChipAuthenticationReferenceTest {
         runTest {
             for (group in listOf(curves[5], dhGroups[0])) {
                 val r = run(group, listOf(CaReferenceChip.Cipher.TDES), CaReferenceChip.Cipher.TDES, setKatSupported = false)
-                val outcome = assertIs<CaOutcome.Restarted>(r.outcome)
+                val outcome = assertIs<CaOutcome.RestartedWithUnverifiedKey>(r.outcome)
                 assertTrue(outcome.usedSetAtFallback)
                 assertEquals(listOf(0x22 to 0xA6, 0x22 to 0xA4, 0x86 to 0x00), r.chip.commands)
                 assertReadsUnderNewKeys(r)
@@ -153,7 +153,7 @@ class ChipAuthenticationReferenceTest {
     fun theReaderPrefersAesWhenTheReferenceChipOffersBoth() =
         runTest {
             val r = run(curves[4], listOf(CaReferenceChip.Cipher.TDES, CaReferenceChip.Cipher.AES256), CaReferenceChip.Cipher.TDES)
-            val outcome = assertIs<CaOutcome.Restarted>(r.outcome)
+            val outcome = assertIs<CaOutcome.RestartedWithUnverifiedKey>(r.outcome)
             assertEquals(SmCipher.AES256, outcome.cipher)
             assertEquals(listOf(0x22 to 0xA4, 0x86 to 0x00), r.chip.commands)
             assertReadsUnderNewKeys(r)

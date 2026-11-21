@@ -7,13 +7,25 @@ import io.lightine.tessera.emrtd.internal.apdu.CommandApdu
 import io.lightine.tessera.emrtd.internal.apdu.LdsIds
 import io.lightine.tessera.emrtd.internal.apdu.ResponseApdu
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
+import io.lightine.tessera.emrtd.internal.cms.ByteSink
 import io.lightine.tessera.emrtd.internal.tlv.TlvException
+import io.lightine.tessera.emrtd.internal.tlv.TlvFailure
 import io.lightine.tessera.emrtd.internal.tlv.TlvParser
 import kotlin.coroutines.cancellation.CancellationException
 
-/** Selects LDS files and reads their BER-TLV bytes without interpreting their contents. */
+/**
+ * Selects LDS files and reads their BER-TLV bytes without interpreting their contents.
+ *
+ * The length a file's first bytes declare is untrusted: a file declaring more than
+ * [maxFileLength] bytes is refused as [MalformedFile] with [TlvFailure.LENGTH_TOO_LONG] before
+ * any further read. One limit serves every file, because the reader does not know what a file
+ * holds; the default, [DEFAULT_MAX_FILE_LENGTH], leaves room for the largest image groups (DG2 to
+ * DG4 with several high-resolution images) while keeping a hostile declaration from making the
+ * reader buffer or poll for gigabytes. A caller that reads only small files may pass less.
+ */
 internal class FileReader(
     private val sender: ApduSender,
+    private val maxFileLength: Int = DEFAULT_MAX_FILE_LENGTH,
 ) {
     suspend fun selectApplication(extendedLengthAllowed: Boolean = false) =
         withTypedFailures {
@@ -80,21 +92,23 @@ internal class FileReader(
             } catch (e: TlvException) {
                 throw MalformedFile(e.failure)
             }
+        if (totalLength > maxFileLength) throw MalformedFile(TlvFailure.LENGTH_TOO_LONG)
         if (firstBytes.size > totalLength) throw MalformedFile(null)
         if (first.sw == StatusWord.END_OF_FILE_BEFORE_NE || firstBytes.size == totalLength) return firstBytes
 
-        var content = firstBytes
+        val content = ByteSink()
+        content.write(firstBytes)
         while (content.size < totalLength) {
             val offset = content.size
             val requested = chunkSize(offset, totalLength - offset, extendedLengthAllowed)
             val response = sendRead(offset, requested, extendedLengthAllowed)
             validateReadStatus(response, fid)
             if (response.data.size > requested) throw MalformedFile(null)
-            content += response.data
-            if (response.sw == StatusWord.END_OF_FILE_BEFORE_NE) return content
+            content.write(response.data)
+            if (response.sw == StatusWord.END_OF_FILE_BEFORE_NE) break
             if (response.data.isEmpty()) throw FileProtocolFailure()
         }
-        return content
+        return content.toByteArray()
     }
 
     private suspend fun sendRead(
@@ -190,7 +204,10 @@ internal class FileReader(
             throw FileProtocolFailure()
         }
 
-    private companion object {
+    companion object {
+        /** The default [maxFileLength]: 4 MiB. */
+        const val DEFAULT_MAX_FILE_LENGTH = 4 * 1024 * 1024
+
         /** Use a conservative short Le; some chips reject the short encoding of 256 (`00`). */
         const val DEFAULT_SHORT_CHUNK = 0xDF
         const val MAX_EXTENDED_CHUNK = CommandApdu.MAX_EXTENDED_NE - 1

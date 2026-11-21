@@ -112,7 +112,10 @@ internal object BcChipCrypto : ChipCrypto {
         base: ByteArray,
         exponent: ByteArray,
         modulus: ByteArray,
-    ): ByteArray = modOp(modulus) { m -> int(base).modPow(int(exponent), m) }
+    ): ByteArray {
+        if (KeyLimits.bitLength(exponent) > KeyLimits.MAX_RSA_MODULUS_BITS) throw ChipCryptoException("exponent too large")
+        return modOp(modulus) { m -> int(base).modPow(int(exponent), m) }
+    }
 
     override fun modMultiply(
         a: ByteArray,
@@ -179,9 +182,9 @@ internal object BcChipCrypto : ChipCrypto {
         exponent: ByteArray,
         input: ByteArray,
     ): ByteArray {
+        if (KeyLimits.rsa(modulus, exponent) != KeyCheck.OK) throw ChipCryptoException("RSA key outside the size policy")
         val n = int(modulus)
         val m = int(input)
-        if (n.signum() <= 0) throw ChipCryptoException("RSA modulus must be positive")
         if (m >= n) throw ChipCryptoException("RSA input is not below the modulus")
         return fixed(m.modPow(int(exponent), n), modulus)
     }
@@ -215,7 +218,11 @@ internal object BcChipCrypto : ChipCrypto {
 
                 is SignatureScheme.RsaPss -> {
                     val k = key as? VerificationKey.Rsa ?: throw mismatch()
-                    if (scheme.saltLength < 0) throw ChipCryptoException("negative PSS salt length")
+                    // RFC 8017, 9.1.1 step 3: the salt must fit the key. Checked here as well as in the
+                    // caller, so no backend call ever builds a signer from an unbounded length.
+                    if (scheme.saltLength < 0 || scheme.saltLength > KeyLimits.maxPssSaltLength(k.modulus, scheme.hash)) {
+                        throw ChipCryptoException("PSS salt length does not fit the key")
+                    }
                     PSSSigner(
                         RSABlindedEngine(),
                         newDigest(scheme.hash),
@@ -227,6 +234,7 @@ internal object BcChipCrypto : ChipCrypto {
 
                 is SignatureScheme.Dsa -> {
                     val k = key as? VerificationKey.Dsa ?: throw mismatch()
+                    if (KeyLimits.dsa(k.p, k.q, k.g, k.y) != KeyCheck.OK) throw ChipCryptoException("DSA key outside the size policy")
                     val params = DSAParameters(int(k.p), int(k.q), int(k.g))
                     DSADigestSigner(DSASigner(), newDigest(scheme.hash))
                         .also { it.init(false, DSAPublicKeyParameters(int(k.y), params)) }
@@ -256,9 +264,9 @@ internal object BcChipCrypto : ChipCrypto {
     private fun mismatch() = ChipCryptoException("key type does not fit the signature scheme")
 
     private fun rsaKey(k: VerificationKey.Rsa): RSAKeyParameters {
-        val n = int(k.modulus)
-        if (n.signum() <= 0 || !n.testBit(0)) throw ChipCryptoException("RSA modulus is not a positive odd number")
-        return RSAKeyParameters(false, n, int(k.publicExponent))
+        // The shared size policy (KeyLimits): odd modulus of at most 8192 bits, odd exponent above 1.
+        if (KeyLimits.rsa(k.modulus, k.publicExponent) != KeyCheck.OK) throw ChipCryptoException("RSA key outside the size policy")
+        return RSAKeyParameters(false, int(k.modulus), int(k.publicExponent))
     }
 
     private fun crypt(
@@ -324,6 +332,7 @@ internal object BcChipCrypto : ChipCrypto {
 
     private fun bcCurve(params: EcDomainParameters): ECCurve =
         guard {
+            if (KeyLimits.bitLength(params.p) > KeyLimits.MAX_EC_FIELD_BITS) throw ChipCryptoException("curve field too large")
             val p = int(params.p)
             if (p.signum() <= 0 || !p.testBit(0)) throw ChipCryptoException("curve prime is not a positive odd number")
             ECCurve.Fp(p, int(params.a), int(params.b), int(params.n), int(params.cofactor))
@@ -355,6 +364,8 @@ internal object BcChipCrypto : ChipCrypto {
         modulus: ByteArray,
         op: (BigInteger) -> BigInteger,
     ): ByteArray {
+        // No caller needs a modulus above the largest key the size policy admits.
+        if (KeyLimits.bitLength(modulus) > KeyLimits.MAX_RSA_MODULUS_BITS) throw ChipCryptoException("modulus too large")
         val m = int(modulus)
         if (m.signum() <= 0) throw ChipCryptoException("modulus must be positive")
         return fixed(guard { op(m) }, modulus)

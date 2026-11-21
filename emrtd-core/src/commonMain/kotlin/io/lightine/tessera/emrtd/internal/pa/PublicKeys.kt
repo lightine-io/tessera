@@ -9,6 +9,8 @@ import io.lightine.tessera.emrtd.internal.crypto.CryptoBytes
 import io.lightine.tessera.emrtd.internal.crypto.EcDomainParameters
 import io.lightine.tessera.emrtd.internal.crypto.EcPoint
 import io.lightine.tessera.emrtd.internal.crypto.EcPointCodec
+import io.lightine.tessera.emrtd.internal.crypto.KeyCheck
+import io.lightine.tessera.emrtd.internal.crypto.KeyLimits
 import io.lightine.tessera.emrtd.internal.crypto.StandardDomainParameterValues
 import io.lightine.tessera.emrtd.internal.crypto.VerificationKey
 import io.lightine.tessera.emrtd.internal.x509.X509Certificate
@@ -79,6 +81,7 @@ internal object PublicKeys {
                 val n = seq.readUnsignedInteger()
                 val e = seq.readUnsignedInteger()
                 seq.finish()
+                checked(KeyLimits.rsa(n, e))
                 VerificationKey.Rsa(n, e)
             }
 
@@ -86,6 +89,7 @@ internal object PublicKeys {
                 val y = DerReader(bits.bytes).let { r -> r.readUnsignedInteger().also { r.finish() } }
                 if (params == null) {
                     val parent = inherited as? VerificationKey.Dsa ?: throw UnreadableKeyException()
+                    checked(KeyLimits.dsa(parent.p, parent.q, parent.g, y))
                     VerificationKey.Dsa(parent.p, parent.q, parent.g, y)
                 } else {
                     val top = DerReader(params)
@@ -95,6 +99,7 @@ internal object PublicKeys {
                     val q = seq.readUnsignedInteger()
                     val g = seq.readUnsignedInteger()
                     seq.finish()
+                    checked(KeyLimits.dsa(p, q, g, y))
                     VerificationKey.Dsa(p, q, g, y)
                 }
             }
@@ -112,6 +117,18 @@ internal object PublicKeys {
             else -> {
                 throw UnsupportedAlgorithmException("public key algorithm")
             }
+        }
+    }
+
+    /**
+     * Applies the shared size policy ([KeyLimits]): a key larger than the SDK computes with is an
+     * unsupported algorithm, a malformed one (even modulus, exponent 1, order below 2) unreadable.
+     */
+    private fun checked(check: KeyCheck) {
+        when (check) {
+            KeyCheck.OK -> Unit
+            KeyCheck.TOO_LARGE -> throw UnsupportedAlgorithmException("key size")
+            KeyCheck.INVALID -> throw UnreadableKeyException()
         }
     }
 
@@ -145,6 +162,7 @@ internal object PublicKeys {
         val n = ec.readUnsignedInteger()
         val h = if (ec.peekTag() == DerTag.universal(DerTag.INTEGER)) ec.readUnsignedInteger() else byteArrayOf(1)
         ec.finish()
+        checked(KeyLimits.ecCurve(p, a, b, n, h))
         val length = CryptoBytes.stripLeadingZeros(p).size
         if (base.size != 1 + 2 * length || base[0].toInt() != 0x04) throw UnreadableKeyException()
         val generator = EcPoint(base.copyOfRange(1, 1 + length), base.copyOfRange(1 + length, base.size))
