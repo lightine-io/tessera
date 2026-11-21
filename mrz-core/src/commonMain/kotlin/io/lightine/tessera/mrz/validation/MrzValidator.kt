@@ -36,6 +36,7 @@ import io.lightine.tessera.types.errors.MrzUnknownCountryCode
 import io.lightine.tessera.types.errors.MrzUnknownDocumentTypeCode
 import io.lightine.tessera.types.errors.MrzValidationError
 import io.lightine.tessera.types.errors.MrzWarning
+import io.lightine.tessera.types.vocabulary.CheckOutcome
 import io.lightine.tessera.types.vocabulary.MrzField
 import io.lightine.tessera.types.vocabulary.MrzFormat
 import kotlinx.datetime.DateTimeUnit
@@ -56,6 +57,10 @@ import kotlin.time.Instant
  * `MrzNameTruncated`, `MrzUnknownCountryCode`,
  * `MrzUnknownDocumentTypeCode`, `MrzSexCharacterX`, and `MrzPersonalNumberCheckDigitFiller` as
  * warnings. Visa formats have no composite check digit and no optional-data check digit.
+ *
+ * Every `validate` result also carries `ValidationResult.checks`: one [MrzCheckRecord] per check
+ * in [MrzCheck] order, so a consumer can tell which checks ran and passed from the ones that
+ * failed or did not apply. The failures and warnings are unchanged by that list.
  *
  * @since 0.1.0
  */
@@ -103,7 +108,12 @@ public object MrzValidator {
         referenceTime: Instant = Clock.System.now(),
     ): ValidationResult {
         rawLinesProblem(document)?.let { problem ->
-            return ValidationResult(validationFailures = emptyList(), warnings = emptyList(), structuralFailure = problem)
+            return ValidationResult(
+                validationFailures = emptyList(),
+                warnings = emptyList(),
+                structuralFailure = problem,
+                checks = notRunChecks(problem),
+            )
         }
         return when (document) {
             is TD3 -> validateTD3(document, referenceTime)
@@ -229,11 +239,11 @@ public object MrzValidator {
     private fun ParseResult.toValidationResult(): ValidationResult =
         when (this) {
             is ParseResult.Success -> {
-                ValidationResult(metadata.validationFailures, metadata.warnings)
+                ValidationResult(metadata.validationFailures, metadata.warnings, checks = metadata.checks)
             }
 
             is ParseResult.PartialSuccess -> {
-                ValidationResult(metadata.validationFailures, metadata.warnings)
+                ValidationResult(metadata.validationFailures, metadata.warnings, checks = metadata.checks)
             }
 
             is ParseResult.Failure -> {
@@ -241,8 +251,16 @@ public object MrzValidator {
                     metadata.validationFailures,
                     metadata.warnings,
                     structuralFailure = error,
+                    checks = notRunChecks(error),
                 )
             }
+        }
+
+    // A structural failure means no check could run: every check is NotRun, with the failure's own
+    // text (which carries no document values) as the reason.
+    private fun notRunChecks(problem: MrzParseError): List<MrzCheckRecord> =
+        MrzCheck.entries.map { check ->
+            MrzCheckRecord(check = check, field = check.field, outcome = CheckOutcome.NotRun(reason = problem.description))
         }
 
     private fun validateTD3(
@@ -252,26 +270,30 @@ public object MrzValidator {
         val rawLines = document.rawLines
         val failures = mutableListOf<MrzValidationError>()
         val warnings = mutableListOf<MrzWarning>()
+        val checks = mutableListOf<MrzCheckRecord>()
 
-        addCheckDigitFailureIfMismatch(
-            into = failures,
+        addCheckDigitCheck(
+            checks = checks,
+            failures = failures,
             input = Td3FormatSpec.documentNumber.extractFrom(rawLines),
             observed = document.commonFields.checkDigits.documentNumber,
-            field = MrzField.DOCUMENT_NUMBER,
+            check = MrzCheck.DOCUMENT_NUMBER_CHECK_DIGIT,
             position = Td3FormatSpec.globalPositionOf(Td3FormatSpec.documentNumberCheckDigit),
         )
-        addCheckDigitFailureIfMismatch(
-            into = failures,
+        addCheckDigitCheck(
+            checks = checks,
+            failures = failures,
             input = Td3FormatSpec.dateOfBirth.extractFrom(rawLines),
             observed = document.commonFields.checkDigits.dateOfBirth,
-            field = MrzField.DATE_OF_BIRTH,
+            check = MrzCheck.DATE_OF_BIRTH_CHECK_DIGIT,
             position = Td3FormatSpec.globalPositionOf(Td3FormatSpec.dateOfBirthCheckDigit),
         )
-        addCheckDigitFailureIfMismatch(
-            into = failures,
+        addCheckDigitCheck(
+            checks = checks,
+            failures = failures,
             input = Td3FormatSpec.dateOfExpiry.extractFrom(rawLines),
             observed = document.commonFields.checkDigits.dateOfExpiry,
-            field = MrzField.DATE_OF_EXPIRY,
+            check = MrzCheck.DATE_OF_EXPIRY_CHECK_DIGIT,
             position = Td3FormatSpec.globalPositionOf(Td3FormatSpec.dateOfExpiryCheckDigit),
         )
         // TD3 personal-number check digit: distinguish "filler with populated personal number"
@@ -287,28 +309,42 @@ public object MrzValidator {
                 // Documented deviation: issuer left the check digit as filler while populating the
                 // personal number itself. Per Principle 1 and [ADR-013], not a failure: surfaced
                 // as a typed warning so consumers can decide whether to treat the deviation as
-                // disqualifying for their use case.
+                // disqualifying for their use case. The check record still reports the fact: the
+                // printed filler differs from the computed digit, so the check outcome is Failed.
                 warnings +=
                     MrzPersonalNumberCheckDigitFiller(
                         rawPersonalNumber = rawPersonalNumber,
                         position = Td3FormatSpec.globalPositionOf(Td3FormatSpec.personalNumberCheckDigit),
                     )
+                checks +=
+                    MrzCheckRecord(
+                        check = MrzCheck.OPTIONAL_DATA_CHECK_DIGIT,
+                        field = MrzField.OPTIONAL_DATA,
+                        outcome = CheckOutcome.Failed,
+                    )
             }
 
             personalNumberCheck == '<' -> {
-                // All-filler personal number with a filler check digit: conformant, nothing to report.
-                // ICAO Doc 9303 Part 4 (8th ed., 2021), 4.2.2.2, position 43: when positions 29 to 42
-                // are all filler, the issuer may write either `0` or the filler `<` in the check
-                // digit position. `0` is the computed value, so the
-                // mismatch check below already accepts it (TES-173).
+                // All-filler personal number with a filler check digit: the standard allows the
+                // filler here, so the check does not apply. ICAO Doc 9303 Part 4 (8th ed., 2021),
+                // 4.2.2.2, position 43: when positions 29 to 42 are all filler, the issuer may
+                // write either `0` or the filler `<` in the check digit position. `0` is the
+                // computed value, so the mismatch check below already accepts it (TES-173).
+                checks +=
+                    MrzCheckRecord(
+                        check = MrzCheck.OPTIONAL_DATA_CHECK_DIGIT,
+                        field = MrzField.OPTIONAL_DATA,
+                        outcome = CheckOutcome.NotApplicable,
+                    )
             }
 
             else -> {
-                addCheckDigitFailureIfMismatch(
-                    into = failures,
+                addCheckDigitCheck(
+                    checks = checks,
+                    failures = failures,
                     input = rawPersonalNumber,
                     observed = personalNumberCheck,
-                    field = MrzField.OPTIONAL_DATA,
+                    check = MrzCheck.OPTIONAL_DATA_CHECK_DIGIT,
                     position = Td3FormatSpec.globalPositionOf(Td3FormatSpec.personalNumberCheckDigit),
                 )
             }
@@ -317,33 +353,45 @@ public object MrzValidator {
         // TD3 always carries a composite check digit per ICAO Doc 9303 Part 4; the parser
         // populates it unconditionally, so the model-level `Char?` is structurally non-null here.
         val compositeInput = Td3FormatSpec.compositeInputFields.joinToString("") { it.extractFrom(rawLines) }
-        document.commonFields.checkDigits.composite?.let { composite ->
-            addCheckDigitFailureIfMismatch(
-                into = failures,
+        val composite = document.commonFields.checkDigits.composite
+        if (composite != null) {
+            addCheckDigitCheck(
+                checks = checks,
+                failures = failures,
                 input = compositeInput,
                 observed = composite,
-                field = MrzField.COMPOSITE,
+                check = MrzCheck.COMPOSITE_CHECK_DIGIT,
                 position = Td3FormatSpec.globalPositionOf(Td3FormatSpec.compositeCheckDigit),
             )
+        } else {
+            checks +=
+                MrzCheckRecord(
+                    check = MrzCheck.COMPOSITE_CHECK_DIGIT,
+                    field = MrzField.COMPOSITE,
+                    outcome = CheckOutcome.NotRun(reason = "the document carries no composite check digit"),
+                )
         }
 
         checkSexCharacter(
             rawSex = document.commonFields.rawSex,
             position = Td3FormatSpec.globalPositionOf(Td3FormatSpec.sex),
+            checks = checks,
             failures = failures,
             warnings = warnings,
         )
 
-        addDateNotInCalendarFailureIfApplicable(
-            into = failures,
+        addDateCalendarCheck(
+            checks = checks,
+            failures = failures,
             date = document.commonFields.dateOfBirth,
-            field = MrzField.DATE_OF_BIRTH,
+            check = MrzCheck.DATE_OF_BIRTH_CALENDAR_DATE,
             position = Td3FormatSpec.globalPositionOf(Td3FormatSpec.dateOfBirth),
         )
-        addDateNotInCalendarFailureIfApplicable(
-            into = failures,
+        addDateCalendarCheck(
+            checks = checks,
+            failures = failures,
             date = document.commonFields.dateOfExpiry,
-            field = MrzField.DATE_OF_EXPIRY,
+            check = MrzCheck.DATE_OF_EXPIRY_CALENDAR_DATE,
             position = Td3FormatSpec.globalPositionOf(Td3FormatSpec.dateOfExpiry),
         )
 
@@ -381,7 +429,11 @@ public object MrzValidator {
             position = Td3FormatSpec.globalPositionOf(Td3FormatSpec.rawNameField),
         )
 
-        return ValidationResult(validationFailures = failures.toList(), warnings = warnings.toList())
+        return ValidationResult(
+            validationFailures = failures.toList(),
+            warnings = warnings.toList(),
+            checks = checks.sortedBy { it.check.ordinal },
+        )
     }
 
     private fun validateTD2(
@@ -391,61 +443,83 @@ public object MrzValidator {
         val rawLines = document.rawLines
         val failures = mutableListOf<MrzValidationError>()
         val warnings = mutableListOf<MrzWarning>()
+        val checks = mutableListOf<MrzCheckRecord>()
 
-        addCheckDigitFailureIfMismatch(
-            into = failures,
+        addCheckDigitCheck(
+            checks = checks,
+            failures = failures,
             input = Td2FormatSpec.documentNumber.extractFrom(rawLines),
             observed = document.commonFields.checkDigits.documentNumber,
-            field = MrzField.DOCUMENT_NUMBER,
+            check = MrzCheck.DOCUMENT_NUMBER_CHECK_DIGIT,
             position = Td2FormatSpec.globalPositionOf(Td2FormatSpec.documentNumberCheckDigit),
         )
-        addCheckDigitFailureIfMismatch(
-            into = failures,
+        addCheckDigitCheck(
+            checks = checks,
+            failures = failures,
             input = Td2FormatSpec.dateOfBirth.extractFrom(rawLines),
             observed = document.commonFields.checkDigits.dateOfBirth,
-            field = MrzField.DATE_OF_BIRTH,
+            check = MrzCheck.DATE_OF_BIRTH_CHECK_DIGIT,
             position = Td2FormatSpec.globalPositionOf(Td2FormatSpec.dateOfBirthCheckDigit),
         )
-        addCheckDigitFailureIfMismatch(
-            into = failures,
+        addCheckDigitCheck(
+            checks = checks,
+            failures = failures,
             input = Td2FormatSpec.dateOfExpiry.extractFrom(rawLines),
             observed = document.commonFields.checkDigits.dateOfExpiry,
-            field = MrzField.DATE_OF_EXPIRY,
+            check = MrzCheck.DATE_OF_EXPIRY_CHECK_DIGIT,
             position = Td2FormatSpec.globalPositionOf(Td2FormatSpec.dateOfExpiryCheckDigit),
         )
         // TD2 has no per-field check digit on optional data (ICAO Doc 9303 Part 6); only the
         // composite digit covers it.
+        checks +=
+            MrzCheckRecord(
+                check = MrzCheck.OPTIONAL_DATA_CHECK_DIGIT,
+                field = MrzField.OPTIONAL_DATA,
+                outcome = CheckOutcome.NotApplicable,
+            )
 
         // TD2 always carries a composite check digit per ICAO Doc 9303 Part 6; the parser
         // populates it unconditionally, so the model-level `Char?` is structurally non-null here.
         val compositeInput = Td2FormatSpec.compositeInputFields.joinToString("") { it.extractFrom(rawLines) }
-        document.commonFields.checkDigits.composite?.let { composite ->
-            addCheckDigitFailureIfMismatch(
-                into = failures,
+        val composite = document.commonFields.checkDigits.composite
+        if (composite != null) {
+            addCheckDigitCheck(
+                checks = checks,
+                failures = failures,
                 input = compositeInput,
                 observed = composite,
-                field = MrzField.COMPOSITE,
+                check = MrzCheck.COMPOSITE_CHECK_DIGIT,
                 position = Td2FormatSpec.globalPositionOf(Td2FormatSpec.compositeCheckDigit),
             )
+        } else {
+            checks +=
+                MrzCheckRecord(
+                    check = MrzCheck.COMPOSITE_CHECK_DIGIT,
+                    field = MrzField.COMPOSITE,
+                    outcome = CheckOutcome.NotRun(reason = "the document carries no composite check digit"),
+                )
         }
 
         checkSexCharacter(
             rawSex = document.commonFields.rawSex,
             position = Td2FormatSpec.globalPositionOf(Td2FormatSpec.sex),
+            checks = checks,
             failures = failures,
             warnings = warnings,
         )
 
-        addDateNotInCalendarFailureIfApplicable(
-            into = failures,
+        addDateCalendarCheck(
+            checks = checks,
+            failures = failures,
             date = document.commonFields.dateOfBirth,
-            field = MrzField.DATE_OF_BIRTH,
+            check = MrzCheck.DATE_OF_BIRTH_CALENDAR_DATE,
             position = Td2FormatSpec.globalPositionOf(Td2FormatSpec.dateOfBirth),
         )
-        addDateNotInCalendarFailureIfApplicable(
-            into = failures,
+        addDateCalendarCheck(
+            checks = checks,
+            failures = failures,
             date = document.commonFields.dateOfExpiry,
-            field = MrzField.DATE_OF_EXPIRY,
+            check = MrzCheck.DATE_OF_EXPIRY_CALENDAR_DATE,
             position = Td2FormatSpec.globalPositionOf(Td2FormatSpec.dateOfExpiry),
         )
 
@@ -478,7 +552,11 @@ public object MrzValidator {
             position = Td2FormatSpec.globalPositionOf(Td2FormatSpec.rawNameField),
         )
 
-        return ValidationResult(validationFailures = failures.toList(), warnings = warnings.toList())
+        return ValidationResult(
+            validationFailures = failures.toList(),
+            warnings = warnings.toList(),
+            checks = checks.sortedBy { it.check.ordinal },
+        )
     }
 
     private fun validateMrvA(
@@ -488,48 +566,67 @@ public object MrzValidator {
         val rawLines = document.rawLines
         val failures = mutableListOf<MrzValidationError>()
         val warnings = mutableListOf<MrzWarning>()
+        val checks = mutableListOf<MrzCheckRecord>()
 
-        addCheckDigitFailureIfMismatch(
-            into = failures,
+        addCheckDigitCheck(
+            checks = checks,
+            failures = failures,
             input = MrvAFormatSpec.documentNumber.extractFrom(rawLines),
             observed = document.commonFields.checkDigits.documentNumber,
-            field = MrzField.DOCUMENT_NUMBER,
+            check = MrzCheck.DOCUMENT_NUMBER_CHECK_DIGIT,
             position = MrvAFormatSpec.globalPositionOf(MrvAFormatSpec.documentNumberCheckDigit),
         )
-        addCheckDigitFailureIfMismatch(
-            into = failures,
+        addCheckDigitCheck(
+            checks = checks,
+            failures = failures,
             input = MrvAFormatSpec.dateOfBirth.extractFrom(rawLines),
             observed = document.commonFields.checkDigits.dateOfBirth,
-            field = MrzField.DATE_OF_BIRTH,
+            check = MrzCheck.DATE_OF_BIRTH_CHECK_DIGIT,
             position = MrvAFormatSpec.globalPositionOf(MrvAFormatSpec.dateOfBirthCheckDigit),
         )
-        addCheckDigitFailureIfMismatch(
-            into = failures,
+        addCheckDigitCheck(
+            checks = checks,
+            failures = failures,
             input = MrvAFormatSpec.dateOfExpiry.extractFrom(rawLines),
             observed = document.commonFields.checkDigits.dateOfExpiry,
-            field = MrzField.DATE_OF_EXPIRY,
+            check = MrzCheck.DATE_OF_EXPIRY_CHECK_DIGIT,
             position = MrvAFormatSpec.globalPositionOf(MrvAFormatSpec.dateOfExpiryCheckDigit),
         )
         // MRV-A has neither a per-field check digit on optional data nor a composite check digit
         // (ICAO Doc 9303 Part 7). No per-field OPTIONAL_DATA or COMPOSITE failures are emitted.
+        checks +=
+            MrzCheckRecord(
+                check = MrzCheck.OPTIONAL_DATA_CHECK_DIGIT,
+                field = MrzField.OPTIONAL_DATA,
+                outcome = CheckOutcome.NotApplicable,
+            )
+        checks +=
+            MrzCheckRecord(
+                check = MrzCheck.COMPOSITE_CHECK_DIGIT,
+                field = MrzField.COMPOSITE,
+                outcome = CheckOutcome.NotApplicable,
+            )
 
         checkSexCharacter(
             rawSex = document.commonFields.rawSex,
             position = MrvAFormatSpec.globalPositionOf(MrvAFormatSpec.sex),
+            checks = checks,
             failures = failures,
             warnings = warnings,
         )
 
-        addDateNotInCalendarFailureIfApplicable(
-            into = failures,
+        addDateCalendarCheck(
+            checks = checks,
+            failures = failures,
             date = document.commonFields.dateOfBirth,
-            field = MrzField.DATE_OF_BIRTH,
+            check = MrzCheck.DATE_OF_BIRTH_CALENDAR_DATE,
             position = MrvAFormatSpec.globalPositionOf(MrvAFormatSpec.dateOfBirth),
         )
-        addDateNotInCalendarFailureIfApplicable(
-            into = failures,
+        addDateCalendarCheck(
+            checks = checks,
+            failures = failures,
             date = document.commonFields.dateOfExpiry,
-            field = MrzField.DATE_OF_EXPIRY,
+            check = MrzCheck.DATE_OF_EXPIRY_CALENDAR_DATE,
             position = MrvAFormatSpec.globalPositionOf(MrvAFormatSpec.dateOfExpiry),
         )
 
@@ -562,7 +659,11 @@ public object MrzValidator {
             position = MrvAFormatSpec.globalPositionOf(MrvAFormatSpec.rawNameField),
         )
 
-        return ValidationResult(validationFailures = failures.toList(), warnings = warnings.toList())
+        return ValidationResult(
+            validationFailures = failures.toList(),
+            warnings = warnings.toList(),
+            checks = checks.sortedBy { it.check.ordinal },
+        )
     }
 
     private fun validateTD1(
@@ -572,61 +673,83 @@ public object MrzValidator {
         val rawLines = document.rawLines
         val failures = mutableListOf<MrzValidationError>()
         val warnings = mutableListOf<MrzWarning>()
+        val checks = mutableListOf<MrzCheckRecord>()
 
-        addCheckDigitFailureIfMismatch(
-            into = failures,
+        addCheckDigitCheck(
+            checks = checks,
+            failures = failures,
             input = Td1FormatSpec.documentNumber.extractFrom(rawLines),
             observed = document.commonFields.checkDigits.documentNumber,
-            field = MrzField.DOCUMENT_NUMBER,
+            check = MrzCheck.DOCUMENT_NUMBER_CHECK_DIGIT,
             position = Td1FormatSpec.globalPositionOf(Td1FormatSpec.documentNumberCheckDigit),
         )
-        addCheckDigitFailureIfMismatch(
-            into = failures,
+        addCheckDigitCheck(
+            checks = checks,
+            failures = failures,
             input = Td1FormatSpec.dateOfBirth.extractFrom(rawLines),
             observed = document.commonFields.checkDigits.dateOfBirth,
-            field = MrzField.DATE_OF_BIRTH,
+            check = MrzCheck.DATE_OF_BIRTH_CHECK_DIGIT,
             position = Td1FormatSpec.globalPositionOf(Td1FormatSpec.dateOfBirthCheckDigit),
         )
-        addCheckDigitFailureIfMismatch(
-            into = failures,
+        addCheckDigitCheck(
+            checks = checks,
+            failures = failures,
             input = Td1FormatSpec.dateOfExpiry.extractFrom(rawLines),
             observed = document.commonFields.checkDigits.dateOfExpiry,
-            field = MrzField.DATE_OF_EXPIRY,
+            check = MrzCheck.DATE_OF_EXPIRY_CHECK_DIGIT,
             position = Td1FormatSpec.globalPositionOf(Td1FormatSpec.dateOfExpiryCheckDigit),
         )
         // TD1 has no per-field check digit on optional data 1 or optional data 2 (ICAO Doc 9303
         // Part 5); the composite digit covers both optional slots.
+        checks +=
+            MrzCheckRecord(
+                check = MrzCheck.OPTIONAL_DATA_CHECK_DIGIT,
+                field = MrzField.OPTIONAL_DATA,
+                outcome = CheckOutcome.NotApplicable,
+            )
 
         // TD1 always carries a composite check digit per ICAO Doc 9303 Part 5; the parser
         // populates it unconditionally, so the model-level `Char?` is structurally non-null here.
         val compositeInput = Td1FormatSpec.compositeInputFields.joinToString("") { it.extractFrom(rawLines) }
-        document.commonFields.checkDigits.composite?.let { composite ->
-            addCheckDigitFailureIfMismatch(
-                into = failures,
+        val composite = document.commonFields.checkDigits.composite
+        if (composite != null) {
+            addCheckDigitCheck(
+                checks = checks,
+                failures = failures,
                 input = compositeInput,
                 observed = composite,
-                field = MrzField.COMPOSITE,
+                check = MrzCheck.COMPOSITE_CHECK_DIGIT,
                 position = Td1FormatSpec.globalPositionOf(Td1FormatSpec.compositeCheckDigit),
             )
+        } else {
+            checks +=
+                MrzCheckRecord(
+                    check = MrzCheck.COMPOSITE_CHECK_DIGIT,
+                    field = MrzField.COMPOSITE,
+                    outcome = CheckOutcome.NotRun(reason = "the document carries no composite check digit"),
+                )
         }
 
         checkSexCharacter(
             rawSex = document.commonFields.rawSex,
             position = Td1FormatSpec.globalPositionOf(Td1FormatSpec.sex),
+            checks = checks,
             failures = failures,
             warnings = warnings,
         )
 
-        addDateNotInCalendarFailureIfApplicable(
-            into = failures,
+        addDateCalendarCheck(
+            checks = checks,
+            failures = failures,
             date = document.commonFields.dateOfBirth,
-            field = MrzField.DATE_OF_BIRTH,
+            check = MrzCheck.DATE_OF_BIRTH_CALENDAR_DATE,
             position = Td1FormatSpec.globalPositionOf(Td1FormatSpec.dateOfBirth),
         )
-        addDateNotInCalendarFailureIfApplicable(
-            into = failures,
+        addDateCalendarCheck(
+            checks = checks,
+            failures = failures,
             date = document.commonFields.dateOfExpiry,
-            field = MrzField.DATE_OF_EXPIRY,
+            check = MrzCheck.DATE_OF_EXPIRY_CALENDAR_DATE,
             position = Td1FormatSpec.globalPositionOf(Td1FormatSpec.dateOfExpiry),
         )
 
@@ -659,7 +782,11 @@ public object MrzValidator {
             position = Td1FormatSpec.globalPositionOf(Td1FormatSpec.rawNameField),
         )
 
-        return ValidationResult(validationFailures = failures.toList(), warnings = warnings.toList())
+        return ValidationResult(
+            validationFailures = failures.toList(),
+            warnings = warnings.toList(),
+            checks = checks.sortedBy { it.check.ordinal },
+        )
     }
 
     private fun validateMrvB(
@@ -669,48 +796,67 @@ public object MrzValidator {
         val rawLines = document.rawLines
         val failures = mutableListOf<MrzValidationError>()
         val warnings = mutableListOf<MrzWarning>()
+        val checks = mutableListOf<MrzCheckRecord>()
 
-        addCheckDigitFailureIfMismatch(
-            into = failures,
+        addCheckDigitCheck(
+            checks = checks,
+            failures = failures,
             input = MrvBFormatSpec.documentNumber.extractFrom(rawLines),
             observed = document.commonFields.checkDigits.documentNumber,
-            field = MrzField.DOCUMENT_NUMBER,
+            check = MrzCheck.DOCUMENT_NUMBER_CHECK_DIGIT,
             position = MrvBFormatSpec.globalPositionOf(MrvBFormatSpec.documentNumberCheckDigit),
         )
-        addCheckDigitFailureIfMismatch(
-            into = failures,
+        addCheckDigitCheck(
+            checks = checks,
+            failures = failures,
             input = MrvBFormatSpec.dateOfBirth.extractFrom(rawLines),
             observed = document.commonFields.checkDigits.dateOfBirth,
-            field = MrzField.DATE_OF_BIRTH,
+            check = MrzCheck.DATE_OF_BIRTH_CHECK_DIGIT,
             position = MrvBFormatSpec.globalPositionOf(MrvBFormatSpec.dateOfBirthCheckDigit),
         )
-        addCheckDigitFailureIfMismatch(
-            into = failures,
+        addCheckDigitCheck(
+            checks = checks,
+            failures = failures,
             input = MrvBFormatSpec.dateOfExpiry.extractFrom(rawLines),
             observed = document.commonFields.checkDigits.dateOfExpiry,
-            field = MrzField.DATE_OF_EXPIRY,
+            check = MrzCheck.DATE_OF_EXPIRY_CHECK_DIGIT,
             position = MrvBFormatSpec.globalPositionOf(MrvBFormatSpec.dateOfExpiryCheckDigit),
         )
         // MRV-B has neither a per-field check digit on optional data nor a composite check digit
         // (ICAO Doc 9303 Part 7). No per-field OPTIONAL_DATA or COMPOSITE failures are emitted.
+        checks +=
+            MrzCheckRecord(
+                check = MrzCheck.OPTIONAL_DATA_CHECK_DIGIT,
+                field = MrzField.OPTIONAL_DATA,
+                outcome = CheckOutcome.NotApplicable,
+            )
+        checks +=
+            MrzCheckRecord(
+                check = MrzCheck.COMPOSITE_CHECK_DIGIT,
+                field = MrzField.COMPOSITE,
+                outcome = CheckOutcome.NotApplicable,
+            )
 
         checkSexCharacter(
             rawSex = document.commonFields.rawSex,
             position = MrvBFormatSpec.globalPositionOf(MrvBFormatSpec.sex),
+            checks = checks,
             failures = failures,
             warnings = warnings,
         )
 
-        addDateNotInCalendarFailureIfApplicable(
-            into = failures,
+        addDateCalendarCheck(
+            checks = checks,
+            failures = failures,
             date = document.commonFields.dateOfBirth,
-            field = MrzField.DATE_OF_BIRTH,
+            check = MrzCheck.DATE_OF_BIRTH_CALENDAR_DATE,
             position = MrvBFormatSpec.globalPositionOf(MrvBFormatSpec.dateOfBirth),
         )
-        addDateNotInCalendarFailureIfApplicable(
-            into = failures,
+        addDateCalendarCheck(
+            checks = checks,
+            failures = failures,
             date = document.commonFields.dateOfExpiry,
-            field = MrzField.DATE_OF_EXPIRY,
+            check = MrzCheck.DATE_OF_EXPIRY_CALENDAR_DATE,
             position = MrvBFormatSpec.globalPositionOf(MrvBFormatSpec.dateOfExpiry),
         )
 
@@ -743,7 +889,11 @@ public object MrzValidator {
             position = MrvBFormatSpec.globalPositionOf(MrvBFormatSpec.rawNameField),
         )
 
-        return ValidationResult(validationFailures = failures.toList(), warnings = warnings.toList())
+        return ValidationResult(
+            validationFailures = failures.toList(),
+            warnings = warnings.toList(),
+            checks = checks.sortedBy { it.check.ordinal },
+        )
     }
 
     private fun addNameTruncatedWarningIfApplicable(
@@ -775,16 +925,26 @@ public object MrzValidator {
         into += MrzUnknownCountryCode(field = field, rawCode = countryCode.rawCode, position = position)
     }
 
-    private fun addDateNotInCalendarFailureIfApplicable(
-        into: MutableList<MrzValidationError>,
+    private fun addDateCalendarCheck(
+        checks: MutableList<MrzCheckRecord>,
+        failures: MutableList<MrzValidationError>,
         date: MrzDate,
-        field: MrzField,
+        check: MrzCheck,
         position: Int,
     ) {
-        if (date.componentsFormCalendarDate == false) {
-            into +=
+        // Parts that are not two-digit numbers (a filler in the date, meaning "unknown") leave the
+        // calendar check not applicable; the standard allows the filler there.
+        val outcome =
+            when (date.componentsFormCalendarDate) {
+                true -> CheckOutcome.Passed
+                false -> CheckOutcome.Failed
+                null -> CheckOutcome.NotApplicable
+            }
+        checks += MrzCheckRecord(check = check, field = check.field, outcome = outcome)
+        if (outcome == CheckOutcome.Failed) {
+            failures +=
                 MrzDateNotInCalendar(
-                    field = field,
+                    field = check.field,
                     rawYear = date.rawYear,
                     rawMonth = date.rawMonth,
                     rawDay = date.rawDay,
@@ -796,10 +956,18 @@ public object MrzValidator {
     private fun checkSexCharacter(
         rawSex: Char,
         position: Int,
+        checks: MutableList<MrzCheckRecord>,
         failures: MutableList<MrzValidationError>,
         warnings: MutableList<MrzWarning>,
     ) {
-        if (rawSex !in VALID_SEX_CHARACTERS) {
+        val accepted = rawSex in VALID_SEX_CHARACTERS
+        checks +=
+            MrzCheckRecord(
+                check = MrzCheck.SEX_CHARACTER,
+                field = MrzField.SEX,
+                outcome = if (accepted) CheckOutcome.Passed else CheckOutcome.Failed,
+            )
+        if (!accepted) {
             failures += MrzInvalidSexValue(observed = rawSex, position = position)
         } else if (rawSex == 'X') {
             // Per ICAO Doc 9303 Part 4 §4.2.2.2 (and Parts 5/6/7 equivalents), the MRZ
@@ -810,16 +978,24 @@ public object MrzValidator {
         }
     }
 
-    private fun addCheckDigitFailureIfMismatch(
-        into: MutableList<MrzValidationError>,
+    private fun addCheckDigitCheck(
+        checks: MutableList<MrzCheckRecord>,
+        failures: MutableList<MrzValidationError>,
         input: String,
         observed: Char,
-        field: MrzField,
+        check: MrzCheck,
         position: Int,
     ) {
         val expected = computeCheckDigit(input)
-        if (expected != observed) {
-            into += MrzCheckDigitMismatch(field = field, expected = expected, observed = observed, position = position)
+        val passed = expected == observed
+        checks +=
+            MrzCheckRecord(
+                check = check,
+                field = check.field,
+                outcome = if (passed) CheckOutcome.Passed else CheckOutcome.Failed,
+            )
+        if (!passed) {
+            failures += MrzCheckDigitMismatch(field = check.field, expected = expected, observed = observed, position = position)
         }
     }
 

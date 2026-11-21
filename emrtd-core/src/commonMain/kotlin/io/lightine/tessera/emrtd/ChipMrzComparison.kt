@@ -121,6 +121,10 @@ public object ChipMrzComparison {
             MrzField.COMPOSITE -> {
                 c.checkDigits.composite?.toString()
             }
+
+            MrzField.SEX -> {
+                c.rawSex.toString()
+            }
         }
     }
 }

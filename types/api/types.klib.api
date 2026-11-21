@@ -61,6 +61,7 @@ final enum class io.lightine.tessera.types.vocabulary/MrzField : kotlin/Enum<io.
     enum entry NAME_FIELD // io.lightine.tessera.types.vocabulary/MrzField.NAME_FIELD|null[0]
     enum entry NATIONALITY // io.lightine.tessera.types.vocabulary/MrzField.NATIONALITY|null[0]
     enum entry OPTIONAL_DATA // io.lightine.tessera.types.vocabulary/MrzField.OPTIONAL_DATA|null[0]
+    enum entry SEX // io.lightine.tessera.types.vocabulary/MrzField.SEX|null[0]
 
     final val entries // io.lightine.tessera.types.vocabulary/MrzField.entries|#static{}entries[0]
         final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.types.vocabulary/MrzField> // io.lightine.tessera.types.vocabulary/MrzField.entries.<get-entries>|<get-entries>#static(){}[0]
@@ -108,6 +109,39 @@ final enum class io.lightine.tessera.types.vocabulary/Sex : kotlin/Enum<io.light
 
     final fun valueOf(kotlin/String): io.lightine.tessera.types.vocabulary/Sex // io.lightine.tessera.types.vocabulary/Sex.valueOf|valueOf#static(kotlin.String){}[0]
     final fun values(): kotlin/Array<io.lightine.tessera.types.vocabulary/Sex> // io.lightine.tessera.types.vocabulary/Sex.values|values#static(){}[0]
+}
+
+sealed interface io.lightine.tessera.types.vocabulary/CheckOutcome { // io.lightine.tessera.types.vocabulary/CheckOutcome|null[0]
+    final class NotRun : io.lightine.tessera.types.vocabulary/CheckOutcome { // io.lightine.tessera.types.vocabulary/CheckOutcome.NotRun|null[0]
+        constructor <init>(kotlin/String) // io.lightine.tessera.types.vocabulary/CheckOutcome.NotRun.<init>|<init>(kotlin.String){}[0]
+
+        final val reason // io.lightine.tessera.types.vocabulary/CheckOutcome.NotRun.reason|{}reason[0]
+            final fun <get-reason>(): kotlin/String // io.lightine.tessera.types.vocabulary/CheckOutcome.NotRun.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun component1(): kotlin/String // io.lightine.tessera.types.vocabulary/CheckOutcome.NotRun.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): io.lightine.tessera.types.vocabulary/CheckOutcome.NotRun // io.lightine.tessera.types.vocabulary/CheckOutcome.NotRun.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.vocabulary/CheckOutcome.NotRun.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.types.vocabulary/CheckOutcome.NotRun.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.types.vocabulary/CheckOutcome.NotRun.toString|toString(){}[0]
+    }
+
+    final object Failed : io.lightine.tessera.types.vocabulary/CheckOutcome { // io.lightine.tessera.types.vocabulary/CheckOutcome.Failed|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.vocabulary/CheckOutcome.Failed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.types.vocabulary/CheckOutcome.Failed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.types.vocabulary/CheckOutcome.Failed.toString|toString(){}[0]
+    }
+
+    final object NotApplicable : io.lightine.tessera.types.vocabulary/CheckOutcome { // io.lightine.tessera.types.vocabulary/CheckOutcome.NotApplicable|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.vocabulary/CheckOutcome.NotApplicable.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.types.vocabulary/CheckOutcome.NotApplicable.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.types.vocabulary/CheckOutcome.NotApplicable.toString|toString(){}[0]
+    }
+
+    final object Passed : io.lightine.tessera.types.vocabulary/CheckOutcome { // io.lightine.tessera.types.vocabulary/CheckOutcome.Passed|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.vocabulary/CheckOutcome.Passed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.types.vocabulary/CheckOutcome.Passed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.types.vocabulary/CheckOutcome.Passed.toString|toString(){}[0]
+    }
 }
 
 final class io.lightine.tessera.types.errors/ChipAccessDenied : io.lightine.tessera.types.errors/ChipError { // io.lightine.tessera.types.errors/ChipAccessDenied|null[0]
