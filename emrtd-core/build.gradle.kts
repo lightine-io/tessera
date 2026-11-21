@@ -24,6 +24,19 @@ mavenPublishing {
     }
 }
 
+// Dokka 2 rejects a source file that two source sets both list, and the shared
+// src/bouncyCastleMain folder (see below) is compiled into jvmMain and androidMain. Everything in
+// it is `internal`, so it never belongs in the API docs: the Android source set drops it from its
+// Dokka roots (the JVM one keeps it, still hidden by Dokka's visibility filter). Compilation is
+// unchanged. The roots are filled by the Kotlin plugin, so this runs after evaluation.
+afterEvaluate {
+    dokka {
+        dokkaSourceSets.matching { it.name == "androidMain" }.configureEach {
+            sourceRoots.setFrom(sourceRoots.files.filterNot { it.path.contains("bouncyCastleMain") })
+        }
+    }
+}
+
 kotlin {
     // The JVM target carries the host tests for this platform-agnostic core, so they run on the
     // JVM `check` runner with no Android SDK and no device. It is also a published artifact
@@ -64,6 +77,26 @@ kotlin {
                 api(libs.kotlinx.coroutines.core)
             }
         }
+        // The chip cryptography (internal ChipCrypto) on BouncyCastle for JVM and Android. Kotlin
+        // does not support a source set shared by only a JVM and an Android target (Kotlin docs,
+        // "Hierarchical project structure"), so common code reaches the backend through an `expect
+        // fun chipCrypto()` with a one-line `actual` per target, and the one backend file lives in
+        // src/bouncyCastleMain, a plain folder compiled into both targets. iosMain's `actual` throws
+        // until the OpenSSL backend lands. BouncyCastle is `implementation`: none of its types may
+        // reach the public API (repo-rules checks the api/ dumps).
+        jvmMain {
+            kotlin.srcDir("src/bouncyCastleMain/kotlin")
+            dependencies { implementation(libs.bouncycastle.bcprov) }
+        }
+        androidMain {
+            kotlin.srcDir("src/bouncyCastleMain/kotlin")
+            dependencies { implementation(libs.bouncycastle.bcprov) }
+        }
+        // The test-time signer for the fake PKI (real signatures with keys made at test time, never
+        // committed) is BouncyCastle too: one file in src/bouncyCastleTest, compiled into both
+        // host test sets the same way. iosTest's `actual` has no signer, so those tests skip there.
+        jvmTest { kotlin.srcDir("src/bouncyCastleTest/kotlin") }
+        matching { it.name == "androidHostTest" }.configureEach { kotlin.srcDir("src/bouncyCastleTest/kotlin") }
         commonTest {
             dependencies {
                 implementation(kotlin("test"))

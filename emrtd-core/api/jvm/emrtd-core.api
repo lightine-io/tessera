@@ -22,7 +22,491 @@ public final class io/lightine/tessera/emrtd/ChipAccessKey$Can : io/lightine/tes
 }
 
 public final class io/lightine/tessera/emrtd/ChipAccessKey$Mrz : io/lightine/tessera/emrtd/ChipAccessKey {
+	public static final field Companion Lio/lightine/tessera/emrtd/ChipAccessKey$Mrz$Companion;
 	public fun <init> (Ljava/lang/String;CLjava/lang/String;CLjava/lang/String;C)V
+	public static final fun fromPrintedFields (Ljava/lang/String;CLjava/lang/String;Ljava/lang/String;CLjava/lang/String;C)Lio/lightine/tessera/emrtd/ChipAccessKey$Mrz;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/ChipAccessKey$Mrz$Companion {
+	public final fun fromPrintedFields (Ljava/lang/String;CLjava/lang/String;Ljava/lang/String;CLjava/lang/String;C)Lio/lightine/tessera/emrtd/ChipAccessKey$Mrz;
+}
+
+public final class io/lightine/tessera/emrtd/lds/BiometricDataBlock {
+	public final fun getBytes ()[B
+	public final fun getIso39794Data ()[B
+	public final fun getIso39794Part ()Lio/lightine/tessera/emrtd/lds/Iso39794Part;
+	public final fun getStandard ()Lio/lightine/tessera/emrtd/lds/BiometricStandard;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/BiometricGroup {
+	public static final field Companion Lio/lightine/tessera/emrtd/lds/BiometricGroup$Companion;
+	public final fun getDeclaredInstances ()Ljava/lang/Integer;
+	public final fun getTemplates ()Ljava/util/List;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/BiometricGroup$Companion {
+	public final fun parse ([B)Lio/lightine/tessera/emrtd/lds/ImageGroupParse;
+}
+
+public final class io/lightine/tessera/emrtd/lds/BiometricHeader {
+	public final fun getBiometricSubType ()[B
+	public final fun getBiometricType ()[B
+	public final fun getCreationDateTime ()[B
+	public final fun getCreatorPid ()[B
+	public final fun getFormatOwner ()[B
+	public final fun getFormatType ()[B
+	public final fun getHeaderVersion ()[B
+	public final fun getValidityPeriod ()[B
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/BiometricStandard : java/lang/Enum {
+	public static final field ISO_19794 Lio/lightine/tessera/emrtd/lds/BiometricStandard;
+	public static final field ISO_39794 Lio/lightine/tessera/emrtd/lds/BiometricStandard;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/lds/BiometricStandard;
+	public static fun values ()[Lio/lightine/tessera/emrtd/lds/BiometricStandard;
+}
+
+public final class io/lightine/tessera/emrtd/lds/BiometricTemplate {
+	public final fun getBlock ()Lio/lightine/tessera/emrtd/lds/BiometricDataBlock;
+	public final fun getHeader ()Lio/lightine/tessera/emrtd/lds/BiometricHeader;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/CertificateExtensionView {
+	public final fun getCritical ()Z
+	public final fun getOid ()Ljava/lang/String;
+	public final fun getRecognized ()Z
+}
+
+public final class io/lightine/tessera/emrtd/lds/ChipDataElement {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTag ()I
+	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public final fun value ()[B
+}
+
+public final class io/lightine/tessera/emrtd/lds/ChipDate {
+	public fun <init> (Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/Integer;)V
+	public final fun component1 ()Ljava/lang/Integer;
+	public final fun component2 ()Ljava/lang/Integer;
+	public final fun component3 ()Ljava/lang/Integer;
+	public final fun copy (Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/Integer;)Lio/lightine/tessera/emrtd/lds/ChipDate;
+	public static synthetic fun copy$default (Lio/lightine/tessera/emrtd/lds/ChipDate;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/Integer;ILjava/lang/Object;)Lio/lightine/tessera/emrtd/lds/ChipDate;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDay ()Ljava/lang/Integer;
+	public final fun getMonth ()Ljava/lang/Integer;
+	public final fun getYear ()Ljava/lang/Integer;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/ChipDateTime {
+	public fun <init> (Lio/lightine/tessera/emrtd/lds/ChipDate;III)V
+	public final fun component1 ()Lio/lightine/tessera/emrtd/lds/ChipDate;
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun component4 ()I
+	public final fun copy (Lio/lightine/tessera/emrtd/lds/ChipDate;III)Lio/lightine/tessera/emrtd/lds/ChipDateTime;
+	public static synthetic fun copy$default (Lio/lightine/tessera/emrtd/lds/ChipDateTime;Lio/lightine/tessera/emrtd/lds/ChipDate;IIIILjava/lang/Object;)Lio/lightine/tessera/emrtd/lds/ChipDateTime;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDate ()Lio/lightine/tessera/emrtd/lds/ChipDate;
+	public final fun getHour ()I
+	public final fun getMinute ()I
+	public final fun getSecond ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/DataGroupHash {
+	public final fun getHash ()[B
+	public final fun getNumber ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/Dg11View {
+	public static final field Companion Lio/lightine/tessera/emrtd/lds/Dg11View$Companion;
+	public static final field TAG I
+	public final fun element (I)Lio/lightine/tessera/emrtd/lds/ChipDataElement;
+	public final fun getAddress ()Ljava/lang/String;
+	public final fun getCustodyInformation ()Ljava/lang/String;
+	public final fun getDateOfBirth ()Lio/lightine/tessera/emrtd/lds/ChipDate;
+	public final fun getElements ()Ljava/util/List;
+	public final fun getFullName ()Ljava/lang/String;
+	public final fun getOtherNames ()Ljava/util/List;
+	public final fun getOtherTravelDocuments ()Ljava/lang/String;
+	public final fun getPersonalNumber ()Ljava/lang/String;
+	public final fun getPersonalSummary ()Ljava/lang/String;
+	public final fun getPlaceOfBirth ()Ljava/lang/String;
+	public final fun getProfession ()Ljava/lang/String;
+	public final fun getTagList ()Ljava/util/List;
+	public final fun getTelephone ()Ljava/lang/String;
+	public final fun getTitle ()Ljava/lang/String;
+	public final fun raw ()[B
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/Dg11View$Companion {
+	public final fun parse ([B)Lio/lightine/tessera/emrtd/lds/LdsParseResult;
+}
+
+public final class io/lightine/tessera/emrtd/lds/Dg12View {
+	public static final field Companion Lio/lightine/tessera/emrtd/lds/Dg12View$Companion;
+	public static final field TAG I
+	public final fun element (I)Lio/lightine/tessera/emrtd/lds/ChipDataElement;
+	public final fun getDateOfIssue ()Lio/lightine/tessera/emrtd/lds/ChipDate;
+	public final fun getElements ()Ljava/util/List;
+	public final fun getEndorsements ()Ljava/lang/String;
+	public final fun getIssuingAuthority ()Ljava/lang/String;
+	public final fun getOtherPersons ()Ljava/util/List;
+	public final fun getPersonalizationSystemSerial ()Ljava/lang/String;
+	public final fun getPersonalizationTime ()Lio/lightine/tessera/emrtd/lds/ChipDateTime;
+	public final fun getTagList ()Ljava/util/List;
+	public final fun getTaxOrExitRequirements ()Ljava/lang/String;
+	public final fun raw ()[B
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/Dg12View$Companion {
+	public final fun parse ([B)Lio/lightine/tessera/emrtd/lds/LdsParseResult;
+}
+
+public final class io/lightine/tessera/emrtd/lds/Dg13View {
+	public static final field Companion Lio/lightine/tessera/emrtd/lds/Dg13View$Companion;
+	public static final field TAG I
+	public final fun content ()[B
+	public final fun raw ()[B
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/Dg13View$Companion {
+	public final fun parse ([B)Lio/lightine/tessera/emrtd/lds/LdsParseResult;
+}
+
+public final class io/lightine/tessera/emrtd/lds/Dg16View {
+	public static final field Companion Lio/lightine/tessera/emrtd/lds/Dg16View$Companion;
+	public static final field TAG I
+	public final fun getDeclaredCount ()Ljava/lang/Integer;
+	public final fun getPersons ()Ljava/util/List;
+	public final fun raw ()[B
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/Dg16View$Companion {
+	public final fun parse ([B)Lio/lightine/tessera/emrtd/lds/LdsParseResult;
+}
+
+public final class io/lightine/tessera/emrtd/lds/Dg1View {
+	public static final field Companion Lio/lightine/tessera/emrtd/lds/Dg1View$Companion;
+	public static final field TAG I
+	public final fun getDocument ()Lio/lightine/tessera/mrz/model/MrzDocument;
+	public final fun getMrzText ()Ljava/lang/String;
+	public final fun getParseResult ()Lio/lightine/tessera/mrz/parsing/ParseResult;
+	public final fun raw ()[B
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/Dg1View$Companion {
+	public final fun parse ([BLkotlin/time/Instant;)Lio/lightine/tessera/emrtd/lds/LdsParseResult;
+	public static synthetic fun parse$default (Lio/lightine/tessera/emrtd/lds/Dg1View$Companion;[BLkotlin/time/Instant;ILjava/lang/Object;)Lio/lightine/tessera/emrtd/lds/LdsParseResult;
+}
+
+public final class io/lightine/tessera/emrtd/lds/DisplayedImageGroup {
+	public static final field Companion Lio/lightine/tessera/emrtd/lds/DisplayedImageGroup$Companion;
+	public final fun getDeclaredInstances ()Ljava/lang/Integer;
+	public final fun getImages ()Ljava/util/List;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/DisplayedImageGroup$Companion {
+	public final fun parseDg5 ([B)Lio/lightine/tessera/emrtd/lds/ImageGroupParse;
+	public final fun parseDg7 ([B)Lio/lightine/tessera/emrtd/lds/ImageGroupParse;
+}
+
+public final class io/lightine/tessera/emrtd/lds/EfComView {
+	public static final field Companion Lio/lightine/tessera/emrtd/lds/EfComView$Companion;
+	public static final field TAG I
+	public final fun getDataGroups ()Ljava/util/List;
+	public final fun getElements ()Ljava/util/List;
+	public final fun getLdsVersion ()Ljava/lang/String;
+	public final fun getTagList ()Ljava/util/List;
+	public final fun getUnicodeVersion ()Ljava/lang/String;
+	public final fun raw ()[B
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/EfComView$Companion {
+	public final fun parse ([B)Lio/lightine/tessera/emrtd/lds/LdsParseResult;
+}
+
+public abstract class io/lightine/tessera/emrtd/lds/ImageGroupParse {
+}
+
+public final class io/lightine/tessera/emrtd/lds/ImageGroupParse$Malformed : io/lightine/tessera/emrtd/lds/ImageGroupParse {
+	public fun <init> (Lio/lightine/tessera/types/errors/ChipImageGroupMalformed;)V
+	public final fun getError ()Lio/lightine/tessera/types/errors/ChipImageGroupMalformed;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/ImageGroupParse$Parsed : io/lightine/tessera/emrtd/lds/ImageGroupParse {
+	public fun <init> (Ljava/lang/Object;)V
+	public final fun getValue ()Ljava/lang/Object;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/Iso39794Part : java/lang/Enum {
+	public static final field PART_4 Lio/lightine/tessera/emrtd/lds/Iso39794Part;
+	public static final field PART_5 Lio/lightine/tessera/emrtd/lds/Iso39794Part;
+	public static final field PART_6 Lio/lightine/tessera/emrtd/lds/Iso39794Part;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/lds/Iso39794Part;
+	public static fun values ()[Lio/lightine/tessera/emrtd/lds/Iso39794Part;
+}
+
+public abstract class io/lightine/tessera/emrtd/lds/LdsParseResult {
+}
+
+public final class io/lightine/tessera/emrtd/lds/LdsParseResult$Failure : io/lightine/tessera/emrtd/lds/LdsParseResult {
+	public fun <init> (Lio/lightine/tessera/types/errors/ChipMalformedFile;)V
+	public final fun getError ()Lio/lightine/tessera/types/errors/ChipMalformedFile;
+}
+
+public final class io/lightine/tessera/emrtd/lds/LdsParseResult$Success : io/lightine/tessera/emrtd/lds/LdsParseResult {
+	public fun <init> (Ljava/lang/Object;)V
+	public final fun getView ()Ljava/lang/Object;
+}
+
+public final class io/lightine/tessera/emrtd/lds/PersonToNotify {
+	public final fun element (I)Lio/lightine/tessera/emrtd/lds/ChipDataElement;
+	public final fun getAddress ()Ljava/lang/String;
+	public final fun getDateRecorded ()Lio/lightine/tessera/emrtd/lds/ChipDate;
+	public final fun getElements ()Ljava/util/List;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getTelephone ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class io/lightine/tessera/emrtd/lds/SecurityObjectParse {
+}
+
+public final class io/lightine/tessera/emrtd/lds/SecurityObjectParse$Parsed : io/lightine/tessera/emrtd/lds/SecurityObjectParse {
+	public final fun getView ()Lio/lightine/tessera/emrtd/lds/SecurityObjectView;
+}
+
+public final class io/lightine/tessera/emrtd/lds/SecurityObjectParse$Unreadable : io/lightine/tessera/emrtd/lds/SecurityObjectParse {
+	public final fun getOffset ()I
+	public final fun getProblem ()Lio/lightine/tessera/emrtd/lds/SecurityObjectProblem;
+}
+
+public final class io/lightine/tessera/emrtd/lds/SecurityObjectProblem : java/lang/Enum {
+	public static final field MALFORMED_ENCODING Lio/lightine/tessera/emrtd/lds/SecurityObjectProblem;
+	public static final field NOT_A_SECURITY_OBJECT Lio/lightine/tessera/emrtd/lds/SecurityObjectProblem;
+	public static final field NOT_SIGNED_DATA Lio/lightine/tessera/emrtd/lds/SecurityObjectProblem;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/lds/SecurityObjectProblem;
+	public static fun values ()[Lio/lightine/tessera/emrtd/lds/SecurityObjectProblem;
+}
+
+public final class io/lightine/tessera/emrtd/lds/SecurityObjectSigner {
+	public final fun getDigestAlgorithmOid ()Ljava/lang/String;
+	public final fun getHasSignedAttributes ()Z
+	public final fun getIssuerSerialNumberHex ()Ljava/lang/String;
+	public final fun getMessageDigest ()[B
+	public final fun getSignatureAlgorithmOid ()Ljava/lang/String;
+	public final fun getSubjectKeyIdentifier ()[B
+	public final fun getVersion ()I
+}
+
+public final class io/lightine/tessera/emrtd/lds/SecurityObjectView {
+	public static final field Companion Lio/lightine/tessera/emrtd/lds/SecurityObjectView$Companion;
+	public final fun contentBytes ()[B
+	public final fun getCertificates ()Ljava/util/List;
+	public final fun getDataGroupHashes ()Ljava/util/List;
+	public final fun getHashAlgorithmHasParameters ()Z
+	public final fun getHashAlgorithmName ()Ljava/lang/String;
+	public final fun getHashAlgorithmOid ()Ljava/lang/String;
+	public final fun getLdsVersion ()Ljava/lang/String;
+	public final fun getSignedDataVersion ()I
+	public final fun getSigners ()Ljava/util/List;
+	public final fun getUnicodeVersion ()Ljava/lang/String;
+	public final fun getUnreadableCertificateCount ()I
+	public final fun getVersion ()I
+	public final fun getWasBer ()Z
+	public final fun hashOf (I)[B
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/SecurityObjectView$Companion {
+	public final fun parse ([B)Lio/lightine/tessera/emrtd/lds/SecurityObjectParse;
+}
+
+public final class io/lightine/tessera/emrtd/lds/SignerCertificateView {
+	public final fun encodedBytes ()[B
+	public final fun getAuthorityKeyIdentifier ()[B
+	public final fun getDocumentTypes ()Ljava/util/List;
+	public final fun getExtendedKeyUsage ()Ljava/util/List;
+	public final fun getExtensions ()Ljava/util/List;
+	public final fun getIssuerCommonName ()Ljava/lang/String;
+	public final fun getIssuerCountry ()Ljava/lang/String;
+	public final fun getKeyUsage ()Ljava/util/Set;
+	public final fun getNotAfter ()Ljava/lang/String;
+	public final fun getNotBefore ()Ljava/lang/String;
+	public final fun getPrivateKeyNotAfter ()Ljava/lang/String;
+	public final fun getPrivateKeyNotBefore ()Ljava/lang/String;
+	public final fun getPublicKeyAlgorithmOid ()Ljava/lang/String;
+	public final fun getSerialNumberHex ()Ljava/lang/String;
+	public final fun getSignatureAlgorithmOid ()Ljava/lang/String;
+	public final fun getSubjectCommonName ()Ljava/lang/String;
+	public final fun getSubjectCountry ()Ljava/lang/String;
+	public final fun getSubjectKeyIdentifier ()[B
+	public final fun getUnrecognizedCriticalExtensions ()Ljava/util/List;
+	public final fun getVersion ()I
+	public final fun isCa ()Ljava/lang/Boolean;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterList {
+	public final fun getAnchors ()Ljava/util/List;
+	public final fun getChecks ()Ljava/util/List;
+	public final fun getUnreadableCertificateCount ()I
+	public final fun getVersion ()I
+	public final fun outcomeOf (Lio/lightine/tessera/emrtd/trust/MasterListCheckKind;)Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListCheck {
+	public final fun getKind ()Lio/lightine/tessera/emrtd/trust/MasterListCheckKind;
+	public final fun getOutcome ()Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListCheckKind : java/lang/Enum {
+	public static final field SIGNATURE_VERIFIES Lio/lightine/tessera/emrtd/trust/MasterListCheckKind;
+	public static final field SIGNER_CHAINS_TO_SUPPLIED_ROOT Lio/lightine/tessera/emrtd/trust/MasterListCheckKind;
+	public static final field SIGNER_CRITICAL_EXTENSIONS_RECOGNIZED Lio/lightine/tessera/emrtd/trust/MasterListCheckKind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/trust/MasterListCheckKind;
+	public static fun values ()[Lio/lightine/tessera/emrtd/trust/MasterListCheckKind;
+}
+
+public abstract class io/lightine/tessera/emrtd/trust/MasterListCheckOutcome {
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListCheckOutcome$Failed : io/lightine/tessera/emrtd/trust/MasterListCheckOutcome {
+	public final fun component1 ()Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public final fun copy (Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;)Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome$Failed;
+	public static synthetic fun copy$default (Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome$Failed;Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;ILjava/lang/Object;)Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome$Failed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListCheckOutcome$NotRun : io/lightine/tessera/emrtd/trust/MasterListCheckOutcome {
+	public final fun component1 ()Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public final fun copy (Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;)Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome$NotRun;
+	public static synthetic fun copy$default (Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome$NotRun;Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;ILjava/lang/Object;)Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome$NotRun;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListCheckOutcome$Passed : io/lightine/tessera/emrtd/trust/MasterListCheckOutcome {
+	public static final field INSTANCE Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome$Passed;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListCheckReason : java/lang/Enum {
+	public static final field CONTENT_TYPE_ATTRIBUTE_DIFFERS Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field CRYPTO_UNAVAILABLE Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field ISSUER_NAME_DIFFERS Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field KEY_DOES_NOT_FIT_SIGNATURE_ALGORITHM Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field MESSAGE_DIGEST_ATTRIBUTE_MISSING Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field MESSAGE_DIGEST_DIFFERS Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field NO_ROOTS_SUPPLIED Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field NO_SIGNER_CERTIFICATE Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field NO_SUPPLIED_ROOT_MATCHES Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field SIGNATURE_DOES_NOT_VERIFY Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field UNREADABLE_KEY Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field UNREADABLE_SIGNER_CERTIFICATE Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field UNRECOGNIZED_CRITICAL_EXTENSION Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field UNSUPPORTED_ALGORITHM Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static fun values ()[Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListProblem : java/lang/Enum {
+	public static final field MALFORMED_CONTENT Lio/lightine/tessera/emrtd/trust/MasterListProblem;
+	public static final field MALFORMED_ENCODING Lio/lightine/tessera/emrtd/trust/MasterListProblem;
+	public static final field NOT_A_MASTER_LIST Lio/lightine/tessera/emrtd/trust/MasterListProblem;
+	public static final field NOT_SIGNED_DATA Lio/lightine/tessera/emrtd/trust/MasterListProblem;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/trust/MasterListProblem;
+	public static fun values ()[Lio/lightine/tessera/emrtd/trust/MasterListProblem;
+}
+
+public abstract class io/lightine/tessera/emrtd/trust/MasterListRead {
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListRead$Read : io/lightine/tessera/emrtd/trust/MasterListRead {
+	public final fun getMasterList ()Lio/lightine/tessera/emrtd/trust/MasterList;
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListRead$Unreadable : io/lightine/tessera/emrtd/trust/MasterListRead {
+	public final fun getOffset ()I
+	public final fun getProblem ()Lio/lightine/tessera/emrtd/trust/MasterListProblem;
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListReader {
+	public static final field INSTANCE Lio/lightine/tessera/emrtd/trust/MasterListReader;
+	public final fun read ([BLjava/util/List;)Lio/lightine/tessera/emrtd/trust/MasterListRead;
+	public static synthetic fun read$default (Lio/lightine/tessera/emrtd/trust/MasterListReader;[BLjava/util/List;ILjava/lang/Object;)Lio/lightine/tessera/emrtd/trust/MasterListRead;
+}
+
+public final class io/lightine/tessera/emrtd/trust/TrustAnchor {
+	public static final field Companion Lio/lightine/tessera/emrtd/trust/TrustAnchor$Companion;
+	public final fun encodedBytes ()[B
+	public final fun getNotAfter ()Ljava/lang/String;
+	public final fun getNotBefore ()Ljava/lang/String;
+	public final fun getPublicKeyAlgorithmOid ()Ljava/lang/String;
+	public final fun getSerialNumberHex ()Ljava/lang/String;
+	public final fun getSubjectCommonName ()Ljava/lang/String;
+	public final fun getSubjectCountry ()Ljava/lang/String;
+	public final fun getSubjectKeyIdentifier ()[B
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/trust/TrustAnchor$Companion {
+	public final fun fromDer ([B)Lio/lightine/tessera/emrtd/trust/TrustAnchorParse;
+}
+
+public abstract class io/lightine/tessera/emrtd/trust/TrustAnchorParse {
+}
+
+public final class io/lightine/tessera/emrtd/trust/TrustAnchorParse$Parsed : io/lightine/tessera/emrtd/trust/TrustAnchorParse {
+	public final fun getAnchor ()Lio/lightine/tessera/emrtd/trust/TrustAnchor;
+}
+
+public final class io/lightine/tessera/emrtd/trust/TrustAnchorParse$Unreadable : io/lightine/tessera/emrtd/trust/TrustAnchorParse {
+	public final fun getOffset ()I
+	public final fun getProblem ()Lio/lightine/tessera/emrtd/trust/TrustAnchorProblem;
+}
+
+public final class io/lightine/tessera/emrtd/trust/TrustAnchorProblem : java/lang/Enum {
+	public static final field INVALID_CERTIFICATE_FIELD Lio/lightine/tessera/emrtd/trust/TrustAnchorProblem;
+	public static final field MALFORMED_ENCODING Lio/lightine/tessera/emrtd/trust/TrustAnchorProblem;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/trust/TrustAnchorProblem;
+	public static fun values ()[Lio/lightine/tessera/emrtd/trust/TrustAnchorProblem;
 }
 

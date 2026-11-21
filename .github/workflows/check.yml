@@ -119,7 +119,7 @@ jobs:
 
       # Compiles every module's androidMain (the core modules and mrz-camera's ML Kit recognizer
       # + CameraX scanner). Most host tests run in the `check` job via each module's jvm target;
-      # mrz-camera is Android-only (no jvm target), so its androidHostTest unit tests - the
+      # mrz-camera and emrtd-nfc are Android-only (no jvm target), so their androidHostTest unit tests - the
       # CameraState recoverable/critical classification - run here, where the Android SDK is present.
       # mrz-camera-ui is likewise Android-only (Jetpack Compose), so its androidHostTest suite
       # (a config unit test plus a Robolectric-driven Compose render/callback smoke test) also runs here.
@@ -133,7 +133,7 @@ jobs:
       # `checkKotlinAbi` inside the `check` job: since Kotlin 2.4.20 abiValidation dumps the AGP-KMP
       # android target (api/android/<module>.api), so no separate android ABI step runs here.
       - name: Compile Android targets, run Android host tests, verify ML Kit bundled model
-        run: ./gradlew compileAndroidMain :mrz-camera:testAndroidHostTest :mrz-camera-ui:testAndroidHostTest :types:testAndroidHostTest :mrz-core:testAndroidHostTest :telemetry:testAndroidHostTest :mrz-camera-core:testAndroidHostTest :emrtd-core:testAndroidHostTest :mrz-camera:verifyMlKitBundledModel
+        run: ./gradlew compileAndroidMain :mrz-camera:testAndroidHostTest :mrz-camera-ui:testAndroidHostTest :types:testAndroidHostTest :mrz-core:testAndroidHostTest :telemetry:testAndroidHostTest :mrz-camera-core:testAndroidHostTest :emrtd-core:testAndroidHostTest :emrtd-nfc:testAndroidHostTest :mrz-camera:verifyMlKitBundledModel
 
   # Empty-module release guard (TES-43 pre-0.5.0 item; the v0.2.0 incident class, PR #154):
   # a module that DECLARES a Kotlin/Native target but produces no klib fails its
@@ -329,6 +329,16 @@ jobs:
         run: |
           if git grep -nE '^(public |internal |private )?((inline|suspend|infix|operator|tailrec) )*(fun|val|var) ' -- 'types/src/*.kt'; then
             echo "::error::Top-level function or property in types/ (.claude/rules/types-module-discipline.md)."
+            exit 1
+          fi
+
+      # The chip cryptography's library is an `implementation` dependency (ADR-031 point 2): no
+      # BouncyCastle type may reach the public API, or apps would be tied to its version. The ABI
+      # dumps list every public signature, so a name in them is a leak.
+      - name: No crypto library types in the public API
+        run: |
+          if git grep -nE 'org[./]bouncycastle' -- '*/api/*'; then
+            echo "::error::A BouncyCastle type is in a public API dump (listed above). Keep it internal (ADR-031 point 2)."
             exit 1
           fi
 

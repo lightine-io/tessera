@@ -57,7 +57,9 @@ class NfcUnavailableTest {
 class ChipErrorTextTest {
     private val errors: List<ChipError> =
         listOf(NfcTagLost, NfcTimeout(1234), NfcTimeout(null)) +
-            NfcUnavailable.Reason.entries.map { NfcUnavailable(it) }
+            NfcUnavailable.Reason.entries.map { NfcUnavailable(it) } +
+            listOf(ChipMalformedFile(null, ChipMalformedFile.Reason.NOT_VALID_TLV)) +
+            ChipMalformedFile.Reason.entries.map { ChipMalformedFile(0x0101, it) }
 
     @Test
     fun to_string_is_the_class_name_then_the_description() {
@@ -75,7 +77,7 @@ class ChipErrorTextTest {
     @Test
     fun sample_list_covers_every_concrete_type() {
         assertEquals(errors.size, errors.count { exhaustive(it) })
-        assertEquals(3, errors.map { it::class }.toSet().size)
+        assertEquals(4, errors.map { it::class }.toSet().size)
     }
 
     private fun exhaustive(e: ChipError): Boolean =
@@ -83,6 +85,24 @@ class ChipErrorTextTest {
             is NfcTagLost,
             is NfcTimeout,
             is NfcUnavailable,
+            is ChipMalformedFile,
+            is ChipImageGroupMalformed,
             -> true
         }
+}
+
+class ChipMalformedFileTest {
+    @Test
+    fun is_a_chip_error_that_names_the_file_and_the_reason_without_values() {
+        val error: ChipError = ChipMalformedFile(0x0101, ChipMalformedFile.Reason.MISSING_ELEMENT)
+        assertTrue("0101" in error.description, error.description)
+        assertTrue("missing" in error.description, error.description)
+        assertFalse("0101" in ChipMalformedFile(null, ChipMalformedFile.Reason.MISSING_ELEMENT).description)
+    }
+
+    @Test
+    fun each_reason_has_its_own_text() {
+        val texts = ChipMalformedFile.Reason.entries.map { ChipMalformedFile(null, it).description }
+        assertEquals(texts.size, texts.toSet().size)
+    }
 }
