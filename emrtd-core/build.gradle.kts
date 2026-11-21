@@ -79,6 +79,11 @@ kotlin {
             kotlin.srcDir("src/bouncyCastleMain/kotlin")
             dependencies { implementation(libs.bouncycastle.bcprov) }
         }
+        // The test-time signer for the fake PKI (real signatures with keys made at test time, never
+        // committed) is BouncyCastle too: one file in src/bouncyCastleTest, compiled into both
+        // host test sets the same way. iosTest's `actual` has no signer, so those tests skip there.
+        jvmTest { kotlin.srcDir("src/bouncyCastleTest/kotlin") }
+        matching { it.name == "androidHostTest" }.configureEach { kotlin.srcDir("src/bouncyCastleTest/kotlin") }
         commonTest {
             dependencies {
                 implementation(kotlin("test"))

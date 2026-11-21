@@ -321,3 +321,7 @@ sealed class io.lightine.tessera.emrtd/ChipAccessKey { // io.lightine.tessera.em
         }
     }
 }
+
+final object io.lightine.tessera.emrtd.trust/MasterListReader { // io.lightine.tessera.emrtd.trust/MasterListReader|null[0]
+    final fun read(kotlin/ByteArray, kotlin.collections/List<io.lightine.tessera.emrtd.trust/TrustAnchor> = ...): io.lightine.tessera.emrtd.trust/MasterListRead // io.lightine.tessera.emrtd.trust/MasterListReader.read|read(kotlin.ByteArray;kotlin.collections.List<io.lightine.tessera.emrtd.trust.TrustAnchor>){}[0]
+}
