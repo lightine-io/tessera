@@ -26,3 +26,94 @@ public final class io/lightine/tessera/emrtd/ChipAccessKey$Mrz : io/lightine/tes
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/lightine/tessera/emrtd/lds/CertificateExtensionView {
+	public final fun getCritical ()Z
+	public final fun getOid ()Ljava/lang/String;
+	public final fun getRecognized ()Z
+}
+
+public final class io/lightine/tessera/emrtd/lds/DataGroupHash {
+	public final fun getHash ()[B
+	public final fun getNumber ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class io/lightine/tessera/emrtd/lds/SecurityObjectParse {
+}
+
+public final class io/lightine/tessera/emrtd/lds/SecurityObjectParse$Parsed : io/lightine/tessera/emrtd/lds/SecurityObjectParse {
+	public final fun getView ()Lio/lightine/tessera/emrtd/lds/SecurityObjectView;
+}
+
+public final class io/lightine/tessera/emrtd/lds/SecurityObjectParse$Unreadable : io/lightine/tessera/emrtd/lds/SecurityObjectParse {
+	public final fun getOffset ()I
+	public final fun getProblem ()Lio/lightine/tessera/emrtd/lds/SecurityObjectProblem;
+}
+
+public final class io/lightine/tessera/emrtd/lds/SecurityObjectProblem : java/lang/Enum {
+	public static final field MALFORMED_ENCODING Lio/lightine/tessera/emrtd/lds/SecurityObjectProblem;
+	public static final field NOT_A_SECURITY_OBJECT Lio/lightine/tessera/emrtd/lds/SecurityObjectProblem;
+	public static final field NOT_SIGNED_DATA Lio/lightine/tessera/emrtd/lds/SecurityObjectProblem;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/lds/SecurityObjectProblem;
+	public static fun values ()[Lio/lightine/tessera/emrtd/lds/SecurityObjectProblem;
+}
+
+public final class io/lightine/tessera/emrtd/lds/SecurityObjectSigner {
+	public final fun getDigestAlgorithmOid ()Ljava/lang/String;
+	public final fun getHasSignedAttributes ()Z
+	public final fun getIssuerSerialNumberHex ()Ljava/lang/String;
+	public final fun getMessageDigest ()[B
+	public final fun getSignatureAlgorithmOid ()Ljava/lang/String;
+	public final fun getSubjectKeyIdentifier ()[B
+	public final fun getVersion ()I
+}
+
+public final class io/lightine/tessera/emrtd/lds/SecurityObjectView {
+	public static final field Companion Lio/lightine/tessera/emrtd/lds/SecurityObjectView$Companion;
+	public final fun contentBytes ()[B
+	public final fun getCertificates ()Ljava/util/List;
+	public final fun getDataGroupHashes ()Ljava/util/List;
+	public final fun getHashAlgorithmHasParameters ()Z
+	public final fun getHashAlgorithmName ()Ljava/lang/String;
+	public final fun getHashAlgorithmOid ()Ljava/lang/String;
+	public final fun getLdsVersion ()Ljava/lang/String;
+	public final fun getSignedDataVersion ()I
+	public final fun getSigners ()Ljava/util/List;
+	public final fun getUnicodeVersion ()Ljava/lang/String;
+	public final fun getUnreadableCertificateCount ()I
+	public final fun getVersion ()I
+	public final fun getWasBer ()Z
+	public final fun hashOf (I)[B
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/SecurityObjectView$Companion {
+	public final fun parse ([B)Lio/lightine/tessera/emrtd/lds/SecurityObjectParse;
+}
+
+public final class io/lightine/tessera/emrtd/lds/SignerCertificateView {
+	public final fun encodedBytes ()[B
+	public final fun getAuthorityKeyIdentifier ()[B
+	public final fun getDocumentTypes ()Ljava/util/List;
+	public final fun getExtendedKeyUsage ()Ljava/util/List;
+	public final fun getExtensions ()Ljava/util/List;
+	public final fun getIssuerCommonName ()Ljava/lang/String;
+	public final fun getIssuerCountry ()Ljava/lang/String;
+	public final fun getKeyUsage ()Ljava/util/Set;
+	public final fun getNotAfter ()Ljava/lang/String;
+	public final fun getNotBefore ()Ljava/lang/String;
+	public final fun getPrivateKeyNotAfter ()Ljava/lang/String;
+	public final fun getPrivateKeyNotBefore ()Ljava/lang/String;
+	public final fun getPublicKeyAlgorithmOid ()Ljava/lang/String;
+	public final fun getSerialNumberHex ()Ljava/lang/String;
+	public final fun getSignatureAlgorithmOid ()Ljava/lang/String;
+	public final fun getSubjectCommonName ()Ljava/lang/String;
+	public final fun getSubjectCountry ()Ljava/lang/String;
+	public final fun getSubjectKeyIdentifier ()[B
+	public final fun getUnrecognizedCriticalExtensions ()Ljava/util/List;
+	public final fun getVersion ()I
+	public final fun isCa ()Ljava/lang/Boolean;
+	public fun toString ()Ljava/lang/String;
+}
+

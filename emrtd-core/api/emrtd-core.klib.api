@@ -6,6 +6,18 @@
 // - Show declarations: true
 
 // Library unique name: <io.lightine.tessera:emrtd-core>
+final enum class io.lightine.tessera.emrtd.lds/SecurityObjectProblem : kotlin/Enum<io.lightine.tessera.emrtd.lds/SecurityObjectProblem> { // io.lightine.tessera.emrtd.lds/SecurityObjectProblem|null[0]
+    enum entry MALFORMED_ENCODING // io.lightine.tessera.emrtd.lds/SecurityObjectProblem.MALFORMED_ENCODING|null[0]
+    enum entry NOT_A_SECURITY_OBJECT // io.lightine.tessera.emrtd.lds/SecurityObjectProblem.NOT_A_SECURITY_OBJECT|null[0]
+    enum entry NOT_SIGNED_DATA // io.lightine.tessera.emrtd.lds/SecurityObjectProblem.NOT_SIGNED_DATA|null[0]
+
+    final val entries // io.lightine.tessera.emrtd.lds/SecurityObjectProblem.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd.lds/SecurityObjectProblem> // io.lightine.tessera.emrtd.lds/SecurityObjectProblem.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd.lds/SecurityObjectProblem // io.lightine.tessera.emrtd.lds/SecurityObjectProblem.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd.lds/SecurityObjectProblem> // io.lightine.tessera.emrtd.lds/SecurityObjectProblem.values|values#static(){}[0]
+}
+
 abstract interface io.lightine.tessera.emrtd/ApduTransport { // io.lightine.tessera.emrtd/ApduTransport|null[0]
     abstract val maxCommandLength // io.lightine.tessera.emrtd/ApduTransport.maxCommandLength|{}maxCommandLength[0]
         abstract fun <get-maxCommandLength>(): kotlin/Int // io.lightine.tessera.emrtd/ApduTransport.maxCommandLength.<get-maxCommandLength>|<get-maxCommandLength>(){}[0]
@@ -15,11 +27,141 @@ abstract interface io.lightine.tessera.emrtd/ApduTransport { // io.lightine.tess
     abstract suspend fun transceive(kotlin/ByteArray): kotlin/ByteArray // io.lightine.tessera.emrtd/ApduTransport.transceive|transceive(kotlin.ByteArray){}[0]
 }
 
+final class io.lightine.tessera.emrtd.lds/CertificateExtensionView { // io.lightine.tessera.emrtd.lds/CertificateExtensionView|null[0]
+    final val critical // io.lightine.tessera.emrtd.lds/CertificateExtensionView.critical|{}critical[0]
+        final fun <get-critical>(): kotlin/Boolean // io.lightine.tessera.emrtd.lds/CertificateExtensionView.critical.<get-critical>|<get-critical>(){}[0]
+    final val oid // io.lightine.tessera.emrtd.lds/CertificateExtensionView.oid|{}oid[0]
+        final fun <get-oid>(): kotlin/String // io.lightine.tessera.emrtd.lds/CertificateExtensionView.oid.<get-oid>|<get-oid>(){}[0]
+    final val recognized // io.lightine.tessera.emrtd.lds/CertificateExtensionView.recognized|{}recognized[0]
+        final fun <get-recognized>(): kotlin/Boolean // io.lightine.tessera.emrtd.lds/CertificateExtensionView.recognized.<get-recognized>|<get-recognized>(){}[0]
+}
+
+final class io.lightine.tessera.emrtd.lds/DataGroupHash { // io.lightine.tessera.emrtd.lds/DataGroupHash|null[0]
+    final val hash // io.lightine.tessera.emrtd.lds/DataGroupHash.hash|{}hash[0]
+        final fun <get-hash>(): kotlin/ByteArray // io.lightine.tessera.emrtd.lds/DataGroupHash.hash.<get-hash>|<get-hash>(){}[0]
+    final val number // io.lightine.tessera.emrtd.lds/DataGroupHash.number|{}number[0]
+        final fun <get-number>(): kotlin/Int // io.lightine.tessera.emrtd.lds/DataGroupHash.number.<get-number>|<get-number>(){}[0]
+
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/DataGroupHash.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.emrtd.lds/SecurityObjectSigner { // io.lightine.tessera.emrtd.lds/SecurityObjectSigner|null[0]
+    final val digestAlgorithmOid // io.lightine.tessera.emrtd.lds/SecurityObjectSigner.digestAlgorithmOid|{}digestAlgorithmOid[0]
+        final fun <get-digestAlgorithmOid>(): kotlin/String // io.lightine.tessera.emrtd.lds/SecurityObjectSigner.digestAlgorithmOid.<get-digestAlgorithmOid>|<get-digestAlgorithmOid>(){}[0]
+    final val hasSignedAttributes // io.lightine.tessera.emrtd.lds/SecurityObjectSigner.hasSignedAttributes|{}hasSignedAttributes[0]
+        final fun <get-hasSignedAttributes>(): kotlin/Boolean // io.lightine.tessera.emrtd.lds/SecurityObjectSigner.hasSignedAttributes.<get-hasSignedAttributes>|<get-hasSignedAttributes>(){}[0]
+    final val issuerSerialNumberHex // io.lightine.tessera.emrtd.lds/SecurityObjectSigner.issuerSerialNumberHex|{}issuerSerialNumberHex[0]
+        final fun <get-issuerSerialNumberHex>(): kotlin/String? // io.lightine.tessera.emrtd.lds/SecurityObjectSigner.issuerSerialNumberHex.<get-issuerSerialNumberHex>|<get-issuerSerialNumberHex>(){}[0]
+    final val messageDigest // io.lightine.tessera.emrtd.lds/SecurityObjectSigner.messageDigest|{}messageDigest[0]
+        final fun <get-messageDigest>(): kotlin/ByteArray? // io.lightine.tessera.emrtd.lds/SecurityObjectSigner.messageDigest.<get-messageDigest>|<get-messageDigest>(){}[0]
+    final val signatureAlgorithmOid // io.lightine.tessera.emrtd.lds/SecurityObjectSigner.signatureAlgorithmOid|{}signatureAlgorithmOid[0]
+        final fun <get-signatureAlgorithmOid>(): kotlin/String // io.lightine.tessera.emrtd.lds/SecurityObjectSigner.signatureAlgorithmOid.<get-signatureAlgorithmOid>|<get-signatureAlgorithmOid>(){}[0]
+    final val subjectKeyIdentifier // io.lightine.tessera.emrtd.lds/SecurityObjectSigner.subjectKeyIdentifier|{}subjectKeyIdentifier[0]
+        final fun <get-subjectKeyIdentifier>(): kotlin/ByteArray? // io.lightine.tessera.emrtd.lds/SecurityObjectSigner.subjectKeyIdentifier.<get-subjectKeyIdentifier>|<get-subjectKeyIdentifier>(){}[0]
+    final val version // io.lightine.tessera.emrtd.lds/SecurityObjectSigner.version|{}version[0]
+        final fun <get-version>(): kotlin/Int // io.lightine.tessera.emrtd.lds/SecurityObjectSigner.version.<get-version>|<get-version>(){}[0]
+}
+
+final class io.lightine.tessera.emrtd.lds/SecurityObjectView { // io.lightine.tessera.emrtd.lds/SecurityObjectView|null[0]
+    final val certificates // io.lightine.tessera.emrtd.lds/SecurityObjectView.certificates|{}certificates[0]
+        final fun <get-certificates>(): kotlin.collections/List<io.lightine.tessera.emrtd.lds/SignerCertificateView> // io.lightine.tessera.emrtd.lds/SecurityObjectView.certificates.<get-certificates>|<get-certificates>(){}[0]
+    final val dataGroupHashes // io.lightine.tessera.emrtd.lds/SecurityObjectView.dataGroupHashes|{}dataGroupHashes[0]
+        final fun <get-dataGroupHashes>(): kotlin.collections/List<io.lightine.tessera.emrtd.lds/DataGroupHash> // io.lightine.tessera.emrtd.lds/SecurityObjectView.dataGroupHashes.<get-dataGroupHashes>|<get-dataGroupHashes>(){}[0]
+    final val hashAlgorithmHasParameters // io.lightine.tessera.emrtd.lds/SecurityObjectView.hashAlgorithmHasParameters|{}hashAlgorithmHasParameters[0]
+        final fun <get-hashAlgorithmHasParameters>(): kotlin/Boolean // io.lightine.tessera.emrtd.lds/SecurityObjectView.hashAlgorithmHasParameters.<get-hashAlgorithmHasParameters>|<get-hashAlgorithmHasParameters>(){}[0]
+    final val hashAlgorithmName // io.lightine.tessera.emrtd.lds/SecurityObjectView.hashAlgorithmName|{}hashAlgorithmName[0]
+        final fun <get-hashAlgorithmName>(): kotlin/String? // io.lightine.tessera.emrtd.lds/SecurityObjectView.hashAlgorithmName.<get-hashAlgorithmName>|<get-hashAlgorithmName>(){}[0]
+    final val hashAlgorithmOid // io.lightine.tessera.emrtd.lds/SecurityObjectView.hashAlgorithmOid|{}hashAlgorithmOid[0]
+        final fun <get-hashAlgorithmOid>(): kotlin/String // io.lightine.tessera.emrtd.lds/SecurityObjectView.hashAlgorithmOid.<get-hashAlgorithmOid>|<get-hashAlgorithmOid>(){}[0]
+    final val ldsVersion // io.lightine.tessera.emrtd.lds/SecurityObjectView.ldsVersion|{}ldsVersion[0]
+        final fun <get-ldsVersion>(): kotlin/String? // io.lightine.tessera.emrtd.lds/SecurityObjectView.ldsVersion.<get-ldsVersion>|<get-ldsVersion>(){}[0]
+    final val signedDataVersion // io.lightine.tessera.emrtd.lds/SecurityObjectView.signedDataVersion|{}signedDataVersion[0]
+        final fun <get-signedDataVersion>(): kotlin/Int // io.lightine.tessera.emrtd.lds/SecurityObjectView.signedDataVersion.<get-signedDataVersion>|<get-signedDataVersion>(){}[0]
+    final val signers // io.lightine.tessera.emrtd.lds/SecurityObjectView.signers|{}signers[0]
+        final fun <get-signers>(): kotlin.collections/List<io.lightine.tessera.emrtd.lds/SecurityObjectSigner> // io.lightine.tessera.emrtd.lds/SecurityObjectView.signers.<get-signers>|<get-signers>(){}[0]
+    final val unicodeVersion // io.lightine.tessera.emrtd.lds/SecurityObjectView.unicodeVersion|{}unicodeVersion[0]
+        final fun <get-unicodeVersion>(): kotlin/String? // io.lightine.tessera.emrtd.lds/SecurityObjectView.unicodeVersion.<get-unicodeVersion>|<get-unicodeVersion>(){}[0]
+    final val unreadableCertificateCount // io.lightine.tessera.emrtd.lds/SecurityObjectView.unreadableCertificateCount|{}unreadableCertificateCount[0]
+        final fun <get-unreadableCertificateCount>(): kotlin/Int // io.lightine.tessera.emrtd.lds/SecurityObjectView.unreadableCertificateCount.<get-unreadableCertificateCount>|<get-unreadableCertificateCount>(){}[0]
+    final val version // io.lightine.tessera.emrtd.lds/SecurityObjectView.version|{}version[0]
+        final fun <get-version>(): kotlin/Int // io.lightine.tessera.emrtd.lds/SecurityObjectView.version.<get-version>|<get-version>(){}[0]
+    final val wasBer // io.lightine.tessera.emrtd.lds/SecurityObjectView.wasBer|{}wasBer[0]
+        final fun <get-wasBer>(): kotlin/Boolean // io.lightine.tessera.emrtd.lds/SecurityObjectView.wasBer.<get-wasBer>|<get-wasBer>(){}[0]
+
+    final fun contentBytes(): kotlin/ByteArray // io.lightine.tessera.emrtd.lds/SecurityObjectView.contentBytes|contentBytes(){}[0]
+    final fun hashOf(kotlin/Int): kotlin/ByteArray? // io.lightine.tessera.emrtd.lds/SecurityObjectView.hashOf|hashOf(kotlin.Int){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/SecurityObjectView.toString|toString(){}[0]
+
+    final object Companion { // io.lightine.tessera.emrtd.lds/SecurityObjectView.Companion|null[0]
+        final fun parse(kotlin/ByteArray): io.lightine.tessera.emrtd.lds/SecurityObjectParse // io.lightine.tessera.emrtd.lds/SecurityObjectView.Companion.parse|parse(kotlin.ByteArray){}[0]
+    }
+}
+
+final class io.lightine.tessera.emrtd.lds/SignerCertificateView { // io.lightine.tessera.emrtd.lds/SignerCertificateView|null[0]
+    final val authorityKeyIdentifier // io.lightine.tessera.emrtd.lds/SignerCertificateView.authorityKeyIdentifier|{}authorityKeyIdentifier[0]
+        final fun <get-authorityKeyIdentifier>(): kotlin/ByteArray? // io.lightine.tessera.emrtd.lds/SignerCertificateView.authorityKeyIdentifier.<get-authorityKeyIdentifier>|<get-authorityKeyIdentifier>(){}[0]
+    final val documentTypes // io.lightine.tessera.emrtd.lds/SignerCertificateView.documentTypes|{}documentTypes[0]
+        final fun <get-documentTypes>(): kotlin.collections/List<kotlin/String>? // io.lightine.tessera.emrtd.lds/SignerCertificateView.documentTypes.<get-documentTypes>|<get-documentTypes>(){}[0]
+    final val extendedKeyUsage // io.lightine.tessera.emrtd.lds/SignerCertificateView.extendedKeyUsage|{}extendedKeyUsage[0]
+        final fun <get-extendedKeyUsage>(): kotlin.collections/List<kotlin/String>? // io.lightine.tessera.emrtd.lds/SignerCertificateView.extendedKeyUsage.<get-extendedKeyUsage>|<get-extendedKeyUsage>(){}[0]
+    final val extensions // io.lightine.tessera.emrtd.lds/SignerCertificateView.extensions|{}extensions[0]
+        final fun <get-extensions>(): kotlin.collections/List<io.lightine.tessera.emrtd.lds/CertificateExtensionView> // io.lightine.tessera.emrtd.lds/SignerCertificateView.extensions.<get-extensions>|<get-extensions>(){}[0]
+    final val isCa // io.lightine.tessera.emrtd.lds/SignerCertificateView.isCa|{}isCa[0]
+        final fun <get-isCa>(): kotlin/Boolean? // io.lightine.tessera.emrtd.lds/SignerCertificateView.isCa.<get-isCa>|<get-isCa>(){}[0]
+    final val issuerCommonName // io.lightine.tessera.emrtd.lds/SignerCertificateView.issuerCommonName|{}issuerCommonName[0]
+        final fun <get-issuerCommonName>(): kotlin/String? // io.lightine.tessera.emrtd.lds/SignerCertificateView.issuerCommonName.<get-issuerCommonName>|<get-issuerCommonName>(){}[0]
+    final val issuerCountry // io.lightine.tessera.emrtd.lds/SignerCertificateView.issuerCountry|{}issuerCountry[0]
+        final fun <get-issuerCountry>(): kotlin/String? // io.lightine.tessera.emrtd.lds/SignerCertificateView.issuerCountry.<get-issuerCountry>|<get-issuerCountry>(){}[0]
+    final val keyUsage // io.lightine.tessera.emrtd.lds/SignerCertificateView.keyUsage|{}keyUsage[0]
+        final fun <get-keyUsage>(): kotlin.collections/Set<kotlin/String>? // io.lightine.tessera.emrtd.lds/SignerCertificateView.keyUsage.<get-keyUsage>|<get-keyUsage>(){}[0]
+    final val notAfter // io.lightine.tessera.emrtd.lds/SignerCertificateView.notAfter|{}notAfter[0]
+        final fun <get-notAfter>(): kotlin/String // io.lightine.tessera.emrtd.lds/SignerCertificateView.notAfter.<get-notAfter>|<get-notAfter>(){}[0]
+    final val notBefore // io.lightine.tessera.emrtd.lds/SignerCertificateView.notBefore|{}notBefore[0]
+        final fun <get-notBefore>(): kotlin/String // io.lightine.tessera.emrtd.lds/SignerCertificateView.notBefore.<get-notBefore>|<get-notBefore>(){}[0]
+    final val privateKeyNotAfter // io.lightine.tessera.emrtd.lds/SignerCertificateView.privateKeyNotAfter|{}privateKeyNotAfter[0]
+        final fun <get-privateKeyNotAfter>(): kotlin/String? // io.lightine.tessera.emrtd.lds/SignerCertificateView.privateKeyNotAfter.<get-privateKeyNotAfter>|<get-privateKeyNotAfter>(){}[0]
+    final val privateKeyNotBefore // io.lightine.tessera.emrtd.lds/SignerCertificateView.privateKeyNotBefore|{}privateKeyNotBefore[0]
+        final fun <get-privateKeyNotBefore>(): kotlin/String? // io.lightine.tessera.emrtd.lds/SignerCertificateView.privateKeyNotBefore.<get-privateKeyNotBefore>|<get-privateKeyNotBefore>(){}[0]
+    final val publicKeyAlgorithmOid // io.lightine.tessera.emrtd.lds/SignerCertificateView.publicKeyAlgorithmOid|{}publicKeyAlgorithmOid[0]
+        final fun <get-publicKeyAlgorithmOid>(): kotlin/String // io.lightine.tessera.emrtd.lds/SignerCertificateView.publicKeyAlgorithmOid.<get-publicKeyAlgorithmOid>|<get-publicKeyAlgorithmOid>(){}[0]
+    final val serialNumberHex // io.lightine.tessera.emrtd.lds/SignerCertificateView.serialNumberHex|{}serialNumberHex[0]
+        final fun <get-serialNumberHex>(): kotlin/String // io.lightine.tessera.emrtd.lds/SignerCertificateView.serialNumberHex.<get-serialNumberHex>|<get-serialNumberHex>(){}[0]
+    final val signatureAlgorithmOid // io.lightine.tessera.emrtd.lds/SignerCertificateView.signatureAlgorithmOid|{}signatureAlgorithmOid[0]
+        final fun <get-signatureAlgorithmOid>(): kotlin/String // io.lightine.tessera.emrtd.lds/SignerCertificateView.signatureAlgorithmOid.<get-signatureAlgorithmOid>|<get-signatureAlgorithmOid>(){}[0]
+    final val subjectCommonName // io.lightine.tessera.emrtd.lds/SignerCertificateView.subjectCommonName|{}subjectCommonName[0]
+        final fun <get-subjectCommonName>(): kotlin/String? // io.lightine.tessera.emrtd.lds/SignerCertificateView.subjectCommonName.<get-subjectCommonName>|<get-subjectCommonName>(){}[0]
+    final val subjectCountry // io.lightine.tessera.emrtd.lds/SignerCertificateView.subjectCountry|{}subjectCountry[0]
+        final fun <get-subjectCountry>(): kotlin/String? // io.lightine.tessera.emrtd.lds/SignerCertificateView.subjectCountry.<get-subjectCountry>|<get-subjectCountry>(){}[0]
+    final val subjectKeyIdentifier // io.lightine.tessera.emrtd.lds/SignerCertificateView.subjectKeyIdentifier|{}subjectKeyIdentifier[0]
+        final fun <get-subjectKeyIdentifier>(): kotlin/ByteArray? // io.lightine.tessera.emrtd.lds/SignerCertificateView.subjectKeyIdentifier.<get-subjectKeyIdentifier>|<get-subjectKeyIdentifier>(){}[0]
+    final val unrecognizedCriticalExtensions // io.lightine.tessera.emrtd.lds/SignerCertificateView.unrecognizedCriticalExtensions|{}unrecognizedCriticalExtensions[0]
+        final fun <get-unrecognizedCriticalExtensions>(): kotlin.collections/List<kotlin/String> // io.lightine.tessera.emrtd.lds/SignerCertificateView.unrecognizedCriticalExtensions.<get-unrecognizedCriticalExtensions>|<get-unrecognizedCriticalExtensions>(){}[0]
+    final val version // io.lightine.tessera.emrtd.lds/SignerCertificateView.version|{}version[0]
+        final fun <get-version>(): kotlin/Int // io.lightine.tessera.emrtd.lds/SignerCertificateView.version.<get-version>|<get-version>(){}[0]
+
+    final fun encodedBytes(): kotlin/ByteArray // io.lightine.tessera.emrtd.lds/SignerCertificateView.encodedBytes|encodedBytes(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/SignerCertificateView.toString|toString(){}[0]
+}
+
 final class io.lightine.tessera.emrtd/ApduTransportException : kotlin/Exception { // io.lightine.tessera.emrtd/ApduTransportException|null[0]
     constructor <init>(io.lightine.tessera.types.errors/NfcError, kotlin/Throwable? = ...) // io.lightine.tessera.emrtd/ApduTransportException.<init>|<init>(io.lightine.tessera.types.errors.NfcError;kotlin.Throwable?){}[0]
 
     final val error // io.lightine.tessera.emrtd/ApduTransportException.error|{}error[0]
         final fun <get-error>(): io.lightine.tessera.types.errors/NfcError // io.lightine.tessera.emrtd/ApduTransportException.error.<get-error>|<get-error>(){}[0]
+}
+
+sealed class io.lightine.tessera.emrtd.lds/SecurityObjectParse { // io.lightine.tessera.emrtd.lds/SecurityObjectParse|null[0]
+    final class Parsed : io.lightine.tessera.emrtd.lds/SecurityObjectParse { // io.lightine.tessera.emrtd.lds/SecurityObjectParse.Parsed|null[0]
+        final val view // io.lightine.tessera.emrtd.lds/SecurityObjectParse.Parsed.view|{}view[0]
+            final fun <get-view>(): io.lightine.tessera.emrtd.lds/SecurityObjectView // io.lightine.tessera.emrtd.lds/SecurityObjectParse.Parsed.view.<get-view>|<get-view>(){}[0]
+    }
+
+    final class Unreadable : io.lightine.tessera.emrtd.lds/SecurityObjectParse { // io.lightine.tessera.emrtd.lds/SecurityObjectParse.Unreadable|null[0]
+        final val offset // io.lightine.tessera.emrtd.lds/SecurityObjectParse.Unreadable.offset|{}offset[0]
+            final fun <get-offset>(): kotlin/Int // io.lightine.tessera.emrtd.lds/SecurityObjectParse.Unreadable.offset.<get-offset>|<get-offset>(){}[0]
+        final val problem // io.lightine.tessera.emrtd.lds/SecurityObjectParse.Unreadable.problem|{}problem[0]
+            final fun <get-problem>(): io.lightine.tessera.emrtd.lds/SecurityObjectProblem // io.lightine.tessera.emrtd.lds/SecurityObjectParse.Unreadable.problem.<get-problem>|<get-problem>(){}[0]
+    }
 }
 
 sealed class io.lightine.tessera.emrtd/ChipAccessKey { // io.lightine.tessera.emrtd/ChipAccessKey|null[0]
