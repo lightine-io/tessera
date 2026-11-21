@@ -38,5 +38,9 @@ sealed class io.lightine.tessera.emrtd/ChipAccessKey { // io.lightine.tessera.em
         constructor <init>(kotlin/String, kotlin/Char, kotlin/String, kotlin/Char, kotlin/String, kotlin/Char) // io.lightine.tessera.emrtd/ChipAccessKey.Mrz.<init>|<init>(kotlin.String;kotlin.Char;kotlin.String;kotlin.Char;kotlin.String;kotlin.Char){}[0]
 
         final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipAccessKey.Mrz.toString|toString(){}[0]
+
+        final object Companion { // io.lightine.tessera.emrtd/ChipAccessKey.Mrz.Companion|null[0]
+            final fun fromPrintedFields(kotlin/String, kotlin/Char, kotlin/String, kotlin/String, kotlin/Char, kotlin/String, kotlin/Char): io.lightine.tessera.emrtd/ChipAccessKey.Mrz // io.lightine.tessera.emrtd/ChipAccessKey.Mrz.Companion.fromPrintedFields|fromPrintedFields(kotlin.String;kotlin.Char;kotlin.String;kotlin.String;kotlin.Char;kotlin.String;kotlin.Char){}[0]
+        }
     }
 }

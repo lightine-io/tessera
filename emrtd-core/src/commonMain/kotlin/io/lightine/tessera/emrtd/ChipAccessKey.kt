@@ -1,6 +1,7 @@
 package io.lightine.tessera.emrtd
 
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
+import kotlin.jvm.JvmStatic
 
 /**
  * What opens a document's chip: values from its MRZ, or its card access number (CAN).
@@ -54,14 +55,23 @@ public sealed class ChipAccessKey {
      *
      * Every value may hold only the MRZ characters `A` to `Z`, `0` to `9` and `<`.
      *
-     * @param documentNumber The document number field as printed, at least one character.
-     * @param documentNumberCheckDigit The check digit printed after the document number.
+     * The document number is always the complete number (Doc 9303 Part 11, section 9.7.3). On a
+     * TD1 or TD2 document whose number is longer than nine characters, the number field holds only
+     * its first nine, the check-digit place holds a filler (`<`), and the rest of the number and its
+     * check digit sit at the start of the optional data. Give such a number whole, with its real
+     * check digit, or let [fromPrintedFields] join it from the printed fields.
+     *
+     * @param documentNumber The complete document number as printed, at least one character: the
+     *   nine-character field with its fillers, or a longer number joined from the optional data.
+     * @param documentNumberCheckDigit The check digit of the document number, as printed.
      * @param dateOfBirth The date of birth as printed, six characters (`YYMMDD`).
      * @param dateOfBirthCheckDigit The check digit printed after the date of birth.
      * @param dateOfExpiry The date of expiry as printed, six characters (`YYMMDD`).
      * @param dateOfExpiryCheckDigit The check digit printed after the date of expiry.
      * @throws IllegalArgumentException when a value is empty, has the wrong length, or holds a
-     *   character outside the MRZ characters. The message names the parameter, never the value.
+     *   character outside the MRZ characters, or when [documentNumberCheckDigit] is `<`: that filler
+     *   marks a number that goes on in the optional data, so the number given is not complete. The
+     *   message names the parameter, never the value.
      * @since 1.0.0
      */
     @ExperimentalTesseraChipApi
@@ -83,6 +93,10 @@ public sealed class ChipAccessKey {
                 requireDate(dateOfBirth, "dateOfBirth")
                 requireDate(dateOfExpiry, "dateOfExpiry")
                 requireMrzCharacter(documentNumberCheckDigit, "documentNumberCheckDigit")
+                require(documentNumberCheckDigit != FILLER) {
+                    "documentNumberCheckDigit is a filler: the document number goes on in the optional data; " +
+                        "give the complete number or use fromPrintedFields"
+                }
                 requireMrzCharacter(dateOfBirthCheckDigit, "dateOfBirthCheckDigit")
                 requireMrzCharacter(dateOfExpiryCheckDigit, "dateOfExpiryCheckDigit")
                 // The MRZ information of Doc 9303 Part 11, section 4.3.2: each field followed by its
@@ -95,6 +109,84 @@ public sealed class ChipAccessKey {
 
             /** `ChipAccessKey.Mrz`, without the values. */
             override fun toString(): String = "ChipAccessKey.Mrz"
+
+            /** Builds an MRZ key from the fields as printed. */
+            public companion object {
+                /**
+                 * A key from the fields as printed in a TD1 or TD2 MRZ, where a document number
+                 * longer than nine characters continues in the optional data.
+                 *
+                 * Doc 9303 Part 5, section 4.2.2, note j (TD1) and Part 6, section 4.2.2, note j
+                 * (TD2): such a number shows its first nine characters in the number field and a
+                 * filler (`<`) in the check-digit place; the rest of the number, its check digit and
+                 * a filler start the optional data. Part 11, section 9.7.3: the key uses the complete number, joined
+                 * without that filler.
+                 *
+                 * When [documentNumberCheckDigit] is a digit, the number is complete as printed,
+                 * [optionalData] is not used, and the result is the same as the [Mrz] constructor.
+                 * When it is `<`, the number is [documentNumberField] followed by the characters of
+                 * [optionalData] up to its first filler, less the last of them, which is the check
+                 * digit. Nothing is corrected: every character is used as printed.
+                 *
+                 * For a TD3 passport, whose number field has no such extension, use the
+                 * constructor.
+                 *
+                 * @param documentNumberField The nine-character document number field as printed.
+                 * @param documentNumberCheckDigit The character printed after the number field: a
+                 *   check digit, or `<` for a longer number.
+                 * @param optionalData The optional data field as printed: on TD1 the 15 characters
+                 *   of the upper line after the check-digit place, on TD2 the 7 characters before
+                 *   the composite check digit.
+                 * @param dateOfBirth The date of birth as printed, six characters (`YYMMDD`).
+                 * @param dateOfBirthCheckDigit The check digit printed after the date of birth.
+                 * @param dateOfExpiry The date of expiry as printed, six characters (`YYMMDD`).
+                 * @param dateOfExpiryCheckDigit The check digit printed after the date of expiry.
+                 * @throws IllegalArgumentException when a value has the wrong length or holds a
+                 *   character outside the MRZ characters, or when the number field says the number
+                 *   continues but the optional data does not start with at least one character and
+                 *   a check digit before a filler. The message names the parameter, never the value.
+                 * @since 1.0.0
+                 */
+                @JvmStatic
+                @Throws(IllegalArgumentException::class)
+                public fun fromPrintedFields(
+                    documentNumberField: String,
+                    documentNumberCheckDigit: Char,
+                    optionalData: String,
+                    dateOfBirth: String,
+                    dateOfBirthCheckDigit: Char,
+                    dateOfExpiry: String,
+                    dateOfExpiryCheckDigit: Char,
+                ): Mrz {
+                    require(documentNumberField.length == DOCUMENT_NUMBER_FIELD_LENGTH) {
+                        "documentNumberField must have $DOCUMENT_NUMBER_FIELD_LENGTH characters, has ${documentNumberField.length}"
+                    }
+                    requireMrzCharacters(documentNumberField, "documentNumberField")
+                    requireMrzCharacters(optionalData, "optionalData")
+                    if (documentNumberCheckDigit != FILLER) {
+                        return Mrz(
+                            documentNumberField,
+                            documentNumberCheckDigit,
+                            dateOfBirth,
+                            dateOfBirthCheckDigit,
+                            dateOfExpiry,
+                            dateOfExpiryCheckDigit,
+                        )
+                    }
+                    val end = optionalData.indexOf(FILLER).let { if (it < 0) optionalData.length else it }
+                    require(end >= 2) {
+                        "optionalData does not hold the rest of the document number and its check digit"
+                    }
+                    return Mrz(
+                        documentNumberField + optionalData.substring(0, end - 1),
+                        optionalData[end - 1],
+                        dateOfBirth,
+                        dateOfBirthCheckDigit,
+                        dateOfExpiry,
+                        dateOfExpiryCheckDigit,
+                    )
+                }
+            }
         }
 
     /**
@@ -125,7 +217,11 @@ public sealed class ChipAccessKey {
         }
 }
 
-private fun isMrzCharacter(c: Char): Boolean = c in 'A'..'Z' || c in '0'..'9' || c == '<'
+private const val FILLER = '<'
+
+private const val DOCUMENT_NUMBER_FIELD_LENGTH = 9
+
+private fun isMrzCharacter(c: Char): Boolean = c in 'A'..'Z' || c in '0'..'9' || c == FILLER
 
 private fun requireMrzCharacter(
     c: Char,

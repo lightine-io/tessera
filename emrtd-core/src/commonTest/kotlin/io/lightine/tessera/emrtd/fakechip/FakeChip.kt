@@ -67,6 +67,18 @@ internal class FakeChip(
         return core(apdu).encode()
     }
 
+    /**
+     * Answers [command] with the handlers after [after] and then the core, without recording it:
+     * secure messaging unwraps a protected command and passes the plain one on here.
+     */
+    fun answerInner(
+        command: CommandApdu,
+        after: FakeCommandHandler,
+    ): ResponseApdu {
+        handlers.drop(handlers.indexOf(after) + 1).forEach { h -> h.handle(this, command)?.let { return it } }
+        return core(command)
+    }
+
     private fun core(c: CommandApdu): ResponseApdu {
         if (c.cla and CommandApdu.CLA_CHAINING_BIT != 0) return status(StatusWord.CHAINING_NOT_SUPPORTED)
         if (c.cla != 0x00) return status(StatusWord.CLA_NOT_SUPPORTED)
