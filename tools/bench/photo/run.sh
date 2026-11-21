@@ -9,7 +9,7 @@
 #   4. the same app also runs a rescue experiment (find the MRZ rows, crop, read again), and
 #      score.py prints the per-variant table and the experiment's gain.
 #
-# Usage: tools/photo-bench/run.sh [out-dir]   (run from anywhere; needs one running Android emulator)
+# Usage: tools/bench/photo/run.sh [out-dir]   (run from anywhere; needs one running Android emulator)
 # Images and results stay in out-dir; never commit them.
 #
 # The OCR-B font is the one inside the iOS Simulator runtime (the same one the TES-149 bench uses).
@@ -18,12 +18,12 @@
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
-repo="$(cd "$here/../.." && pwd)"
+repo="$(cd "$here/../../.." && pwd)"
 out="${1:-${TMPDIR:-/tmp}/tessera-photo-bench}"
 mkdir -p "$out"
 
 echo "== 1. ground truth"
-"$repo/gradlew" -q -p "$here/generator" run --args="$out/manifest.tsv ${PER_FORMAT:-8} 131"
+"$repo/gradlew" -q -p "$here/../generator" run --args="photo $out/manifest.tsv ${PER_FORMAT:-8} 131"
 
 echo "== 2. photos"
 font="${OCRB_FONT:-$(find /private/var/run/com.apple.security.cryptexd/mnt /Library/Developer/CoreSimulator \

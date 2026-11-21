@@ -6,7 +6,7 @@
 #   4. ML Kit reads them on a running Android emulator;
 #   5. score.py prints the result tables.
 #
-# Usage: tools/ocr-bench/run.sh [out-dir]   (run from the repo root)
+# Usage: tools/bench/ocr/run.sh [out-dir]   (run from the repo root)
 # Needs: a booted iOS Simulator (SKIP_IOS=1 to skip) and one running Android emulator
 # (SKIP_ANDROID=1 to skip). Images and results stay in out-dir; never commit them.
 #
@@ -15,12 +15,12 @@
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
-repo="$(cd "$here/../.." && pwd)"
+repo="$(cd "$here/../../.." && pwd)"
 out="${1:-${TMPDIR:-/tmp}/tessera-ocr-bench}"
 mkdir -p "$out"
 
 echo "== 1. ground truth"
-"$repo/gradlew" -q -p "$here/generator" run --args="$out/manifest.tsv 20 149"
+"$repo/gradlew" -q -p "$here/../generator" run --args="ocr $out/manifest.tsv 20 149"
 
 echo "== 2. images"
 shopt -s nullglob

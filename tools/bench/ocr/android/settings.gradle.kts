@@ -18,6 +18,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ocr-bench-android"
+rootProject.name = "bench-ocr-android"
 
 include(":app")

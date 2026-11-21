@@ -1,6 +1,6 @@
-// The OCR benchmark's test-set generator (TES-131). A standalone build, not part of the Tessera
-// build: nothing here ships. It uses the live mrz-core through a composite build, so the MRZ text
-// comes from Tessera's own generator.
+// The benchmarks' shared test-set generator (the OCR line set, TES-149, and the full-page photo
+// set, TES-131). A standalone build, not part of the Tessera build: nothing here ships. It uses
+// the live mrz-core through a composite build, so the MRZ text comes from Tessera's own generator.
 
 pluginManagement {
     repositories {
@@ -15,7 +15,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "photo-bench-generator"
+rootProject.name = "bench-generator"
 
 includeBuild("../../..") {
     dependencySubstitution {

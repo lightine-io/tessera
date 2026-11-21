@@ -19,8 +19,8 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "photo-bench-android"
+rootProject.name = "bench-photo-android"
 
-includeBuild("../../..")
+includeBuild("../../../..")
 
 include(":app")
