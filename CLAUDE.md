@@ -23,6 +23,9 @@ Full principles: [KB TES-A-5](https://lightine.youtrack.cloud/articles/TES-A-5).
 
 - No credentials or secrets in commits. Checked server side by GitHub secret scanning
   with push protection, on every push.
+- No secret file is read into a session: keys, key stores, token and credential files.
+  A project hook (`scripts/block-secret-reads.sh`) blocks file tools and common Bash
+  reads of them; the owner reads such a file outside the session.
 - No private content (private terms; organization names, standards bodies ICAO and
   ISO/IEC excepted) in commits, `gh` text, or YouTrack writes. Checked only by local
   hooks on the maintainer's machine, because the terms list is private. Nothing else
