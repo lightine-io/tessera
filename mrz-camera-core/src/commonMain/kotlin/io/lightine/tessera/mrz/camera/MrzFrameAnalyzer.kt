@@ -15,7 +15,9 @@ import kotlin.time.Instant
  * Analyses one camera frame: runs OCR, locates an MRZ, parses it, and returns a [MrzScanResult].
  *
  * Before parsing it folds case to upper and maps out-of-alphabet chevron glyphs to `<`;
- * [ParsingMode.LENIENT] also removes spaces. The raw OCR text stays on every result. The analyzer
+ * [ParsingMode.LENIENT] also removes spaces. When no MRZ of exact width is found, a name line read
+ * short is padded with `<` at the end, and the result says so (see [MrzFillerPadding]). The raw OCR
+ * text stays on every result. The analyzer
  * emits one [CameraFrameEvent] per frame. It reads a frame but never closes or retains it: the
  * caller releases the frame after [analyse] returns.
  *
@@ -100,9 +102,10 @@ public class MrzFrameAnalyzer<F>(
                 MrzScanResult.NoMrzFound(recognizedText = recognizedText, quality = quality)
             } else {
                 MrzScanResult.Decoded(
-                    parse = MrzParser.parse(candidate, referenceTimeProvider()).withProvenance(provenance.readMethod),
+                    parse = MrzParser.parse(candidate.lines, referenceTimeProvider()).withProvenance(provenance.readMethod),
                     recognizedText = recognizedText,
                     quality = quality,
+                    fillerPadding = candidate.fillerPadding,
                 )
             }
         return result.also(::recordTelemetry)
@@ -111,10 +114,11 @@ public class MrzFrameAnalyzer<F>(
     // Finds a window of consecutive recognized lines — after mode-specific normalization — that matches a
     // known ICAO MRZ shape. The windowing, the MRZ-alphabet guard, and the glyph recovery (case fold, chevron
     // recovery) are shared with TolerantMrzMatcher via MrzLineDetection (TES-117) — see its KDoc for the
-    // algorithm; the analyzer's behaviour is unchanged, only the implementation moved.
-    private fun extractMrzCandidate(text: RecognizedText): List<String>? {
+    // algorithm. When no exact-width window exists, a name line read short may be padded (TES-264); the
+    // padding is reported on the result.
+    private fun extractMrzCandidate(text: RecognizedText): MrzLineDetection.DetectedMrz? {
         val normalized = text.lines.map { MrzLineDetection.normalizeLine(it.text, mode) }
-        return MrzLineDetection.findMrzWindow(normalized)
+        return MrzLineDetection.detect(normalized)
     }
 
     private fun aggregateConfidence(text: RecognizedText): Float? {

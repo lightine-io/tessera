@@ -151,6 +151,7 @@ class TesseraStringKeysTest {
                 "tessera_scanner_obs_check_match",
                 "tessera_scanner_obs_check_mismatch",
                 "tessera_scanner_obs_expiry_well_formed",
+                "tessera_scanner_obs_name_line_padded",
                 "tessera_scanner_obs_read_by",
                 "tessera_scanner_obs_some_mismatch",
                 "tessera_scanner_obs_tone_info",

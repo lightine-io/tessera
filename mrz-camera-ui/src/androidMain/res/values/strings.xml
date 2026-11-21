@@ -286,6 +286,9 @@
     <!-- Provenance line: how the SDK read this document. "%1$s" is the read-method label below. Rendered
          with a ⓘ mark. -->
     <string name="tessera_scanner_obs_read_by">Read by %1$s</string>
+    <!-- The camera read the name line short, and the reader filled the rest of the line with the blank
+         filler, as the document format does after a name. The name may not be split as printed. -->
+    <string name="tessera_scanner_obs_name_line_padded">The end of the name line wasn\'t read, so it was left blank. Please compare the name with your document.</string>
 
     <!-- Read-method labels used in the provenance observation. -->
     <string name="tessera_scanner_read_method_live_camera">live camera</string>

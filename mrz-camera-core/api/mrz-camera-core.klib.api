@@ -192,7 +192,10 @@ sealed interface io.lightine.tessera.mrz.camera/MrzScanResult { // io.lightine.t
 
     final class Decoded : io.lightine.tessera.mrz.camera/MrzScanResult { // io.lightine.tessera.mrz.camera/MrzScanResult.Decoded|null[0]
         constructor <init>(io.lightine.tessera.mrz.parsing/ParseResult, io.lightine.tessera.mrz.camera/RecognizedText, io.lightine.tessera.mrz.camera/ScanQuality) // io.lightine.tessera.mrz.camera/MrzScanResult.Decoded.<init>|<init>(io.lightine.tessera.mrz.parsing.ParseResult;io.lightine.tessera.mrz.camera.RecognizedText;io.lightine.tessera.mrz.camera.ScanQuality){}[0]
+        constructor <init>(io.lightine.tessera.mrz.parsing/ParseResult, io.lightine.tessera.mrz.camera/RecognizedText, io.lightine.tessera.mrz.camera/ScanQuality, io.lightine.tessera.mrz.camera/MrzFillerPadding?) // io.lightine.tessera.mrz.camera/MrzScanResult.Decoded.<init>|<init>(io.lightine.tessera.mrz.parsing.ParseResult;io.lightine.tessera.mrz.camera.RecognizedText;io.lightine.tessera.mrz.camera.ScanQuality;io.lightine.tessera.mrz.camera.MrzFillerPadding?){}[0]
 
+        final val fillerPadding // io.lightine.tessera.mrz.camera/MrzScanResult.Decoded.fillerPadding|{}fillerPadding[0]
+            final fun <get-fillerPadding>(): io.lightine.tessera.mrz.camera/MrzFillerPadding? // io.lightine.tessera.mrz.camera/MrzScanResult.Decoded.fillerPadding.<get-fillerPadding>|<get-fillerPadding>(){}[0]
         final val parse // io.lightine.tessera.mrz.camera/MrzScanResult.Decoded.parse|{}parse[0]
             final fun <get-parse>(): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.camera/MrzScanResult.Decoded.parse.<get-parse>|<get-parse>(){}[0]
         final val quality // io.lightine.tessera.mrz.camera/MrzScanResult.Decoded.quality|{}quality[0]
@@ -203,7 +206,8 @@ sealed interface io.lightine.tessera.mrz.camera/MrzScanResult { // io.lightine.t
         final fun component1(): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.camera/MrzScanResult.Decoded.component1|component1(){}[0]
         final fun component2(): io.lightine.tessera.mrz.camera/RecognizedText // io.lightine.tessera.mrz.camera/MrzScanResult.Decoded.component2|component2(){}[0]
         final fun component3(): io.lightine.tessera.mrz.camera/ScanQuality // io.lightine.tessera.mrz.camera/MrzScanResult.Decoded.component3|component3(){}[0]
-        final fun copy(io.lightine.tessera.mrz.parsing/ParseResult = ..., io.lightine.tessera.mrz.camera/RecognizedText = ..., io.lightine.tessera.mrz.camera/ScanQuality = ...): io.lightine.tessera.mrz.camera/MrzScanResult.Decoded // io.lightine.tessera.mrz.camera/MrzScanResult.Decoded.copy|copy(io.lightine.tessera.mrz.parsing.ParseResult;io.lightine.tessera.mrz.camera.RecognizedText;io.lightine.tessera.mrz.camera.ScanQuality){}[0]
+        final fun component4(): io.lightine.tessera.mrz.camera/MrzFillerPadding? // io.lightine.tessera.mrz.camera/MrzScanResult.Decoded.component4|component4(){}[0]
+        final fun copy(io.lightine.tessera.mrz.parsing/ParseResult = ..., io.lightine.tessera.mrz.camera/RecognizedText = ..., io.lightine.tessera.mrz.camera/ScanQuality = ..., io.lightine.tessera.mrz.camera/MrzFillerPadding? = ...): io.lightine.tessera.mrz.camera/MrzScanResult.Decoded // io.lightine.tessera.mrz.camera/MrzScanResult.Decoded.copy|copy(io.lightine.tessera.mrz.parsing.ParseResult;io.lightine.tessera.mrz.camera.RecognizedText;io.lightine.tessera.mrz.camera.ScanQuality;io.lightine.tessera.mrz.camera.MrzFillerPadding?){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.mrz.camera/MrzScanResult.Decoded.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // io.lightine.tessera.mrz.camera/MrzScanResult.Decoded.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // io.lightine.tessera.mrz.camera/MrzScanResult.Decoded.toString|toString(){}[0]
@@ -350,9 +354,12 @@ final class io.lightine.tessera.mrz.camera/GeoLocation { // io.lightine.tessera.
 
 final class io.lightine.tessera.mrz.camera/MrzCandidate { // io.lightine.tessera.mrz.camera/MrzCandidate|null[0]
     constructor <init>(kotlin.collections/List<kotlin/String>, io.lightine.tessera.mrz.parsing/ParseResult, kotlin.collections/List<io.lightine.tessera.mrz.camera/CharacterDisambiguation>) // io.lightine.tessera.mrz.camera/MrzCandidate.<init>|<init>(kotlin.collections.List<kotlin.String>;io.lightine.tessera.mrz.parsing.ParseResult;kotlin.collections.List<io.lightine.tessera.mrz.camera.CharacterDisambiguation>){}[0]
+    constructor <init>(kotlin.collections/List<kotlin/String>, io.lightine.tessera.mrz.parsing/ParseResult, kotlin.collections/List<io.lightine.tessera.mrz.camera/CharacterDisambiguation>, io.lightine.tessera.mrz.camera/MrzFillerPadding?) // io.lightine.tessera.mrz.camera/MrzCandidate.<init>|<init>(kotlin.collections.List<kotlin.String>;io.lightine.tessera.mrz.parsing.ParseResult;kotlin.collections.List<io.lightine.tessera.mrz.camera.CharacterDisambiguation>;io.lightine.tessera.mrz.camera.MrzFillerPadding?){}[0]
 
     final val disambiguations // io.lightine.tessera.mrz.camera/MrzCandidate.disambiguations|{}disambiguations[0]
         final fun <get-disambiguations>(): kotlin.collections/List<io.lightine.tessera.mrz.camera/CharacterDisambiguation> // io.lightine.tessera.mrz.camera/MrzCandidate.disambiguations.<get-disambiguations>|<get-disambiguations>(){}[0]
+    final val fillerPadding // io.lightine.tessera.mrz.camera/MrzCandidate.fillerPadding|{}fillerPadding[0]
+        final fun <get-fillerPadding>(): io.lightine.tessera.mrz.camera/MrzFillerPadding? // io.lightine.tessera.mrz.camera/MrzCandidate.fillerPadding.<get-fillerPadding>|<get-fillerPadding>(){}[0]
     final val mrzLines // io.lightine.tessera.mrz.camera/MrzCandidate.mrzLines|{}mrzLines[0]
         final fun <get-mrzLines>(): kotlin.collections/List<kotlin/String> // io.lightine.tessera.mrz.camera/MrzCandidate.mrzLines.<get-mrzLines>|<get-mrzLines>(){}[0]
     final val parse // io.lightine.tessera.mrz.camera/MrzCandidate.parse|{}parse[0]
@@ -361,7 +368,8 @@ final class io.lightine.tessera.mrz.camera/MrzCandidate { // io.lightine.tessera
     final fun component1(): kotlin.collections/List<kotlin/String> // io.lightine.tessera.mrz.camera/MrzCandidate.component1|component1(){}[0]
     final fun component2(): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.mrz.camera/MrzCandidate.component2|component2(){}[0]
     final fun component3(): kotlin.collections/List<io.lightine.tessera.mrz.camera/CharacterDisambiguation> // io.lightine.tessera.mrz.camera/MrzCandidate.component3|component3(){}[0]
-    final fun copy(kotlin.collections/List<kotlin/String> = ..., io.lightine.tessera.mrz.parsing/ParseResult = ..., kotlin.collections/List<io.lightine.tessera.mrz.camera/CharacterDisambiguation> = ...): io.lightine.tessera.mrz.camera/MrzCandidate // io.lightine.tessera.mrz.camera/MrzCandidate.copy|copy(kotlin.collections.List<kotlin.String>;io.lightine.tessera.mrz.parsing.ParseResult;kotlin.collections.List<io.lightine.tessera.mrz.camera.CharacterDisambiguation>){}[0]
+    final fun component4(): io.lightine.tessera.mrz.camera/MrzFillerPadding? // io.lightine.tessera.mrz.camera/MrzCandidate.component4|component4(){}[0]
+    final fun copy(kotlin.collections/List<kotlin/String> = ..., io.lightine.tessera.mrz.parsing/ParseResult = ..., kotlin.collections/List<io.lightine.tessera.mrz.camera/CharacterDisambiguation> = ..., io.lightine.tessera.mrz.camera/MrzFillerPadding? = ...): io.lightine.tessera.mrz.camera/MrzCandidate // io.lightine.tessera.mrz.camera/MrzCandidate.copy|copy(kotlin.collections.List<kotlin.String>;io.lightine.tessera.mrz.parsing.ParseResult;kotlin.collections.List<io.lightine.tessera.mrz.camera.CharacterDisambiguation>;io.lightine.tessera.mrz.camera.MrzFillerPadding?){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.mrz.camera/MrzCandidate.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // io.lightine.tessera.mrz.camera/MrzCandidate.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // io.lightine.tessera.mrz.camera/MrzCandidate.toString|toString(){}[0]
@@ -380,6 +388,27 @@ final class io.lightine.tessera.mrz.camera/MrzDecodeConsensus { // io.lightine.t
         final const val DEFAULT_THRESHOLD // io.lightine.tessera.mrz.camera/MrzDecodeConsensus.Companion.DEFAULT_THRESHOLD|{}DEFAULT_THRESHOLD[0]
             final fun <get-DEFAULT_THRESHOLD>(): kotlin/Int // io.lightine.tessera.mrz.camera/MrzDecodeConsensus.Companion.DEFAULT_THRESHOLD.<get-DEFAULT_THRESHOLD>|<get-DEFAULT_THRESHOLD>(){}[0]
     }
+}
+
+final class io.lightine.tessera.mrz.camera/MrzFillerPadding { // io.lightine.tessera.mrz.camera/MrzFillerPadding|null[0]
+    constructor <init>(kotlin/Int, kotlin/Int, kotlin/Int) // io.lightine.tessera.mrz.camera/MrzFillerPadding.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+
+    final val addedCount // io.lightine.tessera.mrz.camera/MrzFillerPadding.addedCount|{}addedCount[0]
+        final fun <get-addedCount>(): kotlin/Int // io.lightine.tessera.mrz.camera/MrzFillerPadding.addedCount.<get-addedCount>|<get-addedCount>(){}[0]
+    final val lineIndex // io.lightine.tessera.mrz.camera/MrzFillerPadding.lineIndex|{}lineIndex[0]
+        final fun <get-lineIndex>(): kotlin/Int // io.lightine.tessera.mrz.camera/MrzFillerPadding.lineIndex.<get-lineIndex>|<get-lineIndex>(){}[0]
+    final val paddedLength // io.lightine.tessera.mrz.camera/MrzFillerPadding.paddedLength|{}paddedLength[0]
+        final fun <get-paddedLength>(): kotlin/Int // io.lightine.tessera.mrz.camera/MrzFillerPadding.paddedLength.<get-paddedLength>|<get-paddedLength>(){}[0]
+    final val recognizedLength // io.lightine.tessera.mrz.camera/MrzFillerPadding.recognizedLength|{}recognizedLength[0]
+        final fun <get-recognizedLength>(): kotlin/Int // io.lightine.tessera.mrz.camera/MrzFillerPadding.recognizedLength.<get-recognizedLength>|<get-recognizedLength>(){}[0]
+
+    final fun component1(): kotlin/Int // io.lightine.tessera.mrz.camera/MrzFillerPadding.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // io.lightine.tessera.mrz.camera/MrzFillerPadding.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // io.lightine.tessera.mrz.camera/MrzFillerPadding.component3|component3(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...): io.lightine.tessera.mrz.camera/MrzFillerPadding // io.lightine.tessera.mrz.camera/MrzFillerPadding.copy|copy(kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.mrz.camera/MrzFillerPadding.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.mrz.camera/MrzFillerPadding.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.mrz.camera/MrzFillerPadding.toString|toString(){}[0]
 }
 
 final class io.lightine.tessera.mrz.camera/RecognizedLine { // io.lightine.tessera.mrz.camera/RecognizedLine|null[0]

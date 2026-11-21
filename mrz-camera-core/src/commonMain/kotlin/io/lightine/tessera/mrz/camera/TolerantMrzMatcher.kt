@@ -24,11 +24,12 @@ import kotlin.time.Instant
  * **v1 scope - character disambiguation only.** The matcher works on a window of lines that already matches a
  * known MRZ shape, found via [MrzLineDetection] - the SAME windowed extraction, MRZ-alphabet guard, and
  * chevron-glyph recovery the strict analyse-frame core uses (shared, not restated, since TES-117), and then
- * varies its ambiguous glyphs in check-digit-covered fields only (TES-265). The harder half - **length-tolerant /
- * collapsed-filler recovery** (ML Kit collapses long `<` filler runs, so line 1 never reaches its nominal length -
- * see TES-18) - is a deferred
- * refinement and is NOT attempted here: a frame whose lines do not reach a known shape yields no candidates,
- * exactly as strict yields no decode. The refinement is tracked separately.
+ * varies its ambiguous glyphs in check-digit-covered fields only (TES-265). Collapsed filler is handled before
+ * this: the platform recognizers re-read a short row (TES-18, [MrzRowRescue]), and [MrzLineDetection.detect] pads
+ * a name line still read short (TES-264) by the same rules as for the analyzer, so the candidates and the
+ * scan result use the same lines and carry the same [MrzFillerPadding]. Padded positions are in the name, which
+ * no check digit covers, so they are never varied. A frame whose lines reach no known shape yields no candidates,
+ * exactly as strict yields no decode.
  */
 internal class TolerantMrzMatcher(
     private val mode: ParsingMode,
@@ -37,7 +38,8 @@ internal class TolerantMrzMatcher(
     /** All distinct, parseable reconstructions of the MRZ in [text]; empty when there is no shape-matched run or nothing ambiguous to resolve. */
     fun candidates(text: RecognizedText): List<MrzCandidate> {
         val normalized = text.lines.map { MrzLineDetection.normalizeLine(it.text, mode) }
-        val run = MrzLineDetection.findMrzWindow(normalized) ?: return emptyList()
+        val detected = MrzLineDetection.detect(normalized) ?: return emptyList()
+        val run = detected.lines
 
         // Only glyphs in a field a check digit covers are ever varied: a change anywhere else (document code,
         // issuing state, name, nationality, sex, unchecked optional data) can never be confirmed, so it would be a
@@ -72,7 +74,7 @@ internal class TolerantMrzMatcher(
                 // Drop structurally-unparseable reconstructions (not plausible readings); keep all that parse,
                 // including check-digit-failing ones (those are PartialSuccess).
                 if (parse !is ParseResult.Failure) {
-                    distinct[mrzLines] = MrzCandidate(mrzLines, parse, disambiguations.toList())
+                    distinct[mrzLines] = MrzCandidate(mrzLines, parse, disambiguations.toList(), detected.fillerPadding)
                 }
             }
         }
