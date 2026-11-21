@@ -123,7 +123,7 @@ jobs:
       # CameraState recoverable/critical classification - run here, where the Android SDK is present.
       # mrz-camera-ui is likewise Android-only (Jetpack Compose), so its androidHostTest suite
       # (a config unit test plus a Robolectric-driven Compose render/callback smoke test) also runs here.
-      # The four source-bearing common modules enable withHostTest{}, so their COMMON test suites also
+      # The five source-bearing common modules enable withHostTest{}, so their COMMON test suites also
       # execute against the Android target here (~600 tests on the JVM host with the Android variant):
       # the Android target is no longer compile-only on CI.
       # verifyMlKitBundledModel asserts ML Kit stays the bundled (offline) text-recognition model - it
@@ -133,7 +133,7 @@ jobs:
       # `checkKotlinAbi` inside the `check` job: since Kotlin 2.4.20 abiValidation dumps the AGP-KMP
       # android target (api/android/<module>.api), so no separate android ABI step runs here.
       - name: Compile Android targets, run Android host tests, verify ML Kit bundled model
-        run: ./gradlew compileAndroidMain :mrz-camera:testAndroidHostTest :mrz-camera-ui:testAndroidHostTest :types:testAndroidHostTest :mrz-core:testAndroidHostTest :telemetry:testAndroidHostTest :mrz-camera-core:testAndroidHostTest :mrz-camera:verifyMlKitBundledModel
+        run: ./gradlew compileAndroidMain :mrz-camera:testAndroidHostTest :mrz-camera-ui:testAndroidHostTest :types:testAndroidHostTest :mrz-core:testAndroidHostTest :telemetry:testAndroidHostTest :mrz-camera-core:testAndroidHostTest :emrtd-core:testAndroidHostTest :mrz-camera:verifyMlKitBundledModel
 
   # Empty-module release guard (TES-43 pre-0.5.0 item; the v0.2.0 incident class, PR #154):
   # a module that DECLARES a Kotlin/Native target but produces no klib fails its
@@ -145,8 +145,8 @@ jobs:
   # explicit escape hatch in the tessera.publishing convention plugin, build-logic/) skips PGP
   # signing, which keyless runners cannot do. macOS runner because K/N publication metadata needs the Apple toolchain.
   # Rule of thumb this enforces: a module that declares a target must produce an artifact for
-  # it; empty placeholders (emrtd-core, logging) declare JVM+Android only - an empty jar/aar
-  # is valid, a missing klib is not.
+  # it; an empty placeholder (logging) declares JVM+Android only - an empty jar/aar is valid, a
+  # missing klib is not.
   publish-smoke:
     name: publish · smoke (empty-module guard)
     runs-on: macos-26

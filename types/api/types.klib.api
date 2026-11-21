@@ -6,6 +6,10 @@
 // - Show declarations: true
 
 // Library unique name: <io.lightine.tessera:types>
+open annotation class io.lightine.tessera.types/ExperimentalTesseraChipApi : kotlin/Annotation { // io.lightine.tessera.types/ExperimentalTesseraChipApi|null[0]
+    constructor <init>() // io.lightine.tessera.types/ExperimentalTesseraChipApi.<init>|<init>(){}[0]
+}
+
 final enum class io.lightine.tessera.types.vocabulary/CountryCodeCategory : kotlin/Enum<io.lightine.tessera.types.vocabulary/CountryCodeCategory> { // io.lightine.tessera.types.vocabulary/CountryCodeCategory|null[0]
     enum entry HISTORICAL // io.lightine.tessera.types.vocabulary/CountryCodeCategory.HISTORICAL|null[0]
     enum entry ORGANIZATION // io.lightine.tessera.types.vocabulary/CountryCodeCategory.ORGANIZATION|null[0]
@@ -517,6 +521,48 @@ final class io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode : io.lig
     final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode.toString|toString(){}[0]
 }
 
+final class io.lightine.tessera.types.errors/NfcTimeout : io.lightine.tessera.types.errors/NfcError { // io.lightine.tessera.types.errors/NfcTimeout|null[0]
+    constructor <init>(kotlin/Long?) // io.lightine.tessera.types.errors/NfcTimeout.<init>|<init>(kotlin.Long?){}[0]
+
+    final val description // io.lightine.tessera.types.errors/NfcTimeout.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/NfcTimeout.description.<get-description>|<get-description>(){}[0]
+    final val timeoutMillis // io.lightine.tessera.types.errors/NfcTimeout.timeoutMillis|{}timeoutMillis[0]
+        final fun <get-timeoutMillis>(): kotlin/Long? // io.lightine.tessera.types.errors/NfcTimeout.timeoutMillis.<get-timeoutMillis>|<get-timeoutMillis>(){}[0]
+
+    final fun component1(): kotlin/Long? // io.lightine.tessera.types.errors/NfcTimeout.component1|component1(){}[0]
+    final fun copy(kotlin/Long? = ...): io.lightine.tessera.types.errors/NfcTimeout // io.lightine.tessera.types.errors/NfcTimeout.copy|copy(kotlin.Long?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/NfcTimeout.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/NfcTimeout.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/NfcTimeout.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/NfcUnavailable : io.lightine.tessera.types.errors/NfcError { // io.lightine.tessera.types.errors/NfcUnavailable|null[0]
+    constructor <init>(io.lightine.tessera.types.errors/NfcUnavailable.Reason) // io.lightine.tessera.types.errors/NfcUnavailable.<init>|<init>(io.lightine.tessera.types.errors.NfcUnavailable.Reason){}[0]
+
+    final val description // io.lightine.tessera.types.errors/NfcUnavailable.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/NfcUnavailable.description.<get-description>|<get-description>(){}[0]
+    final val reason // io.lightine.tessera.types.errors/NfcUnavailable.reason|{}reason[0]
+        final fun <get-reason>(): io.lightine.tessera.types.errors/NfcUnavailable.Reason // io.lightine.tessera.types.errors/NfcUnavailable.reason.<get-reason>|<get-reason>(){}[0]
+
+    final fun component1(): io.lightine.tessera.types.errors/NfcUnavailable.Reason // io.lightine.tessera.types.errors/NfcUnavailable.component1|component1(){}[0]
+    final fun copy(io.lightine.tessera.types.errors/NfcUnavailable.Reason = ...): io.lightine.tessera.types.errors/NfcUnavailable // io.lightine.tessera.types.errors/NfcUnavailable.copy|copy(io.lightine.tessera.types.errors.NfcUnavailable.Reason){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/NfcUnavailable.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/NfcUnavailable.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/NfcUnavailable.toString|toString(){}[0]
+
+    final enum class Reason : kotlin/Enum<io.lightine.tessera.types.errors/NfcUnavailable.Reason> { // io.lightine.tessera.types.errors/NfcUnavailable.Reason|null[0]
+        enum entry DISABLED // io.lightine.tessera.types.errors/NfcUnavailable.Reason.DISABLED|null[0]
+        enum entry NOT_PERMITTED // io.lightine.tessera.types.errors/NfcUnavailable.Reason.NOT_PERMITTED|null[0]
+        enum entry NOT_SUPPORTED // io.lightine.tessera.types.errors/NfcUnavailable.Reason.NOT_SUPPORTED|null[0]
+
+        final val entries // io.lightine.tessera.types.errors/NfcUnavailable.Reason.entries|#static{}entries[0]
+            final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.types.errors/NfcUnavailable.Reason> // io.lightine.tessera.types.errors/NfcUnavailable.Reason.entries.<get-entries>|<get-entries>#static(){}[0]
+
+        final fun valueOf(kotlin/String): io.lightine.tessera.types.errors/NfcUnavailable.Reason // io.lightine.tessera.types.errors/NfcUnavailable.Reason.valueOf|valueOf#static(kotlin.String){}[0]
+        final fun values(): kotlin/Array<io.lightine.tessera.types.errors/NfcUnavailable.Reason> // io.lightine.tessera.types.errors/NfcUnavailable.Reason.values|values#static(){}[0]
+    }
+}
+
 final class io.lightine.tessera.types.vocabulary/UnmappedCharacter { // io.lightine.tessera.types.vocabulary/UnmappedCharacter|null[0]
     constructor <init>(kotlin/Char, kotlin/Int) // io.lightine.tessera.types.vocabulary/UnmappedCharacter.<init>|<init>(kotlin.Char;kotlin.Int){}[0]
 
@@ -531,6 +577,11 @@ final class io.lightine.tessera.types.vocabulary/UnmappedCharacter { // io.light
     final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.vocabulary/UnmappedCharacter.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // io.lightine.tessera.types.vocabulary/UnmappedCharacter.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // io.lightine.tessera.types.vocabulary/UnmappedCharacter.toString|toString(){}[0]
+}
+
+sealed class io.lightine.tessera.types.errors/ChipError { // io.lightine.tessera.types.errors/ChipError|null[0]
+    abstract val description // io.lightine.tessera.types.errors/ChipError.description|{}description[0]
+        abstract fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/ChipError.description.<get-description>|<get-description>(){}[0]
 }
 
 sealed class io.lightine.tessera.types.errors/MrzError { // io.lightine.tessera.types.errors/MrzError|null[0]
@@ -550,4 +601,15 @@ sealed class io.lightine.tessera.types.errors/MrzValidationError { // io.lightin
 sealed class io.lightine.tessera.types.errors/MrzWarning { // io.lightine.tessera.types.errors/MrzWarning|null[0]
     abstract val description // io.lightine.tessera.types.errors/MrzWarning.description|{}description[0]
         abstract fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzWarning.description.<get-description>|<get-description>(){}[0]
+}
+
+sealed class io.lightine.tessera.types.errors/NfcError : io.lightine.tessera.types.errors/ChipError // io.lightine.tessera.types.errors/NfcError|null[0]
+
+final object io.lightine.tessera.types.errors/NfcTagLost : io.lightine.tessera.types.errors/NfcError { // io.lightine.tessera.types.errors/NfcTagLost|null[0]
+    final val description // io.lightine.tessera.types.errors/NfcTagLost.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/NfcTagLost.description.<get-description>|<get-description>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/NfcTagLost.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/NfcTagLost.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/NfcTagLost.toString|toString(){}[0]
 }
