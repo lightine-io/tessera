@@ -36,8 +36,9 @@ internal interface MappingEvidence
  * [afterAuthentication].
  *
  * - Generic mapping: [GenericMapping].
- * - Integrated mapping (section 4.4.3.3.2) and chip authentication mapping (4.4.3.3.3, 4.4.3.5)
- *   plug in here with their own implementation and a line in [Mappings.forKind].
+ * - Integrated mapping: [IntegratedMapping].
+ * - Chip authentication mapping (4.4.3.3.3, 4.4.3.5) plugs in here with its own implementation and
+ *   a line in [Mappings.forKind].
  */
 internal interface Mapping {
     /** The mapping this implements. */
@@ -74,7 +75,7 @@ internal object Mappings {
     fun forKind(kind: PaceMapping): Mapping? =
         when (kind) {
             PaceMapping.GENERIC -> GenericMapping()
-            PaceMapping.INTEGRATED -> null
+            PaceMapping.INTEGRATED -> IntegratedMapping()
             PaceMapping.CHIP_AUTHENTICATION -> null
         }
 }

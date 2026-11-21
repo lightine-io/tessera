@@ -128,7 +128,7 @@ internal object StandardizedParameters {
             StandardizedParameter(2, "2048-bit MODP group with 256-bit prime order subgroup", KeyAgreement.DH, 2048),
             StandardizedParameter(8, "NIST P-192", KeyAgreement.ECDH, 192),
             StandardizedParameter(9, "BrainpoolP192r1", KeyAgreement.ECDH, 192),
-            StandardizedParameter(10, "NIST P-224", KeyAgreement.ECDH, 224),
+            StandardizedParameter(10, "NIST P-224", KeyAgreement.ECDH, 224, usableWithIntegratedMapping = false),
             StandardizedParameter(11, "BrainpoolP224r1", KeyAgreement.ECDH, 224),
             StandardizedParameter(12, "NIST P-256", KeyAgreement.ECDH, 256),
             StandardizedParameter(13, "BrainpoolP256r1", KeyAgreement.ECDH, 256),

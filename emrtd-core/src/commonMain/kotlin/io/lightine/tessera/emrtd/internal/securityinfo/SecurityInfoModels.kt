@@ -52,6 +52,11 @@ internal class StandardizedParameter(
     val name: String,
     val agreement: KeyAgreement,
     val sizeBits: Int,
+    /**
+     * False for the set Table 12 marks as not usable with the integrated mapping (NIST P-224: its
+     * prime is not 3 mod 4, which the point encoding of Appendix B needs).
+     */
+    val usableWithIntegratedMapping: Boolean = true,
 )
 
 /**
@@ -98,8 +103,14 @@ internal data class PaceInfo(
     val standardizedParameter: StandardizedParameter?
         get() = if (parameterKind == ParameterIdKind.STANDARDIZED) StandardizedParameters.byId(parameterId!!) else null
 
-    /** True when the PACEInfo names a standardized set that fits its key agreement. */
-    val usable: Boolean get() = parameterKind == ParameterIdKind.STANDARDIZED
+    /**
+     * True when the PACEInfo names a standardized set that fits its key agreement and its mapping
+     * (Table 12: NIST P-224 cannot be used with the integrated mapping).
+     */
+    val usable: Boolean
+        get() =
+            parameterKind == ParameterIdKind.STANDARDIZED &&
+                (mapping != PaceMapping.INTEGRATED || standardizedParameter?.usableWithIntegratedMapping == true)
 
     /** With chip authentication mapping, [parameterId] is also the key id of the chip's CA public key. */
     val caKeyId: Int? get() = if (mapping == PaceMapping.CHIP_AUTHENTICATION) parameterId else null
