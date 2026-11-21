@@ -6,6 +6,29 @@
 // - Show declarations: true
 
 // Library unique name: <io.lightine.tessera:emrtd-core>
+final enum class io.lightine.tessera.emrtd.lds/BiometricStandard : kotlin/Enum<io.lightine.tessera.emrtd.lds/BiometricStandard> { // io.lightine.tessera.emrtd.lds/BiometricStandard|null[0]
+    enum entry ISO_19794 // io.lightine.tessera.emrtd.lds/BiometricStandard.ISO_19794|null[0]
+    enum entry ISO_39794 // io.lightine.tessera.emrtd.lds/BiometricStandard.ISO_39794|null[0]
+
+    final val entries // io.lightine.tessera.emrtd.lds/BiometricStandard.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd.lds/BiometricStandard> // io.lightine.tessera.emrtd.lds/BiometricStandard.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd.lds/BiometricStandard // io.lightine.tessera.emrtd.lds/BiometricStandard.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd.lds/BiometricStandard> // io.lightine.tessera.emrtd.lds/BiometricStandard.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.emrtd.lds/Iso39794Part : kotlin/Enum<io.lightine.tessera.emrtd.lds/Iso39794Part> { // io.lightine.tessera.emrtd.lds/Iso39794Part|null[0]
+    enum entry PART_4 // io.lightine.tessera.emrtd.lds/Iso39794Part.PART_4|null[0]
+    enum entry PART_5 // io.lightine.tessera.emrtd.lds/Iso39794Part.PART_5|null[0]
+    enum entry PART_6 // io.lightine.tessera.emrtd.lds/Iso39794Part.PART_6|null[0]
+
+    final val entries // io.lightine.tessera.emrtd.lds/Iso39794Part.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd.lds/Iso39794Part> // io.lightine.tessera.emrtd.lds/Iso39794Part.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd.lds/Iso39794Part // io.lightine.tessera.emrtd.lds/Iso39794Part.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd.lds/Iso39794Part> // io.lightine.tessera.emrtd.lds/Iso39794Part.values|values#static(){}[0]
+}
+
 abstract interface io.lightine.tessera.emrtd/ApduTransport { // io.lightine.tessera.emrtd/ApduTransport|null[0]
     abstract val maxCommandLength // io.lightine.tessera.emrtd/ApduTransport.maxCommandLength|{}maxCommandLength[0]
         abstract fun <get-maxCommandLength>(): kotlin/Int // io.lightine.tessera.emrtd/ApduTransport.maxCommandLength.<get-maxCommandLength>|<get-maxCommandLength>(){}[0]
