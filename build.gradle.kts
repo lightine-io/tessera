@@ -5,6 +5,7 @@ plugins {
     // same catalog versions. The Android target uses Google's KMP-library plugin (ADR-017).
     alias(libs.plugins.kotlin.multiplatform) apply false
     alias(libs.plugins.android.kotlin.multiplatform.library) apply false
+    alias(libs.plugins.android.application) apply false
     alias(libs.plugins.maven.publish) apply false
     // Applied here (not `apply false`) for the one aggregated API docs site below (TES-39); the
     // modules apply the same plugin through tessera.kmp-publishing.

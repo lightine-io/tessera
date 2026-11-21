@@ -84,6 +84,8 @@ robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectr
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+# The Android application plugin, for the runnable sample app (samples/android-scanner); same AGP version.
+android-application = { id = "com.android.application", version.ref = "agp" }
 android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 # The Compose compiler, versioned in lockstep with Kotlin (it is part of the Kotlin release). Applied by
 # mrz-camera-ui instead of an AGP `buildFeatures.compose` flag (the KMP-AGP library plugin has none).

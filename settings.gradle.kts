@@ -62,3 +62,8 @@ include(":bom")
 // The documentation examples (TES-230): compiled in CI, never published.
 include(":samples")
 project(":samples").projectDir = file("samples/kotlin")
+
+// A runnable Android app that opens the scanner screen and shows the result (TES-37): built in CI,
+// never published (no publishing plugin).
+include(":samples-android-scanner")
+project(":samples-android-scanner").projectDir = file("samples/android-scanner")
