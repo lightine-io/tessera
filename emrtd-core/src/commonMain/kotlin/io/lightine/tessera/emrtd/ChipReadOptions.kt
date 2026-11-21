@@ -1,5 +1,6 @@
 package io.lightine.tessera.emrtd
 
+import io.lightine.tessera.emrtd.trust.DocumentSignerCertificate
 import io.lightine.tessera.emrtd.trust.TrustAnchor
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import kotlin.jvm.JvmOverloads
@@ -26,6 +27,9 @@ import kotlin.time.Instant
  *   [ChipRead.dg1] is `null` (the raw DG1 is still read).
  * @property allowExtendedLength Whether the reader may use extended-length APDUs. They are used only
  *   when this is `true`, the transport carries them and the chip states it accepts them.
+ * @property signerCertificate A document signer certificate your app supplies for a chip whose
+ *   EF.SOD carries none. It is used only when EF.SOD names no signer of its own, and the signature
+ *   check then records [ChipSignerOrigin.SUPPLIED_BY_APP].
  * @throws IllegalArgumentException when a data group number is outside 1 to 16.
  * @since 1.0.0
  */
@@ -39,6 +43,7 @@ public class ChipReadOptions
         public val trustAnchors: List<TrustAnchor> = emptyList(),
         public val checkTime: Instant? = null,
         public val allowExtendedLength: Boolean = true,
+        public val signerCertificate: DocumentSignerCertificate? = null,
     ) {
         init {
             require(dataGroups.all { it in 1..16 }) { "dataGroups holds a number outside 1 to 16" }
@@ -62,6 +67,7 @@ public class ChipReadOptions
             private var trustAnchors: List<TrustAnchor> = emptyList()
             private var checkTime: Instant? = null
             private var allowExtendedLength: Boolean = true
+            private var signerCertificate: DocumentSignerCertificate? = null
 
             /** The data groups to read, by number (1 to 16). */
             public fun dataGroups(numbers: Set<Int>): Builder = apply { dataGroups = numbers.toSet() }
@@ -75,12 +81,16 @@ public class ChipReadOptions
             /** Whether extended-length APDUs may be used. */
             public fun allowExtendedLength(allow: Boolean): Builder = apply { allowExtendedLength = allow }
 
+            /** A document signer certificate for a chip whose EF.SOD carries none. */
+            public fun signerCertificate(certificate: DocumentSignerCertificate?): Builder = apply { signerCertificate = certificate }
+
             /**
              * The options.
              *
              * @throws IllegalArgumentException when a data group number is outside 1 to 16.
              */
             @Throws(IllegalArgumentException::class)
-            public fun build(): ChipReadOptions = ChipReadOptions(accessKey, dataGroups, trustAnchors, checkTime, allowExtendedLength)
+            public fun build(): ChipReadOptions =
+                ChipReadOptions(accessKey, dataGroups, trustAnchors, checkTime, allowExtendedLength, signerCertificate)
         }
     }

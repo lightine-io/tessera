@@ -18,6 +18,7 @@ import io.lightine.tessera.emrtd.internal.crypto.EcDomainParameters
 import io.lightine.tessera.emrtd.internal.crypto.StandardDomainParameterValues
 import io.lightine.tessera.emrtd.internal.crypto.withCrypto
 import io.lightine.tessera.emrtd.internal.pa.FakeGroups
+import io.lightine.tessera.emrtd.internal.pa.IssuerNameMatch
 import io.lightine.tessera.emrtd.internal.pa.PaCheck
 import io.lightine.tessera.emrtd.internal.pa.PaCheckKind
 import io.lightine.tessera.emrtd.internal.pa.PaInputs
@@ -25,6 +26,7 @@ import io.lightine.tessera.emrtd.internal.pa.PaOutcome
 import io.lightine.tessera.emrtd.internal.pa.PassiveAuthentication
 import io.lightine.tessera.emrtd.internal.pa.Pki
 import io.lightine.tessera.emrtd.internal.pa.SignedObject
+import io.lightine.tessera.emrtd.internal.pa.SignerCertificateOrigin
 import io.lightine.tessera.emrtd.internal.pa.withKeys
 import io.lightine.tessera.emrtd.internal.securityinfo.KeyAgreement
 import io.lightine.tessera.emrtd.internal.securityinfo.StandardizedParameters
@@ -259,11 +261,22 @@ class PaceCamFakeChipTest {
                 for (facts in listOf(
                     emptyList(),
                     cardSecurityFacts(PaOutcome.NotRun(io.lightine.tessera.emrtd.internal.pa.PaNotRun.NO_ROOTS_SUPPLIED)),
-                    listOf(PaCheck(PaCheckKind.SignatureVerifies(SignedObject.CARD_SECURITY), PaOutcome.Passed)),
+                    listOf(
+                        PaCheck(
+                            PaCheckKind.SignatureVerifies(SignedObject.CARD_SECURITY, SignerCertificateOrigin.STORED_IN_FILE),
+                            PaOutcome.Passed,
+                        ),
+                    ),
                     // The EF.SOD facts do not stand in for EF.CardSecurity's.
                     listOf(
-                        PaCheck(PaCheckKind.SignatureVerifies(SignedObject.SECURITY_OBJECT), PaOutcome.Passed),
-                        PaCheck(PaCheckKind.SignerChainsToSuppliedRoot(SignedObject.SECURITY_OBJECT), PaOutcome.Passed),
+                        PaCheck(
+                            PaCheckKind.SignatureVerifies(SignedObject.SECURITY_OBJECT, SignerCertificateOrigin.STORED_IN_FILE),
+                            PaOutcome.Passed,
+                        ),
+                        PaCheck(
+                            PaCheckKind.SignerChainsToSuppliedRoot(SignedObject.SECURITY_OBJECT, IssuerNameMatch.BYTE_EQUAL),
+                            PaOutcome.Passed,
+                        ),
                     ),
                 )) {
                     val check = ChipAuthMappingCheck.run(c, run.evidence, cardSecurity, facts)
@@ -298,7 +311,9 @@ class PaceCamFakeChipTest {
                     assertEquals(true, noRoot.keyMatches)
                     assertEquals(CamOutcome.NotRun(CamNotRun.CARD_SECURITY_NOT_AUTHENTICATED), noRoot.outcome)
                     assertIs<PaOutcome.Passed>(
-                        pa(emptyList()).single { it.kind == PaCheckKind.SignatureVerifies(SignedObject.CARD_SECURITY) }.outcome,
+                        pa(
+                            emptyList(),
+                        ).single { (it.kind as? PaCheckKind.SignatureVerifies)?.signed == SignedObject.CARD_SECURITY }.outcome,
                     )
                 }
             }

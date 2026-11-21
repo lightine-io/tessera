@@ -654,7 +654,7 @@ class PassiveAuthenticationTest {
             val pki = Pki.rsa(keys, dsSubject = noCountry)
             assertEquals(
                 notRun(PaNotRun.COUNTRY_NAME_ABSENT),
-                run(pki).outcome(PaCheckKind.SignerCountryMatchesRootCountry),
+                run(pki).single { it.kind is PaCheckKind.SignerCountryMatchesRootCountry }.outcome,
             )
         }
 

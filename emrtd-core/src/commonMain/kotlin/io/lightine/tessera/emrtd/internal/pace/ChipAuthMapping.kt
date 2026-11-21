@@ -8,10 +8,12 @@ import io.lightine.tessera.emrtd.internal.crypto.CryptoBytes
 import io.lightine.tessera.emrtd.internal.crypto.EcDomainParameters
 import io.lightine.tessera.emrtd.internal.crypto.EcPointCodec
 import io.lightine.tessera.emrtd.internal.crypto.EllipticCurves
+import io.lightine.tessera.emrtd.internal.pa.IssuerNameMatch
 import io.lightine.tessera.emrtd.internal.pa.PaCheck
 import io.lightine.tessera.emrtd.internal.pa.PaCheckKind
 import io.lightine.tessera.emrtd.internal.pa.PaOutcome
 import io.lightine.tessera.emrtd.internal.pa.SignedObject
+import io.lightine.tessera.emrtd.internal.pa.SignerCertificateOrigin
 import io.lightine.tessera.emrtd.internal.securityinfo.ChipAuthenticationPublicKeyInfo
 import io.lightine.tessera.emrtd.internal.securityinfo.ChipSecurityFiles
 import io.lightine.tessera.emrtd.internal.securityinfo.DomainParameters
@@ -199,13 +201,25 @@ internal class CamCheck(
 internal object ChipAuthMappingCheck {
     /**
      * The passive authentication facts the static key relies on: EF.CardSecurity's signature, and
-     * its signer chaining to a root the app supplied. Both must be Passed.
+     * its signer chaining to a root the app supplied. Both must be Passed, whatever the signer's
+     * origin or the way the root's name matched ([sameFact]).
      */
     val requiredCardSecurityFacts: List<PaCheckKind> =
         listOf(
-            PaCheckKind.SignatureVerifies(SignedObject.CARD_SECURITY),
-            PaCheckKind.SignerChainsToSuppliedRoot(SignedObject.CARD_SECURITY),
+            PaCheckKind.SignatureVerifies(SignedObject.CARD_SECURITY, SignerCertificateOrigin.STORED_IN_FILE),
+            PaCheckKind.SignerChainsToSuppliedRoot(SignedObject.CARD_SECURITY, IssuerNameMatch.BYTE_EQUAL),
         )
+
+    /** Whether [a] and [b] are the same fact about the same file, ignoring how it was reached. */
+    fun sameFact(
+        a: PaCheckKind,
+        b: PaCheckKind,
+    ): Boolean =
+        when {
+            a is PaCheckKind.SignatureVerifies && b is PaCheckKind.SignatureVerifies -> a.signed == b.signed
+            a is PaCheckKind.SignerChainsToSuppliedRoot && b is PaCheckKind.SignerChainsToSuppliedRoot -> a.signed == b.signed
+            else -> a == b
+        }
 
     /**
      * [evidence] from PACE; [cardSecurity] the raw EF.CardSecurity, or null when not read;
@@ -237,7 +251,7 @@ internal object ChipAuthMappingCheck {
             }
         val authenticated =
             requiredCardSecurityFacts.all { kind ->
-                passiveAuthentication.any { it.kind == kind && it.outcome == PaOutcome.Passed }
+                passiveAuthentication.any { sameFact(it.kind, kind) && it.outcome == PaOutcome.Passed }
             }
         return CamCheck(matches, if (authenticated) CamOutcome.Passed else CamOutcome.NotRun(CamNotRun.CARD_SECURITY_NOT_AUTHENTICATED))
     }

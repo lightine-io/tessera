@@ -897,6 +897,7 @@ internal class ReadFlow(
                 cardAccess = cardAccess,
                 cardSecurity = cardSecurity,
                 roots = options.trustAnchors.map { it.certificate },
+                signerCertificate = options.signerCertificate?.certificate,
                 at = options.checkTime?.let { CertTimes.fromEpochSeconds(it.epochSeconds) },
                 documentCode = appFile(FILE_DG1)?.let(::documentCode),
                 issueDate = issue,
@@ -923,7 +924,7 @@ internal class ReadFlow(
     private fun passed(
         pa: List<PaCheck>,
         kind: PaCheckKind,
-    ): Boolean = pa.any { it.kind == kind && it.outcome == PaOutcome.Passed }
+    ): Boolean = pa.any { ChipAuthMappingCheck.sameFact(it.kind, kind) && it.outcome == PaOutcome.Passed }
 
     /** The file with the key passed its hash (for a data group), signature and root checks. */
     private fun keyFileChecksPassed(
@@ -932,8 +933,8 @@ internal class ReadFlow(
     ): Boolean =
         when (context) {
             ChipFileContext.MASTER_FILE -> {
-                passed(pa, PaCheckKind.SignatureVerifies(SignedObject.CARD_SECURITY)) &&
-                    passed(pa, PaCheckKind.SignerChainsToSuppliedRoot(SignedObject.CARD_SECURITY))
+                passed(pa, PaCheckKind.SignatureVerifies(SignedObject.CARD_SECURITY, null)) &&
+                    passed(pa, PaCheckKind.SignerChainsToSuppliedRoot(SignedObject.CARD_SECURITY, null))
             }
 
             ChipFileContext.EMRTD_APPLICATION -> {
@@ -950,8 +951,8 @@ internal class ReadFlow(
         dataGroup: Int,
     ): Boolean =
         passed(pa, PaCheckKind.DataGroupHashMatches(dataGroup)) &&
-            passed(pa, PaCheckKind.SignatureVerifies(SignedObject.SECURITY_OBJECT)) &&
-            passed(pa, PaCheckKind.SignerChainsToSuppliedRoot(SignedObject.SECURITY_OBJECT))
+            passed(pa, PaCheckKind.SignatureVerifies(SignedObject.SECURITY_OBJECT, null)) &&
+            passed(pa, PaCheckKind.SignerChainsToSuppliedRoot(SignedObject.SECURITY_OBJECT, null))
 
     private fun camOutcome(pa: List<PaCheck>): CheckOutcome {
         val evidence = camEvidence ?: return CheckOutcome.NotApplicable(ChipCheckReason.NOT_OFFERED)

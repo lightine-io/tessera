@@ -2,16 +2,22 @@ package io.lightine.tessera.emrtd.internal.flow
 
 import io.lightine.tessera.emrtd.CheckOutcome
 import io.lightine.tessera.emrtd.ChipCheck
+import io.lightine.tessera.emrtd.ChipCheckDetail
 import io.lightine.tessera.emrtd.ChipCheckKind
 import io.lightine.tessera.emrtd.ChipCheckReason
+import io.lightine.tessera.emrtd.ChipCountrySource
 import io.lightine.tessera.emrtd.ChipFileContext
+import io.lightine.tessera.emrtd.ChipNameComparison
 import io.lightine.tessera.emrtd.ChipPaceMapping
 import io.lightine.tessera.emrtd.ChipSignedCopy
 import io.lightine.tessera.emrtd.ChipSignedFile
+import io.lightine.tessera.emrtd.ChipSignerOrigin
 import io.lightine.tessera.emrtd.internal.aa.ActiveAuthenticationFailure
 import io.lightine.tessera.emrtd.internal.bac.BacException
 import io.lightine.tessera.emrtd.internal.bac.BacFailure
 import io.lightine.tessera.emrtd.internal.ca.CaContext
+import io.lightine.tessera.emrtd.internal.pa.CountrySource
+import io.lightine.tessera.emrtd.internal.pa.IssuerNameMatch
 import io.lightine.tessera.emrtd.internal.pa.PaCheck
 import io.lightine.tessera.emrtd.internal.pa.PaCheckKind
 import io.lightine.tessera.emrtd.internal.pa.PaFailure
@@ -20,6 +26,7 @@ import io.lightine.tessera.emrtd.internal.pa.PaNotRun
 import io.lightine.tessera.emrtd.internal.pa.PaOutcome
 import io.lightine.tessera.emrtd.internal.pa.SignedCopy
 import io.lightine.tessera.emrtd.internal.pa.SignedObject
+import io.lightine.tessera.emrtd.internal.pa.SignerCertificateOrigin
 import io.lightine.tessera.emrtd.internal.pace.CamFailure
 import io.lightine.tessera.emrtd.internal.pace.CamNotRun
 import io.lightine.tessera.emrtd.internal.pace.CamOutcome
@@ -41,7 +48,48 @@ import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
  * `Chip*` errors here, and nowhere else. Nothing here carries bytes from the chip.
  */
 internal object FlowMappings {
-    fun check(pa: PaCheck): ChipCheck = ChipCheck(kind(pa.kind), outcome(pa.outcome))
+    fun check(pa: PaCheck): ChipCheck = ChipCheck(kind(pa.kind), outcome(pa.outcome), detail(pa.kind))
+
+    /** The detail a passive-authentication fact records about how it was reached, as public facts. */
+    fun detail(k: PaCheckKind): ChipCheckDetail? =
+        when (k) {
+            is PaCheckKind.SignatureVerifies -> {
+                k.signerOrigin?.let {
+                    ChipCheckDetail.SignerCertificate(
+                        when (it) {
+                            SignerCertificateOrigin.STORED_IN_FILE -> ChipSignerOrigin.STORED_IN_FILE
+                            SignerCertificateOrigin.SUPPLIED_BY_APP -> ChipSignerOrigin.SUPPLIED_BY_APP
+                        },
+                    )
+                }
+            }
+
+            is PaCheckKind.SignerChainsToSuppliedRoot -> {
+                k.issuerNameMatch?.let {
+                    ChipCheckDetail.IssuerNameComparison(
+                        when (it) {
+                            IssuerNameMatch.BYTE_EQUAL -> ChipNameComparison.BYTE_EQUAL
+                            IssuerNameMatch.NORMALIZED -> ChipNameComparison.RFC_5280_NORMALIZED
+                        },
+                    )
+                }
+            }
+
+            is PaCheckKind.SignerCountryMatchesRootCountry -> {
+                ChipCheckDetail.CountrySources(k.signerSource?.let(::countrySource), k.rootSource?.let(::countrySource))
+            }
+
+            else -> {
+                null
+            }
+        }
+
+    private fun countrySource(s: CountrySource): ChipCountrySource =
+        when (s) {
+            CountrySource.SUBJECT_NAME -> ChipCountrySource.SUBJECT_NAME
+            CountrySource.SUBJECT_ALT_NAME -> ChipCountrySource.SUBJECT_ALT_NAME
+            CountrySource.ISSUER_ALT_NAME -> ChipCountrySource.ISSUER_ALT_NAME
+        }
 
     fun kind(k: PaCheckKind): ChipCheckKind =
         when (k) {
@@ -54,7 +102,7 @@ internal object FlowMappings {
             PaCheckKind.EfDirMatchesSignedCopy -> ChipCheckKind.EfDirMatchesSignedCopy
             PaCheckKind.SignerDocumentTypeMatches -> ChipCheckKind.SignerDocumentTypeMatches
             PaCheckKind.SignerKeyUsageIsDigitalSignatureOnly -> ChipCheckKind.SignerKeyUsageIsDigitalSignatureOnly
-            PaCheckKind.SignerCountryMatchesRootCountry -> ChipCheckKind.SignerCountryMatchesRootCountry
+            is PaCheckKind.SignerCountryMatchesRootCountry -> ChipCheckKind.SignerCountryMatchesRootCountry
             PaCheckKind.IssueDateInSignerUsagePeriod -> ChipCheckKind.IssueDateInSignerUsagePeriod
             PaCheckKind.RevocationChecked -> ChipCheckKind.SignerNotRevoked
         }

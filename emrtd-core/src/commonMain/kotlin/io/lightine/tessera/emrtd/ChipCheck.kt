@@ -17,21 +17,107 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  *
  * @property kind What was checked.
  * @property outcome How it came out.
+ * @property detail How the check reached its outcome, for the checks that record it: where the
+ *   signer certificate came from, how the root's name matched, where the countries were read from.
+ *   `null` for the others.
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
 public class ChipCheck internal constructor(
     public val kind: ChipCheckKind,
     public val outcome: CheckOutcome,
+    public val detail: ChipCheckDetail? = null,
 ) {
-    /** Equal when both the kind and the outcome are equal. */
-    override fun equals(other: Any?): Boolean = other is ChipCheck && other.kind == kind && other.outcome == outcome
+    /** Equal when the kind, the outcome and the detail are equal. */
+    override fun equals(other: Any?): Boolean =
+        other is ChipCheck && other.kind == kind && other.outcome == outcome && other.detail == detail
 
-    /** Hash of the kind and the outcome. */
-    override fun hashCode(): Int = 31 * kind.hashCode() + outcome.hashCode()
+    /** Hash of the kind, the outcome and the detail. */
+    override fun hashCode(): Int = (31 * kind.hashCode() + outcome.hashCode()) * 31 + detail.hashCode()
 
-    /** `ChipCheck(kind, outcome)`. */
-    override fun toString(): String = "ChipCheck($kind, $outcome)"
+    /** `ChipCheck(kind, outcome)`, with the detail when there is one. */
+    override fun toString(): String = if (detail == null) "ChipCheck($kind, $outcome)" else "ChipCheck($kind, $outcome, $detail)"
+}
+
+/**
+ * How a [ChipCheck] reached its outcome: facts about the inputs, kept beside the check so that the
+ * kind stays the same whichever way the check went.
+ *
+ * Experimental: see [ExperimentalTesseraChipApi].
+ *
+ * @since 1.0.0
+ */
+@ExperimentalTesseraChipApi
+public sealed class ChipCheckDetail {
+    /** For [ChipCheckKind.SignatureVerifies]: where the signer certificate came from. */
+    public data class SignerCertificate(
+        public val origin: ChipSignerOrigin,
+    ) : ChipCheckDetail()
+
+    /** For [ChipCheckKind.SignerChainsToSuppliedRoot]: how the signer's issuer name matched the root's subject name. */
+    public data class IssuerNameComparison(
+        public val comparison: ChipNameComparison,
+    ) : ChipCheckDetail()
+
+    /**
+     * For [ChipCheckKind.SignerCountryMatchesRootCountry]: where each country was read from, or
+     * `null` on a side with no country.
+     */
+    public data class CountrySources(
+        public val signer: ChipCountrySource?,
+        public val root: ChipCountrySource?,
+    ) : ChipCheckDetail()
+}
+
+/**
+ * Where a signer certificate came from.
+ *
+ * Experimental: see [ExperimentalTesseraChipApi].
+ *
+ * @since 1.0.0
+ */
+@ExperimentalTesseraChipApi
+public enum class ChipSignerOrigin {
+    /** The signed file carries it among its own certificates. */
+    STORED_IN_FILE,
+
+    /** Your app supplied it ([ChipReadOptions.signerCertificate]), because the file names no signer of its own. */
+    SUPPLIED_BY_APP,
+}
+
+/**
+ * How two certificate names were found equal.
+ *
+ * Experimental: see [ExperimentalTesseraChipApi].
+ *
+ * @since 1.0.0
+ */
+@ExperimentalTesseraChipApi
+public enum class ChipNameComparison {
+    /** Their DER bytes are equal. */
+    BYTE_EQUAL,
+
+    /** The bytes differ, and the comparison of RFC 5280, section 7.1 matched (case and insignificant spaces ignored). */
+    RFC_5280_NORMALIZED,
+}
+
+/**
+ * Where a certificate's country was read from.
+ *
+ * Experimental: see [ExperimentalTesseraChipApi].
+ *
+ * @since 1.0.0
+ */
+@ExperimentalTesseraChipApi
+public enum class ChipCountrySource {
+    /** The subject's `countryName` attribute. */
+    SUBJECT_NAME,
+
+    /** A `directoryName` in the SubjectAltName extension (Part 12, 7.1). */
+    SUBJECT_ALT_NAME,
+
+    /** A `directoryName` in the IssuerAltName extension. */
+    ISSUER_ALT_NAME,
 }
 
 /**
@@ -166,7 +252,11 @@ public sealed class ChipCheckKind {
     /** With no document-type list: the signer key is for digital signatures only (Part 11, 5.1.1 best practice 1). */
     public data object SignerKeyUsageIsDigitalSignatureOnly : ChipCheckKind()
 
-    /** The signer's country equals the matched root's country (Part 11, 5.1.1 best practice 2). */
+    /**
+     * The signer's country equals the matched root's country (Part 11, 5.1.1 best practice 2). Each
+     * country comes from the subject name, else the alternative-name extensions; the check's
+     * [ChipCheckDetail.CountrySources] says which.
+     */
     public data object SignerCountryMatchesRootCountry : ChipCheckKind()
 
     /** The issue date from DG12 is inside the signer's private-key usage period (Part 11, 5.1.1 best practice 3). */

@@ -168,8 +168,11 @@ internal object FakeReadFlowChip {
         cardAccessOverride: ByteArray? = null,
         /** Handlers before secure messaging: they see protected commands and can answer bare. */
         leadingHandlers: List<FakeCommandHandler> = emptyList(),
+        /** The signer and root in place of the default Utopia pair. */
+        pki: Pki = Pki.rsa(keys),
+        /** The certificates EF.SOD carries; empty for a file that names no signer of its own. */
+        sodCertificates: List<ByteArray>? = null,
     ): FlowChip {
-        val pki = Pki.rsa(keys)
         val groups = linkedMapOf(1 to FakeChipData.dg1(lines), 2 to dg2())
         val caKey = if (caInApplication || caInMasterFile) FakeCaKey.generate(c, 13) else null
         val caOffers = listOf(FakeCaOffer(dh = false, cipherCode = 2))
@@ -187,7 +190,7 @@ internal object FakeReadFlowChip {
         val efCom = FakeChipData.efCom(groups.keys.map { tagOf(it) })
         val app = HashMap<Int, ByteArray>()
         app[LdsIds.EF_COM] = efCom
-        app[LdsIds.EF_SOD] = pki.sod(groups)
+        app[LdsIds.EF_SOD] = if (sodCertificates == null) pki.sod(groups) else pki.sod(groups, certificates = sodCertificates)
         groups.forEach { (n, bytes) -> app[0x0100 + n] = bytes }
         app.putAll(extraApplicationFiles)
 
