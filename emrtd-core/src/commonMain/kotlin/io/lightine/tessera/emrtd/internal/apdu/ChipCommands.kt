@@ -7,6 +7,7 @@ package io.lightine.tessera.emrtd.internal.apdu
 internal object ChipCommands {
     const val INS_SELECT = 0xA4
     const val INS_READ_BINARY = 0xB0
+    const val INS_READ_BINARY_ODD = 0xB1
 
     /** SELECT P1: select by application identifier (DF name). */
     const val SELECT_BY_AID = 0x04
@@ -29,6 +30,9 @@ internal object ChipCommands {
         return CommandApdu(0x00, INS_SELECT, SELECT_EF_UNDER_CURRENT_DF, SELECT_NO_FCI, byteArrayOf((fid shr 8).toByte(), fid.toByte()))
     }
 
+    /** SELECT the master file: `00 A4 00 0C 02 3F 00`. */
+    fun selectMasterFile(): CommandApdu = CommandApdu(0x00, INS_SELECT, 0x00, SELECT_NO_FCI, byteArrayOf(0x3F, 0x00))
+
     /** READ BINARY of the current EF at a 15-bit [offset]: `00 B0 P1 P2 Le`. */
     fun readBinary(
         offset: Int,
@@ -50,6 +54,26 @@ internal object ChipCommands {
         require(sfi in 1..30) { "sfi out of range" }
         require(offset in 0..0xFF) { "offset out of range" }
         return CommandApdu(0x00, INS_READ_BINARY, 0x80 or sfi, offset, ne = ne)
+    }
+
+    /**
+     * READ BINARY with an extended offset (ISO/IEC 7816-4): `00 B1 00 00`, data object `54`
+     * containing the unsigned offset, and [ne].
+     */
+    fun readBinaryExtendedOffset(
+        offset: Int,
+        ne: Int,
+    ): CommandApdu {
+        require(offset > 0x7FFF) { "extended offset must be above 32767" }
+        val value =
+            when {
+                offset <= 0xFF -> byteArrayOf(offset.toByte())
+                offset <= 0xFFFF -> byteArrayOf((offset shr 8).toByte(), offset.toByte())
+                offset <= 0xFFFFFF -> byteArrayOf((offset shr 16).toByte(), (offset shr 8).toByte(), offset.toByte())
+                else -> byteArrayOf((offset shr 24).toByte(), (offset shr 16).toByte(), (offset shr 8).toByte(), offset.toByte())
+            }
+        val data = byteArrayOf(0x54, value.size.toByte()) + value
+        return CommandApdu(0x00, INS_READ_BINARY_ODD, 0x00, 0x00, data, ne)
     }
 }
 
