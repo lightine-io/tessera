@@ -328,6 +328,16 @@ jobs:
             exit 1
           fi
 
+      # The chip cryptography's library is an `implementation` dependency (ADR-031 point 2): no
+      # BouncyCastle type may reach the public API, or apps would be tied to its version. The ABI
+      # dumps list every public signature, so a name in them is a leak.
+      - name: No crypto library types in the public API
+        run: |
+          if git grep -nE 'org[./]bouncycastle' -- '*/api/*'; then
+            echo "::error::A BouncyCastle type is in a public API dump (listed above). Keep it internal (ADR-031 point 2)."
+            exit 1
+          fi
+
       # Past ~200 lines instruction-following degrades and sediment creeps back.
       - name: CLAUDE.md size cap (200 lines)
         run: |
