@@ -54,3 +54,17 @@ Spotless and ktlint, runtime and test dependencies, settings plugins.
   back that belongs in a path rule, a skill, or a hook; every pointer-table link still
   says what it claims; the invariants name what really checks them. Fix it in the
   cadence's docs PR.
+
+## Crypto shipped in the SDK
+
+Each run, check the cryptography libraries that ship inside the SDK and note the
+result on the cadence issue:
+
+- **BouncyCastle** (`org.bouncycastle:bcprov-jdk18on`; version in
+  `gradle/libs.versions.toml` key `bouncycastle`; once chip reading ships): run
+  `gh api /advisories -f ecosystem=maven -f affects=org.bouncycastle:bcprov-jdk18on`
+  and confirm no advisory affects the pinned version. Dependabot also raises
+  security alerts for it.
+- **OpenSSL for iOS chip reading** (not added yet; the iOS crypto card will pin it):
+  Dependabot does not see it, so check the pinned version against
+  https://openssl-library.org/news/vulnerabilities/ and an NVD search for "openssl".
