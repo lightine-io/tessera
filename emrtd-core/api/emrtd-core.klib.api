@@ -41,6 +41,65 @@ final enum class io.lightine.tessera.emrtd.lds/SecurityObjectProblem : kotlin/En
     final fun values(): kotlin/Array<io.lightine.tessera.emrtd.lds/SecurityObjectProblem> // io.lightine.tessera.emrtd.lds/SecurityObjectProblem.values|values#static(){}[0]
 }
 
+final enum class io.lightine.tessera.emrtd.trust/MasterListCheckKind : kotlin/Enum<io.lightine.tessera.emrtd.trust/MasterListCheckKind> { // io.lightine.tessera.emrtd.trust/MasterListCheckKind|null[0]
+    enum entry SIGNATURE_VERIFIES // io.lightine.tessera.emrtd.trust/MasterListCheckKind.SIGNATURE_VERIFIES|null[0]
+    enum entry SIGNER_CHAINS_TO_SUPPLIED_ROOT // io.lightine.tessera.emrtd.trust/MasterListCheckKind.SIGNER_CHAINS_TO_SUPPLIED_ROOT|null[0]
+    enum entry SIGNER_CRITICAL_EXTENSIONS_RECOGNIZED // io.lightine.tessera.emrtd.trust/MasterListCheckKind.SIGNER_CRITICAL_EXTENSIONS_RECOGNIZED|null[0]
+
+    final val entries // io.lightine.tessera.emrtd.trust/MasterListCheckKind.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd.trust/MasterListCheckKind> // io.lightine.tessera.emrtd.trust/MasterListCheckKind.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd.trust/MasterListCheckKind // io.lightine.tessera.emrtd.trust/MasterListCheckKind.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd.trust/MasterListCheckKind> // io.lightine.tessera.emrtd.trust/MasterListCheckKind.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.emrtd.trust/MasterListCheckReason : kotlin/Enum<io.lightine.tessera.emrtd.trust/MasterListCheckReason> { // io.lightine.tessera.emrtd.trust/MasterListCheckReason|null[0]
+    enum entry CONTENT_TYPE_ATTRIBUTE_DIFFERS // io.lightine.tessera.emrtd.trust/MasterListCheckReason.CONTENT_TYPE_ATTRIBUTE_DIFFERS|null[0]
+    enum entry CRYPTO_UNAVAILABLE // io.lightine.tessera.emrtd.trust/MasterListCheckReason.CRYPTO_UNAVAILABLE|null[0]
+    enum entry ISSUER_NAME_DIFFERS // io.lightine.tessera.emrtd.trust/MasterListCheckReason.ISSUER_NAME_DIFFERS|null[0]
+    enum entry KEY_DOES_NOT_FIT_SIGNATURE_ALGORITHM // io.lightine.tessera.emrtd.trust/MasterListCheckReason.KEY_DOES_NOT_FIT_SIGNATURE_ALGORITHM|null[0]
+    enum entry MESSAGE_DIGEST_ATTRIBUTE_MISSING // io.lightine.tessera.emrtd.trust/MasterListCheckReason.MESSAGE_DIGEST_ATTRIBUTE_MISSING|null[0]
+    enum entry MESSAGE_DIGEST_DIFFERS // io.lightine.tessera.emrtd.trust/MasterListCheckReason.MESSAGE_DIGEST_DIFFERS|null[0]
+    enum entry NO_ROOTS_SUPPLIED // io.lightine.tessera.emrtd.trust/MasterListCheckReason.NO_ROOTS_SUPPLIED|null[0]
+    enum entry NO_SIGNER_CERTIFICATE // io.lightine.tessera.emrtd.trust/MasterListCheckReason.NO_SIGNER_CERTIFICATE|null[0]
+    enum entry NO_SUPPLIED_ROOT_MATCHES // io.lightine.tessera.emrtd.trust/MasterListCheckReason.NO_SUPPLIED_ROOT_MATCHES|null[0]
+    enum entry SIGNATURE_DOES_NOT_VERIFY // io.lightine.tessera.emrtd.trust/MasterListCheckReason.SIGNATURE_DOES_NOT_VERIFY|null[0]
+    enum entry UNREADABLE_KEY // io.lightine.tessera.emrtd.trust/MasterListCheckReason.UNREADABLE_KEY|null[0]
+    enum entry UNREADABLE_SIGNER_CERTIFICATE // io.lightine.tessera.emrtd.trust/MasterListCheckReason.UNREADABLE_SIGNER_CERTIFICATE|null[0]
+    enum entry UNRECOGNIZED_CRITICAL_EXTENSION // io.lightine.tessera.emrtd.trust/MasterListCheckReason.UNRECOGNIZED_CRITICAL_EXTENSION|null[0]
+    enum entry UNSUPPORTED_ALGORITHM // io.lightine.tessera.emrtd.trust/MasterListCheckReason.UNSUPPORTED_ALGORITHM|null[0]
+
+    final val entries // io.lightine.tessera.emrtd.trust/MasterListCheckReason.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd.trust/MasterListCheckReason> // io.lightine.tessera.emrtd.trust/MasterListCheckReason.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd.trust/MasterListCheckReason // io.lightine.tessera.emrtd.trust/MasterListCheckReason.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd.trust/MasterListCheckReason> // io.lightine.tessera.emrtd.trust/MasterListCheckReason.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.emrtd.trust/MasterListProblem : kotlin/Enum<io.lightine.tessera.emrtd.trust/MasterListProblem> { // io.lightine.tessera.emrtd.trust/MasterListProblem|null[0]
+    enum entry MALFORMED_CONTENT // io.lightine.tessera.emrtd.trust/MasterListProblem.MALFORMED_CONTENT|null[0]
+    enum entry MALFORMED_ENCODING // io.lightine.tessera.emrtd.trust/MasterListProblem.MALFORMED_ENCODING|null[0]
+    enum entry NOT_A_MASTER_LIST // io.lightine.tessera.emrtd.trust/MasterListProblem.NOT_A_MASTER_LIST|null[0]
+    enum entry NOT_SIGNED_DATA // io.lightine.tessera.emrtd.trust/MasterListProblem.NOT_SIGNED_DATA|null[0]
+
+    final val entries // io.lightine.tessera.emrtd.trust/MasterListProblem.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd.trust/MasterListProblem> // io.lightine.tessera.emrtd.trust/MasterListProblem.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd.trust/MasterListProblem // io.lightine.tessera.emrtd.trust/MasterListProblem.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd.trust/MasterListProblem> // io.lightine.tessera.emrtd.trust/MasterListProblem.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.emrtd.trust/TrustAnchorProblem : kotlin/Enum<io.lightine.tessera.emrtd.trust/TrustAnchorProblem> { // io.lightine.tessera.emrtd.trust/TrustAnchorProblem|null[0]
+    enum entry INVALID_CERTIFICATE_FIELD // io.lightine.tessera.emrtd.trust/TrustAnchorProblem.INVALID_CERTIFICATE_FIELD|null[0]
+    enum entry MALFORMED_ENCODING // io.lightine.tessera.emrtd.trust/TrustAnchorProblem.MALFORMED_ENCODING|null[0]
+
+    final val entries // io.lightine.tessera.emrtd.trust/TrustAnchorProblem.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd.trust/TrustAnchorProblem> // io.lightine.tessera.emrtd.trust/TrustAnchorProblem.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd.trust/TrustAnchorProblem // io.lightine.tessera.emrtd.trust/TrustAnchorProblem.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd.trust/TrustAnchorProblem> // io.lightine.tessera.emrtd.trust/TrustAnchorProblem.values|values#static(){}[0]
+}
+
 abstract interface io.lightine.tessera.emrtd/ApduTransport { // io.lightine.tessera.emrtd/ApduTransport|null[0]
     abstract val maxCommandLength // io.lightine.tessera.emrtd/ApduTransport.maxCommandLength|{}maxCommandLength[0]
         abstract fun <get-maxCommandLength>(): kotlin/Int // io.lightine.tessera.emrtd/ApduTransport.maxCommandLength.<get-maxCommandLength>|<get-maxCommandLength>(){}[0]
@@ -451,6 +510,53 @@ final class io.lightine.tessera.emrtd.lds/SignerCertificateView { // io.lightine
     final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/SignerCertificateView.toString|toString(){}[0]
 }
 
+final class io.lightine.tessera.emrtd.trust/MasterList { // io.lightine.tessera.emrtd.trust/MasterList|null[0]
+    final val anchors // io.lightine.tessera.emrtd.trust/MasterList.anchors|{}anchors[0]
+        final fun <get-anchors>(): kotlin.collections/List<io.lightine.tessera.emrtd.trust/TrustAnchor> // io.lightine.tessera.emrtd.trust/MasterList.anchors.<get-anchors>|<get-anchors>(){}[0]
+    final val checks // io.lightine.tessera.emrtd.trust/MasterList.checks|{}checks[0]
+        final fun <get-checks>(): kotlin.collections/List<io.lightine.tessera.emrtd.trust/MasterListCheck> // io.lightine.tessera.emrtd.trust/MasterList.checks.<get-checks>|<get-checks>(){}[0]
+    final val unreadableCertificateCount // io.lightine.tessera.emrtd.trust/MasterList.unreadableCertificateCount|{}unreadableCertificateCount[0]
+        final fun <get-unreadableCertificateCount>(): kotlin/Int // io.lightine.tessera.emrtd.trust/MasterList.unreadableCertificateCount.<get-unreadableCertificateCount>|<get-unreadableCertificateCount>(){}[0]
+    final val version // io.lightine.tessera.emrtd.trust/MasterList.version|{}version[0]
+        final fun <get-version>(): kotlin/Int // io.lightine.tessera.emrtd.trust/MasterList.version.<get-version>|<get-version>(){}[0]
+
+    final fun outcomeOf(io.lightine.tessera.emrtd.trust/MasterListCheckKind): io.lightine.tessera.emrtd.trust/MasterListCheckOutcome // io.lightine.tessera.emrtd.trust/MasterList.outcomeOf|outcomeOf(io.lightine.tessera.emrtd.trust.MasterListCheckKind){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.trust/MasterList.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.emrtd.trust/MasterListCheck { // io.lightine.tessera.emrtd.trust/MasterListCheck|null[0]
+    final val kind // io.lightine.tessera.emrtd.trust/MasterListCheck.kind|{}kind[0]
+        final fun <get-kind>(): io.lightine.tessera.emrtd.trust/MasterListCheckKind // io.lightine.tessera.emrtd.trust/MasterListCheck.kind.<get-kind>|<get-kind>(){}[0]
+    final val outcome // io.lightine.tessera.emrtd.trust/MasterListCheck.outcome|{}outcome[0]
+        final fun <get-outcome>(): io.lightine.tessera.emrtd.trust/MasterListCheckOutcome // io.lightine.tessera.emrtd.trust/MasterListCheck.outcome.<get-outcome>|<get-outcome>(){}[0]
+
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.trust/MasterListCheck.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.emrtd.trust/TrustAnchor { // io.lightine.tessera.emrtd.trust/TrustAnchor|null[0]
+    final val notAfter // io.lightine.tessera.emrtd.trust/TrustAnchor.notAfter|{}notAfter[0]
+        final fun <get-notAfter>(): kotlin/String // io.lightine.tessera.emrtd.trust/TrustAnchor.notAfter.<get-notAfter>|<get-notAfter>(){}[0]
+    final val notBefore // io.lightine.tessera.emrtd.trust/TrustAnchor.notBefore|{}notBefore[0]
+        final fun <get-notBefore>(): kotlin/String // io.lightine.tessera.emrtd.trust/TrustAnchor.notBefore.<get-notBefore>|<get-notBefore>(){}[0]
+    final val publicKeyAlgorithmOid // io.lightine.tessera.emrtd.trust/TrustAnchor.publicKeyAlgorithmOid|{}publicKeyAlgorithmOid[0]
+        final fun <get-publicKeyAlgorithmOid>(): kotlin/String // io.lightine.tessera.emrtd.trust/TrustAnchor.publicKeyAlgorithmOid.<get-publicKeyAlgorithmOid>|<get-publicKeyAlgorithmOid>(){}[0]
+    final val serialNumberHex // io.lightine.tessera.emrtd.trust/TrustAnchor.serialNumberHex|{}serialNumberHex[0]
+        final fun <get-serialNumberHex>(): kotlin/String // io.lightine.tessera.emrtd.trust/TrustAnchor.serialNumberHex.<get-serialNumberHex>|<get-serialNumberHex>(){}[0]
+    final val subjectCommonName // io.lightine.tessera.emrtd.trust/TrustAnchor.subjectCommonName|{}subjectCommonName[0]
+        final fun <get-subjectCommonName>(): kotlin/String? // io.lightine.tessera.emrtd.trust/TrustAnchor.subjectCommonName.<get-subjectCommonName>|<get-subjectCommonName>(){}[0]
+    final val subjectCountry // io.lightine.tessera.emrtd.trust/TrustAnchor.subjectCountry|{}subjectCountry[0]
+        final fun <get-subjectCountry>(): kotlin/String? // io.lightine.tessera.emrtd.trust/TrustAnchor.subjectCountry.<get-subjectCountry>|<get-subjectCountry>(){}[0]
+    final val subjectKeyIdentifier // io.lightine.tessera.emrtd.trust/TrustAnchor.subjectKeyIdentifier|{}subjectKeyIdentifier[0]
+        final fun <get-subjectKeyIdentifier>(): kotlin/ByteArray? // io.lightine.tessera.emrtd.trust/TrustAnchor.subjectKeyIdentifier.<get-subjectKeyIdentifier>|<get-subjectKeyIdentifier>(){}[0]
+
+    final fun encodedBytes(): kotlin/ByteArray // io.lightine.tessera.emrtd.trust/TrustAnchor.encodedBytes|encodedBytes(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.trust/TrustAnchor.toString|toString(){}[0]
+
+    final object Companion { // io.lightine.tessera.emrtd.trust/TrustAnchor.Companion|null[0]
+        final fun fromDer(kotlin/ByteArray): io.lightine.tessera.emrtd.trust/TrustAnchorParse // io.lightine.tessera.emrtd.trust/TrustAnchor.Companion.fromDer|fromDer(kotlin.ByteArray){}[0]
+    }
+}
+
 final class io.lightine.tessera.emrtd/ApduTransportException : kotlin/Exception { // io.lightine.tessera.emrtd/ApduTransportException|null[0]
     constructor <init>(io.lightine.tessera.types.errors/NfcError, kotlin/Throwable? = ...) // io.lightine.tessera.emrtd/ApduTransportException.<init>|<init>(io.lightine.tessera.types.errors.NfcError;kotlin.Throwable?){}[0]
 
@@ -508,6 +614,64 @@ sealed class io.lightine.tessera.emrtd.lds/SecurityObjectParse { // io.lightine.
     }
 }
 
+sealed class io.lightine.tessera.emrtd.trust/MasterListCheckOutcome { // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome|null[0]
+    final class Failed : io.lightine.tessera.emrtd.trust/MasterListCheckOutcome { // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Failed|null[0]
+        final val reason // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Failed.reason|{}reason[0]
+            final fun <get-reason>(): io.lightine.tessera.emrtd.trust/MasterListCheckReason // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Failed.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun component1(): io.lightine.tessera.emrtd.trust/MasterListCheckReason // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Failed.component1|component1(){}[0]
+        final fun copy(io.lightine.tessera.emrtd.trust/MasterListCheckReason = ...): io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Failed // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Failed.copy|copy(io.lightine.tessera.emrtd.trust.MasterListCheckReason){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Failed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Failed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Failed.toString|toString(){}[0]
+    }
+
+    final class NotRun : io.lightine.tessera.emrtd.trust/MasterListCheckOutcome { // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.NotRun|null[0]
+        final val reason // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.NotRun.reason|{}reason[0]
+            final fun <get-reason>(): io.lightine.tessera.emrtd.trust/MasterListCheckReason // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.NotRun.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun component1(): io.lightine.tessera.emrtd.trust/MasterListCheckReason // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.NotRun.component1|component1(){}[0]
+        final fun copy(io.lightine.tessera.emrtd.trust/MasterListCheckReason = ...): io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.NotRun // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.NotRun.copy|copy(io.lightine.tessera.emrtd.trust.MasterListCheckReason){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.NotRun.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.NotRun.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.NotRun.toString|toString(){}[0]
+    }
+
+    final object Passed : io.lightine.tessera.emrtd.trust/MasterListCheckOutcome { // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Passed|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Passed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Passed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Passed.toString|toString(){}[0]
+    }
+}
+
+sealed class io.lightine.tessera.emrtd.trust/MasterListRead { // io.lightine.tessera.emrtd.trust/MasterListRead|null[0]
+    final class Read : io.lightine.tessera.emrtd.trust/MasterListRead { // io.lightine.tessera.emrtd.trust/MasterListRead.Read|null[0]
+        final val masterList // io.lightine.tessera.emrtd.trust/MasterListRead.Read.masterList|{}masterList[0]
+            final fun <get-masterList>(): io.lightine.tessera.emrtd.trust/MasterList // io.lightine.tessera.emrtd.trust/MasterListRead.Read.masterList.<get-masterList>|<get-masterList>(){}[0]
+    }
+
+    final class Unreadable : io.lightine.tessera.emrtd.trust/MasterListRead { // io.lightine.tessera.emrtd.trust/MasterListRead.Unreadable|null[0]
+        final val offset // io.lightine.tessera.emrtd.trust/MasterListRead.Unreadable.offset|{}offset[0]
+            final fun <get-offset>(): kotlin/Int // io.lightine.tessera.emrtd.trust/MasterListRead.Unreadable.offset.<get-offset>|<get-offset>(){}[0]
+        final val problem // io.lightine.tessera.emrtd.trust/MasterListRead.Unreadable.problem|{}problem[0]
+            final fun <get-problem>(): io.lightine.tessera.emrtd.trust/MasterListProblem // io.lightine.tessera.emrtd.trust/MasterListRead.Unreadable.problem.<get-problem>|<get-problem>(){}[0]
+    }
+}
+
+sealed class io.lightine.tessera.emrtd.trust/TrustAnchorParse { // io.lightine.tessera.emrtd.trust/TrustAnchorParse|null[0]
+    final class Parsed : io.lightine.tessera.emrtd.trust/TrustAnchorParse { // io.lightine.tessera.emrtd.trust/TrustAnchorParse.Parsed|null[0]
+        final val anchor // io.lightine.tessera.emrtd.trust/TrustAnchorParse.Parsed.anchor|{}anchor[0]
+            final fun <get-anchor>(): io.lightine.tessera.emrtd.trust/TrustAnchor // io.lightine.tessera.emrtd.trust/TrustAnchorParse.Parsed.anchor.<get-anchor>|<get-anchor>(){}[0]
+    }
+
+    final class Unreadable : io.lightine.tessera.emrtd.trust/TrustAnchorParse { // io.lightine.tessera.emrtd.trust/TrustAnchorParse.Unreadable|null[0]
+        final val offset // io.lightine.tessera.emrtd.trust/TrustAnchorParse.Unreadable.offset|{}offset[0]
+            final fun <get-offset>(): kotlin/Int // io.lightine.tessera.emrtd.trust/TrustAnchorParse.Unreadable.offset.<get-offset>|<get-offset>(){}[0]
+        final val problem // io.lightine.tessera.emrtd.trust/TrustAnchorParse.Unreadable.problem|{}problem[0]
+            final fun <get-problem>(): io.lightine.tessera.emrtd.trust/TrustAnchorProblem // io.lightine.tessera.emrtd.trust/TrustAnchorParse.Unreadable.problem.<get-problem>|<get-problem>(){}[0]
+    }
+}
+
 sealed class io.lightine.tessera.emrtd/ChipAccessKey { // io.lightine.tessera.emrtd/ChipAccessKey|null[0]
     final val isCleared // io.lightine.tessera.emrtd/ChipAccessKey.isCleared|{}isCleared[0]
         final fun <get-isCleared>(): kotlin/Boolean // io.lightine.tessera.emrtd/ChipAccessKey.isCleared.<get-isCleared>|<get-isCleared>(){}[0]
@@ -529,4 +693,8 @@ sealed class io.lightine.tessera.emrtd/ChipAccessKey { // io.lightine.tessera.em
             final fun fromPrintedFields(kotlin/String, kotlin/Char, kotlin/String, kotlin/String, kotlin/Char, kotlin/String, kotlin/Char): io.lightine.tessera.emrtd/ChipAccessKey.Mrz // io.lightine.tessera.emrtd/ChipAccessKey.Mrz.Companion.fromPrintedFields|fromPrintedFields(kotlin.String;kotlin.Char;kotlin.String;kotlin.String;kotlin.Char;kotlin.String;kotlin.Char){}[0]
         }
     }
+}
+
+final object io.lightine.tessera.emrtd.trust/MasterListReader { // io.lightine.tessera.emrtd.trust/MasterListReader|null[0]
+    final fun read(kotlin/ByteArray, kotlin.collections/List<io.lightine.tessera.emrtd.trust/TrustAnchor> = ...): io.lightine.tessera.emrtd.trust/MasterListRead // io.lightine.tessera.emrtd.trust/MasterListReader.read|read(kotlin.ByteArray;kotlin.collections.List<io.lightine.tessera.emrtd.trust.TrustAnchor>){}[0]
 }

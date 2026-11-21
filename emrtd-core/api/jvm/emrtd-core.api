@@ -371,3 +371,142 @@ public final class io/lightine/tessera/emrtd/lds/SignerCertificateView {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/lightine/tessera/emrtd/trust/MasterList {
+	public final fun getAnchors ()Ljava/util/List;
+	public final fun getChecks ()Ljava/util/List;
+	public final fun getUnreadableCertificateCount ()I
+	public final fun getVersion ()I
+	public final fun outcomeOf (Lio/lightine/tessera/emrtd/trust/MasterListCheckKind;)Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListCheck {
+	public final fun getKind ()Lio/lightine/tessera/emrtd/trust/MasterListCheckKind;
+	public final fun getOutcome ()Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListCheckKind : java/lang/Enum {
+	public static final field SIGNATURE_VERIFIES Lio/lightine/tessera/emrtd/trust/MasterListCheckKind;
+	public static final field SIGNER_CHAINS_TO_SUPPLIED_ROOT Lio/lightine/tessera/emrtd/trust/MasterListCheckKind;
+	public static final field SIGNER_CRITICAL_EXTENSIONS_RECOGNIZED Lio/lightine/tessera/emrtd/trust/MasterListCheckKind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/trust/MasterListCheckKind;
+	public static fun values ()[Lio/lightine/tessera/emrtd/trust/MasterListCheckKind;
+}
+
+public abstract class io/lightine/tessera/emrtd/trust/MasterListCheckOutcome {
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListCheckOutcome$Failed : io/lightine/tessera/emrtd/trust/MasterListCheckOutcome {
+	public final fun component1 ()Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public final fun copy (Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;)Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome$Failed;
+	public static synthetic fun copy$default (Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome$Failed;Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;ILjava/lang/Object;)Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome$Failed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListCheckOutcome$NotRun : io/lightine/tessera/emrtd/trust/MasterListCheckOutcome {
+	public final fun component1 ()Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public final fun copy (Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;)Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome$NotRun;
+	public static synthetic fun copy$default (Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome$NotRun;Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;ILjava/lang/Object;)Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome$NotRun;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListCheckOutcome$Passed : io/lightine/tessera/emrtd/trust/MasterListCheckOutcome {
+	public static final field INSTANCE Lio/lightine/tessera/emrtd/trust/MasterListCheckOutcome$Passed;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListCheckReason : java/lang/Enum {
+	public static final field CONTENT_TYPE_ATTRIBUTE_DIFFERS Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field CRYPTO_UNAVAILABLE Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field ISSUER_NAME_DIFFERS Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field KEY_DOES_NOT_FIT_SIGNATURE_ALGORITHM Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field MESSAGE_DIGEST_ATTRIBUTE_MISSING Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field MESSAGE_DIGEST_DIFFERS Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field NO_ROOTS_SUPPLIED Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field NO_SIGNER_CERTIFICATE Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field NO_SUPPLIED_ROOT_MATCHES Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field SIGNATURE_DOES_NOT_VERIFY Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field UNREADABLE_KEY Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field UNREADABLE_SIGNER_CERTIFICATE Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field UNRECOGNIZED_CRITICAL_EXTENSION Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static final field UNSUPPORTED_ALGORITHM Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+	public static fun values ()[Lio/lightine/tessera/emrtd/trust/MasterListCheckReason;
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListProblem : java/lang/Enum {
+	public static final field MALFORMED_CONTENT Lio/lightine/tessera/emrtd/trust/MasterListProblem;
+	public static final field MALFORMED_ENCODING Lio/lightine/tessera/emrtd/trust/MasterListProblem;
+	public static final field NOT_A_MASTER_LIST Lio/lightine/tessera/emrtd/trust/MasterListProblem;
+	public static final field NOT_SIGNED_DATA Lio/lightine/tessera/emrtd/trust/MasterListProblem;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/trust/MasterListProblem;
+	public static fun values ()[Lio/lightine/tessera/emrtd/trust/MasterListProblem;
+}
+
+public abstract class io/lightine/tessera/emrtd/trust/MasterListRead {
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListRead$Read : io/lightine/tessera/emrtd/trust/MasterListRead {
+	public final fun getMasterList ()Lio/lightine/tessera/emrtd/trust/MasterList;
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListRead$Unreadable : io/lightine/tessera/emrtd/trust/MasterListRead {
+	public final fun getOffset ()I
+	public final fun getProblem ()Lio/lightine/tessera/emrtd/trust/MasterListProblem;
+}
+
+public final class io/lightine/tessera/emrtd/trust/MasterListReader {
+	public static final field INSTANCE Lio/lightine/tessera/emrtd/trust/MasterListReader;
+	public final fun read ([BLjava/util/List;)Lio/lightine/tessera/emrtd/trust/MasterListRead;
+	public static synthetic fun read$default (Lio/lightine/tessera/emrtd/trust/MasterListReader;[BLjava/util/List;ILjava/lang/Object;)Lio/lightine/tessera/emrtd/trust/MasterListRead;
+}
+
+public final class io/lightine/tessera/emrtd/trust/TrustAnchor {
+	public static final field Companion Lio/lightine/tessera/emrtd/trust/TrustAnchor$Companion;
+	public final fun encodedBytes ()[B
+	public final fun getNotAfter ()Ljava/lang/String;
+	public final fun getNotBefore ()Ljava/lang/String;
+	public final fun getPublicKeyAlgorithmOid ()Ljava/lang/String;
+	public final fun getSerialNumberHex ()Ljava/lang/String;
+	public final fun getSubjectCommonName ()Ljava/lang/String;
+	public final fun getSubjectCountry ()Ljava/lang/String;
+	public final fun getSubjectKeyIdentifier ()[B
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/trust/TrustAnchor$Companion {
+	public final fun fromDer ([B)Lio/lightine/tessera/emrtd/trust/TrustAnchorParse;
+}
+
+public abstract class io/lightine/tessera/emrtd/trust/TrustAnchorParse {
+}
+
+public final class io/lightine/tessera/emrtd/trust/TrustAnchorParse$Parsed : io/lightine/tessera/emrtd/trust/TrustAnchorParse {
+	public final fun getAnchor ()Lio/lightine/tessera/emrtd/trust/TrustAnchor;
+}
+
+public final class io/lightine/tessera/emrtd/trust/TrustAnchorParse$Unreadable : io/lightine/tessera/emrtd/trust/TrustAnchorParse {
+	public final fun getOffset ()I
+	public final fun getProblem ()Lio/lightine/tessera/emrtd/trust/TrustAnchorProblem;
+}
+
+public final class io/lightine/tessera/emrtd/trust/TrustAnchorProblem : java/lang/Enum {
+	public static final field INVALID_CERTIFICATE_FIELD Lio/lightine/tessera/emrtd/trust/TrustAnchorProblem;
+	public static final field MALFORMED_ENCODING Lio/lightine/tessera/emrtd/trust/TrustAnchorProblem;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/trust/TrustAnchorProblem;
+	public static fun values ()[Lio/lightine/tessera/emrtd/trust/TrustAnchorProblem;
+}
+

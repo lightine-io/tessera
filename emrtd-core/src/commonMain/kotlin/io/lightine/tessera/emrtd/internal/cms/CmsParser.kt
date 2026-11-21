@@ -96,7 +96,14 @@ internal object CmsParser {
 
     private val FILE_TAG = DerTag(DerTag.APPLICATION, true, 23)
 
-    fun parse(file: ByteArray): CmsSignedData {
+    /**
+     * Reads [file] as a SignedData whose content type is [expectedContentType]: the LDS security
+     * object by default; EF.CardSecurity (id-SecurityObject) and a CSCA master list name theirs.
+     */
+    fun parse(
+        file: ByteArray,
+        expectedContentType: String = OID_LDS_SECURITY_OBJECT,
+    ): CmsSignedData {
         val normalized = BerNormalizer.normalize(file)
         var reader = DerReader(normalized.der)
         val outer = reader
@@ -122,7 +129,7 @@ internal object CmsParser {
         val contentType = encap.readOid()
         val contentReader = encap.readOptional(DerTag.context(0, constructed = true))?.contents()
         encap.finish()
-        if (contentType != OID_LDS_SECURITY_OBJECT) throw CmsException(CmsFailure.WRONG_CONTENT_TYPE)
+        if (contentType != expectedContentType) throw CmsException(CmsFailure.WRONG_CONTENT_TYPE)
         if (contentReader == null) throw CmsException(CmsFailure.MISSING_CONTENT)
         val eContent = readOctetStringAny(contentReader)
         contentReader.finish()
