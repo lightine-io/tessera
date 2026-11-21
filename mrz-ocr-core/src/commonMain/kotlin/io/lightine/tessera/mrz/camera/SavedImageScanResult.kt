@@ -5,7 +5,7 @@ package io.lightine.tessera.mrz.camera
  *
  * [scan] has the same shape as a live-camera result and differs only in its reading method,
  * `PRE_CAPTURED_IMAGE`. The type holds document data and can hold a precise location: do not log it
- * verbatim.
+ * verbatim. `toString()` shows no document values; they are in the properties.
  *
  * @since 0.3.0
  */
@@ -25,4 +25,9 @@ public data class SavedImageScanResult(
      * `null` when none was requested: policy [CaptureMetadataPolicy.NONE] or no [CaptureMetadataReader].
      */
     public val captureMetadata: CaptureMetadata?,
-)
+) {
+    /** The scan variant and the counts; never a document value. */
+    override fun toString(): String =
+        "SavedImageScanResult(scan=${scan::class.simpleName}, candidates=${candidates.size}, " +
+            "captureMetadata=${captureMetadata != null})"
+}

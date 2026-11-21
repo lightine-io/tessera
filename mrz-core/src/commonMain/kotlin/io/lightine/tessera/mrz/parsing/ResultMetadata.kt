@@ -12,6 +12,9 @@ import io.lightine.tessera.types.vocabulary.ReadMethod
  *
  * A parse [ParseResult.Failure] carries empty `warnings`, `validationFailures`, and `checks`.
  *
+ * `toString()` shows no document values; they are in the warnings, the validation failures, the
+ * transliteration details, and their properties.
+ *
  * @property readMethod How the data reached the SDK: [MrzParser] and the generator set
  *   `BACKEND_STRING_INPUT`, and [ManualMrzReader] sets `MANUAL_ENTRY`.
  * @property warnings Warnings found while validating. Empty if there are none, on a failure, and on
@@ -48,4 +51,10 @@ public data class ResultMetadata(
         validationFailures: List<MrzValidationError>,
         transliterationDetails: TransliterationDetails?,
     ) : this(readMethod, warnings, validationFailures, transliterationDetails, emptyList())
+
+    /** The read method and the counts; never a document value. */
+    override fun toString(): String =
+        "ResultMetadata(readMethod=$readMethod, warnings=${warnings.size}, " +
+            "validationFailures=${validationFailures.size}, " +
+            "transliterationDetails=${transliterationDetails != null}, checks=${checks.size})"
 }

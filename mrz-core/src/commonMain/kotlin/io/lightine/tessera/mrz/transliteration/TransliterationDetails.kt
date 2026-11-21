@@ -6,7 +6,7 @@ import io.lightine.tessera.types.vocabulary.MrzField
  * The transliteration a generator applied.
  *
  * The generator sets it on [io.lightine.tessera.mrz.parsing.ResultMetadata.transliterationDetails]
- * when you pass a profile.
+ * when you pass a profile. `toString()` shows no document values; they are in the properties.
  *
  * @property profileIdentifier Identifier of the profile that ran.
  * @property transliteratedFields The values passed through the profile. From field values: one
@@ -17,10 +17,17 @@ import io.lightine.tessera.types.vocabulary.MrzField
 public data class TransliterationDetails(
     val profileIdentifier: String,
     val transliteratedFields: List<TransliteratedField>,
-)
+) {
+    /** The profile and how many values it ran over; never a document value. */
+    override fun toString(): String =
+        "TransliterationDetails(profileIdentifier=$profileIdentifier, " +
+            "transliteratedFields=${transliteratedFields.size})"
+}
 
 /**
  * One value passed through a transliteration profile.
+ *
+ * `toString()` shows no document values; they are in the properties.
  *
  * @property field The MRZ field the value belongs to.
  * @property originalInput The value as passed in.
@@ -33,4 +40,7 @@ public data class TransliteratedField(
     val originalInput: String,
     val normalizedInput: String,
     val transliteratedOutput: String,
-)
+) {
+    /** The field the value belongs to; never the value itself. */
+    override fun toString(): String = "TransliteratedField(field=$field)"
+}

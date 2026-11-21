@@ -6,7 +6,8 @@ import io.lightine.tessera.mrz.parsing.ParseResult
  * The outcome of analysing one frame.
  *
  * [Decoded] and [NoMrzFound] hold document data and raw OCR text, so logging a whole result leaks
- * it: log only non-PII fields such as [quality], or redact first.
+ * it: log only non-PII fields such as [quality], or redact first. `toString()` on each variant
+ * shows no document values; they are in the properties.
  *
  * @since 0.2.0
  */
@@ -47,6 +48,10 @@ public sealed interface MrzScanResult {
             recognizedText: RecognizedText,
             quality: ScanQuality,
         ) : this(parse, recognizedText, quality, fillerPadding = null)
+
+        /** The parse variant and the quality signals; never a document value. */
+        override fun toString(): String =
+            "Decoded(parse=${parse::class.simpleName}, quality=$quality, fillerPadding=${fillerPadding != null})"
     }
 
     /**
@@ -59,7 +64,10 @@ public sealed interface MrzScanResult {
     public data class NoMrzFound(
         public val recognizedText: RecognizedText,
         override val quality: ScanQuality,
-    ) : MrzScanResult
+    ) : MrzScanResult {
+        /** The line count and the quality signals; never a document value. */
+        override fun toString(): String = "NoMrzFound(lines=${recognizedText.lines.size}, quality=$quality)"
+    }
 
     /**
      * The capture step failed (see [CameraError]); there is no recognized text.
@@ -71,7 +79,10 @@ public sealed interface MrzScanResult {
     public data class CaptureError(
         public val error: CameraError,
         override val quality: ScanQuality,
-    ) : MrzScanResult
+    ) : MrzScanResult {
+        /** What failed and the quality signals; never a document value. */
+        override fun toString(): String = "CaptureError($error, quality=$quality)"
+    }
 }
 
 /**

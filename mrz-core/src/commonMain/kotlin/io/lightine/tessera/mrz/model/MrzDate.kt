@@ -9,6 +9,8 @@ import kotlin.time.Instant
 /**
  * An MRZ date: the printed year, month, and day, plus an inferred full date.
  *
+ * `toString()` shows no document values; they are in the properties.
+ *
  * @property rawYear The two year characters as printed.
  * @property rawMonth The two month characters as printed.
  * @property rawDay The two day characters as printed.
@@ -31,6 +33,9 @@ public data class MrzDate(
     val inferenceMethod: MrzDateInferenceMethod = MrzDateInferenceMethod.RAW_ONLY,
     val componentsFormCalendarDate: Boolean? = null,
 ) {
+    /** The inference method and whether the parts form a real date; never a document value. */
+    override fun toString(): String = "MrzDate(inferenceMethod=$inferenceMethod, componentsFormCalendarDate=$componentsFormCalendarDate)"
+
     /** Factories that parse printed date components. */
     public companion object {
         internal const val MAX_PLAUSIBLE_AGE_YEARS: Int = 130

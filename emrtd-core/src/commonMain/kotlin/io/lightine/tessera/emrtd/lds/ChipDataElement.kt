@@ -48,7 +48,8 @@ public class ChipDataElement internal constructor(
  * A date as a chip file holds it: year, month and day as numbers, each `null` when the chip marks it
  * unknown (`0000` for the year, `00` for month or day; Doc 9303 Part 10, section 4.7.11).
  *
- * The SDK does not check the date against the calendar.
+ * The SDK does not check the date against the calendar. `toString()` shows no document values; they
+ * are in the properties.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -63,6 +64,9 @@ public data class ChipDate(
     val month: Int?,
     val day: Int?,
 ) {
+    /** Which parts the chip wrote down; never a date value. */
+    override fun toString(): String = "ChipDate(year=${year != null}, month=${month != null}, day=${day != null})"
+
     internal companion object {
         /** From 8 ASCII digits (`yyyymmdd`) or 4 bytes of BCD; `null` for any other bytes. */
         fun decode(value: ByteArray): ChipDate? = LdsReader.digits(value, 8)?.let { fromDigits(it) }
@@ -80,6 +84,7 @@ public data class ChipDate(
  * A date and time of day as a chip file holds them (`yyyymmddhhmmss`).
  *
  * The numbers are as written; the SDK does not check them against the calendar or the clock.
+ * `toString()` shows no document values; they are in the properties.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -96,6 +101,9 @@ public data class ChipDateTime(
     val minute: Int,
     val second: Int,
 ) {
+    /** The date part's shape; never a date or time value. */
+    override fun toString(): String = "ChipDateTime($date)"
+
     internal companion object {
         /** From 14 ASCII digits or 7 bytes of BCD; `null` for any other bytes. */
         fun decode(value: ByteArray): ChipDateTime? {

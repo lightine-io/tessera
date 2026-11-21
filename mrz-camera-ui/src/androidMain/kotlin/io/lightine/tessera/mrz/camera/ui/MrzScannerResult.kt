@@ -35,14 +35,18 @@ public sealed interface MrzScannerResult {
      * The user accepted a decoded MRZ, or [ReviewMode.INSTANT_RETURN] returned it without review.
      *
      * The reading is never a parse failure. A check-digit mismatch is reported as a partial success.
-     * It holds document data, so do not log it verbatim.
+     * It holds document data, so do not log it verbatim. `toString()` shows no document values;
+     * they are in the properties.
      *
      * @property result The decoded reading, as the headless reader produced it.
      * @since 0.5.0
      */
     public data class Confirmed(
         public val result: MrzScanResult.Decoded,
-    ) : MrzScannerResult
+    ) : MrzScannerResult {
+        /** `Confirmed`, without the reading. */
+        override fun toString(): String = "Confirmed"
+    }
 
     /**
      * The flow ended without a confirmed reading.

@@ -7,6 +7,8 @@ import io.lightine.tessera.types.vocabulary.UnmappedCharacter
  *
  * The profiles the SDK ships map unmapped characters to `<` and always return [Success].
  *
+ * `toString()` on each of them shows no document values; they are in the properties.
+ *
  * @since 0.1.0
  */
 public sealed class TransliterationResult {
@@ -18,7 +20,10 @@ public sealed class TransliterationResult {
      */
     public data class Success(
         val output: String,
-    ) : TransliterationResult()
+    ) : TransliterationResult() {
+        /** How long the mapped text is; never the text itself. */
+        override fun toString(): String = "Success(outputLength=${output.length})"
+    }
 
     /**
      * At least one character could not be mapped and the profile has no fallback.
@@ -28,5 +33,8 @@ public sealed class TransliterationResult {
      */
     public data class Failure(
         val unmappedCharacters: List<UnmappedCharacter>,
-    ) : TransliterationResult()
+    ) : TransliterationResult() {
+        /** How many characters could not be mapped; never a character itself. */
+        override fun toString(): String = "Failure(unmappedCharacterCount=${unmappedCharacters.size})"
+    }
 }

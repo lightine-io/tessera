@@ -6,6 +6,8 @@ import kotlin.jvm.JvmInline
 /**
  * A country code as printed in an MRZ: three characters.
  *
+ * `toString()` shows no document values; the code is in [rawCode].
+ *
  * @property rawCode The code exactly as printed.
  * @since 0.1.0
  */
@@ -28,4 +30,7 @@ public value class CountryCode(
     /** The category from [entry], or `null` if the code is not recognized. */
     public val category: CountryCodeCategory?
         get() = entry?.category
+
+    /** `CountryCode`, without the code. */
+    override fun toString(): String = "CountryCode"
 }

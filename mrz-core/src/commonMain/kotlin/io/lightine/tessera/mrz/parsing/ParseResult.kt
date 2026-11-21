@@ -7,7 +7,7 @@ import io.lightine.tessera.types.errors.MrzParseError
  * The result of parsing an MRZ: [Success], [PartialSuccess], or [Failure].
  *
  * Success and PartialSuccess hold the personal data of the document, and Failure holds the raw
- * input, so do not log a whole result verbatim.
+ * input. `toString()` on each of them shows no document values; they are in the properties.
  *
  * @since 0.1.0
  */
@@ -25,7 +25,12 @@ public sealed class ParseResult {
     public data class Success(
         val document: MrzDocument,
         override val metadata: ResultMetadata,
-    ) : ParseResult()
+    ) : ParseResult() {
+        /** The format and the metadata counts; never a document value. */
+        override fun toString(): String =
+            "Success(format=${document.format}, warnings=${metadata.warnings.size}, " +
+                "validationFailures=${metadata.validationFailures.size}, checks=${metadata.checks.size})"
+    }
 
     /**
      * The input parsed, and the validator found at least one validation failure.
@@ -37,7 +42,12 @@ public sealed class ParseResult {
     public data class PartialSuccess(
         val document: MrzDocument,
         override val metadata: ResultMetadata,
-    ) : ParseResult()
+    ) : ParseResult() {
+        /** The format and the metadata counts; never a document value. */
+        override fun toString(): String =
+            "PartialSuccess(format=${document.format}, warnings=${metadata.warnings.size}, " +
+                "validationFailures=${metadata.validationFailures.size}, checks=${metadata.checks.size})"
+    }
 
     /**
      * The input could not be parsed.
@@ -51,5 +61,8 @@ public sealed class ParseResult {
         val error: MrzParseError,
         val rawInput: String?,
         override val metadata: ResultMetadata,
-    ) : ParseResult()
+    ) : ParseResult() {
+        /** The error and whether the raw input is present; never the input itself. */
+        override fun toString(): String = "Failure($error, rawInput=${rawInput != null})"
+    }
 }

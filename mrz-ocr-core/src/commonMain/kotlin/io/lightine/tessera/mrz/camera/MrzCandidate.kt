@@ -17,7 +17,8 @@ import io.lightine.tessera.mrz.parsing.ParseResult
  * was not explored, not that it is ruled out. More than one reconstruction can pass every check
  * digit: two changed characters in one field can cancel out in its check digit. All of them are
  * listed, in no order of likelihood, and the app or the person chooses. The type holds document
- * data: do not log it verbatim.
+ * data: do not log it verbatim. `toString()` on it and on [CharacterDisambiguation] shows no
+ * document values; they are in the properties.
  *
  * @since 0.3.0
  */
@@ -51,11 +52,19 @@ public data class MrzCandidate(
         parse: ParseResult,
         disambiguations: List<CharacterDisambiguation>,
     ) : this(mrzLines, parse, disambiguations, fillerPadding = null)
+
+    /** The line count and the glyph-change count; never a document value. */
+    override fun toString(): String =
+        "MrzCandidate(mrzLineCount=${mrzLines.size}, disambiguations=${disambiguations.size}, " +
+            "fillerPadding=${fillerPadding != null})"
 }
 
 /**
  * One glyph change in an [MrzCandidate]: the [recognized] glyph at ([lineIndex], [columnIndex]) was
  * read as [resolved].
+ *
+ * The glyphs come from the document. `toString()` shows no document values; they are in the
+ * properties.
  *
  * @since 0.3.0
  */
@@ -68,4 +77,7 @@ public data class CharacterDisambiguation(
     public val recognized: Char,
     /** The glyph in this candidate. */
     public val resolved: Char,
-)
+) {
+    /** Where the changed glyph sits; never a glyph itself. */
+    override fun toString(): String = "CharacterDisambiguation(lineIndex=$lineIndex, columnIndex=$columnIndex)"
+}

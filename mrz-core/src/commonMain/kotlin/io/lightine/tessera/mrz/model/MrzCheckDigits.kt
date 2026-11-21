@@ -3,6 +3,8 @@ package io.lightine.tessera.mrz.model
 /**
  * The check digits exactly as printed on the document, not computed by the SDK.
  *
+ * `toString()` shows no document values; they are in the properties.
+ *
  * @property documentNumber Check digit of the document number.
  * @property dateOfBirth Check digit of the date of birth.
  * @property dateOfExpiry Check digit of the date of expiry.
@@ -17,4 +19,7 @@ public data class MrzCheckDigits(
     val dateOfExpiry: Char,
     val optionalData: Char?,
     val composite: Char?,
-)
+) {
+    /** Which check digits the format prints; never a document value. */
+    override fun toString(): String = "MrzCheckDigits(optionalData=${optionalData != null}, composite=${composite != null})"
+}
