@@ -73,6 +73,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
@@ -86,9 +87,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
@@ -1269,9 +1272,12 @@ private fun CameraPreview(
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         // WYSIWYG viewport (TES-86): built from the preview area's measured size + the display rotation so
         // CameraX crops the analysis frame to the SAME sensor region the viewfinder shows — this is what makes
-        // the MRZ band line up with the on-screen framing guide. Rebuilt if the measured size changes.
+        // the MRZ band line up with the on-screen framing guide. Rebuilt when the preview area's aspect ratio
+        // or the display rotation changes; the scanner below is then restarted with it (TES-119).
+        // The configuration is a key so an app that handles rotation itself (no activity restart) re-reads it.
+        val configuration = LocalConfiguration.current
         val displayRotation =
-            remember(context) {
+            remember(context, configuration) {
                 // Context.getDisplay() (API 30+, Android 11) is the non-deprecated read of the display rotation.
                 // WindowManager.defaultDisplay was deprecated in API 30; it is used only BELOW 30, where
                 // getDisplay() does not exist (minSdk 23) — so no deprecated API is ever called on a modern device.
@@ -1282,49 +1288,48 @@ private fun CameraPreview(
                     (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation
                 }
             }
-        val viewport =
-            remember(constraints, displayRotation) {
-                if (constraints.hasBoundedWidth && constraints.hasBoundedHeight &&
-                    constraints.maxWidth > 0 && constraints.maxHeight > 0
-                ) {
-                    ViewPort
-                        .Builder(Rational(constraints.maxWidth, constraints.maxHeight), displayRotation)
-                        .build()
-                } else {
-                    null
-                }
-            }
-        val scanner =
-            remember(context, lifecycleOwner) {
-                CameraXMrzScanner(
-                    appContext = context.applicationContext,
-                    lifecycleOwner = lifecycleOwner,
-                    // Restrict OCR to the MRZ band the guide marks (TES-86). The viewport above makes the
-                    // analysis frame match the viewfinder, so the band lines up with the on-screen guide.
-                    recognizer = MlKitMrzTextRecognizer().apply { restrictToMrzBand() },
-                    // Lenient candidate extraction for the live camera: ML Kit routinely injects spaces into
-                    // and splits MRZ lines, and a space is never meaningful in an MRZ. LENIENT strips all
-                    // whitespace before shape-matching, so a line ML Kit read as "…459 AZBPU…" still matches
-                    // its fixed width and is detected — device-observed to be the dominant cause of dropped
-                    // frames (a steady card was detected on only ~half of frames under STRICT).
-                    mode = ParsingMode.LENIENT,
-                ).apply { enablePreview(viewport) }
-            }
+        val viewport = rememberPreviewViewport(constraints, displayRotation)
 
         // Torch on/off, hoisted so the button reflects it and it survives recreation (rotation / process death).
         // Seeded from the consumer's torchOnByDefault; a fresh scanner (e.g. this preview re-mounting after a
-        // rescan) re-applies the current desired state on bind via the DisposableEffect below, so the button and
-        // the flash never drift apart.
+        // rescan, or a restart after a resize) re-applies the current desired state on bind via onStart below,
+        // so the button and the flash never drift apart.
         var torchOn by rememberSaveable { mutableStateOf(torchOnByDefault) }
 
-        DisposableEffect(scanner) {
-            // Seed the desired torch state before start() so CameraX honours it the moment the camera binds (the
-            // scanner holds it and applies it on bind — no rebind, so capture is never interrupted). A no-op on a
-            // device with no flash unit.
-            scanner.setTorchEnabled(torchOn)
-            scanner.start()
-            onDispose { scanner.close() }
-        }
+        // A CameraX ViewPort is fixed when the use cases bind, so a new one only takes effect on a new bind.
+        // When the window is resized without an activity restart (split screen, freeform, a fold handled by
+        // the app), the viewport above changes and the scanner is replaced by a fresh one bound with it
+        // (TES-119): the preview blinks briefly through the loading state, and the analysed region lines up
+        // with the guide again. A window that never changes aspect keeps the one scanner, as before.
+        val scanner =
+            rememberViewportScanner(
+                viewport = viewport,
+                context = context,
+                lifecycleOwner = lifecycleOwner,
+                create = { armedViewport ->
+                    CameraXMrzScanner(
+                        appContext = context.applicationContext,
+                        lifecycleOwner = lifecycleOwner,
+                        // Restrict OCR to the MRZ band the guide marks (TES-86). The viewport above makes the
+                        // analysis frame match the viewfinder, so the band lines up with the on-screen guide.
+                        recognizer = MlKitMrzTextRecognizer().apply { restrictToMrzBand() },
+                        // Lenient candidate extraction for the live camera: ML Kit routinely injects spaces into
+                        // and splits MRZ lines, and a space is never meaningful in an MRZ. LENIENT strips all
+                        // whitespace before shape-matching, so a line ML Kit read as "…459 AZBPU…" still matches
+                        // its fixed width and is detected — device-observed to be the dominant cause of dropped
+                        // frames (a steady card was detected on only ~half of frames under STRICT).
+                        mode = ParsingMode.LENIENT,
+                    ).apply { enablePreview(armedViewport) }
+                },
+                onStart = { started ->
+                    // Seed the desired torch state before start() so CameraX honours it the moment the camera
+                    // binds (the scanner holds it and applies it on bind — no rebind, so capture is never
+                    // interrupted). A no-op on a device with no flash unit.
+                    started.setTorchEnabled(torchOn)
+                    started.start()
+                },
+                onClose = { it.close() },
+            )
 
         LaunchedEffect(scanner) {
             scanner.results.collect { result -> onCameraResult(result) }
@@ -1404,6 +1409,63 @@ private fun CameraPreview(
             // edge — so it never collides with the torch and does not compete with the framing hint.
         }
     }
+}
+
+/**
+ * The WYSIWYG [ViewPort] for a preview area measured as [constraints], or `null` while the area is unbounded
+ * or empty.
+ *
+ * It is keyed on the reduced aspect ratio ([Rational] reduces itself) and [displayRotation], not on the raw
+ * size: the crop CameraX derives from a viewport depends only on those two, so a resize that keeps the aspect
+ * ratio returns the same instance and does not restart the camera.
+ *
+ * `internal` so the host test can check, without a camera, that a resize yields a new viewport (TES-119).
+ */
+@Composable
+internal fun rememberPreviewViewport(
+    constraints: Constraints,
+    displayRotation: Int,
+): ViewPort? {
+    val aspectRatio =
+        if (constraints.hasBoundedWidth && constraints.hasBoundedHeight &&
+            constraints.maxWidth > 0 && constraints.maxHeight > 0
+        ) {
+            Rational(constraints.maxWidth, constraints.maxHeight)
+        } else {
+            null
+        }
+    return remember(aspectRatio, displayRotation) {
+        aspectRatio?.let { ViewPort.Builder(it, displayRotation).build() }
+    }
+}
+
+/**
+ * Holds one scanner for the current [viewport], started while it is in composition and closed when it leaves.
+ *
+ * A CameraX viewport is applied only when the use cases bind, so when [viewport] changes (a window resize
+ * that keeps the activity) the old scanner is closed and a new one is made with [create] and started with
+ * [onStart] (TES-119). The same holds when [context] or [lifecycleOwner] change. Each scanner has its own
+ * session and preview-surface stream, so the closing scanner's teardown can never clear the new one's
+ * surface.
+ *
+ * Generic over the scanner type, and `internal`, so the host test drives it with a fake: the real
+ * [CameraXMrzScanner] needs a camera.
+ */
+@Composable
+internal fun <S> rememberViewportScanner(
+    viewport: ViewPort?,
+    context: Context,
+    lifecycleOwner: LifecycleOwner,
+    create: (ViewPort?) -> S,
+    onStart: (S) -> Unit,
+    onClose: (S) -> Unit,
+): S {
+    val scanner = remember(context, lifecycleOwner, viewport) { create(viewport) }
+    DisposableEffect(scanner) {
+        onStart(scanner)
+        onDispose { onClose(scanner) }
+    }
+    return scanner
 }
 
 /**
