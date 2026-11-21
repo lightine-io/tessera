@@ -208,6 +208,10 @@ class CodeDocs(unittest.TestCase):
         code, found = self.findings("public fun x() = 1\n", "core/src/commonTest/kotlin/T.kt")
         self.assertEqual((code, found), (0, []))
 
+    def test_documentation_samples_are_skipped(self):
+        code, found = self.findings("public fun x() = 1\n", "samples/kotlin/src/jvmMain/kotlin/S.kt")
+        self.assertEqual((code, found), (0, []))
+
     def test_swift(self):
         swift = git_repo({"Sources/UI/V.swift": textwrap.dedent('''\
             /// A view.
@@ -425,6 +429,105 @@ class ShelfLive(unittest.TestCase):
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             self.assertEqual(self.live(fetch), 0)
+
+
+FENCE = "`" * 3
+SAMPLE_PAGE = (
+    "Intro.\n\n1. Add the dependency.\n\n   `build.gradle.kts`\n\n"
+    "   " + FENCE + "kotlin\n   dependencies {\n       implementation(\"x\")\n   }\n   " + FENCE + "\n\n"
+    "2. Parse.\n\n   " + FENCE + "kotlin\n   import a.B\n\n   val x = B.parse()\n   println(x)\n   " + FENCE + "\n\n"
+    "   " + FENCE + "\n   Success\n   " + FENCE + "\n\n"
+    + FENCE + "swift\nlet y = 1\n" + FENCE + "\n"
+)
+
+
+def sample_file(blocks):
+    """blocks: [(marker, code)] -> a sample file with each code between its region lines."""
+    out = ["package samples", "", "fun main() {"]
+    for marker, code in blocks:
+        out += ["    // region " + marker] + ["    " + ln for ln in code.splitlines()] + ["    // endregion"]
+    return "\n".join(out + ["}"]) + "\n"
+
+
+class Samples(unittest.TestCase):
+    def check(self, files, pages=None):
+        regions, findings = cd.sample_regions(files)
+        return findings + cd.samples_findings(pages or {"TES-A-25": ("Parse", SAMPLE_PAGE)}, regions)
+
+    def test_blocks_are_read_with_labels(self):
+        blocks = cd.kotlin_blocks(SAMPLE_PAGE)
+        self.assertEqual([(n, label) for n, label, _ in blocks], [(1, "build.gradle.kts"), (2, "")])
+        self.assertEqual(blocks[1][2], "import a.B\n\nval x = B.parse()\nprintln(x)")
+
+    def test_matching_regions_pass_whitespace_aside(self):
+        files = {"s/build.kts": sample_file([("TES-A-25 block 1", "dependencies {\nimplementation(\"x\")\n}")]),
+                 "s/A.kt": sample_file([("TES-A-25 block 2", "  import a.B\nval x = B.parse()  \n\nprintln(x)")])}
+        self.assertEqual(self.check(files), [])
+
+    def test_changed_line_is_a_finding(self):
+        files = {"s/build.kts": sample_file([("TES-A-25 block 1", "dependencies {\nimplementation(\"x\")\n}")]),
+                 "s/A.kt": sample_file([("TES-A-25 block 2", "import a.B\nval x = B.parse(1)\nprintln(x)")])}
+        found = self.check(files)
+        self.assertEqual(len(found), 1)
+        self.assertIn("TES-A-25 block 2 differs from the page at line 2", found[0])
+        self.assertIn("page 'val x = B.parse()', sample 'val x = B.parse(1)'", found[0])
+
+    def test_block_without_region_and_region_without_block(self):
+        files = {"s/A.kt": sample_file([("TES-A-25 block 2", "import a.B\nval x = B.parse()\nprintln(x)"),
+                                        ("TES-A-25 block 3", "println(1)"),
+                                        ("TES-A-99 block 1", "println(2)")])}
+        found = "\n".join(self.check(files))
+        self.assertIn("TES-A-25 block 1 (build.gradle.kts): no sample region", found)
+        self.assertIn("region for TES-A-25 block 3 has no such block", found)
+        self.assertIn("region for TES-A-99 block 1 has no such block", found)
+
+    def test_parts_join_in_order(self):
+        text = ("// region TES-A-25 block 2 part 1\nimport a.B\n// endregion\n"
+                "fun main() {\n    // region TES-A-25 block 2 part 2\n    val x = B.parse()\n    println(x)\n"
+                "    // endregion\n}\n")
+        files = {"s/A.kt": text,
+                 "s/build.kts": sample_file([("TES-A-25 block 1", "dependencies {\nimplementation(\"x\")\n}")])}
+        self.assertEqual(self.check(files), [])
+
+    def test_duplicate_and_unclosed_regions(self):
+        files = {"s/A.kt": sample_file([("TES-A-25 block 1", "x"), ("TES-A-25 block 1", "y")]),
+                 "s/B.kt": "// region TES-A-25 block 2\nval x = 1\n"}
+        found = "\n".join(cd.sample_regions(files)[1])
+        self.assertIn("second region for TES-A-25 block 1", found)
+        self.assertIn("s/B.kt:1: region has no endregion", found)
+
+    def test_fetch_error_cannot_run(self):
+        repo = tempfile.mkdtemp()
+        write(repo, "samples/kotlin/A.kt", "x\n")
+
+        def boom(url):
+            raise OSError("no route")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            with self.assertRaises(SystemExit) as ctx:
+                cd.cmd_samples(repo, fetch=boom)
+        self.assertEqual(ctx.exception.code, 2)
+        self.assertIn("cannot read the live KB", err.getvalue())
+
+    def test_live_pages_are_compared(self):
+        repo = tempfile.mkdtemp()
+        write(repo, "samples/kotlin/build-scripts/p.gradle.kts",
+              sample_file([("TES-A-25 block 1", "dependencies {\nimplementation(\"x\")\n}")]))
+        write(repo, "samples/kotlin/src/jvmMain/kotlin/p.kt",
+              sample_file([("TES-A-25 block 2", "import a.B\nval x = B.parse()\nprintln(y)")]))
+        listing = [{"idReadable": "TES-A-3", "summary": "Public", "parentArticle": None},
+                   {"idReadable": "TES-A-139", "summary": "Matrix", "parentArticle": {"idReadable": "TES-A-3"}},
+                   {"idReadable": "TES-A-88", "summary": "How-to", "parentArticle": {"idReadable": "TES-A-3"}},
+                   {"idReadable": "TES-A-25", "summary": "Parse", "parentArticle": {"idReadable": "TES-A-88"}}]
+
+        def fetch(url):
+            if "TES-A-25?" in url:
+                return {"content": SAMPLE_PAGE}
+            return {"content": ""} if "fields=content" in url else listing
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(cd.cmd_samples(repo, fetch=fetch), 1)
+        self.assertIn("page 'println(x)', sample 'println(y)'", out.getvalue())
 
 
 if __name__ == "__main__":

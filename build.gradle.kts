@@ -19,14 +19,17 @@ allprojects {
 
 spotless {
     val ktlintVersion = libs.versions.ktlint.get()
+    // The documentation samples (samples/kotlin/src, samples/kotlin/build-scripts) are left as the
+    // pages print them: a formatter would change the page text the samples check compares (TES-230).
+    val pageSamples = arrayOf("samples/kotlin/src/**", "samples/kotlin/build-scripts/**")
     kotlin {
         target("**/*.kt")
-        targetExclude("**/build/**", "**/.gradle/**")
+        targetExclude("**/build/**", "**/.gradle/**", *pageSamples)
         ktlint(ktlintVersion)
     }
     kotlinGradle {
         target("**/*.gradle.kts")
-        targetExclude("**/build/**", "**/.gradle/**")
+        targetExclude("**/build/**", "**/.gradle/**", *pageSamples)
         ktlint(ktlintVersion)
     }
 }

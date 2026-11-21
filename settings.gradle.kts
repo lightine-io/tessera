@@ -58,3 +58,7 @@ include(":mrz-camera")
 include(":mrz-camera-ios")
 include(":mrz-camera-ui")
 include(":bom")
+
+// The documentation examples (TES-230): compiled in CI, never published.
+include(":samples")
+project(":samples").projectDir = file("samples/kotlin")
