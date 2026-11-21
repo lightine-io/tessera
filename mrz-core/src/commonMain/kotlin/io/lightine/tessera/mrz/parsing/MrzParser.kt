@@ -40,7 +40,7 @@ import kotlin.time.Instant
  * that are not in the calendar, and sex characters outside `M`, `F`, `<`, and `X` as validation
  * failures. It reports `MrzExpiryDatePast`, `MrzExpiryDateImplausiblyFar`,
  * `MrzExpiryDateCenturyNotInferred`, `MrzExpiryDateAfterSingleLetterPassportLimit`,
- * `MrzBirthDateImplausiblyOld`, `MrzNameTruncated`, `MrzUnknownCountryCode`,
+ * `MrzNameTruncated`, `MrzUnknownCountryCode`,
  * `MrzUnknownDocumentTypeCode`, `MrzSexCharacterX`, and `MrzPersonalNumberCheckDigitFiller` as
  * warnings.
  *

@@ -1,5 +1,3 @@
-@file:Suppress("DEPRECATION") // MrzBirthDateImplausiblyOld is deprecated, never reported (TES-202)
-
 package io.lightine.tessera.mrz.validation
 
 import io.lightine.tessera.mrz.Specimens
@@ -15,7 +13,6 @@ import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.mrz.recognition.CountryCode
 import io.lightine.tessera.mrz.recognition.DocumentType
 import io.lightine.tessera.mrz.withCompositeRecomputed
-import io.lightine.tessera.types.errors.MrzBirthDateImplausiblyOld
 import io.lightine.tessera.types.errors.MrzCharacterSetViolation
 import io.lightine.tessera.types.errors.MrzCheckDigitMismatch
 import io.lightine.tessera.types.errors.MrzDateNotInCalendar
@@ -782,126 +779,6 @@ class MrzValidatorTest {
             result.validationFailures.none { it is MrzDateNotInCalendar },
             "Default null signal must not trigger MrzDateNotInCalendar; got ${result.validationFailures}",
         )
-    }
-
-    // --- Birth-age warnings ---
-
-    @Test
-    fun birth_with_componentsExceedBirthAgeLimit_true_emits_MrzBirthDateImplausiblyOld_with_threshold_and_reference() {
-        val baseFields = specimenCommonFields()
-        val td3 =
-            specimenTd3(
-                commonFields =
-                    baseFields.copy(
-                        dateOfBirth =
-                            MrzDate(
-                                rawYear = "00",
-                                rawMonth = "06",
-                                rawDay = "15",
-                                componentsFormCalendarDate = true,
-                                componentsExceedBirthAgeLimit = true,
-                            ),
-                    ),
-            )
-
-        val referenceTime = Instant.parse("2200-01-01T00:00:00Z")
-        val result = MrzValidator.validate(td3, referenceTime = referenceTime)
-
-        val warning =
-            assertIs<MrzBirthDateImplausiblyOld>(
-                result.warnings.first { it is MrzBirthDateImplausiblyOld },
-            )
-        assertEquals("00", warning.rawYear)
-        assertEquals("06", warning.rawMonth)
-        assertEquals("15", warning.rawDay)
-        assertEquals(LocalDate(2200, 1, 1), warning.referenceDate)
-        assertEquals(130, warning.thresholdYears)
-    }
-
-    @Test
-    fun birth_with_componentsExceedBirthAgeLimit_false_does_not_emit_warning() {
-        val baseFields = specimenCommonFields()
-        val td3 =
-            specimenTd3(
-                commonFields =
-                    baseFields.copy(
-                        dateOfBirth =
-                            MrzDate(
-                                rawYear = "80",
-                                rawMonth = "06",
-                                rawDay = "15",
-                                computedYear = 1980,
-                                computedDate = LocalDate(1980, 6, 15),
-                                inferenceMethod = MrzDateInferenceMethod.SLIDING_WINDOW_BIRTH,
-                                componentsFormCalendarDate = true,
-                                componentsExceedBirthAgeLimit = false,
-                            ),
-                    ),
-            )
-        val result = MrzValidator.validate(td3)
-        assertTrue(
-            result.warnings.none { it is MrzBirthDateImplausiblyOld },
-            "Successful birth inference must not emit MrzBirthDateImplausiblyOld; got ${result.warnings}",
-        )
-    }
-
-    @Test
-    fun birth_with_componentsExceedBirthAgeLimit_null_does_not_emit_warning() {
-        // Specimen as-shipped: dateOfBirth uses primary constructor with default null signal.
-        val result = MrzValidator.validate(specimenTd3())
-        assertTrue(
-            result.warnings.none { it is MrzBirthDateImplausiblyOld },
-            "Default null signal must not emit MrzBirthDateImplausiblyOld; got ${result.warnings}",
-        )
-    }
-
-    @Test
-    fun expiry_signal_does_not_influence_birth_age_warning() {
-        // Even if (hypothetically) an expiry MrzDate carried componentsExceedBirthAgeLimit = true via direct
-        // construction, the validator must consult only the birth date. Lock that the warning is birth-only.
-        val baseFields = specimenCommonFields()
-        val td3 =
-            specimenTd3(
-                commonFields =
-                    baseFields.copy(
-                        dateOfExpiry =
-                            MrzDate(
-                                rawYear = "30",
-                                rawMonth = "06",
-                                rawDay = "01",
-                                componentsFormCalendarDate = true,
-                                componentsExceedBirthAgeLimit = true,
-                            ),
-                    ),
-            )
-        val result = MrzValidator.validate(td3)
-        assertTrue(
-            result.warnings.none { it is MrzBirthDateImplausiblyOld },
-            "Expiry-side signal must not trigger birth-age warning; got ${result.warnings}",
-        )
-    }
-
-    @Test
-    fun birth_parsed_at_far_future_reference_emits_MrzBirthDateImplausiblyOld_end_to_end() {
-        val referenceTime = Instant.parse("2200-01-01T00:00:00Z")
-        val parsedBirth =
-            MrzDate.parseBirth(
-                rawYear = "00",
-                rawMonth = "06",
-                rawDay = "15",
-                referenceTime = referenceTime,
-            )
-        val baseFields = specimenCommonFields()
-        val td3 = specimenTd3(commonFields = baseFields.copy(dateOfBirth = parsedBirth))
-
-        val result = MrzValidator.validate(td3, referenceTime = referenceTime)
-
-        val warning =
-            assertIs<MrzBirthDateImplausiblyOld>(
-                result.warnings.first { it is MrzBirthDateImplausiblyOld },
-            )
-        assertEquals(LocalDate(2200, 1, 1), warning.referenceDate)
-        assertEquals(130, warning.thresholdYears)
     }
 
     // --- Unknown document type code warning ---
