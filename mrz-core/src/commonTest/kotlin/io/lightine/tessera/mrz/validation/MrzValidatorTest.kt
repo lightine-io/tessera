@@ -2,15 +2,19 @@
 
 package io.lightine.tessera.mrz.validation
 
+import io.lightine.tessera.mrz.Specimens
+import io.lightine.tessera.mrz.formats.Td3FormatSpec
 import io.lightine.tessera.mrz.model.CommonFields
 import io.lightine.tessera.mrz.model.MrzCheckDigits
 import io.lightine.tessera.mrz.model.MrzDate
 import io.lightine.tessera.mrz.model.MrzDateInferenceMethod
 import io.lightine.tessera.mrz.model.TD3
+import io.lightine.tessera.mrz.overwrite
 import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.mrz.recognition.CountryCode
 import io.lightine.tessera.mrz.recognition.DocumentType
+import io.lightine.tessera.mrz.withCompositeRecomputed
 import io.lightine.tessera.types.errors.MrzBirthDateImplausiblyOld
 import io.lightine.tessera.types.errors.MrzCharacterSetViolation
 import io.lightine.tessera.types.errors.MrzCheckDigitMismatch
@@ -36,8 +40,9 @@ import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 class MrzValidatorTest {
-    private val specimenLine1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-    private val specimenLine2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
+    // The project's TD3 specimen.
+    private val specimenLine1 = Specimens.TD3[0]
+    private val specimenLine2 = Specimens.TD3[1]
 
     private fun specimenCommonFields(
         rawSex: Char = 'F',
@@ -45,10 +50,10 @@ class MrzValidatorTest {
         checkDigits: MrzCheckDigits =
             MrzCheckDigits(
                 documentNumber = '3',
-                dateOfBirth = '1',
-                dateOfExpiry = '6',
-                optionalData = '1',
-                composite = '4',
+                dateOfBirth = '2',
+                dateOfExpiry = '1',
+                optionalData = '2',
+                composite = '0',
             ),
     ): CommonFields =
         CommonFields(
@@ -57,25 +62,25 @@ class MrzValidatorTest {
             primaryIdentifier = "",
             secondaryIdentifier = "",
             nameTruncated = false,
-            rawNameField = "ERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-            documentNumber = "L898902C<",
+            rawNameField = "SPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<",
+            documentNumber = "T22000129",
             nationality = CountryCode("UTO"),
-            dateOfBirth = MrzDate(rawYear = "69", rawMonth = "08", rawDay = "06"),
+            dateOfBirth = MrzDate(rawYear = "90", rawMonth = "03", rawDay = "15"),
             sex = sex,
             rawSex = rawSex,
-            dateOfExpiry = MrzDate(rawYear = "94", rawMonth = "06", rawDay = "23"),
+            dateOfExpiry = MrzDate(rawYear = "34", rawMonth = "03", rawDay = "14"),
             checkDigits = checkDigits,
         )
 
     private fun specimenTd3(
         line2: String = specimenLine2,
         commonFields: CommonFields = specimenCommonFields(),
-        personalNumberCheckDigit: Char = '1',
+        personalNumberCheckDigit: Char = '2',
     ): TD3 =
         TD3(
             rawLines = listOf(specimenLine1, line2),
             commonFields = commonFields,
-            personalNumber = "ZE184226B<<<<<",
+            personalNumber = "S98765432<<<<<",
             personalNumberCheckDigit = personalNumberCheckDigit,
         )
 
@@ -102,10 +107,10 @@ class MrzValidatorTest {
                         checkDigits =
                             MrzCheckDigits(
                                 documentNumber = '7',
-                                dateOfBirth = '1',
-                                dateOfExpiry = '6',
-                                optionalData = '1',
-                                composite = '4',
+                                dateOfBirth = '2',
+                                dateOfExpiry = '1',
+                                optionalData = '2',
+                                composite = '0',
                             ),
                     ),
             )
@@ -129,9 +134,9 @@ class MrzValidatorTest {
                             MrzCheckDigits(
                                 documentNumber = '3',
                                 dateOfBirth = '0',
-                                dateOfExpiry = '6',
-                                optionalData = '1',
-                                composite = '4',
+                                dateOfExpiry = '1',
+                                optionalData = '2',
+                                composite = '0',
                             ),
                     ),
             )
@@ -140,7 +145,7 @@ class MrzValidatorTest {
             assertIs<MrzCheckDigitMismatch>(
                 result.validationFailures.first { it is MrzCheckDigitMismatch && it.field == MrzField.DATE_OF_BIRTH },
             )
-        assertEquals('1', mismatch.expected)
+        assertEquals('2', mismatch.expected)
         assertEquals('0', mismatch.observed)
         assertEquals(63, mismatch.position)
     }
@@ -154,10 +159,10 @@ class MrzValidatorTest {
                         checkDigits =
                             MrzCheckDigits(
                                 documentNumber = '3',
-                                dateOfBirth = '1',
+                                dateOfBirth = '2',
                                 dateOfExpiry = '5',
-                                optionalData = '1',
-                                composite = '4',
+                                optionalData = '2',
+                                composite = '0',
                             ),
                     ),
             )
@@ -166,7 +171,7 @@ class MrzValidatorTest {
             assertIs<MrzCheckDigitMismatch>(
                 result.validationFailures.first { it is MrzCheckDigitMismatch && it.field == MrzField.DATE_OF_EXPIRY },
             )
-        assertEquals('6', mismatch.expected)
+        assertEquals('1', mismatch.expected)
         assertEquals('5', mismatch.observed)
         assertEquals(71, mismatch.position)
     }
@@ -180,10 +185,10 @@ class MrzValidatorTest {
                         checkDigits =
                             MrzCheckDigits(
                                 documentNumber = '3',
-                                dateOfBirth = '1',
-                                dateOfExpiry = '6',
+                                dateOfBirth = '2',
+                                dateOfExpiry = '1',
                                 optionalData = '0',
-                                composite = '4',
+                                composite = '0',
                             ),
                     ),
                 personalNumberCheckDigit = '0',
@@ -193,7 +198,7 @@ class MrzValidatorTest {
             assertIs<MrzCheckDigitMismatch>(
                 result.validationFailures.first { it is MrzCheckDigitMismatch && it.field == MrzField.OPTIONAL_DATA },
             )
-        assertEquals('1', mismatch.expected)
+        assertEquals('2', mismatch.expected)
         assertEquals('0', mismatch.observed)
         assertEquals(86, mismatch.position)
     }
@@ -212,10 +217,10 @@ class MrzValidatorTest {
                         checkDigits =
                             MrzCheckDigits(
                                 documentNumber = '3',
-                                dateOfBirth = '1',
-                                dateOfExpiry = '6',
+                                dateOfBirth = '2',
+                                dateOfExpiry = '1',
                                 optionalData = '<',
-                                composite = '4',
+                                composite = '0',
                             ),
                     ),
                 personalNumberCheckDigit = '<',
@@ -225,7 +230,7 @@ class MrzValidatorTest {
         val warning =
             result.warnings.filterIsInstance<MrzPersonalNumberCheckDigitFiller>().firstOrNull()
         assertTrue(warning != null, "Expected MrzPersonalNumberCheckDigitFiller; got ${result.warnings}")
-        assertEquals("ZE184226B<<<<<", warning.rawPersonalNumber)
+        assertEquals("S98765432<<<<<", warning.rawPersonalNumber)
         // Personal number check digit slot on TD3: line 1 index 42, global = 44 + 42 = 86
         assertEquals(86, warning.position)
     }
@@ -241,10 +246,10 @@ class MrzValidatorTest {
                         checkDigits =
                             MrzCheckDigits(
                                 documentNumber = '3',
-                                dateOfBirth = '1',
-                                dateOfExpiry = '6',
+                                dateOfBirth = '2',
+                                dateOfExpiry = '1',
                                 optionalData = '<',
-                                composite = '4',
+                                composite = '0',
                             ),
                     ),
                 personalNumberCheckDigit = '<',
@@ -268,14 +273,15 @@ class MrzValidatorTest {
         // overriding `line2` to a version with an all-filler personal-number slot is enough.
         val td3 =
             specimenTd3(
-                line2 = "L898902C<3UTO6908061F9406236<<<<<<<<<<<<<<<<",
+                // Personal number, its check digit and the composite all filler.
+                line2 = Specimens.TD3.overwrite(1, Td3FormatSpec.personalNumber.startInLine, "<".repeat(16))[1],
                 commonFields =
                     specimenCommonFields(
                         checkDigits =
                             MrzCheckDigits(
                                 documentNumber = '3',
-                                dateOfBirth = '1',
-                                dateOfExpiry = '6',
+                                dateOfBirth = '2',
+                                dateOfExpiry = '1',
                                 optionalData = '<',
                                 composite = '<',
                             ),
@@ -297,21 +303,26 @@ class MrzValidatorTest {
     // ICAO Doc 9303 Part 4 (8th ed., 2021), 4.2.2.2, lower line, position 43: "When the personal
     // number field is not used and filler characters (<) are used in positions 29 to 42, the
     // check digit may be zero or the filler character (<) at the option of the issuing State or
-    // organization." Lines below are the ICAO specimen with the personal number emptied and the
-    // composite digit recomputed.
+    // organization." Lines below are the project's specimen with the personal number emptied, the
+    // personal-number check digit set as each test needs, and the composite digit recomputed.
 
-    private val specimen2021Line2Prefix = "L898902C36UTO7408122F1204159<<<<<<<<<<<<<<"
-    private val specimenReference = Instant.parse("2010-01-01T00:00:00Z")
+    private val specimenLines = Specimens.TD3
 
-    private fun parseAllFillerSpecimen(checkAndComposite: String): ParseResult =
+    // A reference inside the specimen's validity, so no expiry warning joins the result.
+    private val specimenReference = Instant.parse("2026-05-04T12:00:00Z")
+
+    private fun parseAllFillerSpecimen(personalNumberCheckDigit: Char): ParseResult =
         MrzParser.parse(
-            listOf(specimenLine1, specimen2021Line2Prefix + checkAndComposite),
+            specimenLines
+                .overwrite(Td3FormatSpec.personalNumber, "<".repeat(Td3FormatSpec.personalNumber.width))
+                .overwrite(Td3FormatSpec.personalNumberCheckDigit, personalNumberCheckDigit.toString())
+                .withCompositeRecomputed(Td3FormatSpec),
             referenceTime = specimenReference,
         )
 
     @Test
     fun all_filler_personal_number_with_filler_check_digit_reports_nothing() {
-        val result = parseAllFillerSpecimen("<8")
+        val result = parseAllFillerSpecimen('<')
         val success = assertIs<ParseResult.Success>(result, "Expected Success; got $result")
         assertTrue(success.metadata.validationFailures.isEmpty(), "Got ${success.metadata.validationFailures}")
         assertTrue(success.metadata.warnings.isEmpty(), "Got ${success.metadata.warnings}")
@@ -319,7 +330,7 @@ class MrzValidatorTest {
 
     @Test
     fun all_filler_personal_number_with_zero_check_digit_reports_nothing() {
-        val result = parseAllFillerSpecimen("08")
+        val result = parseAllFillerSpecimen('0')
         val success = assertIs<ParseResult.Success>(result, "Expected Success; got $result")
         assertTrue(success.metadata.validationFailures.isEmpty(), "Got ${success.metadata.validationFailures}")
         assertTrue(success.metadata.warnings.isEmpty(), "Got ${success.metadata.warnings}")
@@ -327,9 +338,9 @@ class MrzValidatorTest {
 
     @Test
     fun all_filler_personal_number_with_wrong_check_digit_is_still_a_mismatch() {
-        // Composite '3' matches the line with '5' at position 43, so only the personal-number
-        // check digit is wrong.
-        val result = parseAllFillerSpecimen("53")
+        // The composite is recomputed over the line with '5' at position 43, so only the
+        // personal-number check digit is wrong.
+        val result = parseAllFillerSpecimen('5')
         val partial = assertIs<ParseResult.PartialSuccess>(result, "Expected PartialSuccess; got $result")
         val mismatch = partial.metadata.validationFailures.single()
         assertIs<MrzCheckDigitMismatch>(mismatch)
@@ -354,12 +365,12 @@ class MrzValidatorTest {
                         checkDigits =
                             MrzCheckDigits(
                                 documentNumber = '3',
-                                dateOfBirth = '1',
-                                dateOfExpiry = '6',
+                                dateOfBirth = '2',
+                                dateOfExpiry = '1',
                                 optionalData = '<',
                                 // Composite over `...<` input — the test asserts the OPTIONAL_DATA
                                 // path is suppressed; composite mismatch is incidental.
-                                composite = '4',
+                                composite = '0',
                             ),
                     ),
                 personalNumberCheckDigit = '<',
@@ -386,10 +397,10 @@ class MrzValidatorTest {
                         checkDigits =
                             MrzCheckDigits(
                                 documentNumber = '3',
-                                dateOfBirth = '1',
-                                dateOfExpiry = '6',
-                                optionalData = '1',
-                                composite = '0',
+                                dateOfBirth = '2',
+                                dateOfExpiry = '1',
+                                optionalData = '2',
+                                composite = '9',
                             ),
                     ),
             )
@@ -398,8 +409,8 @@ class MrzValidatorTest {
             assertIs<MrzCheckDigitMismatch>(
                 result.validationFailures.first { it is MrzCheckDigitMismatch && it.field == MrzField.COMPOSITE },
             )
-        assertEquals('4', mismatch.expected)
-        assertEquals('0', mismatch.observed)
+        assertEquals('0', mismatch.expected)
+        assertEquals('9', mismatch.observed)
         assertEquals(87, mismatch.position)
     }
 
@@ -415,7 +426,7 @@ class MrzValidatorTest {
                                 dateOfBirth = '0',
                                 dateOfExpiry = '0',
                                 optionalData = '0',
-                                composite = '0',
+                                composite = '9',
                             ),
                     ),
                 personalNumberCheckDigit = '0',

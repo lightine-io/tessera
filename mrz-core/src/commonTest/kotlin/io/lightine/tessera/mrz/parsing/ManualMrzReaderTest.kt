@@ -1,5 +1,6 @@
 package io.lightine.tessera.mrz.parsing
 
+import io.lightine.tessera.mrz.Specimens
 import io.lightine.tessera.types.errors.MrzFormatNotDetected
 import io.lightine.tessera.types.errors.MrzInvalidLength
 import io.lightine.tessera.types.vocabulary.MrzFormat
@@ -13,34 +14,12 @@ import kotlin.time.Instant
 class ManualMrzReaderTest {
     private val ref2026 = Instant.parse("2026-05-04T12:00:00Z")
 
-    // The Anna Eriksson / UTO synthetic specimens shared across the parser fixtures
-    // (check digits pre-computed and locked).
-    private val td1Lines =
-        listOf(
-            "I<UTOL898902C<3<<<<<<<<<<<<<<<",
-            "6908061F3008063UTO<<<<<<<<<<<2",
-            "ERIKSSON<<ANNA<MARIA<<<<<<<<<<",
-        )
-    private val td2Lines =
-        listOf(
-            "I<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<",
-            "D231458907UTO6908061F3008063<<<<<<<4",
-        )
-    private val td3Lines =
-        listOf(
-            "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-            "L898902C<3UTO6908061F9406236ZE184226B<<<<<14",
-        )
-    private val mrvALines =
-        listOf(
-            "V<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-            "L898902C<3UTO6908061F3008063<<<<<<<<<<<<<<<<",
-        )
-    private val mrvBLines =
-        listOf(
-            "V<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<",
-            "L898902C<3UTO6908061F3008063<<<<<<<<",
-        )
+    // The project's specimens.
+    private val td1Lines = Specimens.TD1
+    private val td2Lines = Specimens.TD2
+    private val td3Lines = Specimens.TD3
+    private val mrvALines = Specimens.MRV_A
+    private val mrvBLines = Specimens.MRV_B
 
     private fun joined(lines: List<String>) = lines.joinToString("\n")
 
@@ -139,7 +118,8 @@ class ManualMrzReaderTest {
     // document has bad fields), exercising the PartialSuccess branch of the read-method stamp.
     @Test
     fun read_partial_success_is_stamped_manual_entry() {
-        val tampered = listOf(td3Lines[0], td3Lines[1].dropLast(1) + "0")
+        // The specimen's composite check digit is '0'; '9' is wrong on purpose.
+        val tampered = listOf(td3Lines[0], td3Lines[1].dropLast(1) + "9")
         val partial = assertIs<ParseResult.PartialSuccess>(ManualMrzReader.read(tampered, ref2026))
         assertEquals(ReadMethod.MANUAL_ENTRY, partial.metadata.readMethod)
         assertTrue(partial.metadata.validationFailures.isNotEmpty(), "expected a check-digit validation failure")

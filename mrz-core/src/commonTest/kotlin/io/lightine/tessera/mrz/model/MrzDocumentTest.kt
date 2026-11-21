@@ -12,23 +12,23 @@ class MrzDocumentTest {
         CommonFields(
             documentType = DocumentType("P"),
             issuingState = CountryCode("UTO"),
-            primaryIdentifier = "ERIKSSON",
-            secondaryIdentifier = "ANNA MARIA",
+            primaryIdentifier = "SPECIMEN",
+            secondaryIdentifier = "ALEX MORGAN",
             nameTruncated = false,
-            rawNameField = "ERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-            documentNumber = "L898902C<",
+            rawNameField = "SPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<",
+            documentNumber = "T22000129",
             nationality = CountryCode("UTO"),
-            dateOfBirth = MrzDate(rawYear = "69", rawMonth = "08", rawDay = "06"),
+            dateOfBirth = MrzDate(rawYear = "90", rawMonth = "03", rawDay = "15"),
             sex = Sex.FEMALE,
             rawSex = 'F',
-            dateOfExpiry = MrzDate(rawYear = "94", rawMonth = "06", rawDay = "23"),
+            dateOfExpiry = MrzDate(rawYear = "34", rawMonth = "03", rawDay = "14"),
             checkDigits =
                 MrzCheckDigits(
                     documentNumber = '3',
-                    dateOfBirth = '1',
-                    dateOfExpiry = '6',
-                    optionalData = '1',
-                    composite = '4',
+                    dateOfBirth = '2',
+                    dateOfExpiry = '1',
+                    optionalData = '2',
+                    composite = '0',
                 ),
         )
 
@@ -36,22 +36,22 @@ class MrzDocumentTest {
         TD3(
             rawLines =
                 listOf(
-                    "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-                    "L898902C<3UTO6908061F9406236ZE184226B<<<<<14",
+                    "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<",
+                    "T220001293UTO9003152F3403141S98765432<<<<<20",
                 ),
             commonFields = specimenCommonFields,
-            personalNumber = "ZE184226B<<<<<",
-            personalNumberCheckDigit = '1',
+            personalNumber = "S98765432<<<<<",
+            personalNumberCheckDigit = '2',
         )
 
     @Test
     fun td3_specimen_constructs_and_exposes_common_fields_verbatim() {
         assertEquals("P", specimenTd3.commonFields.documentType.rawCode)
         assertEquals("UTO", specimenTd3.commonFields.issuingState.rawCode)
-        assertEquals("ERIKSSON", specimenTd3.commonFields.primaryIdentifier)
-        assertEquals("ANNA MARIA", specimenTd3.commonFields.secondaryIdentifier)
+        assertEquals("SPECIMEN", specimenTd3.commonFields.primaryIdentifier)
+        assertEquals("ALEX MORGAN", specimenTd3.commonFields.secondaryIdentifier)
         assertEquals(false, specimenTd3.commonFields.nameTruncated)
-        assertEquals("L898902C<", specimenTd3.commonFields.documentNumber)
+        assertEquals("T22000129", specimenTd3.commonFields.documentNumber)
         assertEquals("UTO", specimenTd3.commonFields.nationality.rawCode)
         assertEquals(Sex.FEMALE, specimenTd3.commonFields.sex)
     }
@@ -59,30 +59,30 @@ class MrzDocumentTest {
     @Test
     fun td3_specimen_exposes_dates_as_raw_year_month_day() {
         val dob = specimenTd3.commonFields.dateOfBirth
-        assertEquals("69", dob.rawYear)
-        assertEquals("08", dob.rawMonth)
-        assertEquals("06", dob.rawDay)
+        assertEquals("90", dob.rawYear)
+        assertEquals("03", dob.rawMonth)
+        assertEquals("15", dob.rawDay)
 
         val expiry = specimenTd3.commonFields.dateOfExpiry
-        assertEquals("94", expiry.rawYear)
-        assertEquals("06", expiry.rawMonth)
-        assertEquals("23", expiry.rawDay)
+        assertEquals("34", expiry.rawYear)
+        assertEquals("03", expiry.rawMonth)
+        assertEquals("14", expiry.rawDay)
     }
 
     @Test
     fun td3_specimen_exposes_check_digits_verbatim() {
         val checks = specimenTd3.commonFields.checkDigits
         assertEquals('3', checks.documentNumber)
-        assertEquals('1', checks.dateOfBirth)
-        assertEquals('6', checks.dateOfExpiry)
-        assertEquals('1', checks.optionalData)
-        assertEquals('4', checks.composite)
+        assertEquals('2', checks.dateOfBirth)
+        assertEquals('1', checks.dateOfExpiry)
+        assertEquals('2', checks.optionalData)
+        assertEquals('0', checks.composite)
     }
 
     @Test
     fun td3_specimen_exposes_personal_number_and_its_check_digit() {
-        assertEquals("ZE184226B<<<<<", specimenTd3.personalNumber)
-        assertEquals('1', specimenTd3.personalNumberCheckDigit)
+        assertEquals("S98765432<<<<<", specimenTd3.personalNumber)
+        assertEquals('2', specimenTd3.personalNumberCheckDigit)
     }
 
     @Test
@@ -94,8 +94,8 @@ class MrzDocumentTest {
     fun td3_raw_lines_round_trip_unchanged() {
         assertEquals(
             listOf(
-                "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-                "L898902C<3UTO6908061F9406236ZE184226B<<<<<14",
+                "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<",
+                "T220001293UTO9003152F3403141S98765432<<<<<20",
             ),
             specimenTd3.rawLines,
         )
@@ -107,8 +107,8 @@ class MrzDocumentTest {
             TD3(
                 rawLines = specimenTd3.rawLines,
                 commonFields = specimenCommonFields,
-                personalNumber = "ZE184226B<<<<<",
-                personalNumberCheckDigit = '1',
+                personalNumber = "S98765432<<<<<",
+                personalNumberCheckDigit = '2',
             )
         assertEquals(specimenTd3, other)
     }

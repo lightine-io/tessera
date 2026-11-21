@@ -1,9 +1,12 @@
 package io.lightine.tessera.mrz.generation
 
+import io.lightine.tessera.mrz.Specimens
+import io.lightine.tessera.mrz.formats.Td3FormatSpec
 import io.lightine.tessera.mrz.model.CommonFields
 import io.lightine.tessera.mrz.model.MrzCheckDigits
 import io.lightine.tessera.mrz.model.MrzDate
 import io.lightine.tessera.mrz.model.TD3
+import io.lightine.tessera.mrz.overwrite
 import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.mrz.recognition.CountryCode
@@ -21,9 +24,8 @@ import kotlin.time.Instant
 class MrzGeneratorTd3Test {
     private val ref2026 = Instant.parse("2026-05-04T12:00:00Z")
 
-    private val specimenLine1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-    private val specimenLine2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
-    private val specimenLines = listOf(specimenLine1, specimenLine2)
+    // The project's TD3 specimen.
+    private val specimenLines = Specimens.TD3
 
     private fun specimenTd3(): TD3 {
         val result = MrzParser.parseTD3(specimenLines, referenceTime = ref2026)
@@ -105,14 +107,14 @@ class MrzGeneratorTd3Test {
                     td3.commonFields.copy(
                         checkDigits =
                             MrzCheckDigits(
-                                documentNumber = '0',
-                                dateOfBirth = '0',
-                                dateOfExpiry = '0',
-                                optionalData = '0',
-                                composite = '0',
+                                documentNumber = '9',
+                                dateOfBirth = '9',
+                                dateOfExpiry = '9',
+                                optionalData = '9',
+                                composite = '9',
                             ),
                     ),
-                personalNumberCheckDigit = '0',
+                personalNumberCheckDigit = '9',
             )
         val regenerated = assertIs<GenerationResult.Success>(MrzGenerator.generate(corrupted))
         // The regenerated MRZ matches the original (clean) specimen, not the corrupted digits.
@@ -163,7 +165,7 @@ class MrzGeneratorTd3Test {
         // field per the ICAO "long document number" extension. That extension is deferred to a
         // future slice; for now, the generator fails with overflow for >9-character doc numbers.
         val td3 = specimenTd3()
-        val overflowing = td3.copy(commonFields = td3.commonFields.copy(documentNumber = "L898902C<<X"))
+        val overflowing = td3.copy(commonFields = td3.commonFields.copy(documentNumber = "T22000129XX"))
         val failure = assertIs<GenerationResult.Failure>(MrzGenerator.generate(overflowing))
         val error = assertIs<MrzGenerationFieldOverflow>(failure.error)
         assertEquals(MrzField.DOCUMENT_NUMBER, error.field)
@@ -226,11 +228,7 @@ class MrzGeneratorTd3Test {
     @Test
     fun round_trips_a_two_character_document_type_code() {
         // PP (ordinary passport) is in the recognized set. Build a synthetic TD3 with "PP".
-        val customLines =
-            listOf(
-                "PPUTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-                "L898902C<3UTO6908061F9406236ZE184226B<<<<<14",
-            )
+        val customLines = specimenLines.overwrite(Td3FormatSpec.documentType, "PP")
         val parsed = assertIs<ParseResult.Success>(MrzParser.parseTD3(customLines, referenceTime = ref2026))
         val td3 = assertIs<TD3>(parsed.document)
 
@@ -245,10 +243,10 @@ class MrzGeneratorTd3Test {
     fun date_raw_components_are_emitted_verbatim() {
         val td3 = specimenTd3()
         val regenerated = assertIs<GenerationResult.Success>(MrzGenerator.generate(td3))
-        // DOB at line 2 positions 13-19; specimen has 690806
-        assertEquals("690806", regenerated.mrz[1].substring(13, 19))
-        // DOE at line 2 positions 21-27; specimen has 940623
-        assertEquals("940623", regenerated.mrz[1].substring(21, 27))
+        // DOB at line 2 positions 13-19; specimen has 900315
+        assertEquals("900315", regenerated.mrz[1].substring(13, 19))
+        // DOE at line 2 positions 21-27; specimen has 340314
+        assertEquals("340314", regenerated.mrz[1].substring(21, 27))
     }
 
     // --- Custom MrzDate with non-default fields preserves rawYear/Month/Day ---

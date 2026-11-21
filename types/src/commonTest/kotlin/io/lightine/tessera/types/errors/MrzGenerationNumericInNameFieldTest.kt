@@ -25,12 +25,12 @@ class MrzGenerationNumericInNameFieldTest {
         val error =
             MrzGenerationNumericInNameField(
                 format = MrzFormat.TD3,
-                observedValue = "ANNA M4RIA",
+                observedValue = "ALEX M4RGAN",
                 numericCharacters = listOf('4'),
             )
         assertTrue("TD3" in error.description)
         assertTrue("4.6" in error.description)
-        assertFalse("ANNA M4RIA" in error.description)
+        assertFalse("ALEX M4RGAN" in error.description)
         assertFalse("'4'" in error.description)
         assertEquals("MrzGenerationNumericInNameField: ${error.description}", error.toString())
     }

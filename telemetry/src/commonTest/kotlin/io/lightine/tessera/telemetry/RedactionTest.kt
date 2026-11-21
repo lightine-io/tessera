@@ -21,10 +21,10 @@ class RedactionTest {
 
     @Test
     fun preserves_filler_and_length() {
-        val input = "P<DEUMUSTERMANN<<ERIKA<<<<<<<<<<<<<<<<<<<<<<"
+        val input = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
         val redacted = Redaction.redactMrzLine(input)
         assertEquals(input.length, redacted.length)
-        assertEquals("*<*************<<*****<<<<<<<<<<<<<<<<<<<<<<", redacted)
+        assertEquals("*<***********<<****<******<<<<<<<<<<<<<<<<<<", redacted)
     }
 
     @Test
@@ -34,8 +34,8 @@ class RedactionTest {
 
     @Test
     fun redacts_realistic_td3_line_2() {
-        // Synthetic TD3 line 2: 37 alphanumerics, 5 fillers, then a 2-digit composite check.
-        val input = "L898902C36UTO7408122F1204159ZE184226B<<<<<10"
+        // The project's TD3 specimen, line 2: 37 alphanumerics, 5 fillers, then a 2-digit composite check.
+        val input = "T220001293UTO9003152F3403141S98765432<<<<<20"
         val redacted = Redaction.redactMrzLine(input)
         assertEquals(input.length, redacted.length)
         assertEquals("*************************************<<<<<**", redacted)
