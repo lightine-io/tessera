@@ -14,8 +14,10 @@ import io.lightine.tessera.mrz.parsing.ParseResult
  * not tried, because a check digit cannot tell the two apart. At most 6
  * ambiguous positions are varied: those in fields whose check digit fails come first, then the
  * rest, each in reading order; later ones stay as recognized. An absent candidate means the reading
- * was not explored, not that it is ruled out. The type holds document data: do not log it
- * verbatim.
+ * was not explored, not that it is ruled out. More than one reconstruction can pass every check
+ * digit: two changed characters in one field can cancel out in its check digit. All of them are
+ * listed, in no order of likelihood, and the app or the person chooses. The type holds document
+ * data: do not log it verbatim.
  *
  * @since 0.3.0
  */
