@@ -48,6 +48,8 @@ Type, service (SDK, vulnerability response, questions and bug reports, contribut
 
 If the owner is not in the session, the worker holds the meeting alone and leaves blockers as comments on the cards.
 
+CI counts part of this every Monday (`board-check.yml`): the column limits, cards with no change for 14 days in Next, Develop, Review or Test, and the share of process work since the last release. It fails when a limit or the aging rule is broken. Its log shows card ids and numbers only, because the board is private and the repository is public.
+
 ## Pulling work
 
 1. Expedite first (top lane).
