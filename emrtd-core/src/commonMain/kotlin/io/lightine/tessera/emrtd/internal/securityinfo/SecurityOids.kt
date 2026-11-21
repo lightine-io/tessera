@@ -34,6 +34,9 @@ internal object SecurityOids {
     const val EC_PUBLIC_KEY = "1.2.840.10045.2.1"
     const val PRIME_FIELD = "1.2.840.10045.1.1"
 
+    /** rsaEncryption (RFC 5280): the active-authentication key of EF.DG15 (Part 11, 6.1.5). */
+    const val RSA_ENCRYPTION = "1.2.840.113549.1.1.1"
+
     /** CMS ContentInfo type signedData. */
     const val CMS_SIGNED_DATA = "1.2.840.113549.1.7.2"
 
