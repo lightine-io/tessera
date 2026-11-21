@@ -11,6 +11,6 @@ dependencies {
 dependencies {
     implementation(platform("io.lightine.tessera:tessera-bom:0.7.0"))
     implementation("io.lightine.tessera:tessera-mrz-core")
-    implementation("io.lightine.tessera:tessera-mrz-camera-core")
+    implementation("io.lightine.tessera:tessera-mrz-ocr-core")
 }
 // endregion

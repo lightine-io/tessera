@@ -4,23 +4,22 @@ plugins {
     id("tessera.kmp-publishing")
 }
 
-// The platform-agnostic camera-reading core (ADR-021): the analyse-frame engine, the streaming
-// scan() contract, the MrzCameraScanner interface, and the shared result/error/quality types.
-// mrz-camera and mrz-camera-ios are thin platform-I/O modules that depend on this; the
-// dependency-free seam (MrzTextRecognizer<F>) is also where a future USB/desktop/web frame source
-// plugs in (ADR-020). Published to Maven Central at the 0.2.0 release as `tessera-mrz-camera-core`
-// (ADR-016/ADR-021); Android consumers of `tessera-mrz-camera` pull it transitively.
+// The platform-agnostic OCR core (ADR-021): shared by camera reading and saved-image reading.
+// The analyse-frame engine, streaming scan() contract, MrzCameraScanner interface, and shared
+// result/error/quality types live here. The camera modules are thin platform-I/O modules that
+// depend on this; the dependency-free seam (MrzTextRecognizer<F>) also supports saved images and
+// future USB/desktop/web frame sources (ADR-020).
 
 mavenPublishing {
-    coordinates(group.toString(), "tessera-mrz-camera-core", version.toString())
+    coordinates(group.toString(), "tessera-mrz-ocr-core", version.toString())
 
     pom {
-        name.set("tessera-mrz-camera-core")
+        name.set("tessera-mrz-ocr-core")
         description.set(
-            "Platform-agnostic camera MRZ-reading core for the Tessera identity-document SDK: the " +
-                "analyse-frame engine, the frame-source-agnostic scan() streaming contract, the " +
-                "MrzCameraScanner owns-session interface, and the shared scan-result, camera-error, " +
-                "and quality types. The Android and iOS platform-I/O modules build on it.",
+            "Platform-agnostic OCR core for the Tessera identity-document SDK, backing both camera " +
+                "reading and saved-image reading. It provides the analyse-frame engine, the " +
+                "frame-source-agnostic scan() streaming contract, the MrzCameraScanner owns-session " +
+                "interface, and the shared scan-result, camera-error, and quality types.",
         )
     }
 }
@@ -36,7 +35,7 @@ kotlin {
         }
     }
 
-    // The JVM target is published as `tessera-mrz-camera-core-jvm` and listed in the BOM: a JVM app
+    // The JVM target is published as `tessera-mrz-ocr-core-jvm` and listed in the BOM: a JVM app
     // uses it to analyze its own frames and to read saved images with its own recognizer. It also
     // carries the host tests for this platform-agnostic core, so they run on the JVM `check` CI
     // runner with no Android SDK and no device. Removing the target would remove a published

@@ -34,7 +34,7 @@ kotlin {
             dependencies {
                 implementation(project(":mrz-core"))
                 implementation(project(":telemetry"))
-                implementation(project(":mrz-camera-core"))
+                implementation(project(":mrz-ocr-core"))
             }
         }
         androidMain {

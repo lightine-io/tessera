@@ -10,7 +10,7 @@ import kotlin.test.assertNull
  * two-pass MRZ rescue (TES-130): the EXIF-undoing crop-rect math, padding, and row regions. All fixture text is synthetic.
  */
 class VisionSavedImageRescueTest {
-    // isMrzCandidate / rescuedLines are shared with Android and tested in mrz-camera-core (MrzRowRescueTest).
+    // isMrzCandidate / rescuedLines are shared with Android and tested in mrz-ocr-core (MrzRowRescueTest).
 
     // --- rawCropRect (oriented bottom-left normalized -> raw top-left normalized) ---
 

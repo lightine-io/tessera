@@ -13,6 +13,7 @@ paths:
   - "**/androidInstrumentedTest/**"
   - "**/iosTest/**"
   - "mrz-camera-*/**"
+  - "mrz-ocr-core/**"
 ---
 
 # Platform and build work

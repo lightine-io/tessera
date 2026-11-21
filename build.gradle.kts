@@ -34,7 +34,7 @@ dependencies {
     dokka(project(":emrtd-pcsc"))
     dokka(project(":telemetry"))
     dokka(project(":logging"))
-    dokka(project(":mrz-camera-core"))
+    dokka(project(":mrz-ocr-core"))
     dokka(project(":mrz-camera"))
     dokka(project(":mrz-camera-ui"))
 }

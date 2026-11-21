@@ -7,7 +7,7 @@ import kotlin.native.HidesFromObjC
 
 /**
  * Marks a declaration that is public only so Tessera's own modules can share it (for example the camera
- * modules sharing one rule from mrz-camera-core). It is not part of Tessera's API: it can change or go away
+ * modules sharing one rule from mrz-ocr-core). It is not part of Tessera's API: it can change or go away
  * in any release, without notice and without a deprecation cycle.
  *
  * Using it is a compile error unless the caller opts in, which only Tessera's own modules do. Marked

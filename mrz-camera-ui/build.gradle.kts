@@ -81,9 +81,9 @@ kotlin {
     sourceSets {
         androidMain {
             dependencies {
-                // The reading contract: MrzScannerResult surfaces mrz-camera-core's MrzScanResult in its
+                // The reading contract: MrzScannerResult surfaces mrz-ocr-core's MrzScanResult in its
                 // public API, so the core is `api` (seen by consumers).
-                api(project(":mrz-camera-core"))
+                api(project(":mrz-ocr-core"))
                 // The Android owns-the-session scanner drives the live camera behind the screen; the UI
                 // arms its opt-in preview seam and renders the SurfaceRequest it publishes. `implementation`
                 // — the scanner is an internal engine of the screen, not part of this module's public API
@@ -127,7 +127,7 @@ kotlin {
             implementation(libs.robolectric)
             // Test-only (TES-124): runTest + virtual time to exercise awaitCameraActiveThenTimeout — the pure
             // suspend gate that starts each scan-session timer only once the camera preview is active — without
-            // a real camera or wall-clock delay. Same catalog entry mrz-camera-core's scan() tests use.
+            // a real camera or wall-clock delay. Same catalog entry mrz-ocr-core's scan() tests use.
             implementation(libs.kotlinx.coroutines.test)
             // Test-only (TES-102): kotlin-reflect backs ScannerUiStateSaverTest's variant-completeness guard
             // — `ScannerUiState::class.sealedSubclasses` structurally proves every sealed variant has a codec

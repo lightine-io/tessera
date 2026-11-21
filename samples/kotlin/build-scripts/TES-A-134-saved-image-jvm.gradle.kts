@@ -4,6 +4,6 @@
 // region TES-A-134 block 1
 dependencies {
     implementation(platform("io.lightine.tessera:tessera-bom:0.7.0"))
-    implementation("io.lightine.tessera:tessera-mrz-camera-core")
+    implementation("io.lightine.tessera:tessera-mrz-ocr-core")
 }
 // endregion

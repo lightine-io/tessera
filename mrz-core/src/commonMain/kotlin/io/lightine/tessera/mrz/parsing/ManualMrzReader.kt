@@ -178,7 +178,7 @@ public object ManualMrzReader {
  * method - the document, warnings, and validation failures are surfaced unchanged. Used by the
  * provenance-aware reading methods in `mrz-core` (e.g. [ManualMrzReader]) that delegate to
  * [MrzParser] - which always reports `BACKEND_STRING_INPUT` because it sees only a string - but
- * know the data's true provenance (Principle 5). The `mrz-camera-core` analyse-frame core does the
+ * know the data's true provenance (Principle 5). The `mrz-ocr-core` analyse-frame core does the
  * same with its own copy (module-private; an `internal` helper cannot cross the module boundary).
  */
 internal fun ParseResult.withReadMethod(readMethod: ReadMethod): ParseResult {
