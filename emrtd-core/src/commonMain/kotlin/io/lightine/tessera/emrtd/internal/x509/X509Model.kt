@@ -1,6 +1,7 @@
 package io.lightine.tessera.emrtd.internal.x509
 
 import io.lightine.tessera.emrtd.internal.asn1.DerBitString
+import io.lightine.tessera.emrtd.internal.asn1.DerTag
 
 /** Why an X.509 structure could not be read. Carries no data bytes. */
 internal enum class X509Failure {
@@ -45,6 +46,31 @@ internal class DistinguishedName(
 
     val countryName: String? get() = first(OID_COUNTRY)
     val commonName: String? get() = first(OID_COMMON_NAME)
+
+    /**
+     * The comparison RFC 5280, section 7.1 defines for names whose DER bytes differ: the same
+     * attributes in the same order, each a PrintableString or a UTF8String, with values matched
+     * case-insensitively and insignificant spaces (leading, trailing and repeated) removed. A name
+     * with an attribute of any other type never matches this way. Used only as a fallback after
+     * the byte comparison, never in its place.
+     */
+    fun matchesNormalized(other: DistinguishedName): Boolean {
+        if (attributes.size != other.attributes.size) return false
+        return attributes.indices.all { i ->
+            val a = attributes[i]
+            val b = other.attributes[i]
+            a.oid == b.oid && comparableText(a) && comparableText(b) && normalizedText(a.value) == normalizedText(b.value)
+        }
+    }
+
+    private fun comparableText(a: NameAttribute): Boolean = a.stringTag == DerTag.PRINTABLE_STRING || a.stringTag == DerTag.UTF8_STRING
+
+    private fun normalizedText(value: String): String =
+        value
+            .uppercase()
+            .split(' ')
+            .filter { it.isNotEmpty() }
+            .joinToString(" ")
 
     companion object {
         const val OID_COUNTRY = "2.5.4.6"
@@ -129,6 +155,10 @@ internal class DecodedExtensions(
     val authorityKeyIdentifier: AuthorityKeyIdentifier?,
     val privateKeyUsagePeriod: PrivateKeyUsagePeriod?,
     val documentTypeList: DocumentTypeList?,
+    /** The country of the first directoryName in the SubjectAltName extension that carries one, or `null` (Part 12, 7.1). */
+    val subjectAltNameCountry: String?,
+    /** The country of the first directoryName in the IssuerAltName extension that carries one, or `null`. */
+    val issuerAltNameCountry: String?,
     /** `true` when the NameChange extension is present. */
     val nameChange: Boolean,
 )

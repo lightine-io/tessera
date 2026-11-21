@@ -3,6 +3,7 @@ package io.lightine.tessera.emrtd.internal.pa
 import io.lightine.tessera.emrtd.internal.asn1.Asn1Exception
 import io.lightine.tessera.emrtd.internal.cms.CmsSignedData
 import io.lightine.tessera.emrtd.internal.cms.CmsSignerInfo
+import io.lightine.tessera.emrtd.internal.cms.SignerIdentifier
 import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
 import io.lightine.tessera.emrtd.internal.crypto.ChipCryptoException
 import io.lightine.tessera.emrtd.internal.crypto.KeyLimits
@@ -17,14 +18,18 @@ import io.lightine.tessera.emrtd.internal.x509.X509Parser
 internal class SignerLookup(
     val signerInfo: CmsSignerInfo?,
     val certificate: X509Certificate?,
+    /** Where [certificate] came from: the file itself, the app, or neither (`null`). */
+    val origin: SignerCertificateOrigin?,
     val notRun: PaNotRun?,
 )
 
-/** What the signer-to-root check found: the outcome and, when a root's key verified the signer, that root and its key. */
+/** What the signer-to-root check found: the outcome, the matched root, its key, and how the names matched. */
 internal class RootMatch(
     val outcome: PaOutcome,
     val root: X509Certificate?,
     val rootKey: VerificationKey?,
+    /** How the signer's issuer name equals the root's subject name, or `null` when none matched. */
+    val issuerNameMatch: IssuerNameMatch?,
 )
 
 /**
@@ -36,11 +41,16 @@ internal class RootMatch(
 internal object SignatureChecks {
     /**
      * The certificate the first SignerInfo names (by issuer and serial number, or by subject key
-     * identifier) among the certificates the SignedData carries. A certificate is never guessed: with
-     * no match the outcome is [PaNotRun.NO_SIGNER_CERTIFICATE].
+     * identifier) among the certificates the SignedData carries, or, when none of those names the
+     * signer, the certificate [appSupplied] hands in (Part 10, App D: an EF.SOD may carry none) when
+     * the SignerInfo names it. A certificate is never guessed: with no match the outcome is
+     * [PaNotRun.NO_SIGNER_CERTIFICATE].
      */
-    fun findSigner(sd: CmsSignedData): SignerLookup {
-        val info = sd.signerInfos.firstOrNull() ?: return SignerLookup(null, null, PaNotRun.NO_SIGNER_CERTIFICATE)
+    fun findSigner(
+        sd: CmsSignedData,
+        appSupplied: X509Certificate?,
+    ): SignerLookup {
+        val info = sd.signerInfos.firstOrNull() ?: return SignerLookup(null, null, null, PaNotRun.NO_SIGNER_CERTIFICATE)
         var unreadable = false
         for (der in sd.certificates) {
             val cert =
@@ -53,17 +63,25 @@ internal object SignatureChecks {
                     unreadable = true
                     continue
                 }
-            val sid = info.sid
-            val matches =
-                if (sid.subjectKeyIdentifier != null) {
-                    cert.decoded.subjectKeyIdentifier?.contentEquals(sid.subjectKeyIdentifier) == true
-                } else {
-                    sid.issuer?.contentEquals(cert.issuer.encoded) == true && sid.serialNumber?.contentEquals(cert.serialNumber) == true
-                }
-            if (matches) return SignerLookup(info, cert, null)
+            if (matches(info.sid, cert)) return SignerLookup(info, cert, SignerCertificateOrigin.STORED_IN_FILE, null)
         }
-        return SignerLookup(info, null, if (unreadable) PaNotRun.UNREADABLE_SIGNER_CERTIFICATE else PaNotRun.NO_SIGNER_CERTIFICATE)
+        if (appSupplied != null && matches(info.sid, appSupplied)) {
+            return SignerLookup(info, appSupplied, SignerCertificateOrigin.SUPPLIED_BY_APP, null)
+        }
+        return SignerLookup(info, null, null, if (unreadable) PaNotRun.UNREADABLE_SIGNER_CERTIFICATE else PaNotRun.NO_SIGNER_CERTIFICATE)
     }
+
+    /** Whether [certificate] is the one [sid] names. */
+    private fun matches(
+        sid: SignerIdentifier,
+        certificate: X509Certificate,
+    ): Boolean =
+        if (sid.subjectKeyIdentifier != null) {
+            certificate.decoded.subjectKeyIdentifier?.contentEquals(sid.subjectKeyIdentifier) == true
+        } else {
+            sid.issuer?.contentEquals(certificate.issuer.encoded) == true &&
+                sid.serialNumber?.contentEquals(certificate.serialNumber) == true
+        }
 
     /** Whether [key]'s type is the one [scheme] needs. */
     private fun fits(
@@ -161,20 +179,23 @@ internal object SignatureChecks {
      * The single-certificate path from [signer] to one of [roots] (Part 12, App D.1.1; paths have one
      * certificate, CHIP-22). The candidate roots are those whose SubjectKeyIdentifier equals the
      * signer's AuthorityKeyIdentifier (App D.1.1.1); if none does, or the signer has no AKI, those
-     * whose subject name equals the signer's issuer name. Passed when a candidate's key verifies the
-     * signer's signature and its subject is the signer's issuer name (compared as DER bytes).
-     * Validity, critical extensions and revocation are separate checks.
+     * whose subject name equals the signer's issuer name, byte for byte first and then, where those
+     * differ, by the comparison of RFC 5280, section 7.1 (case-insensitive, insignificant spaces
+     * removed). Passed when a candidate's key verifies the signer's signature and its subject is the
+     * signer's issuer name by either comparison, which [RootMatch.issuerNameMatch] records; byte
+     * equality is tried first. Validity, critical extensions and revocation are separate checks.
      */
     fun chainToRoot(
         crypto: ChipCrypto,
         signer: X509Certificate,
         roots: List<X509Certificate>,
     ): RootMatch {
-        if (roots.isEmpty()) return RootMatch(PaOutcome.NotRun(PaNotRun.NO_ROOTS_SUPPLIED), null, null)
+        if (roots.isEmpty()) return RootMatch(PaOutcome.NotRun(PaNotRun.NO_ROOTS_SUPPLIED), null, null, null)
         val aki = signer.decoded.authorityKeyIdentifier?.keyIdentifier
         val byKey = if (aki == null) emptyList() else roots.filter { it.decoded.subjectKeyIdentifier?.contentEquals(aki) == true }
-        val candidates = byKey.ifEmpty { roots.filter { it.subject.encoded.contentEquals(signer.issuer.encoded) } }
-        if (candidates.isEmpty()) return RootMatch(PaOutcome.Failed(PaFailure.NO_SUPPLIED_ROOT_MATCHES), null, null)
+        val (exactNames, otherNames) = roots.partition { it.subject.encoded.contentEquals(signer.issuer.encoded) }
+        val candidates = byKey.ifEmpty { exactNames + otherNames.filter { it.subject.matchesNormalized(signer.issuer) } }
+        if (candidates.isEmpty()) return RootMatch(PaOutcome.Failed(PaFailure.NO_SUPPLIED_ROOT_MATCHES), null, null, null)
         var notRun: PaOutcome? = null
         var nameDiffers: RootMatch? = null
         var anyRan = false
@@ -196,15 +217,18 @@ internal object SignatureChecks {
             }
             anyRan = true
             if (outcome == PaOutcome.Passed) {
-                if (root.subject.encoded.contentEquals(signer.issuer.encoded)) return RootMatch(PaOutcome.Passed, root, key)
-                nameDiffers = RootMatch(PaOutcome.Failed(PaFailure.ISSUER_NAME_DIFFERS), root, key)
+                if (root.subject.encoded.contentEquals(signer.issuer.encoded)) {
+                    return RootMatch(PaOutcome.Passed, root, key, IssuerNameMatch.BYTE_EQUAL)
+                }
+                if (root.subject.matchesNormalized(signer.issuer)) return RootMatch(PaOutcome.Passed, root, key, IssuerNameMatch.NORMALIZED)
+                nameDiffers = RootMatch(PaOutcome.Failed(PaFailure.ISSUER_NAME_DIFFERS), root, key, null)
             }
         }
         return nameDiffers
             ?: if (anyRan || notRun == null) {
-                RootMatch(PaOutcome.Failed(PaFailure.SIGNATURE_DOES_NOT_VERIFY), null, null)
+                RootMatch(PaOutcome.Failed(PaFailure.SIGNATURE_DOES_NOT_VERIFY), null, null, null)
             } else {
-                RootMatch(notRun, null, null)
+                RootMatch(notRun, null, null, null)
             }
     }
 

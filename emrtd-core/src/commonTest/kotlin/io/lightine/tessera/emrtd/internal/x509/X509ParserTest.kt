@@ -93,6 +93,77 @@ class X509ParserTest {
     }
 
     @Test
+    fun altNameDirectoryCountriesAreDecoded() {
+        val c =
+            X509Parser.parse(
+                FakePki.certificate(
+                    extensions =
+                        listOf(
+                            FakePki.subjectAltNameDirectory("UT"),
+                            FakePki.issuerAltNameDirectory("UT", "Utopia Issuer Directory Name"),
+                        ),
+                ),
+            )
+        assertEquals("UT", c.decoded.subjectAltNameCountry)
+        assertEquals("UT", c.decoded.issuerAltNameCountry)
+    }
+
+    @Test
+    fun anAltNameWithoutADirectoryNameCountryDecodesToNull() {
+        // A URI only, as the Sixth Edition profile's SAN writes it.
+        val c = X509Parser.parse(FakePki.documentSignerCertificate())
+        assertNull(c.decoded.subjectAltNameCountry)
+        assertNull(c.decoded.issuerAltNameCountry)
+        // A directoryName that carries no country attribute.
+        val noCountry = X509Parser.parse(FakePki.certificate(extensions = listOf(FakePki.subjectAltNameDirectory(null))))
+        assertNull(noCountry.decoded.subjectAltNameCountry)
+    }
+
+    @Test
+    fun anAltNameWithWrongContentFails() {
+        val bad = FakePki.Ext(FakePki.OID_SAN, false, DerWriter.nullValue())
+        val der = FakePki.certificate(extensions = listOf(bad))
+        assertEquals(X509Failure.INVALID_EXTENSION, assertFailsWith<X509Exception> { X509Parser.parse(der) }.failure)
+    }
+
+    @Test
+    fun namesThatDifferOnlyInCaseSpacesOrEncodingMatchUnderTheRfc5280Comparison() {
+        val a = X509Parser.parse(FakePki.certificate(subject = FakePki.name("UT", "Utopia CSCA"))).subject
+        val b = X509Parser.parse(FakePki.certificate(subject = FakePki.nameUtf8("ut", "utopia  csca"))).subject
+        assertFalse(a.encoded.contentEquals(b.encoded))
+        assertTrue(a.matchesNormalized(b))
+        assertTrue(b.matchesNormalized(a))
+    }
+
+    @Test
+    fun namesThatDifferInOrderOrTypeDoNotMatchUnderTheRfc5280Comparison() {
+        val a = X509Parser.parse(FakePki.certificate(subject = FakePki.name("UT", "Utopia CSCA"))).subject
+        // The same attributes in another order are another name.
+        val swapped = X509Parser.parse(FakePki.certificate(subject = FakePki.nameSwapped("UT", "Utopia CSCA"))).subject
+        assertFalse(a.matchesNormalized(swapped))
+        // Another attribute count.
+        val shorter = X509Parser.parse(FakePki.certificate(subject = FakePki.nameWithoutCountry("Utopia CSCA"))).subject
+        assertFalse(a.matchesNormalized(shorter))
+        // A name with an attribute that is neither PrintableString nor UTF8String is never matched
+        // this way, even when the text is the same.
+        val ia5Name =
+            DerWriter.sequence(
+                DerWriter.set(DerWriter.sequence(DerWriter.oid("2.5.4.6"), DerWriter.printableString("UT"))),
+                DerWriter.set(
+                    DerWriter.sequence(DerWriter.oid("1.2.840.113549.1.9.1"), DerWriter.tlv(0x16, "utopia@example".encodeToByteArray())),
+                ),
+            )
+        val ia5 = X509Parser.parse(FakePki.certificate(subject = ia5Name)).subject
+        val utf8Name =
+            DerWriter.sequence(
+                DerWriter.set(DerWriter.sequence(DerWriter.oid("2.5.4.6"), DerWriter.printableString("UT"))),
+                DerWriter.set(DerWriter.sequence(DerWriter.oid("1.2.840.113549.1.9.1"), DerWriter.utf8String("utopia@example"))),
+            )
+        val utf8 = X509Parser.parse(FakePki.certificate(subject = utf8Name)).subject
+        assertFalse(ia5.matchesNormalized(utf8))
+    }
+
+    @Test
     fun certificateWithoutExtensionsAndVersionOneParses() {
         val c = X509Parser.parse(FakePki.certificate(version = 1))
         assertEquals(1, c.version)

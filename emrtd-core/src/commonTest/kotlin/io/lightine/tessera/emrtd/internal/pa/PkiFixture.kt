@@ -134,17 +134,18 @@ internal class Pki(
             ski: ByteArray = CSCA_SKI,
             ec: FakePki.EcParameters = FakePki.EcParameters.EXPLICIT,
             namedCurveOid: String? = null,
+            extensions: List<FakePki.Ext> =
+                listOf(
+                    FakePki.subjectKeyIdentifier(ski),
+                    FakePki.keyUsage(5, 6),
+                    FakePki.basicConstraints(true, 0),
+                ),
         ): ByteArray =
             FakePki.certificate(
                 subject = name,
                 issuer = name,
                 serial = 0x1001,
-                extensions =
-                    listOf(
-                        FakePki.subjectKeyIdentifier(ski),
-                        FakePki.keyUsage(5, 6),
-                        FakePki.basicConstraints(true, 0),
-                    ),
+                extensions = extensions,
                 publicKeyInfo = FakePki.publicKeyInfo(key.publicKey, ec, namedCurveOid),
                 signing = FakePki.Signing(signer, key, algorithm),
             )

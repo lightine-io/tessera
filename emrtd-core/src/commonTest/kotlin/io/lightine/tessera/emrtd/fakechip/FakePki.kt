@@ -17,6 +17,7 @@ import io.lightine.tessera.emrtd.internal.asn1.DerWriter.sequence
 import io.lightine.tessera.emrtd.internal.asn1.DerWriter.set
 import io.lightine.tessera.emrtd.internal.asn1.DerWriter.unsignedInteger
 import io.lightine.tessera.emrtd.internal.asn1.DerWriter.utcTime
+import io.lightine.tessera.emrtd.internal.asn1.DerWriter.utf8String
 import io.lightine.tessera.emrtd.internal.crypto.CryptoBytes
 import io.lightine.tessera.emrtd.internal.crypto.EcdsaSignatureFormat
 import io.lightine.tessera.emrtd.internal.crypto.HashAlgorithm
@@ -51,6 +52,7 @@ internal object FakePki {
     const val OID_AKI = "2.5.29.35"
     const val OID_PKUP = "2.5.29.16"
     const val OID_SAN = "2.5.29.17"
+    const val OID_IAN = "2.5.29.18"
     const val OID_CRL_DP = "2.5.29.31"
     const val OID_DOCUMENT_TYPE = "2.23.136.1.1.6.2"
 
@@ -78,6 +80,29 @@ internal object FakePki {
         sequence(
             set(sequence(oid("2.5.4.6"), printableString(country))),
             set(sequence(oid("2.5.4.3"), printableString(commonName))),
+        )
+
+    /** A name with no country attribute, as a certificate whose country lives in an alt-name extension writes it. */
+    fun nameWithoutCountry(commonName: String): ByteArray = sequence(set(sequence(oid("2.5.4.3"), printableString(commonName))))
+
+    /** A name in UTF8String: byte-different from [name] with the same letters, but the same name under the comparison of RFC 5280, 7.1. */
+    fun nameUtf8(
+        country: String,
+        commonName: String,
+    ): ByteArray =
+        sequence(
+            set(sequence(oid("2.5.4.6"), utf8String(country))),
+            set(sequence(oid("2.5.4.3"), utf8String(commonName))),
+        )
+
+    /** A name whose attributes come in the opposite order from [name]: not the same name even under the comparison of RFC 5280, 7.1. */
+    fun nameSwapped(
+        country: String,
+        commonName: String,
+    ): ByteArray =
+        sequence(
+            set(sequence(oid("2.5.4.3"), printableString(commonName))),
+            set(sequence(oid("2.5.4.6"), printableString(country))),
         )
 
     // ---- extensions ----
@@ -127,6 +152,35 @@ internal object FakePki {
         Ext(OID_DOCUMENT_TYPE, false, sequence(integer(0), set(*types.map { printableString(it) }.toTypedArray())))
 
     fun subjectAltName(uri: String) = Ext(OID_SAN, false, sequence(implicitPrimitive(6, uri.encodeToByteArray())))
+
+    /**
+     * The GeneralNames of an alt-name extension holding one directoryName (the Part 12, 7.1 form
+     * that carries a country), with [country] and a common name; `country` null leaves the
+     * directoryName without one.
+     */
+    fun altNameDirectory(
+        country: String?,
+        commonName: String = "Utopia Directory Name",
+    ): ByteArray =
+        sequence(
+            implicitConstructed(
+                4,
+                *listOfNotNull(
+                    country?.let { set(sequence(oid("2.5.4.6"), printableString(it))) },
+                    set(sequence(oid("2.5.4.3"), printableString(commonName))),
+                ).toTypedArray(),
+            ),
+        )
+
+    fun subjectAltNameDirectory(
+        country: String?,
+        commonName: String = "Utopia Directory Name",
+    ) = Ext(OID_SAN, false, altNameDirectory(country, commonName))
+
+    fun issuerAltNameDirectory(
+        country: String?,
+        commonName: String = "Utopia Directory Name",
+    ) = Ext(OID_IAN, false, altNameDirectory(country, commonName))
 
     fun crlDistributionPoint(uri: String) =
         Ext(OID_CRL_DP, false, sequence(sequence(explicit(0, explicit(0, implicitPrimitive(6, uri.encodeToByteArray()))))))

@@ -29,6 +29,36 @@ internal enum class SignedCopy {
     CARD_SECURITY,
 }
 
+/** How the signer's issuer name was found to equal the matched root's subject name. */
+internal enum class IssuerNameMatch {
+    /** The two names' DER bytes are equal. */
+    BYTE_EQUAL,
+
+    /** The bytes differ and the comparison of RFC 5280, section 7.1 matched: case-insensitive, insignificant spaces removed. */
+    NORMALIZED,
+}
+
+/** Where the country of a certificate was read from, for the signer-versus-root country fact. */
+internal enum class CountrySource {
+    /** The subject's `countryName` attribute. */
+    SUBJECT_NAME,
+
+    /** A `directoryName` in the SubjectAltName extension (Part 12, 7.1). */
+    SUBJECT_ALT_NAME,
+
+    /** A `directoryName` in the IssuerAltName extension. */
+    ISSUER_ALT_NAME,
+}
+
+/** Where the signer certificate of a signed object came from. */
+internal enum class SignerCertificateOrigin {
+    /** The signed object carries it among its own certificates. */
+    STORED_IN_FILE,
+
+    /** The app supplied it, for a signed object whose own certificates name no signer (Part 10, App D). */
+    SUPPLIED_BY_APP,
+}
+
 /** What a check is about. */
 internal sealed interface PaCheckKind {
     /** The hash of data group [dataGroup] as read equals the one the security object stores (Part 11, 5.1.1 step 5). */
@@ -38,18 +68,23 @@ internal sealed interface PaCheckKind {
 
     /**
      * The signature of [signed] verifies under its signer certificate's public key, and the signed
-     * attributes (content type and message digest) agree with the signed content (RFC 5652, 5.4 and 5.6).
+     * attributes (content type and message digest) agree with the signed content (RFC 5652, 5.4 and
+     * 5.6). [signerOrigin] says where that certificate came from, or is `null` when there is none.
      */
     data class SignatureVerifies(
         val signed: SignedObject,
+        val signerOrigin: SignerCertificateOrigin?,
     ) : PaCheckKind
 
     /**
      * The signer certificate of [signed] is signed by one of the roots the app supplied, the one its
-     * AuthorityKeyIdentifier names, and its issuer name is that root's subject (Part 12, App D.1.1).
+     * AuthorityKeyIdentifier names, and its issuer name is that root's subject (Part 12, App D.1.1):
+     * byte for byte first, and when those differ, by the comparison of RFC 5280, section 7.1 that
+     * [issuerNameMatch] records. `null` when no root's name matched.
      */
     data class SignerChainsToSuppliedRoot(
         val signed: SignedObject,
+        val issuerNameMatch: IssuerNameMatch?,
     ) : PaCheckKind
 
     /** The signer certificate of [signed] is inside its validity period at [time], a time the caller gave. */
@@ -77,8 +112,16 @@ internal sealed interface PaCheckKind {
     /** With no DocumentType extension: the signer's KeyUsage is digitalSignature and it has no ExtendedKeyUsage (Part 11, 5.1.1 best practice 1). */
     data object SignerKeyUsageIsDigitalSignatureOnly : PaCheckKind
 
-    /** The signer's subject country equals the matched root's subject country (part of Part 11, 5.1.1 best practice 2). */
-    data object SignerCountryMatchesRootCountry : PaCheckKind
+    /**
+     * The signer's country equals the matched root's country (part of Part 11, 5.1.1 best practice 2).
+     * Each country is read from its certificate's subject name first, then from the SubjectAltName
+     * or IssuerAltName extension where the Part 12 profile puts it; [signerSource] and [rootSource]
+     * say which was used, and are `null` on a side with no country to read.
+     */
+    data class SignerCountryMatchesRootCountry(
+        val signerSource: CountrySource?,
+        val rootSource: CountrySource?,
+    ) : PaCheckKind
 
     /** The issue date the caller gave is inside the signer's PrivateKeyUsagePeriod (Part 11, 5.1.1 best practice 3). */
     data object IssueDateInSignerUsagePeriod : PaCheckKind

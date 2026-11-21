@@ -7,8 +7,9 @@ import io.lightine.tessera.emrtd.internal.asn1.DerTag
 /**
  * Decodes the extensions Doc 9303 Part 12 (Table 6, 7.1.1.5, 7.1.1.6) names and that a later check
  * needs: KeyUsage, BasicConstraints, ExtKeyUsage, SubjectKeyIdentifier, AuthorityKeyIdentifier,
- * PrivateKeyUsagePeriod, DocumentTypeList and NameChange. The first extension with an OID wins.
- * A known extension with the wrong content fails with [X509Exception]; an unknown one is skipped.
+ * PrivateKeyUsagePeriod, DocumentTypeList, NameChange, and the country a directoryName in
+ * SubjectAltName or IssuerAltName carries (7.1). The first extension with an OID wins. A known
+ * extension with the wrong content fails with [X509Exception]; an unknown one is skipped.
  */
 internal object X509Extensions {
     const val KEY_USAGE = "2.5.29.15"
@@ -55,6 +56,8 @@ internal object X509Extensions {
             authorityKeyIdentifier = find(AUTHORITY_KEY_ID)?.let { wrap { authorityKeyId(it.value) } },
             privateKeyUsagePeriod = find(PRIVATE_KEY_USAGE_PERIOD)?.let { wrap { keyUsagePeriod(it.value) } },
             documentTypeList = find(DOCUMENT_TYPE_LIST)?.let { wrap { documentTypeList(it.value) } },
+            subjectAltNameCountry = find(SUBJECT_ALT_NAME)?.let { wrap { altNameCountry(it.value) } },
+            issuerAltNameCountry = find(ISSUER_ALT_NAME)?.let { wrap { altNameCountry(it.value) } },
             nameChange =
                 find(NAME_CHANGE)?.let {
                     wrap {
@@ -145,5 +148,24 @@ internal object X509Extensions {
             types.add(e.value().decodeToString())
         }
         return DocumentTypeList(version, types)
+    }
+
+    /**
+     * The country of the first `directoryName` GeneralName that carries one (Part 12, 7.1), or
+     * `null`. The other GeneralName forms are skipped: this parser names no ICAO `otherName`, so
+     * only a directoryName's country attribute is read.
+     */
+    private fun altNameCountry(value: ByteArray): String? {
+        val reader = DerReader(value)
+        val names = reader.readSequence()
+        reader.finish()
+        var country: String? = null
+        while (names.hasMore) {
+            val e = names.read()
+            if (country == null && e.tag == DerTag.context(4, constructed = true)) {
+                country = X509Parser.readNameAttributes(e.contents()).firstOrNull { it.oid == DistinguishedName.OID_COUNTRY }?.value
+            }
+        }
+        return country
     }
 }

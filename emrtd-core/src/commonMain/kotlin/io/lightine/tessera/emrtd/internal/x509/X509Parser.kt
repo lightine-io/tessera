@@ -105,7 +105,11 @@ internal object X509Parser {
 
     private fun readName(parent: DerReader): DistinguishedName {
         val element = parent.read(DerTag.universal(DerTag.SEQUENCE, constructed = true))
-        val rdns = element.contents()
+        return DistinguishedName(element.encoded(), readNameAttributes(element.contents()))
+    }
+
+    /** The attributes of a name from the RDN SETs [rdns] is positioned at: the content of the Name SEQUENCE, or of its `[4] IMPLICIT` form in a GeneralName. */
+    internal fun readNameAttributes(rdns: DerReader): List<NameAttribute> {
         val attributes = ArrayList<NameAttribute>()
         while (rdns.hasMore) {
             val set = rdns.readSet()
@@ -117,7 +121,7 @@ internal object X509Parser {
                 attributes.add(NameAttribute(oid, stringValue(value.tag.number, value.tag.tagClass, value.value()), value.tag.number))
             }
         }
-        return DistinguishedName(element.encoded(), attributes)
+        return attributes
     }
 
     private fun stringValue(
