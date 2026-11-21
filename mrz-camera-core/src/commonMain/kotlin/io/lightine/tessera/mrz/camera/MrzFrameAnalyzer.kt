@@ -143,6 +143,7 @@ public class MrzFrameAnalyzer<F>(
                     mrzRegionFound = result.quality.mrzRegionFound,
                     ocrConfidence = result.quality.ocrConfidence,
                     detectedFormat = (result as? MrzScanResult.Decoded)?.let { formatOf(it.parse) },
+                    fillerPaddingAdded = (result as? MrzScanResult.Decoded)?.fillerPadding?.addedCount ?: 0,
                 ),
             )
         } catch (cancellation: CancellationException) {

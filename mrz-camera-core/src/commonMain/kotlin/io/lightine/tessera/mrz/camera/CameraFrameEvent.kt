@@ -6,8 +6,8 @@ import io.lightine.tessera.types.vocabulary.MrzFormat
 /**
  * Telemetry emitted once per analysed frame, with diagnostics and no document data.
  *
- * It holds counts, booleans, a coarse confidence, the detected format, and an outcome. It never
- * holds recognized text or a parsed field.
+ * It holds counts, booleans, a coarse confidence, the detected format, an outcome, and how many
+ * fillers the reader added to a short name line. It never holds recognized text or a parsed field.
  *
  * @since 0.2.0
  */
@@ -22,6 +22,14 @@ public data class CameraFrameEvent(
     public val ocrConfidence: Float?,
     /** The MRZ format when the parse produced a document, otherwise `null` (including a failure). */
     public val detectedFormat: MrzFormat?,
+    /**
+     * How many `<` fillers the reader added at the end of a name line that was read short; `0` when
+     * no line was padded. It is a count only, never the line or its text. See
+     * [MrzFillerPadding.addedCount].
+     *
+     * @since 1.0.0
+     */
+    public val fillerPaddingAdded: Int = 0,
 ) : TelemetryEvent {
     /** Event name: `mrz.camera.frame`. */
     override val name: String get() = EVENT_NAME
