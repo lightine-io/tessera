@@ -39,7 +39,7 @@ import kotlin.time.Instant
  * builds and puts the outcome on the result metadata. It reports check digit mismatches, dates
  * that are not in the calendar, and sex characters outside `M`, `F`, `<`, and `X` as validation
  * failures. It reports `MrzExpiryDatePast`, `MrzExpiryDateImplausiblyFar`,
- * `MrzExpiryDateCenturyNotInferred`, `MrzExpiryDateAfterSingleLetterPassportLimit`,
+ * `MrzExpiryDateCenturyNotInferred`, `MrzExpiryDateAfterNonHarmonizedPassportLimit`,
  * `MrzNameTruncated`, `MrzUnknownCountryCode`,
  * `MrzUnknownDocumentTypeCode`, `MrzSexCharacterX`, and `MrzPersonalNumberCheckDigitFiller` as
  * warnings.

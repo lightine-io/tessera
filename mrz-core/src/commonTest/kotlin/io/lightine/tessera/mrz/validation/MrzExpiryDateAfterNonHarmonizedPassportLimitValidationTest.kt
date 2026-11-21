@@ -7,7 +7,7 @@ import io.lightine.tessera.mrz.overwrite
 import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.mrz.withCheckDigitsRecomputed
-import io.lightine.tessera.types.errors.MrzExpiryDateAfterSingleLetterPassportLimit
+import io.lightine.tessera.types.errors.MrzExpiryDateAfterNonHarmonizedPassportLimit
 import io.lightine.tessera.types.errors.MrzExpiryDateCenturyNotInferred
 import io.lightine.tessera.types.errors.MrzWarning
 import io.lightine.tessera.types.vocabulary.MrzFormat
@@ -19,13 +19,14 @@ import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 /**
- * `MrzExpiryDateAfterSingleLetterPassportLimit` (TES-303): ICAO Doc 9303 Part 4 (8th ed.), 4.4. A
- * passport issued without a second document code letter shall expire before 1 January 2038.
+ * `MrzExpiryDateAfterNonHarmonizedPassportLimit` (TES-303, TES-304): ICAO Doc 9303 Part 4 (8th ed.),
+ * 4.4. A passport issued without a harmonized second document code letter (PP, PE, PD, PO, PR, PT,
+ * PS, PL, PM) shall expire before 1 January 2038.
  *
  * Fixtures are the project's own specimen (SPECIMEN, ALEX MORGAN, Utopia) with the document code
  * or the expiry date changed and the check digits recomputed. Every reference time is fixed.
  */
-class MrzExpiryDateAfterSingleLetterPassportLimitValidationTest {
+class MrzExpiryDateAfterNonHarmonizedPassportLimitValidationTest {
     private val referenceTime = Instant.parse("2026-11-21T00:00:00Z")
 
     private fun td3(
@@ -38,7 +39,7 @@ class MrzExpiryDateAfterSingleLetterPassportLimitValidationTest {
             .withCheckDigitsRecomputed(Td3FormatSpec)
 
     private fun limitWarnings(warnings: List<MrzWarning>): List<MrzWarning> =
-        warnings.filterIsInstance<MrzExpiryDateAfterSingleLetterPassportLimit>()
+        warnings.filterIsInstance<MrzExpiryDateAfterNonHarmonizedPassportLimit>()
 
     private fun parseWarnings(
         lines: List<String>,
@@ -52,7 +53,7 @@ class MrzExpiryDateAfterSingleLetterPassportLimitValidationTest {
     @Test
     fun a_one_letter_passport_expiring_in_2040_is_reported_on_every_entry_point() {
         val lines = td3(expiry = "400314")
-        val expected = listOf(MrzExpiryDateAfterSingleLetterPassportLimit(rawDocumentCode = "P<", expiryDate = LocalDate(2040, 3, 14)))
+        val expected = listOf(MrzExpiryDateAfterNonHarmonizedPassportLimit(rawDocumentCode = "P<", expiryDate = LocalDate(2040, 3, 14)))
         val parsed = MrzParser.parse(lines, referenceTime)
         val document = assertIs<ParseResult.Success>(parsed).document
         assertEquals(expected, limitWarnings(parsed.metadata.warnings), "parse")
@@ -65,7 +66,7 @@ class MrzExpiryDateAfterSingleLetterPassportLimitValidationTest {
     @Test
     fun the_first_day_of_2038_is_reported() {
         val warnings = limitWarnings(parseWarnings(td3(expiry = "380101")))
-        assertEquals(listOf<MrzWarning>(MrzExpiryDateAfterSingleLetterPassportLimit("P<", LocalDate(2038, 1, 1))), warnings)
+        assertEquals(listOf<MrzWarning>(MrzExpiryDateAfterNonHarmonizedPassportLimit("P<", LocalDate(2038, 1, 1))), warnings)
     }
 
     @Test
@@ -79,10 +80,39 @@ class MrzExpiryDateAfterSingleLetterPassportLimitValidationTest {
     }
 
     @Test
-    fun a_two_letter_passport_code_is_not_reported() {
-        listOf("PP", "PD", "PX").forEach { code ->
+    fun a_harmonized_passport_code_is_not_reported() {
+        listOf("PP", "PE", "PD", "PO", "PR", "PT", "PS", "PL", "PM").forEach { code ->
             assertEquals(emptyList(), limitWarnings(parseWarnings(td3(code = code, expiry = "400314"))), code)
         }
+    }
+
+    @Test
+    fun the_single_sheet_code_pu_is_not_reported() {
+        assertEquals(emptyList(), limitWarnings(parseWarnings(td3(code = "PU", expiry = "400314"))))
+    }
+
+    @Test
+    fun a_second_letter_outside_the_table_expiring_in_2040_is_reported_with_the_code_as_read() {
+        listOf("PX", "PA", "P1").forEach { code ->
+            val expected = listOf<MrzWarning>(MrzExpiryDateAfterNonHarmonizedPassportLimit(code, LocalDate(2040, 3, 14)))
+            assertEquals(expected, limitWarnings(parseWarnings(td3(code = code, expiry = "400314"))), code)
+        }
+    }
+
+    @Test
+    fun a_second_letter_outside_the_table_expiring_before_2038_is_not_reported() {
+        // The issue date is not in the MRZ, so the code alone says nothing about 2026 or later.
+        listOf("PX", "PA", "P<").forEach { code ->
+            assertEquals(emptyList(), limitWarnings(parseWarnings(td3(code = code, expiry = "371231"))), code)
+        }
+    }
+
+    @Test
+    fun a_code_outside_the_table_with_an_unknown_expiry_century_is_not_judged() {
+        val at = Instant.parse("1980-06-15T00:00:00Z")
+        val warnings = parseWarnings(td3(code = "PX", expiry = "400314"), at)
+        assertTrue(warnings.any { it is MrzExpiryDateCenturyNotInferred }, "premise: century unknown, got $warnings")
+        assertEquals(emptyList(), limitWarnings(warnings))
     }
 
     @Test

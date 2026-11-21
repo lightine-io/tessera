@@ -276,7 +276,7 @@
     <!-- A passport whose document code has no second letter expires in 2038 or later. ICAO Doc 9303
          Part 4, section 4.4 says such a passport expires before 2038. "%1$s" is the document code exactly
          as read, such as P<. -->
-    <string name="tessera_scanner_obs_warning_expiry_after_single_letter_passport_limit">Passport code %1$s has no second letter, and ICAO says such passports expire before 2038</string>
+    <string name="tessera_scanner_obs_warning_expiry_after_non_harmonized_passport_limit">Passport code %1$s has no second letter from the ICAO list, and ICAO says passports without one expire before 2038</string>
     <!-- The name uses its whole line, so the printed name may be cut short. -->
     <string name="tessera_scanner_obs_warning_name_truncated">The name fills its whole line and may be cut short</string>
     <!-- The personal number has content but its check number position holds a filler. -->

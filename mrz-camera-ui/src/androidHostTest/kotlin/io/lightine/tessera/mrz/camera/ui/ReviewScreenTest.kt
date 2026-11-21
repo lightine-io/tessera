@@ -29,7 +29,7 @@ import io.lightine.tessera.mrz.checkdigit.computeCheckDigit
 import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.mrz.recognition.DocumentType
-import io.lightine.tessera.types.errors.MrzExpiryDateAfterSingleLetterPassportLimit
+import io.lightine.tessera.types.errors.MrzExpiryDateAfterNonHarmonizedPassportLimit
 import io.lightine.tessera.types.errors.MrzExpiryDateCenturyNotInferred
 import io.lightine.tessera.types.errors.MrzUnknownCountryCode
 import io.lightine.tessera.types.vocabulary.DocumentCategory
@@ -701,7 +701,7 @@ class ReviewScreenTest {
             )
         assertTrue(
             decoded.parse.metadata.warnings
-                .any { it is MrzExpiryDateAfterSingleLetterPassportLimit },
+                .any { it is MrzExpiryDateAfterNonHarmonizedPassportLimit },
             "fixture must carry the warning",
         )
         var texts: List<String> = emptyList()
@@ -712,7 +712,7 @@ class ReviewScreenTest {
         composeRule.waitForIdle()
 
         assertTrue(
-            "Passport code P< has no second letter, and ICAO says such passports expire before 2038" in texts,
+            "Passport code P< has no second letter from the ICAO list, and ICAO says passports without one expire before 2038" in texts,
             "the note is present: $texts",
         )
     }

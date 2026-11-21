@@ -53,7 +53,7 @@ import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.mrz.recognition.CountryCode
 import io.lightine.tessera.mrz.recognition.DocumentType
 import io.lightine.tessera.types.errors.MrzCheckDigitMismatch
-import io.lightine.tessera.types.errors.MrzExpiryDateAfterSingleLetterPassportLimit
+import io.lightine.tessera.types.errors.MrzExpiryDateAfterNonHarmonizedPassportLimit
 import io.lightine.tessera.types.errors.MrzExpiryDateCenturyNotInferred
 import io.lightine.tessera.types.errors.MrzExpiryDateImplausiblyFar
 import io.lightine.tessera.types.errors.MrzExpiryDatePast
@@ -371,8 +371,8 @@ private fun warningText(warning: MrzWarning): String? =
             stringResource(R.string.tessera_scanner_obs_warning_expiry_century_unknown, warning.rawYear)
         }
 
-        is MrzExpiryDateAfterSingleLetterPassportLimit -> {
-            stringResource(R.string.tessera_scanner_obs_warning_expiry_after_single_letter_passport_limit, warning.rawDocumentCode)
+        is MrzExpiryDateAfterNonHarmonizedPassportLimit -> {
+            stringResource(R.string.tessera_scanner_obs_warning_expiry_after_non_harmonized_passport_limit, warning.rawDocumentCode)
         }
 
         is MrzNameTruncated -> {

@@ -163,22 +163,22 @@ final class io.lightine.tessera.types.errors/MrzDateNotInCalendar : io.lightine.
     final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzDateNotInCalendar.toString|toString(){}[0]
 }
 
-final class io.lightine.tessera.types.errors/MrzExpiryDateAfterSingleLetterPassportLimit : io.lightine.tessera.types.errors/MrzWarning { // io.lightine.tessera.types.errors/MrzExpiryDateAfterSingleLetterPassportLimit|null[0]
-    constructor <init>(kotlin/String, kotlinx.datetime/LocalDate) // io.lightine.tessera.types.errors/MrzExpiryDateAfterSingleLetterPassportLimit.<init>|<init>(kotlin.String;kotlinx.datetime.LocalDate){}[0]
+final class io.lightine.tessera.types.errors/MrzExpiryDateAfterNonHarmonizedPassportLimit : io.lightine.tessera.types.errors/MrzWarning { // io.lightine.tessera.types.errors/MrzExpiryDateAfterNonHarmonizedPassportLimit|null[0]
+    constructor <init>(kotlin/String, kotlinx.datetime/LocalDate) // io.lightine.tessera.types.errors/MrzExpiryDateAfterNonHarmonizedPassportLimit.<init>|<init>(kotlin.String;kotlinx.datetime.LocalDate){}[0]
 
-    final val description // io.lightine.tessera.types.errors/MrzExpiryDateAfterSingleLetterPassportLimit.description|{}description[0]
-        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDateAfterSingleLetterPassportLimit.description.<get-description>|<get-description>(){}[0]
-    final val expiryDate // io.lightine.tessera.types.errors/MrzExpiryDateAfterSingleLetterPassportLimit.expiryDate|{}expiryDate[0]
-        final fun <get-expiryDate>(): kotlinx.datetime/LocalDate // io.lightine.tessera.types.errors/MrzExpiryDateAfterSingleLetterPassportLimit.expiryDate.<get-expiryDate>|<get-expiryDate>(){}[0]
-    final val rawDocumentCode // io.lightine.tessera.types.errors/MrzExpiryDateAfterSingleLetterPassportLimit.rawDocumentCode|{}rawDocumentCode[0]
-        final fun <get-rawDocumentCode>(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDateAfterSingleLetterPassportLimit.rawDocumentCode.<get-rawDocumentCode>|<get-rawDocumentCode>(){}[0]
+    final val description // io.lightine.tessera.types.errors/MrzExpiryDateAfterNonHarmonizedPassportLimit.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDateAfterNonHarmonizedPassportLimit.description.<get-description>|<get-description>(){}[0]
+    final val expiryDate // io.lightine.tessera.types.errors/MrzExpiryDateAfterNonHarmonizedPassportLimit.expiryDate|{}expiryDate[0]
+        final fun <get-expiryDate>(): kotlinx.datetime/LocalDate // io.lightine.tessera.types.errors/MrzExpiryDateAfterNonHarmonizedPassportLimit.expiryDate.<get-expiryDate>|<get-expiryDate>(){}[0]
+    final val rawDocumentCode // io.lightine.tessera.types.errors/MrzExpiryDateAfterNonHarmonizedPassportLimit.rawDocumentCode|{}rawDocumentCode[0]
+        final fun <get-rawDocumentCode>(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDateAfterNonHarmonizedPassportLimit.rawDocumentCode.<get-rawDocumentCode>|<get-rawDocumentCode>(){}[0]
 
-    final fun component1(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDateAfterSingleLetterPassportLimit.component1|component1(){}[0]
-    final fun component2(): kotlinx.datetime/LocalDate // io.lightine.tessera.types.errors/MrzExpiryDateAfterSingleLetterPassportLimit.component2|component2(){}[0]
-    final fun copy(kotlin/String = ..., kotlinx.datetime/LocalDate = ...): io.lightine.tessera.types.errors/MrzExpiryDateAfterSingleLetterPassportLimit // io.lightine.tessera.types.errors/MrzExpiryDateAfterSingleLetterPassportLimit.copy|copy(kotlin.String;kotlinx.datetime.LocalDate){}[0]
-    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzExpiryDateAfterSingleLetterPassportLimit.equals|equals(kotlin.Any?){}[0]
-    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzExpiryDateAfterSingleLetterPassportLimit.hashCode|hashCode(){}[0]
-    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDateAfterSingleLetterPassportLimit.toString|toString(){}[0]
+    final fun component1(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDateAfterNonHarmonizedPassportLimit.component1|component1(){}[0]
+    final fun component2(): kotlinx.datetime/LocalDate // io.lightine.tessera.types.errors/MrzExpiryDateAfterNonHarmonizedPassportLimit.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlinx.datetime/LocalDate = ...): io.lightine.tessera.types.errors/MrzExpiryDateAfterNonHarmonizedPassportLimit // io.lightine.tessera.types.errors/MrzExpiryDateAfterNonHarmonizedPassportLimit.copy|copy(kotlin.String;kotlinx.datetime.LocalDate){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/MrzExpiryDateAfterNonHarmonizedPassportLimit.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/MrzExpiryDateAfterNonHarmonizedPassportLimit.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/MrzExpiryDateAfterNonHarmonizedPassportLimit.toString|toString(){}[0]
 }
 
 final class io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred : io.lightine.tessera.types.errors/MrzWarning { // io.lightine.tessera.types.errors/MrzExpiryDateCenturyNotInferred|null[0]
