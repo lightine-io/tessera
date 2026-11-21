@@ -15,12 +15,17 @@ public enum class ReadMethod {
     /** A person typed the text. Reported by `ManualMrzReader`. */
     MANUAL_ENTRY,
 
-    /** The text came from a passport's NFC chip. No SDK module reports it. */
+    /** The text came from a document's chip (its DG1), read over NFC. Reported by `emrtd-core`. */
     NFC_CHIP,
 
     /** Your app passed the text as a string. Reported by `MrzParser` and `MrzGenerator`. */
     BACKEND_STRING_INPUT,
 
-    /** The text combines several reading methods. No SDK module reports it. */
+    /**
+     * The chip's DG1 values, combined with a printed MRZ the app also read: `ChipMrzComparison.combine`
+     * in `emrtd-core` reports it. The values are the chip's, and each field carries a fact saying
+     * whether the printed MRZ shows the same characters. Nothing is corrected, and neither source is
+     * picked over the other.
+     */
     MIXED,
 }

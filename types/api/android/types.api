@@ -1,57 +1,73 @@
 public abstract interface annotation class io/lightine/tessera/types/ExperimentalTesseraChipApi : java/lang/annotation/Annotation {
 }
 
-public abstract class io/lightine/tessera/types/errors/ChipError {
-	public abstract fun getDescription ()Ljava/lang/String;
-}
-
-public final class io/lightine/tessera/types/errors/ChipImageGroup : java/lang/Enum {
-	public static final field DG2 Lio/lightine/tessera/types/errors/ChipImageGroup;
-	public static final field DG5 Lio/lightine/tessera/types/errors/ChipImageGroup;
-	public static final field DG7 Lio/lightine/tessera/types/errors/ChipImageGroup;
-	public static fun getEntries ()Lkotlin/enums/EnumEntries;
-	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/errors/ChipImageGroup;
-	public static fun values ()[Lio/lightine/tessera/types/errors/ChipImageGroup;
-}
-
-public final class io/lightine/tessera/types/errors/ChipImageGroupMalformed : io/lightine/tessera/types/errors/ChipError {
-	public fun <init> (Lio/lightine/tessera/types/errors/ChipImageGroup;Lio/lightine/tessera/types/errors/ChipImageGroupProblem;Ljava/lang/Integer;)V
-	public final fun component1 ()Lio/lightine/tessera/types/errors/ChipImageGroup;
-	public final fun component2 ()Lio/lightine/tessera/types/errors/ChipImageGroupProblem;
+public final class io/lightine/tessera/types/errors/ChipAccessDenied : io/lightine/tessera/types/errors/ChipError {
+	public fun <init> (Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;Ljava/lang/Integer;)V
+	public synthetic fun <init> (Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;Ljava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;
+	public final fun component2 ()Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
 	public final fun component3 ()Ljava/lang/Integer;
-	public final fun copy (Lio/lightine/tessera/types/errors/ChipImageGroup;Lio/lightine/tessera/types/errors/ChipImageGroupProblem;Ljava/lang/Integer;)Lio/lightine/tessera/types/errors/ChipImageGroupMalformed;
-	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/ChipImageGroupMalformed;Lio/lightine/tessera/types/errors/ChipImageGroup;Lio/lightine/tessera/types/errors/ChipImageGroupProblem;Ljava/lang/Integer;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/ChipImageGroupMalformed;
+	public final fun copy (Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;Ljava/lang/Integer;)Lio/lightine/tessera/types/errors/ChipAccessDenied;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/ChipAccessDenied;Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;Ljava/lang/Integer;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/ChipAccessDenied;
 	public fun equals (Ljava/lang/Object;)Z
 	public fun getDescription ()Ljava/lang/String;
-	public final fun getGroup ()Lio/lightine/tessera/types/errors/ChipImageGroup;
-	public final fun getOffset ()Ljava/lang/Integer;
-	public final fun getProblem ()Lio/lightine/tessera/types/errors/ChipImageGroupProblem;
+	public final fun getProtocol ()Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;
+	public final fun getReason ()Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
+	public final fun getStatusWord ()Ljava/lang/Integer;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class io/lightine/tessera/types/errors/ChipImageGroupProblem : java/lang/Enum {
-	public static final field INVALID_LENGTH Lio/lightine/tessera/types/errors/ChipImageGroupProblem;
-	public static final field INVALID_TAG Lio/lightine/tessera/types/errors/ChipImageGroupProblem;
-	public static final field LENGTH_EXCEEDS_DATA Lio/lightine/tessera/types/errors/ChipImageGroupProblem;
-	public static final field MISSING_OBJECT Lio/lightine/tessera/types/errors/ChipImageGroupProblem;
-	public static final field NESTING_TOO_DEEP Lio/lightine/tessera/types/errors/ChipImageGroupProblem;
-	public static final field UNEXPECTED_STRUCTURE Lio/lightine/tessera/types/errors/ChipImageGroupProblem;
-	public static final field WRONG_FILE_TAG Lio/lightine/tessera/types/errors/ChipImageGroupProblem;
+public final class io/lightine/tessera/types/errors/ChipAccessDenied$Reason : java/lang/Enum {
+	public static final field CHIP_REFUSED Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
+	public static final field FILE_PROTECTED Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
+	public static final field KEY_CLEARED Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
+	public static final field KEY_NEEDS_PACE Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
+	public static final field KEY_NOT_MATCHED Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
+	public static final field UNEXPECTED_CHIP_ANSWER Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
-	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/errors/ChipImageGroupProblem;
-	public static fun values ()[Lio/lightine/tessera/types/errors/ChipImageGroupProblem;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
+	public static fun values ()[Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
+}
+
+public final class io/lightine/tessera/types/errors/ChipBlank : io/lightine/tessera/types/errors/ChipError {
+	public static final field INSTANCE Lio/lightine/tessera/types/errors/ChipBlank;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class io/lightine/tessera/types/errors/ChipError {
+	public abstract fun getDescription ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/ChipFileNotFound : io/lightine/tessera/types/errors/ChipError {
+	public fun <init> (IZ)V
+	public final fun component1 ()I
+	public final fun component2 ()Z
+	public final fun copy (IZ)Lio/lightine/tessera/types/errors/ChipFileNotFound;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/ChipFileNotFound;IZILjava/lang/Object;)Lio/lightine/tessera/types/errors/ChipFileNotFound;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getFileId ()I
+	public final fun getListedByChip ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class io/lightine/tessera/types/errors/ChipMalformedFile : io/lightine/tessera/types/errors/ChipError {
-	public fun <init> (Ljava/lang/Integer;Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;)V
+	public fun <init> (Ljava/lang/Integer;Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;Ljava/lang/Integer;)V
+	public synthetic fun <init> (Ljava/lang/Integer;Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;Ljava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/Integer;
 	public final fun component2 ()Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;
-	public final fun copy (Ljava/lang/Integer;Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;)Lio/lightine/tessera/types/errors/ChipMalformedFile;
-	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/ChipMalformedFile;Ljava/lang/Integer;Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/ChipMalformedFile;
+	public final fun component3 ()Ljava/lang/Integer;
+	public final fun copy (Ljava/lang/Integer;Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;Ljava/lang/Integer;)Lio/lightine/tessera/types/errors/ChipMalformedFile;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/ChipMalformedFile;Ljava/lang/Integer;Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;Ljava/lang/Integer;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/ChipMalformedFile;
 	public fun equals (Ljava/lang/Object;)Z
 	public fun getDescription ()Ljava/lang/String;
 	public final fun getFileId ()Ljava/lang/Integer;
+	public final fun getOffset ()Ljava/lang/Integer;
 	public final fun getReason ()Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
@@ -60,11 +76,93 @@ public final class io/lightine/tessera/types/errors/ChipMalformedFile : io/light
 public final class io/lightine/tessera/types/errors/ChipMalformedFile$Reason : java/lang/Enum {
 	public static final field INVALID_ELEMENT Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;
 	public static final field MISSING_ELEMENT Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;
+	public static final field NESTING_TOO_DEEP Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;
+	public static final field NOT_SIGNED_DATA Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;
 	public static final field NOT_VALID_TLV Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;
+	public static final field UNEXPECTED_CONTENT_TYPE Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;
 	public static final field UNEXPECTED_FILE_TAG Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;
 	public static fun values ()[Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;
+}
+
+public final class io/lightine/tessera/types/errors/ChipSecureMessagingLost : io/lightine/tessera/types/errors/ChipError {
+	public fun <init> (Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;Ljava/lang/Integer;)V
+	public synthetic fun <init> (Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;Ljava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;
+	public final fun component2 ()Ljava/lang/Integer;
+	public final fun copy (Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;Ljava/lang/Integer;)Lio/lightine/tessera/types/errors/ChipSecureMessagingLost;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/ChipSecureMessagingLost;Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;Ljava/lang/Integer;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/ChipSecureMessagingLost;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getReason ()Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;
+	public final fun getStatusWord ()Ljava/lang/Integer;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason : java/lang/Enum {
+	public static final field CHIP_ENDED_SESSION Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;
+	public static final field MALFORMED_ANSWER Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;
+	public static final field MISSING_CHECKSUM Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;
+	public static final field PLAIN_LENGTH_HINT Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;
+	public static final field SESSION_CLOSED Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;
+	public static final field WRONG_CHECKSUM Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;
+	public static final field WRONG_PADDING Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;
+	public static fun values ()[Lio/lightine/tessera/types/errors/ChipSecureMessagingLost$Reason;
+}
+
+public final class io/lightine/tessera/types/errors/ChipUnexpectedAnswer : io/lightine/tessera/types/errors/ChipError {
+	public fun <init> (Lio/lightine/tessera/types/errors/ChipUnexpectedAnswer$Reason;Ljava/lang/Integer;)V
+	public synthetic fun <init> (Lio/lightine/tessera/types/errors/ChipUnexpectedAnswer$Reason;Ljava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lio/lightine/tessera/types/errors/ChipUnexpectedAnswer$Reason;
+	public final fun component2 ()Ljava/lang/Integer;
+	public final fun copy (Lio/lightine/tessera/types/errors/ChipUnexpectedAnswer$Reason;Ljava/lang/Integer;)Lio/lightine/tessera/types/errors/ChipUnexpectedAnswer;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/ChipUnexpectedAnswer;Lio/lightine/tessera/types/errors/ChipUnexpectedAnswer$Reason;Ljava/lang/Integer;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/ChipUnexpectedAnswer;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getReason ()Lio/lightine/tessera/types/errors/ChipUnexpectedAnswer$Reason;
+	public final fun getStatusWord ()Ljava/lang/Integer;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/ChipUnexpectedAnswer$Reason : java/lang/Enum {
+	public static final field NO_STATUS_WORD Lio/lightine/tessera/types/errors/ChipUnexpectedAnswer$Reason;
+	public static final field UNEXPECTED_STATUS_WORD Lio/lightine/tessera/types/errors/ChipUnexpectedAnswer$Reason;
+	public static final field UNUSABLE_FILE_ANSWER Lio/lightine/tessera/types/errors/ChipUnexpectedAnswer$Reason;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/errors/ChipUnexpectedAnswer$Reason;
+	public static fun values ()[Lio/lightine/tessera/types/errors/ChipUnexpectedAnswer$Reason;
+}
+
+public final class io/lightine/tessera/types/errors/ChipUnsupportedAlgorithm : io/lightine/tessera/types/errors/ChipError {
+	public fun <init> (Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason;Ljava/lang/Integer;)V
+	public synthetic fun <init> (Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason;Ljava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;
+	public final fun component2 ()Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason;
+	public final fun component3 ()Ljava/lang/Integer;
+	public final fun copy (Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason;Ljava/lang/Integer;)Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm;Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason;Ljava/lang/Integer;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getProtocol ()Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;
+	public final fun getReason ()Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason;
+	public final fun getStatusWord ()Ljava/lang/Integer;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason : java/lang/Enum {
+	public static final field CHIP_REFUSED_SUITE Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason;
+	public static final field EXTENDED_LENGTH_REQUIRED Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason;
+	public static final field NO_CRYPTOGRAPHY_ON_PLATFORM Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason;
+	public static final field NO_SUPPORTED_SUITE Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason;
+	public static fun values ()[Lio/lightine/tessera/types/errors/ChipUnsupportedAlgorithm$Reason;
 }
 
 public final class io/lightine/tessera/types/errors/MrzCharacterSetViolation : io/lightine/tessera/types/errors/MrzParseError {
@@ -450,6 +548,15 @@ public final class io/lightine/tessera/types/errors/NfcUnavailable$Reason : java
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static fun values ()[Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+}
+
+public final class io/lightine/tessera/types/vocabulary/ChipAccessProtocol : java/lang/Enum {
+	public static final field BAC Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;
+	public static final field NONE Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;
+	public static final field PACE Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;
+	public static fun values ()[Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;
 }
 
 public final class io/lightine/tessera/types/vocabulary/CountryCodeCategory : java/lang/Enum {

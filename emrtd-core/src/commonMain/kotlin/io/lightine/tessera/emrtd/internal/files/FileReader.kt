@@ -5,8 +5,10 @@ import io.lightine.tessera.emrtd.internal.apdu.ApduSender
 import io.lightine.tessera.emrtd.internal.apdu.ChipCommands
 import io.lightine.tessera.emrtd.internal.apdu.CommandApdu
 import io.lightine.tessera.emrtd.internal.apdu.LdsIds
+import io.lightine.tessera.emrtd.internal.apdu.MalformedResponse
 import io.lightine.tessera.emrtd.internal.apdu.ResponseApdu
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
+import io.lightine.tessera.emrtd.internal.sm.SecureMessagingException
 import io.lightine.tessera.emrtd.internal.tlv.TlvException
 import io.lightine.tessera.emrtd.internal.tlv.TlvParser
 import kotlin.coroutines.cancellation.CancellationException
@@ -185,6 +187,11 @@ internal class FileReader(
         } catch (e: CancellationException) {
             throw e
         } catch (e: FileReadFailure) {
+            throw e
+        } catch (e: SecureMessagingException) {
+            // The session ended: the read flow reports it as such, not as a file problem.
+            throw e
+        } catch (e: MalformedResponse) {
             throw e
         } catch (e: Exception) {
             throw FileProtocolFailure()
