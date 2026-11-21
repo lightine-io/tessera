@@ -38,8 +38,8 @@ fun main() {
     val recognizer = MrzTextRecognizer<Frame> {
         RecognizedText(
             listOf(
-                RecognizedLine("P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<", null),
-                RecognizedLine("L898902C36UTO7408122F1204159ZE184226B<<<<<10", null),
+                RecognizedLine("P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<", null),
+                RecognizedLine("T220001293UTO9003152F3403141S98765432<<<<<20", null),
             ),
         )
     }
@@ -47,7 +47,7 @@ fun main() {
     // endregion
 
     // region TES-A-29 block 6
-    println(Redaction.redactMrzLine("P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"))
+    println(Redaction.redactMrzLine("P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"))
     // endregion
 
     // region TES-A-29 block 7

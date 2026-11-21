@@ -31,15 +31,15 @@ fun main() {
     // region TES-A-129 block 4
     val analyzer = MrzFrameAnalyzer(
         recognizer,
-        referenceTimeProvider = { Instant.parse("2010-06-01T00:00:00Z") },
+        referenceTimeProvider = { Instant.parse("2026-11-21T00:00:00Z") },
     )
     // endregion
 
     // region TES-A-129 block 5
     val mrzFrame = Frame(
         listOf(
-            "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-            "L898902C36UTO7408122F1204159ZE184226B<<<<<10",
+            "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<",
+            "T220001293UTO9003152F3403141S98765432<<<<<20",
         ),
     )
     runBlocking {

@@ -8,13 +8,13 @@ import io.lightine.tessera.mrz.parsing.isMrzAlphabetCharacter
 
 fun main() {
     // region TES-A-131 block 3
-    println(computeCheckDigit("L898902C<"))
-    println(computeCheckDigit("740812"))
+    println(computeCheckDigit("T22000129"))
+    println(computeCheckDigit("900315"))
     // endregion
 
     // region TES-A-131 block 4
     val printed = '2'
-    println(computeCheckDigit("740812") == printed)
+    println(computeCheckDigit("900315") == printed)
     // endregion
 
     // region TES-A-131 block 5
@@ -27,12 +27,12 @@ fun main() {
     fun checkDigitOrNull(field: String): Char? =
         if (field.all(::isMrzAlphabetCharacter)) computeCheckDigit(field) else null
 
-    println(checkDigitOrNull("L898902C<"))
-    println(checkDigitOrNull("l898902c<"))
+    println(checkDigitOrNull("T22000129"))
+    println(checkDigitOrNull("t22000129"))
     // endregion
 
     // region TES-A-131 block 7
-    val composite = computeCheckDigit("L898902C3674081221204159ZE184226B<<<<<1")
+    val composite = computeCheckDigit("T22000129390031523403141S98765432<<<<<2")
     println(composite)
     // endregion
 }

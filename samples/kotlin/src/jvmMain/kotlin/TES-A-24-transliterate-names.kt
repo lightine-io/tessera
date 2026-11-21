@@ -31,7 +31,7 @@ object LettersOnlyProfile : TransliterationProfile {
 }
 
 fun printLettersOnly() {
-    println(LettersOnlyProfile.transliterate("ANNA MARIA").result)
+    println(LettersOnlyProfile.transliterate("ALEX MORGAN").result)
     println(LettersOnlyProfile.transliterate("ŁUKASZ").result)
 }
 // endregion
@@ -64,10 +64,10 @@ fun main() {
 
     // region TES-A-24 block 8
     val generated = MrzGenerator.generateTD3(
-        documentType = "P", issuingState = "UTO", documentNumber = "L898902C3",
-        primaryIdentifier = "ERIKSSÖN", secondaryIdentifier = "ANNA MARÍA", nationality = "UTO",
-        dateOfBirth = LocalDate(1974, 8, 12), sex = Sex.FEMALE, dateOfExpiry = LocalDate(2012, 4, 15),
-        personalNumber = "ZE184226B", transliteration = IcaoDefaultTransliterationProfile,
+        documentType = "P", issuingState = "UTO", documentNumber = "T22000129",
+        primaryIdentifier = "SPÉCIMEN", secondaryIdentifier = "ALEX MÖRGAN", nationality = "UTO",
+        dateOfBirth = LocalDate(1990, 3, 15), sex = Sex.FEMALE, dateOfExpiry = LocalDate(2034, 3, 14),
+        personalNumber = "S98765432", transliteration = IcaoDefaultTransliterationProfile,
     )
     generated.metadata.transliterationDetails?.transliteratedFields?.forEach {
         println("${it.originalInput} -> ${it.transliteratedOutput}")

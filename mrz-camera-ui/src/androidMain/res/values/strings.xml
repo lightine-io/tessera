@@ -45,8 +45,8 @@
     <!-- MRZ explainer (TES-89): a "What's the MRZ?" link on the camera screen that opens an illustrated
          dialog showing what the machine-readable zone is and where it sits on a document. Plain language for a
          first-time user who has never heard the term "MRZ" (which they meet elsewhere in the flow — "Enter the
-         MRZ by hand", "Couldn't read this MRZ"). The specimen shown in the illustration is the ICAO Doc 9303
-         published example, hard-coded in the drawing (not translatable copy). -->
+         MRZ by hand", "Couldn't read this MRZ"). The specimen shown in the illustration is the project's own
+         specimen (fictional, Utopia), hard-coded in the drawing (not translatable copy). -->
     <string name="tessera_scanner_explainer_action">What\'s the MRZ?</string>
     <string name="tessera_scanner_explainer_title">What\'s the MRZ?</string>
     <string name="tessera_scanner_explainer_intro">MRZ is short for machine-readable zone. It\'s the block of text a scanner can read.</string>
@@ -207,7 +207,7 @@
 
     <!-- A date field (date of birth / expiry) shown when the SDK cannot resolve its century (TES-94) — e.g. an
          expiry whose printed two-digit year falls outside the plausibility window relative to today (any
-         sufficiently old document, real or a decades-old ICAO test specimen, eventually lands here). "%1$s" is
+         sufficiently old document, real or a decades-old test specimen, eventually lands here). "%1$s" is
          the date parts as printed, day first with the two-digit year, like the document's visual zone
          ("23 06 94"; ICAO Doc 9303 Part 3) (TES-112). Not a resolved calendar date: the SDK never guesses a
          century in this UI (that stays mrz-core's job). -->

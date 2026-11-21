@@ -11,10 +11,10 @@ import kotlin.time.Instant
 fun main() {
     // region TES-A-25 block 3
     val mrz = """
-        P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<
-        L898902C36UTO7408122F1204159ZE184226B<<<<<10
+        P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<
+        T220001293UTO9003152F3403141S98765432<<<<<20
     """.trimIndent()
-    val referenceTime = Instant.parse("2010-06-01T00:00:00Z")
+    val referenceTime = Instant.parse("2026-11-21T00:00:00Z")
     // endregion
 
     // region TES-A-25 block 4
@@ -35,6 +35,6 @@ fun main() {
 internal fun configure(mrz: String) {
     // region TES-A-25 block 7
     val lines = mrz.lines()
-    val result = MrzParser.parseTD3(lines, referenceTime = Instant.parse("2013-01-01T00:00:00Z"))
+    val result = MrzParser.parseTD3(lines, referenceTime = Instant.parse("2035-01-01T00:00:00Z"))
     // endregion
 }

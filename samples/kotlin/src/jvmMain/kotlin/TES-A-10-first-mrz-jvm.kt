@@ -6,11 +6,11 @@ import kotlin.time.Instant
 
 fun main() {
     val mrz = listOf(
-        "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-        "L898902C36UTO7408122F1204159ZE184226B<<<<<10",
+        "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<",
+        "T220001293UTO9003152F3403141S98765432<<<<<20",
     )
-    // The specimen expires in 2012. A fixed reference time keeps the output the same on every run.
-    val referenceTime = Instant.parse("2010-06-01T00:00:00Z")
+    // The specimen expires in 2034. A fixed reference time keeps the output the same on every run.
+    val referenceTime = Instant.parse("2026-11-21T00:00:00Z")
 
     when (val result = MrzParser.parse(mrz, referenceTime)) {
         is ParseResult.Success -> {
