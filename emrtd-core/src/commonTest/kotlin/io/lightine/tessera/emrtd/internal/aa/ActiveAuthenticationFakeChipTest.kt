@@ -10,8 +10,10 @@ import io.lightine.tessera.emrtd.fakechip.FakeChipData
 import io.lightine.tessera.emrtd.fakechip.FakeCommandHandler
 import io.lightine.tessera.emrtd.fakechip.FakeFileSystem
 import io.lightine.tessera.emrtd.fakechip.FakeSm
+import io.lightine.tessera.emrtd.internal.apdu.ApduSender
 import io.lightine.tessera.emrtd.internal.apdu.ChipCommands
 import io.lightine.tessera.emrtd.internal.apdu.LdsIds
+import io.lightine.tessera.emrtd.internal.apdu.PlainApduSender
 import io.lightine.tessera.emrtd.internal.apdu.ResponseApdu
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
 import io.lightine.tessera.emrtd.internal.bac.Bac
@@ -21,8 +23,6 @@ import io.lightine.tessera.emrtd.internal.crypto.toHex
 import io.lightine.tessera.emrtd.internal.crypto.withCrypto
 import io.lightine.tessera.emrtd.internal.securityinfo.ActiveAuthenticationInfo
 import io.lightine.tessera.emrtd.internal.securityinfo.SecurityOids
-import io.lightine.tessera.emrtd.internal.sm.ApduExchange
-import io.lightine.tessera.emrtd.internal.sm.PlainExchange
 import io.lightine.tessera.emrtd.internal.sm.SecureChannel
 import io.lightine.tessera.emrtd.internal.tlv.TlvParser
 import kotlinx.coroutines.test.runTest
@@ -87,7 +87,7 @@ class ActiveAuthenticationFakeChipTest {
                     val key = FakeAaKey.rsa(c)
                     val aa = FakeAa(key, c, hash)
                     val chip = chipWith(aa)
-                    val result = ActiveAuthentication(PlainExchange(chip), c).authenticate(aa.dg15, aaInfo = null)
+                    val result = ActiveAuthentication(PlainApduSender(chip), c).authenticate(aa.dg15, aaInfo = null)
                     assertEquals(ActiveAuthenticationResult.Passed, result, "$hash")
 
                     // What went over the wire: the INTERNAL AUTHENTICATE command with a fresh
@@ -131,7 +131,7 @@ class ActiveAuthenticationFakeChipTest {
                         )
                     assertEquals(
                         ActiveAuthenticationResult.Passed,
-                        ActiveAuthentication(PlainExchange(chip), c).authenticate(aa.dg15, info),
+                        ActiveAuthentication(PlainApduSender(chip), c).authenticate(aa.dg15, info),
                         "$id",
                     )
                 }
@@ -145,7 +145,7 @@ class ActiveAuthenticationFakeChipTest {
                 val aa = FakeAa(FakeAaKey.rsa(c), c, HashAlgorithm.SHA256)
                 aa.corruptNextSignature = true
                 val chip = chipWith(aa)
-                val result = ActiveAuthentication(PlainExchange(chip), c).authenticate(aa.dg15, aaInfo = null)
+                val result = ActiveAuthentication(PlainApduSender(chip), c).authenticate(aa.dg15, aaInfo = null)
                 // One flipped bit scatters the whole representative, so the failure is the
                 // malformed representative in almost every run and a wrong digest in the rest.
                 assertTrue(result is ActiveAuthenticationResult.Failed)
@@ -163,7 +163,7 @@ class ActiveAuthenticationFakeChipTest {
                 val aa = FakeAa(FakeAaKey.rsa(c), c, HashAlgorithm.SHA1)
                 aa.tamperRecoveredMessage = true
                 val chip = chipWith(aa)
-                val result = ActiveAuthentication(PlainExchange(chip), c).authenticate(aa.dg15, aaInfo = null)
+                val result = ActiveAuthentication(PlainApduSender(chip), c).authenticate(aa.dg15, aaInfo = null)
                 // The digest is over the original M1, the recovered part says otherwise: the
                 // comparison of steps 16 to 18 catches it.
                 assertEquals(ActiveAuthenticationResult.Failed(ActiveAuthenticationFailure.WRONG_SIGNATURE), result)
@@ -177,7 +177,7 @@ class ActiveAuthenticationFakeChipTest {
                 val sm = FakeSm(c)
                 val aa = FakeAa(FakeAaKey.rsa(c), c, HashAlgorithm.SHA1)
                 val chip = FakeChip(files(aa.dg15), handlers = listOf(sm, FakeBac(mrzInformation, sm, c), aa))
-                val exchange = PlainExchange(chip)
+                val exchange = PlainApduSender(chip)
                 assertEquals(StatusWord.SUCCESS, exchange.send(ChipCommands.selectApplication(LdsIds.LDS1_AID)).sw)
                 val channel = Bac.open(exchange, c, accessKey())
                 assertTrue(sm.isActive)
@@ -198,7 +198,7 @@ class ActiveAuthenticationFakeChipTest {
             runTest {
                 val aa = FakeAa(FakeAaKey.rsa(c), c, HashAlgorithm.SHA1)
                 val chip = chipWith(aa)
-                val exchange = PlainExchange(chip)
+                val exchange = PlainApduSender(chip)
                 assertEquals(ActiveAuthenticationResult.Passed, ActiveAuthentication(exchange, c).authenticate(aa.dg15, aaInfo = null))
                 val first = nonceOf(chip.received.single())
                 assertEquals(ActiveAuthenticationResult.Passed, ActiveAuthentication(exchange, c).authenticate(aa.dg15, aaInfo = null))
@@ -215,7 +215,7 @@ class ActiveAuthenticationFakeChipTest {
             runTest {
                 val aa = FakeAa(FakeAaKey.rsa(c), c, HashAlgorithm.SHA1)
                 val chip = chipWith(aa)
-                val engine = ActiveAuthentication(PlainExchange(chip), c)
+                val engine = ActiveAuthentication(PlainApduSender(chip), c)
                 assertEquals(ActiveAuthenticationResult.Passed, engine.authenticate(aa.dg15, aaInfo = null))
                 assertFailsWith<IllegalStateException> { engine.authenticate(aa.dg15, aaInfo = null) }
                 assertEquals(1, chip.received.size)
@@ -227,7 +227,7 @@ class ActiveAuthenticationFakeChipTest {
         withCrypto { c ->
             runTest {
                 val chip = FakeChip(FakeChipData.plainChipFiles(lines))
-                val result = ActiveAuthentication(PlainExchange(chip), c).authenticate(dg15 = null, aaInfo = null)
+                val result = ActiveAuthentication(PlainApduSender(chip), c).authenticate(dg15 = null, aaInfo = null)
                 assertEquals(ActiveAuthenticationResult.NotApplicable, result)
                 assertTrue(chip.received.isEmpty())
             }
@@ -252,7 +252,7 @@ class ActiveAuthenticationFakeChipTest {
                                 },
                             ),
                     )
-                val result = ActiveAuthentication(PlainExchange(chip), c).authenticate(aa.dg15, aaInfo = null)
+                val result = ActiveAuthentication(PlainApduSender(chip), c).authenticate(aa.dg15, aaInfo = null)
                 assertEquals(
                     ActiveAuthenticationResult.Failed(ActiveAuthenticationFailure.CHIP_REFUSED, StatusWord.CONDITIONS_OF_USE_NOT_SATISFIED),
                     result,
@@ -266,7 +266,7 @@ class ActiveAuthenticationFakeChipTest {
             runTest {
                 val aa = FakeAa(FakeAaKey.ecdsa(c, 12), c, HashAlgorithm.SHA256)
                 val chip = chipWith(aa)
-                val result = ActiveAuthentication(PlainExchange(chip), c).authenticate(aa.dg15, aaInfo = null)
+                val result = ActiveAuthentication(PlainApduSender(chip), c).authenticate(aa.dg15, aaInfo = null)
                 // Without the ActiveAuthenticationInfo of section 9.2.4 the hash is unknown, so
                 // the reader sends nothing rather than a challenge it could not check.
                 assertEquals(ActiveAuthenticationResult.Failed(ActiveAuthenticationFailure.MISSING_SIGNATURE_ALGORITHM), result)
@@ -282,7 +282,7 @@ class ActiveAuthenticationFakeChipTest {
                 val chip = chipWith(aa)
                 // TR-03111's ecdsa-plain-SHA1: section 6.1.2.3 forbids SHA-1 for ECDSA here.
                 val info = aaInfo("0.4.0.127.0.7.1.4.1")
-                val result = ActiveAuthentication(PlainExchange(chip), c).authenticate(aa.dg15, info)
+                val result = ActiveAuthentication(PlainApduSender(chip), c).authenticate(aa.dg15, info)
                 assertEquals(ActiveAuthenticationResult.Failed(ActiveAuthenticationFailure.UNSUPPORTED_SIGNATURE_ALGORITHM), result)
                 assertTrue(chip.received.isEmpty())
             }
@@ -290,7 +290,7 @@ class ActiveAuthenticationFakeChipTest {
 
     /** Selects [fid] and reads its whole content through [channel], as the reader's file code does. */
     private suspend fun readFile(
-        channel: ApduExchange,
+        channel: ApduSender,
         fid: Int,
     ): ByteArray {
         assertEquals(StatusWord.SUCCESS, channel.send(ChipCommands.selectFile(fid)).sw)

@@ -10,6 +10,7 @@ import io.lightine.tessera.emrtd.fakechip.FakePaceSuite
 import io.lightine.tessera.emrtd.fakechip.FakeSm
 import io.lightine.tessera.emrtd.internal.apdu.ChipCommands
 import io.lightine.tessera.emrtd.internal.apdu.LdsIds
+import io.lightine.tessera.emrtd.internal.apdu.PlainApduSender
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
 import io.lightine.tessera.emrtd.internal.asn1.DerWriter
 import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
@@ -27,7 +28,6 @@ import io.lightine.tessera.emrtd.internal.pa.SignedObject
 import io.lightine.tessera.emrtd.internal.pa.withKeys
 import io.lightine.tessera.emrtd.internal.securityinfo.KeyAgreement
 import io.lightine.tessera.emrtd.internal.securityinfo.StandardizedParameters
-import io.lightine.tessera.emrtd.internal.sm.PlainExchange
 import io.lightine.tessera.emrtd.internal.sm.SmCipher
 import io.lightine.tessera.emrtd.internal.x509.X509Parser
 import kotlinx.coroutines.test.runTest
@@ -80,7 +80,7 @@ class PaceCamFakeChipTest {
         val sm = FakeSm(c)
         val pace = FakePace(c, sm, setOf(FakePaceSuite(oid, id)), listOf(cam), mrzInformation = mrzInformation)
         val chip = FakeChip(files, handlers = listOf(sm, pace))
-        val result = Pace.open(PlainExchange(chip), c, mrzKey(), PaceSuite.of(oid, id))
+        val result = Pace.open(PlainApduSender(chip), c, mrzKey(), PaceSuite.of(oid, id))
         return Run(result, cam, cam.chipAuthenticationPublicKeyInfo(params, id), chip)
     }
 

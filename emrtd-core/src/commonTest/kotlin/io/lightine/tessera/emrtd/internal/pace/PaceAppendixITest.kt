@@ -1,6 +1,7 @@
 package io.lightine.tessera.emrtd.internal.pace
 
 import io.lightine.tessera.emrtd.ChipAccessKey
+import io.lightine.tessera.emrtd.internal.apdu.PlainApduSender
 import io.lightine.tessera.emrtd.internal.asn1.DerWriter
 import io.lightine.tessera.emrtd.internal.bac.ScriptedTransport
 import io.lightine.tessera.emrtd.internal.crypto.EcPointCodec
@@ -11,7 +12,6 @@ import io.lightine.tessera.emrtd.internal.crypto.withCrypto
 import io.lightine.tessera.emrtd.internal.securityinfo.DomainParameters
 import io.lightine.tessera.emrtd.internal.securityinfo.PaceMapping
 import io.lightine.tessera.emrtd.internal.securityinfo.SecurityInfoParser
-import io.lightine.tessera.emrtd.internal.sm.PlainExchange
 import io.lightine.tessera.emrtd.internal.sm.SessionKeys
 import io.lightine.tessera.emrtd.internal.sm.SmCipher
 import kotlinx.coroutines.test.runTest
@@ -93,7 +93,7 @@ class PaceAppendixITest {
                 val transport = ScriptedTransport(SCRIPT)
                 val result =
                     Pace.open(
-                        PlainExchange(transport),
+                        PlainApduSender(transport),
                         c,
                         key(),
                         suite(),

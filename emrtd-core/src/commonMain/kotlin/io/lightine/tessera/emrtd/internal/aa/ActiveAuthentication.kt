@@ -1,5 +1,6 @@
 package io.lightine.tessera.emrtd.internal.aa
 
+import io.lightine.tessera.emrtd.internal.apdu.ApduSender
 import io.lightine.tessera.emrtd.internal.apdu.CommandApdu
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
 import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
@@ -9,7 +10,6 @@ import io.lightine.tessera.emrtd.internal.crypto.HashAlgorithm
 import io.lightine.tessera.emrtd.internal.crypto.SignatureScheme
 import io.lightine.tessera.emrtd.internal.crypto.VerificationKey
 import io.lightine.tessera.emrtd.internal.securityinfo.ActiveAuthenticationInfo
-import io.lightine.tessera.emrtd.internal.sm.ApduExchange
 
 /**
  * Why the active-authentication check did not pass. Carries no chip bytes and no document values,
@@ -84,7 +84,7 @@ internal sealed interface ActiveAuthenticationResult {
  * (section 6.1.6): the result is an internal fact the reader's report carries as it is.
  */
 internal class ActiveAuthentication(
-    private val exchange: ApduExchange,
+    private val exchange: ApduSender,
     private val crypto: ChipCrypto,
 ) {
     private var ran = false

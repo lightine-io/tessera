@@ -3,9 +3,9 @@ package io.lightine.tessera.emrtd.internal.pace
 import io.lightine.tessera.emrtd.ApduTransport
 import io.lightine.tessera.emrtd.ChipAccessKey
 import io.lightine.tessera.emrtd.fakechip.FakeChipData
+import io.lightine.tessera.emrtd.internal.apdu.PlainApduSender
 import io.lightine.tessera.emrtd.internal.crypto.chipCrypto
 import io.lightine.tessera.emrtd.internal.securityinfo.SecurityInfoParser
-import io.lightine.tessera.emrtd.internal.sm.PlainExchange
 import io.lightine.tessera.emrtd.internal.sm.SmCipher
 import kotlinx.coroutines.test.runTest
 import org.bouncycastle.asn1.ASN1EncodableVector
@@ -66,7 +66,7 @@ class PaceCamReferenceTest {
             for (s in suites) {
                 val chip = ReferenceCamChip(s, mrzInformation, random)
                 val oid = "0.4.0.127.0.7.2.2.4.6.${s.cipherCode}"
-                val result = Pace.open(PlainExchange(chip), chipCrypto(), key, PaceSuite.of(oid, s.parameterId))
+                val result = Pace.open(PlainApduSender(chip), chipCrypto(), key, PaceSuite.of(oid, s.parameterId))
                 assertEquals(if (s.keyLength == 24) SmCipher.AES192 else SmCipher.AES256, result.channel.cipher, s.curveName)
                 val evidence = assertIs<ChipAuthMappingEvidence>(result.mappingEvidence, s.curveName)
                 assertNull(evidence.dataFailure, s.curveName)
@@ -78,7 +78,7 @@ class PaceCamReferenceTest {
                 )
                 // The same run with a chip that sends CA_IC + 1: the check fails.
                 val wrong = ReferenceCamChip(s, mrzInformation, random, offByOne = true)
-                val bad = Pace.open(PlainExchange(wrong), chipCrypto(), key, PaceSuite.of(oid, s.parameterId))
+                val bad = Pace.open(PlainApduSender(wrong), chipCrypto(), key, PaceSuite.of(oid, s.parameterId))
                 val badEvidence = bad.mappingEvidence as ChipAuthMappingEvidence
                 val badInfo = SecurityInfoParser.parse(wrong.securityInfos()).chipAuthenticationPublicKey(s.parameterId)!!
                 assertEquals(
