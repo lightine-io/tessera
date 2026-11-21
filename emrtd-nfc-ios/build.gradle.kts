@@ -42,3 +42,11 @@ kotlin {
         }
     }
 }
+
+// This module's only targets are iOS, and they depend on emrtd-core's iOS targets, which link OpenSSL
+// through cinterop. A host that cannot process that cinterop (Linux) builds no iOS klib here, so the
+// klib ABI dump comes out empty and cannot be compared with the committed one. The check runs where
+// the iOS targets compile (macOS): the ios-compile CI job runs :emrtd-nfc-ios:checkKotlinAbi.
+tasks.matching { it.name == "checkKotlinAbi" || it.name == "checkLegacyAbi" }.configureEach {
+    onlyIf("iOS klib ABI is checked on macOS only") { System.getProperty("os.name").startsWith("Mac") }
+}

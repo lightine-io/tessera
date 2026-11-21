@@ -204,3 +204,10 @@ tasks.register<Exec>("checkOpenSslSymbolClash") {
         openssl.resolve("include").path,
     )
 }
+
+// Same reason as in emrtd-nfc-ios: on a host that cannot process emrtd-core's OpenSSL cinterop
+// (Linux) no iOS klib is built here, so the ABI dump is empty. The ios-compile CI job (macOS) runs
+// :mrz-camera-ios:checkKotlinAbi.
+tasks.matching { it.name == "checkKotlinAbi" || it.name == "checkLegacyAbi" }.configureEach {
+    onlyIf("iOS klib ABI is checked on macOS only") { System.getProperty("os.name").startsWith("Mac") }
+}
