@@ -452,6 +452,7 @@ public object MrzParser {
                 readMethod = ReadMethod.BACKEND_STRING_INPUT,
                 warnings = validation.warnings,
                 validationFailures = validation.validationFailures,
+                checks = validation.checks,
             )
         return if (validation.validationFailures.isEmpty()) {
             ParseResult.Success(document = document, metadata = metadata)

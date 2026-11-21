@@ -552,6 +552,41 @@ public final class io/lightine/tessera/types/errors/NfcUnavailable$Reason : java
 	public static fun values ()[Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 }
 
+public abstract interface class io/lightine/tessera/types/vocabulary/CheckOutcome {
+}
+
+public final class io/lightine/tessera/types/vocabulary/CheckOutcome$Failed : io/lightine/tessera/types/vocabulary/CheckOutcome {
+	public static final field INSTANCE Lio/lightine/tessera/types/vocabulary/CheckOutcome$Failed;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/vocabulary/CheckOutcome$NotApplicable : io/lightine/tessera/types/vocabulary/CheckOutcome {
+	public static final field INSTANCE Lio/lightine/tessera/types/vocabulary/CheckOutcome$NotApplicable;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/vocabulary/CheckOutcome$NotRun : io/lightine/tessera/types/vocabulary/CheckOutcome {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lio/lightine/tessera/types/vocabulary/CheckOutcome$NotRun;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/vocabulary/CheckOutcome$NotRun;Ljava/lang/String;ILjava/lang/Object;)Lio/lightine/tessera/types/vocabulary/CheckOutcome$NotRun;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/vocabulary/CheckOutcome$Passed : io/lightine/tessera/types/vocabulary/CheckOutcome {
+	public static final field INSTANCE Lio/lightine/tessera/types/vocabulary/CheckOutcome$Passed;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class io/lightine/tessera/types/vocabulary/ChipAccessProtocol : java/lang/Enum {
 	public static final field BAC Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;
 	public static final field NONE Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;
@@ -594,6 +629,7 @@ public final class io/lightine/tessera/types/vocabulary/MrzField : java/lang/Enu
 	public static final field NAME_FIELD Lio/lightine/tessera/types/vocabulary/MrzField;
 	public static final field NATIONALITY Lio/lightine/tessera/types/vocabulary/MrzField;
 	public static final field OPTIONAL_DATA Lio/lightine/tessera/types/vocabulary/MrzField;
+	public static final field SEX Lio/lightine/tessera/types/vocabulary/MrzField;
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/vocabulary/MrzField;
 	public static fun values ()[Lio/lightine/tessera/types/vocabulary/MrzField;

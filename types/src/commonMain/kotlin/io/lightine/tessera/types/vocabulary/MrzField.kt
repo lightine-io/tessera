@@ -32,4 +32,7 @@ public enum class MrzField {
 
     /** The composite check digit, which covers several fields. */
     COMPOSITE,
+
+    /** The sex character. @since 1.0.0 */
+    SEX,
 }
