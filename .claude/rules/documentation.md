@@ -53,9 +53,10 @@ issue, and the handoff points at the issue.
   [Documentation style](https://lightine.youtrack.cloud/articles/TES-A-81).
 - One platform per page. Kotlin pages cover JVM and Android; Swift pages cover iOS.
 - Code in a page comes from a compiled sample: Kotlin in the `:samples` module, Swift
-  in tessera-swift `Samples/`. The page names the sample file above the block. Until
-  a page's code has its sample, check every symbol against the source and list the files in the
-  page's `sources:` header.
+  in tessera-swift `Samples/`. Each code block has its own marked region in a sample file
+  (`// region TES-A-n block k`), and the release gate compares the two. The page does not
+  name the sample file. A new page's code is added to the samples and compiled before the
+  page is published.
 - Across homes, link by URL. The link text is the page title, never a file path.
 - Pages for a feature are written with the feature and published to the public KB at
   the release tag. Until then they are drafts the team can see and consumers cannot. A
