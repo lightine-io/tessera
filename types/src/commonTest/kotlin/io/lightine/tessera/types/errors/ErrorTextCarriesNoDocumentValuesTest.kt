@@ -33,6 +33,7 @@ class ErrorTextCarriesNoDocumentValuesTest {
     private val warnings: List<MrzWarning> =
         listOf(
             MrzBirthDateImplausiblyOld(sentinelYear, sentinelMonth, sentinelDay, sentinelDate, 131),
+            MrzExpiryDateAfterSingleLetterPassportLimit(text, sentinelDate),
             MrzExpiryDateCenturyNotInferred(sentinelYear, sentinelMonth, sentinelDay, sentinelDate),
             MrzExpiryDateImplausiblyFar(sentinelDate, sentinelDate, 11),
             MrzExpiryDatePast(sentinelDate, sentinelDate),
@@ -100,6 +101,7 @@ class ErrorTextCarriesNoDocumentValuesTest {
     private fun exhaustive(w: MrzWarning): Boolean =
         when (w) {
             is MrzBirthDateImplausiblyOld,
+            is MrzExpiryDateAfterSingleLetterPassportLimit,
             is MrzExpiryDateCenturyNotInferred,
             is MrzExpiryDateImplausiblyFar,
             is MrzExpiryDatePast,

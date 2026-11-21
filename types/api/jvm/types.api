@@ -74,6 +74,20 @@ public abstract class io/lightine/tessera/types/errors/MrzError {
 	public abstract fun getDescription ()Ljava/lang/String;
 }
 
+public final class io/lightine/tessera/types/errors/MrzExpiryDateAfterSingleLetterPassportLimit : io/lightine/tessera/types/errors/MrzWarning {
+	public fun <init> (Ljava/lang/String;Lkotlinx/datetime/LocalDate;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lkotlinx/datetime/LocalDate;
+	public final fun copy (Ljava/lang/String;Lkotlinx/datetime/LocalDate;)Lio/lightine/tessera/types/errors/MrzExpiryDateAfterSingleLetterPassportLimit;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/MrzExpiryDateAfterSingleLetterPassportLimit;Ljava/lang/String;Lkotlinx/datetime/LocalDate;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/MrzExpiryDateAfterSingleLetterPassportLimit;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getExpiryDate ()Lkotlinx/datetime/LocalDate;
+	public final fun getRawDocumentCode ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class io/lightine/tessera/types/errors/MrzExpiryDateCenturyNotInferred : io/lightine/tessera/types/errors/MrzWarning {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlinx/datetime/LocalDate;)V
 	public final fun component1 ()Ljava/lang/String;
