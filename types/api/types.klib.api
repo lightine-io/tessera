@@ -10,6 +10,34 @@ open annotation class io.lightine.tessera.types/ExperimentalTesseraChipApi : kot
     constructor <init>() // io.lightine.tessera.types/ExperimentalTesseraChipApi.<init>|<init>(){}[0]
 }
 
+final enum class io.lightine.tessera.types.errors/ChipImageGroup : kotlin/Enum<io.lightine.tessera.types.errors/ChipImageGroup> { // io.lightine.tessera.types.errors/ChipImageGroup|null[0]
+    enum entry DG2 // io.lightine.tessera.types.errors/ChipImageGroup.DG2|null[0]
+    enum entry DG5 // io.lightine.tessera.types.errors/ChipImageGroup.DG5|null[0]
+    enum entry DG7 // io.lightine.tessera.types.errors/ChipImageGroup.DG7|null[0]
+
+    final val entries // io.lightine.tessera.types.errors/ChipImageGroup.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.types.errors/ChipImageGroup> // io.lightine.tessera.types.errors/ChipImageGroup.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.types.errors/ChipImageGroup // io.lightine.tessera.types.errors/ChipImageGroup.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.types.errors/ChipImageGroup> // io.lightine.tessera.types.errors/ChipImageGroup.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.types.errors/ChipImageGroupProblem : kotlin/Enum<io.lightine.tessera.types.errors/ChipImageGroupProblem> { // io.lightine.tessera.types.errors/ChipImageGroupProblem|null[0]
+    enum entry INVALID_LENGTH // io.lightine.tessera.types.errors/ChipImageGroupProblem.INVALID_LENGTH|null[0]
+    enum entry INVALID_TAG // io.lightine.tessera.types.errors/ChipImageGroupProblem.INVALID_TAG|null[0]
+    enum entry LENGTH_EXCEEDS_DATA // io.lightine.tessera.types.errors/ChipImageGroupProblem.LENGTH_EXCEEDS_DATA|null[0]
+    enum entry MISSING_OBJECT // io.lightine.tessera.types.errors/ChipImageGroupProblem.MISSING_OBJECT|null[0]
+    enum entry NESTING_TOO_DEEP // io.lightine.tessera.types.errors/ChipImageGroupProblem.NESTING_TOO_DEEP|null[0]
+    enum entry UNEXPECTED_STRUCTURE // io.lightine.tessera.types.errors/ChipImageGroupProblem.UNEXPECTED_STRUCTURE|null[0]
+    enum entry WRONG_FILE_TAG // io.lightine.tessera.types.errors/ChipImageGroupProblem.WRONG_FILE_TAG|null[0]
+
+    final val entries // io.lightine.tessera.types.errors/ChipImageGroupProblem.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.types.errors/ChipImageGroupProblem> // io.lightine.tessera.types.errors/ChipImageGroupProblem.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.types.errors/ChipImageGroupProblem // io.lightine.tessera.types.errors/ChipImageGroupProblem.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.types.errors/ChipImageGroupProblem> // io.lightine.tessera.types.errors/ChipImageGroupProblem.values|values#static(){}[0]
+}
+
 final enum class io.lightine.tessera.types.vocabulary/CountryCodeCategory : kotlin/Enum<io.lightine.tessera.types.vocabulary/CountryCodeCategory> { // io.lightine.tessera.types.vocabulary/CountryCodeCategory|null[0]
     enum entry HISTORICAL // io.lightine.tessera.types.vocabulary/CountryCodeCategory.HISTORICAL|null[0]
     enum entry ORGANIZATION // io.lightine.tessera.types.vocabulary/CountryCodeCategory.ORGANIZATION|null[0]
@@ -96,6 +124,27 @@ final enum class io.lightine.tessera.types.vocabulary/Sex : kotlin/Enum<io.light
 
     final fun valueOf(kotlin/String): io.lightine.tessera.types.vocabulary/Sex // io.lightine.tessera.types.vocabulary/Sex.valueOf|valueOf#static(kotlin.String){}[0]
     final fun values(): kotlin/Array<io.lightine.tessera.types.vocabulary/Sex> // io.lightine.tessera.types.vocabulary/Sex.values|values#static(){}[0]
+}
+
+final class io.lightine.tessera.types.errors/ChipImageGroupMalformed : io.lightine.tessera.types.errors/ChipError { // io.lightine.tessera.types.errors/ChipImageGroupMalformed|null[0]
+    constructor <init>(io.lightine.tessera.types.errors/ChipImageGroup, io.lightine.tessera.types.errors/ChipImageGroupProblem, kotlin/Int?) // io.lightine.tessera.types.errors/ChipImageGroupMalformed.<init>|<init>(io.lightine.tessera.types.errors.ChipImageGroup;io.lightine.tessera.types.errors.ChipImageGroupProblem;kotlin.Int?){}[0]
+
+    final val description // io.lightine.tessera.types.errors/ChipImageGroupMalformed.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/ChipImageGroupMalformed.description.<get-description>|<get-description>(){}[0]
+    final val group // io.lightine.tessera.types.errors/ChipImageGroupMalformed.group|{}group[0]
+        final fun <get-group>(): io.lightine.tessera.types.errors/ChipImageGroup // io.lightine.tessera.types.errors/ChipImageGroupMalformed.group.<get-group>|<get-group>(){}[0]
+    final val offset // io.lightine.tessera.types.errors/ChipImageGroupMalformed.offset|{}offset[0]
+        final fun <get-offset>(): kotlin/Int? // io.lightine.tessera.types.errors/ChipImageGroupMalformed.offset.<get-offset>|<get-offset>(){}[0]
+    final val problem // io.lightine.tessera.types.errors/ChipImageGroupMalformed.problem|{}problem[0]
+        final fun <get-problem>(): io.lightine.tessera.types.errors/ChipImageGroupProblem // io.lightine.tessera.types.errors/ChipImageGroupMalformed.problem.<get-problem>|<get-problem>(){}[0]
+
+    final fun component1(): io.lightine.tessera.types.errors/ChipImageGroup // io.lightine.tessera.types.errors/ChipImageGroupMalformed.component1|component1(){}[0]
+    final fun component2(): io.lightine.tessera.types.errors/ChipImageGroupProblem // io.lightine.tessera.types.errors/ChipImageGroupMalformed.component2|component2(){}[0]
+    final fun component3(): kotlin/Int? // io.lightine.tessera.types.errors/ChipImageGroupMalformed.component3|component3(){}[0]
+    final fun copy(io.lightine.tessera.types.errors/ChipImageGroup = ..., io.lightine.tessera.types.errors/ChipImageGroupProblem = ..., kotlin/Int? = ...): io.lightine.tessera.types.errors/ChipImageGroupMalformed // io.lightine.tessera.types.errors/ChipImageGroupMalformed.copy|copy(io.lightine.tessera.types.errors.ChipImageGroup;io.lightine.tessera.types.errors.ChipImageGroupProblem;kotlin.Int?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/ChipImageGroupMalformed.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/ChipImageGroupMalformed.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/ChipImageGroupMalformed.toString|toString(){}[0]
 }
 
 final class io.lightine.tessera.types.errors/ChipMalformedFile : io.lightine.tessera.types.errors/ChipError { // io.lightine.tessera.types.errors/ChipMalformedFile|null[0]
