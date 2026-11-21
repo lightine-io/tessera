@@ -31,6 +31,7 @@ dependencies {
     dokka(project(":types"))
     dokka(project(":mrz-core"))
     dokka(project(":emrtd-core"))
+    dokka(project(":emrtd-pcsc"))
     dokka(project(":telemetry"))
     dokka(project(":logging"))
     dokka(project(":mrz-camera-core"))
