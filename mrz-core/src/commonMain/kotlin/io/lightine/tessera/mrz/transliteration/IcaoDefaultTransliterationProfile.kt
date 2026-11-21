@@ -66,7 +66,7 @@ public object IcaoDefaultTransliterationProfile : TransliterationProfile {
      * @return The new profile.
      * @throws IllegalArgumentException If [identifier] is blank or a value has a character outside
      *   the MRZ alphabet.
-     * @since 0.8.0
+     * @since 1.0.0
      */
     public fun withOverrides(
         identifier: String,

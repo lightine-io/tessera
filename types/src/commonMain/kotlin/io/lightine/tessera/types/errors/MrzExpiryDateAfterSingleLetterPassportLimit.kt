@@ -14,7 +14,7 @@ import kotlinx.datetime.LocalDate
  *
  * @property rawDocumentCode The two document code characters as printed, such as `P<`.
  * @property expiryDate The computed expiry date.
- * @since 0.8.0
+ * @since 1.0.0
  */
 public data class MrzExpiryDateAfterSingleLetterPassportLimit(
     val rawDocumentCode: String,
