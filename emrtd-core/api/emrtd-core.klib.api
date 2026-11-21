@@ -100,6 +100,199 @@ final enum class io.lightine.tessera.emrtd.trust/TrustAnchorProblem : kotlin/Enu
     final fun values(): kotlin/Array<io.lightine.tessera.emrtd.trust/TrustAnchorProblem> // io.lightine.tessera.emrtd.trust/TrustAnchorProblem.values|values#static(){}[0]
 }
 
+final enum class io.lightine.tessera.emrtd/ChipCheckReason : kotlin/Enum<io.lightine.tessera.emrtd/ChipCheckReason> { // io.lightine.tessera.emrtd/ChipCheckReason|null[0]
+    enum entry CHIP_AUTHENTICATION_DATA_ABSENT // io.lightine.tessera.emrtd/ChipCheckReason.CHIP_AUTHENTICATION_DATA_ABSENT|null[0]
+    enum entry CHIP_AUTHENTICATION_DATA_MALFORMED // io.lightine.tessera.emrtd/ChipCheckReason.CHIP_AUTHENTICATION_DATA_MALFORMED|null[0]
+    enum entry CHIP_AUTHENTICATION_DATA_OUT_OF_RANGE // io.lightine.tessera.emrtd/ChipCheckReason.CHIP_AUTHENTICATION_DATA_OUT_OF_RANGE|null[0]
+    enum entry CHIP_REFUSED // io.lightine.tessera.emrtd/ChipCheckReason.CHIP_REFUSED|null[0]
+    enum entry CONTENT_TYPE_ATTRIBUTE_DIFFERS // io.lightine.tessera.emrtd/ChipCheckReason.CONTENT_TYPE_ATTRIBUTE_DIFFERS|null[0]
+    enum entry COUNTRY_DIFFERS // io.lightine.tessera.emrtd/ChipCheckReason.COUNTRY_DIFFERS|null[0]
+    enum entry COUNTRY_NAME_ABSENT // io.lightine.tessera.emrtd/ChipCheckReason.COUNTRY_NAME_ABSENT|null[0]
+    enum entry CRYPTOGRAPHY_FAILED // io.lightine.tessera.emrtd/ChipCheckReason.CRYPTOGRAPHY_FAILED|null[0]
+    enum entry CRYPTO_UNAVAILABLE // io.lightine.tessera.emrtd/ChipCheckReason.CRYPTO_UNAVAILABLE|null[0]
+    enum entry DATA_GROUP_NOT_READ // io.lightine.tessera.emrtd/ChipCheckReason.DATA_GROUP_NOT_READ|null[0]
+    enum entry DIFFERS_FROM_SIGNED_COPY // io.lightine.tessera.emrtd/ChipCheckReason.DIFFERS_FROM_SIGNED_COPY|null[0]
+    enum entry DOCUMENT_TYPE_NOT_LISTED // io.lightine.tessera.emrtd/ChipCheckReason.DOCUMENT_TYPE_NOT_LISTED|null[0]
+    enum entry ENTRIES_MISSING_FROM_SIGNED_COPY // io.lightine.tessera.emrtd/ChipCheckReason.ENTRIES_MISSING_FROM_SIGNED_COPY|null[0]
+    enum entry EXTENDED_KEY_USAGE_PRESENT // io.lightine.tessera.emrtd/ChipCheckReason.EXTENDED_KEY_USAGE_PRESENT|null[0]
+    enum entry FIELDS_DIFFER // io.lightine.tessera.emrtd/ChipCheckReason.FIELDS_DIFFER|null[0]
+    enum entry FILE_NOT_READ // io.lightine.tessera.emrtd/ChipCheckReason.FILE_NOT_READ|null[0]
+    enum entry HASH_DIFFERS // io.lightine.tessera.emrtd/ChipCheckReason.HASH_DIFFERS|null[0]
+    enum entry HAS_DOCUMENT_TYPE_EXTENSION // io.lightine.tessera.emrtd/ChipCheckReason.HAS_DOCUMENT_TYPE_EXTENSION|null[0]
+    enum entry INVALID_PUBLIC_KEY // io.lightine.tessera.emrtd/ChipCheckReason.INVALID_PUBLIC_KEY|null[0]
+    enum entry ISSUER_NAME_DIFFERS // io.lightine.tessera.emrtd/ChipCheckReason.ISSUER_NAME_DIFFERS|null[0]
+    enum entry KEY_AGREEMENT_FAILED // io.lightine.tessera.emrtd/ChipCheckReason.KEY_AGREEMENT_FAILED|null[0]
+    enum entry KEY_DOES_NOT_FIT_SIGNATURE_ALGORITHM // io.lightine.tessera.emrtd/ChipCheckReason.KEY_DOES_NOT_FIT_SIGNATURE_ALGORITHM|null[0]
+    enum entry KEY_FILE_CHECKS_NOT_PASSED // io.lightine.tessera.emrtd/ChipCheckReason.KEY_FILE_CHECKS_NOT_PASSED|null[0]
+    enum entry KEY_USAGE_NOT_DIGITAL_SIGNATURE_ONLY // io.lightine.tessera.emrtd/ChipCheckReason.KEY_USAGE_NOT_DIGITAL_SIGNATURE_ONLY|null[0]
+    enum entry MALFORMED_SIGNATURE // io.lightine.tessera.emrtd/ChipCheckReason.MALFORMED_SIGNATURE|null[0]
+    enum entry MAPPING_KEY_DIFFERS // io.lightine.tessera.emrtd/ChipCheckReason.MAPPING_KEY_DIFFERS|null[0]
+    enum entry MESSAGE_DIGEST_ATTRIBUTE_MISSING // io.lightine.tessera.emrtd/ChipCheckReason.MESSAGE_DIGEST_ATTRIBUTE_MISSING|null[0]
+    enum entry MESSAGE_DIGEST_DIFFERS // io.lightine.tessera.emrtd/ChipCheckReason.MESSAGE_DIGEST_DIFFERS|null[0]
+    enum entry MISSING_SIGNATURE_ALGORITHM // io.lightine.tessera.emrtd/ChipCheckReason.MISSING_SIGNATURE_ALGORITHM|null[0]
+    enum entry NEW_KEYS_NOT_CONFIRMED // io.lightine.tessera.emrtd/ChipCheckReason.NEW_KEYS_NOT_CONFIRMED|null[0]
+    enum entry NOT_OFFERED // io.lightine.tessera.emrtd/ChipCheckReason.NOT_OFFERED|null[0]
+    enum entry NOT_SUPPORTED // io.lightine.tessera.emrtd/ChipCheckReason.NOT_SUPPORTED|null[0]
+    enum entry NO_CARD_ACCESS // io.lightine.tessera.emrtd/ChipCheckReason.NO_CARD_ACCESS|null[0]
+    enum entry NO_CHIP_AUTHENTICATION_KEY // io.lightine.tessera.emrtd/ChipCheckReason.NO_CHIP_AUTHENTICATION_KEY|null[0]
+    enum entry NO_CHIP_MRZ // io.lightine.tessera.emrtd/ChipCheckReason.NO_CHIP_MRZ|null[0]
+    enum entry NO_DOCUMENT_CODE // io.lightine.tessera.emrtd/ChipCheckReason.NO_DOCUMENT_CODE|null[0]
+    enum entry NO_DOCUMENT_TYPE_EXTENSION // io.lightine.tessera.emrtd/ChipCheckReason.NO_DOCUMENT_TYPE_EXTENSION|null[0]
+    enum entry NO_EF_DIR // io.lightine.tessera.emrtd/ChipCheckReason.NO_EF_DIR|null[0]
+    enum entry NO_HASH_IN_SECURITY_OBJECT // io.lightine.tessera.emrtd/ChipCheckReason.NO_HASH_IN_SECURITY_OBJECT|null[0]
+    enum entry NO_ISSUE_DATE // io.lightine.tessera.emrtd/ChipCheckReason.NO_ISSUE_DATE|null[0]
+    enum entry NO_MATCHED_ROOT // io.lightine.tessera.emrtd/ChipCheckReason.NO_MATCHED_ROOT|null[0]
+    enum entry NO_PRIVATE_KEY_USAGE_PERIOD // io.lightine.tessera.emrtd/ChipCheckReason.NO_PRIVATE_KEY_USAGE_PERIOD|null[0]
+    enum entry NO_ROOTS_SUPPLIED // io.lightine.tessera.emrtd/ChipCheckReason.NO_ROOTS_SUPPLIED|null[0]
+    enum entry NO_SECURE_MESSAGING // io.lightine.tessera.emrtd/ChipCheckReason.NO_SECURE_MESSAGING|null[0]
+    enum entry NO_SIGNED_COPY // io.lightine.tessera.emrtd/ChipCheckReason.NO_SIGNED_COPY|null[0]
+    enum entry NO_SIGNER_CERTIFICATE // io.lightine.tessera.emrtd/ChipCheckReason.NO_SIGNER_CERTIFICATE|null[0]
+    enum entry NO_SUPPLIED_ROOT_MATCHES // io.lightine.tessera.emrtd/ChipCheckReason.NO_SUPPLIED_ROOT_MATCHES|null[0]
+    enum entry NO_TIME_GIVEN // io.lightine.tessera.emrtd/ChipCheckReason.NO_TIME_GIVEN|null[0]
+    enum entry NO_USABLE_SUITE // io.lightine.tessera.emrtd/ChipCheckReason.NO_USABLE_SUITE|null[0]
+    enum entry OTHER_CHIP_AUTHENTICATION_USED // io.lightine.tessera.emrtd/ChipCheckReason.OTHER_CHIP_AUTHENTICATION_USED|null[0]
+    enum entry OUTSIDE_USAGE_PERIOD // io.lightine.tessera.emrtd/ChipCheckReason.OUTSIDE_USAGE_PERIOD|null[0]
+    enum entry OUTSIDE_VALIDITY // io.lightine.tessera.emrtd/ChipCheckReason.OUTSIDE_VALIDITY|null[0]
+    enum entry PACE_MISSING_FROM_CARD_ACCESS // io.lightine.tessera.emrtd/ChipCheckReason.PACE_MISSING_FROM_CARD_ACCESS|null[0]
+    enum entry PACE_OFFERED_BUT_NOT_USED // io.lightine.tessera.emrtd/ChipCheckReason.PACE_OFFERED_BUT_NOT_USED|null[0]
+    enum entry READ_STOPPED // io.lightine.tessera.emrtd/ChipCheckReason.READ_STOPPED|null[0]
+    enum entry SIGNATURE_DOES_NOT_VERIFY // io.lightine.tessera.emrtd/ChipCheckReason.SIGNATURE_DOES_NOT_VERIFY|null[0]
+    enum entry UNREADABLE_FILE // io.lightine.tessera.emrtd/ChipCheckReason.UNREADABLE_FILE|null[0]
+    enum entry UNREADABLE_KEY // io.lightine.tessera.emrtd/ChipCheckReason.UNREADABLE_KEY|null[0]
+    enum entry UNREADABLE_SECURITY_OBJECT // io.lightine.tessera.emrtd/ChipCheckReason.UNREADABLE_SECURITY_OBJECT|null[0]
+    enum entry UNREADABLE_SIGNED_COPY // io.lightine.tessera.emrtd/ChipCheckReason.UNREADABLE_SIGNED_COPY|null[0]
+    enum entry UNREADABLE_SIGNER_CERTIFICATE // io.lightine.tessera.emrtd/ChipCheckReason.UNREADABLE_SIGNER_CERTIFICATE|null[0]
+    enum entry UNRECOGNIZED_CRITICAL_EXTENSION // io.lightine.tessera.emrtd/ChipCheckReason.UNRECOGNIZED_CRITICAL_EXTENSION|null[0]
+    enum entry UNSUPPORTED_ALGORITHM // io.lightine.tessera.emrtd/ChipCheckReason.UNSUPPORTED_ALGORITHM|null[0]
+    enum entry UNUSABLE_CHIP_AUTHENTICATION_KEY // io.lightine.tessera.emrtd/ChipCheckReason.UNUSABLE_CHIP_AUTHENTICATION_KEY|null[0]
+    enum entry WRONG_SIGNATURE_LENGTH // io.lightine.tessera.emrtd/ChipCheckReason.WRONG_SIGNATURE_LENGTH|null[0]
+
+    final val entries // io.lightine.tessera.emrtd/ChipCheckReason.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd/ChipCheckReason> // io.lightine.tessera.emrtd/ChipCheckReason.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd/ChipCheckReason // io.lightine.tessera.emrtd/ChipCheckReason.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd/ChipCheckReason> // io.lightine.tessera.emrtd/ChipCheckReason.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.emrtd/ChipCountrySource : kotlin/Enum<io.lightine.tessera.emrtd/ChipCountrySource> { // io.lightine.tessera.emrtd/ChipCountrySource|null[0]
+    enum entry ISSUER_ALT_NAME // io.lightine.tessera.emrtd/ChipCountrySource.ISSUER_ALT_NAME|null[0]
+    enum entry SUBJECT_ALT_NAME // io.lightine.tessera.emrtd/ChipCountrySource.SUBJECT_ALT_NAME|null[0]
+    enum entry SUBJECT_NAME // io.lightine.tessera.emrtd/ChipCountrySource.SUBJECT_NAME|null[0]
+
+    final val entries // io.lightine.tessera.emrtd/ChipCountrySource.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd/ChipCountrySource> // io.lightine.tessera.emrtd/ChipCountrySource.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd/ChipCountrySource // io.lightine.tessera.emrtd/ChipCountrySource.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd/ChipCountrySource> // io.lightine.tessera.emrtd/ChipCountrySource.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.emrtd/ChipFileContext : kotlin/Enum<io.lightine.tessera.emrtd/ChipFileContext> { // io.lightine.tessera.emrtd/ChipFileContext|null[0]
+    enum entry EMRTD_APPLICATION // io.lightine.tessera.emrtd/ChipFileContext.EMRTD_APPLICATION|null[0]
+    enum entry MASTER_FILE // io.lightine.tessera.emrtd/ChipFileContext.MASTER_FILE|null[0]
+
+    final val entries // io.lightine.tessera.emrtd/ChipFileContext.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd/ChipFileContext> // io.lightine.tessera.emrtd/ChipFileContext.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd/ChipFileContext // io.lightine.tessera.emrtd/ChipFileContext.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd/ChipFileContext> // io.lightine.tessera.emrtd/ChipFileContext.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.emrtd/ChipNameComparison : kotlin/Enum<io.lightine.tessera.emrtd/ChipNameComparison> { // io.lightine.tessera.emrtd/ChipNameComparison|null[0]
+    enum entry BYTE_EQUAL // io.lightine.tessera.emrtd/ChipNameComparison.BYTE_EQUAL|null[0]
+    enum entry RFC_5280_NORMALIZED // io.lightine.tessera.emrtd/ChipNameComparison.RFC_5280_NORMALIZED|null[0]
+
+    final val entries // io.lightine.tessera.emrtd/ChipNameComparison.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd/ChipNameComparison> // io.lightine.tessera.emrtd/ChipNameComparison.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd/ChipNameComparison // io.lightine.tessera.emrtd/ChipNameComparison.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd/ChipNameComparison> // io.lightine.tessera.emrtd/ChipNameComparison.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.emrtd/ChipPaceMapping : kotlin/Enum<io.lightine.tessera.emrtd/ChipPaceMapping> { // io.lightine.tessera.emrtd/ChipPaceMapping|null[0]
+    enum entry CHIP_AUTHENTICATION // io.lightine.tessera.emrtd/ChipPaceMapping.CHIP_AUTHENTICATION|null[0]
+    enum entry GENERIC // io.lightine.tessera.emrtd/ChipPaceMapping.GENERIC|null[0]
+    enum entry INTEGRATED // io.lightine.tessera.emrtd/ChipPaceMapping.INTEGRATED|null[0]
+
+    final val entries // io.lightine.tessera.emrtd/ChipPaceMapping.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd/ChipPaceMapping> // io.lightine.tessera.emrtd/ChipPaceMapping.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd/ChipPaceMapping // io.lightine.tessera.emrtd/ChipPaceMapping.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd/ChipPaceMapping> // io.lightine.tessera.emrtd/ChipPaceMapping.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.emrtd/ChipPassword : kotlin/Enum<io.lightine.tessera.emrtd/ChipPassword> { // io.lightine.tessera.emrtd/ChipPassword|null[0]
+    enum entry CAN // io.lightine.tessera.emrtd/ChipPassword.CAN|null[0]
+    enum entry MRZ // io.lightine.tessera.emrtd/ChipPassword.MRZ|null[0]
+
+    final val entries // io.lightine.tessera.emrtd/ChipPassword.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd/ChipPassword> // io.lightine.tessera.emrtd/ChipPassword.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd/ChipPassword // io.lightine.tessera.emrtd/ChipPassword.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd/ChipPassword> // io.lightine.tessera.emrtd/ChipPassword.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.emrtd/ChipReadStep : kotlin/Enum<io.lightine.tessera.emrtd/ChipReadStep> { // io.lightine.tessera.emrtd/ChipReadStep|null[0]
+    enum entry ACTIVE_AUTHENTICATION // io.lightine.tessera.emrtd/ChipReadStep.ACTIVE_AUTHENTICATION|null[0]
+    enum entry BAC // io.lightine.tessera.emrtd/ChipReadStep.BAC|null[0]
+    enum entry CHIP_AUTHENTICATION // io.lightine.tessera.emrtd/ChipReadStep.CHIP_AUTHENTICATION|null[0]
+    enum entry PACE // io.lightine.tessera.emrtd/ChipReadStep.PACE|null[0]
+    enum entry PASSIVE_AUTHENTICATION // io.lightine.tessera.emrtd/ChipReadStep.PASSIVE_AUTHENTICATION|null[0]
+    enum entry READ // io.lightine.tessera.emrtd/ChipReadStep.READ|null[0]
+    enum entry READ_FILE // io.lightine.tessera.emrtd/ChipReadStep.READ_FILE|null[0]
+    enum entry SELECT_APPLICATION // io.lightine.tessera.emrtd/ChipReadStep.SELECT_APPLICATION|null[0]
+
+    final val entries // io.lightine.tessera.emrtd/ChipReadStep.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd/ChipReadStep> // io.lightine.tessera.emrtd/ChipReadStep.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd/ChipReadStep // io.lightine.tessera.emrtd/ChipReadStep.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd/ChipReadStep> // io.lightine.tessera.emrtd/ChipReadStep.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.emrtd/ChipReadStepOutcome : kotlin/Enum<io.lightine.tessera.emrtd/ChipReadStepOutcome> { // io.lightine.tessera.emrtd/ChipReadStepOutcome|null[0]
+    enum entry FAILED // io.lightine.tessera.emrtd/ChipReadStepOutcome.FAILED|null[0]
+    enum entry SKIPPED // io.lightine.tessera.emrtd/ChipReadStepOutcome.SKIPPED|null[0]
+    enum entry SUCCEEDED // io.lightine.tessera.emrtd/ChipReadStepOutcome.SUCCEEDED|null[0]
+
+    final val entries // io.lightine.tessera.emrtd/ChipReadStepOutcome.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd/ChipReadStepOutcome> // io.lightine.tessera.emrtd/ChipReadStepOutcome.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd/ChipReadStepOutcome // io.lightine.tessera.emrtd/ChipReadStepOutcome.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd/ChipReadStepOutcome> // io.lightine.tessera.emrtd/ChipReadStepOutcome.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.emrtd/ChipSignedCopy : kotlin/Enum<io.lightine.tessera.emrtd/ChipSignedCopy> { // io.lightine.tessera.emrtd/ChipSignedCopy|null[0]
+    enum entry CARD_SECURITY // io.lightine.tessera.emrtd/ChipSignedCopy.CARD_SECURITY|null[0]
+    enum entry DG14 // io.lightine.tessera.emrtd/ChipSignedCopy.DG14|null[0]
+
+    final val entries // io.lightine.tessera.emrtd/ChipSignedCopy.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd/ChipSignedCopy> // io.lightine.tessera.emrtd/ChipSignedCopy.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd/ChipSignedCopy // io.lightine.tessera.emrtd/ChipSignedCopy.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd/ChipSignedCopy> // io.lightine.tessera.emrtd/ChipSignedCopy.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.emrtd/ChipSignedFile : kotlin/Enum<io.lightine.tessera.emrtd/ChipSignedFile> { // io.lightine.tessera.emrtd/ChipSignedFile|null[0]
+    enum entry CARD_SECURITY // io.lightine.tessera.emrtd/ChipSignedFile.CARD_SECURITY|null[0]
+    enum entry SECURITY_OBJECT // io.lightine.tessera.emrtd/ChipSignedFile.SECURITY_OBJECT|null[0]
+
+    final val entries // io.lightine.tessera.emrtd/ChipSignedFile.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd/ChipSignedFile> // io.lightine.tessera.emrtd/ChipSignedFile.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd/ChipSignedFile // io.lightine.tessera.emrtd/ChipSignedFile.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd/ChipSignedFile> // io.lightine.tessera.emrtd/ChipSignedFile.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.emrtd/ChipSignerOrigin : kotlin/Enum<io.lightine.tessera.emrtd/ChipSignerOrigin> { // io.lightine.tessera.emrtd/ChipSignerOrigin|null[0]
+    enum entry STORED_IN_FILE // io.lightine.tessera.emrtd/ChipSignerOrigin.STORED_IN_FILE|null[0]
+    enum entry SUPPLIED_BY_APP // io.lightine.tessera.emrtd/ChipSignerOrigin.SUPPLIED_BY_APP|null[0]
+
+    final val entries // io.lightine.tessera.emrtd/ChipSignerOrigin.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd/ChipSignerOrigin> // io.lightine.tessera.emrtd/ChipSignerOrigin.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd/ChipSignerOrigin // io.lightine.tessera.emrtd/ChipSignerOrigin.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd/ChipSignerOrigin> // io.lightine.tessera.emrtd/ChipSignerOrigin.values|values#static(){}[0]
+}
+
 abstract interface io.lightine.tessera.emrtd/ApduTransport { // io.lightine.tessera.emrtd/ApduTransport|null[0]
     abstract val maxCommandLength // io.lightine.tessera.emrtd/ApduTransport.maxCommandLength|{}maxCommandLength[0]
         abstract fun <get-maxCommandLength>(): kotlin/Int // io.lightine.tessera.emrtd/ApduTransport.maxCommandLength.<get-maxCommandLength>|<get-maxCommandLength>(){}[0]
@@ -131,7 +324,7 @@ final class io.lightine.tessera.emrtd.lds/BiometricGroup { // io.lightine.tesser
     final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/BiometricGroup.toString|toString(){}[0]
 
     final object Companion { // io.lightine.tessera.emrtd.lds/BiometricGroup.Companion|null[0]
-        final fun parse(kotlin/ByteArray): io.lightine.tessera.emrtd.lds/ImageGroupParse<io.lightine.tessera.emrtd.lds/BiometricGroup> // io.lightine.tessera.emrtd.lds/BiometricGroup.Companion.parse|parse(kotlin.ByteArray){}[0]
+        final fun parse(kotlin/ByteArray): io.lightine.tessera.emrtd.lds/LdsParseResult<io.lightine.tessera.emrtd.lds/BiometricGroup> // io.lightine.tessera.emrtd.lds/BiometricGroup.Companion.parse|parse(kotlin.ByteArray){}[0]
     }
 }
 
@@ -368,8 +561,8 @@ final class io.lightine.tessera.emrtd.lds/DisplayedImageGroup { // io.lightine.t
     final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.toString|toString(){}[0]
 
     final object Companion { // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.Companion|null[0]
-        final fun parseDg5(kotlin/ByteArray): io.lightine.tessera.emrtd.lds/ImageGroupParse<io.lightine.tessera.emrtd.lds/DisplayedImageGroup> // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.Companion.parseDg5|parseDg5(kotlin.ByteArray){}[0]
-        final fun parseDg7(kotlin/ByteArray): io.lightine.tessera.emrtd.lds/ImageGroupParse<io.lightine.tessera.emrtd.lds/DisplayedImageGroup> // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.Companion.parseDg7|parseDg7(kotlin.ByteArray){}[0]
+        final fun parseDg5(kotlin/ByteArray): io.lightine.tessera.emrtd.lds/LdsParseResult<io.lightine.tessera.emrtd.lds/DisplayedImageGroup> // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.Companion.parseDg5|parseDg5(kotlin.ByteArray){}[0]
+        final fun parseDg7(kotlin/ByteArray): io.lightine.tessera.emrtd.lds/LdsParseResult<io.lightine.tessera.emrtd.lds/DisplayedImageGroup> // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.Companion.parseDg7|parseDg7(kotlin.ByteArray){}[0]
     }
 }
 
@@ -510,6 +703,20 @@ final class io.lightine.tessera.emrtd.lds/SignerCertificateView { // io.lightine
     final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/SignerCertificateView.toString|toString(){}[0]
 }
 
+final class io.lightine.tessera.emrtd.trust/DocumentSignerCertificate { // io.lightine.tessera.emrtd.trust/DocumentSignerCertificate|null[0]
+    final val serialNumberHex // io.lightine.tessera.emrtd.trust/DocumentSignerCertificate.serialNumberHex|{}serialNumberHex[0]
+        final fun <get-serialNumberHex>(): kotlin/String // io.lightine.tessera.emrtd.trust/DocumentSignerCertificate.serialNumberHex.<get-serialNumberHex>|<get-serialNumberHex>(){}[0]
+    final val subjectCountry // io.lightine.tessera.emrtd.trust/DocumentSignerCertificate.subjectCountry|{}subjectCountry[0]
+        final fun <get-subjectCountry>(): kotlin/String? // io.lightine.tessera.emrtd.trust/DocumentSignerCertificate.subjectCountry.<get-subjectCountry>|<get-subjectCountry>(){}[0]
+
+    final fun encodedBytes(): kotlin/ByteArray // io.lightine.tessera.emrtd.trust/DocumentSignerCertificate.encodedBytes|encodedBytes(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.trust/DocumentSignerCertificate.toString|toString(){}[0]
+
+    final object Companion { // io.lightine.tessera.emrtd.trust/DocumentSignerCertificate.Companion|null[0]
+        final fun fromDer(kotlin/ByteArray): io.lightine.tessera.emrtd.trust/DocumentSignerCertificateParse // io.lightine.tessera.emrtd.trust/DocumentSignerCertificate.Companion.fromDer|fromDer(kotlin.ByteArray){}[0]
+    }
+}
+
 final class io.lightine.tessera.emrtd.trust/MasterList { // io.lightine.tessera.emrtd.trust/MasterList|null[0]
     final val anchors // io.lightine.tessera.emrtd.trust/MasterList.anchors|{}anchors[0]
         final fun <get-anchors>(): kotlin.collections/List<io.lightine.tessera.emrtd.trust/TrustAnchor> // io.lightine.tessera.emrtd.trust/MasterList.anchors.<get-anchors>|<get-anchors>(){}[0]
@@ -557,6 +764,27 @@ final class io.lightine.tessera.emrtd.trust/TrustAnchor { // io.lightine.tessera
     }
 }
 
+final class io.lightine.tessera.emrtd/AccessReport { // io.lightine.tessera.emrtd/AccessReport|null[0]
+    final val cardAccessRead // io.lightine.tessera.emrtd/AccessReport.cardAccessRead|{}cardAccessRead[0]
+        final fun <get-cardAccessRead>(): kotlin/Boolean // io.lightine.tessera.emrtd/AccessReport.cardAccessRead.<get-cardAccessRead>|<get-cardAccessRead>(){}[0]
+    final val extendedLengthAllowed // io.lightine.tessera.emrtd/AccessReport.extendedLengthAllowed|{}extendedLengthAllowed[0]
+        final fun <get-extendedLengthAllowed>(): kotlin/Boolean // io.lightine.tessera.emrtd/AccessReport.extendedLengthAllowed.<get-extendedLengthAllowed>|<get-extendedLengthAllowed>(){}[0]
+    final val offeredPace // io.lightine.tessera.emrtd/AccessReport.offeredPace|{}offeredPace[0]
+        final fun <get-offeredPace>(): kotlin.collections/List<io.lightine.tessera.emrtd/ChipPaceOffer> // io.lightine.tessera.emrtd/AccessReport.offeredPace.<get-offeredPace>|<get-offeredPace>(){}[0]
+    final val paceMapping // io.lightine.tessera.emrtd/AccessReport.paceMapping|{}paceMapping[0]
+        final fun <get-paceMapping>(): io.lightine.tessera.emrtd/ChipPaceMapping? // io.lightine.tessera.emrtd/AccessReport.paceMapping.<get-paceMapping>|<get-paceMapping>(){}[0]
+    final val paceParameterId // io.lightine.tessera.emrtd/AccessReport.paceParameterId|{}paceParameterId[0]
+        final fun <get-paceParameterId>(): kotlin/Int? // io.lightine.tessera.emrtd/AccessReport.paceParameterId.<get-paceParameterId>|<get-paceParameterId>(){}[0]
+    final val paceProtocolOid // io.lightine.tessera.emrtd/AccessReport.paceProtocolOid|{}paceProtocolOid[0]
+        final fun <get-paceProtocolOid>(): kotlin/String? // io.lightine.tessera.emrtd/AccessReport.paceProtocolOid.<get-paceProtocolOid>|<get-paceProtocolOid>(){}[0]
+    final val password // io.lightine.tessera.emrtd/AccessReport.password|{}password[0]
+        final fun <get-password>(): io.lightine.tessera.emrtd/ChipPassword? // io.lightine.tessera.emrtd/AccessReport.password.<get-password>|<get-password>(){}[0]
+    final val protocol // io.lightine.tessera.emrtd/AccessReport.protocol|{}protocol[0]
+        final fun <get-protocol>(): io.lightine.tessera.types.vocabulary/ChipAccessProtocol // io.lightine.tessera.emrtd/AccessReport.protocol.<get-protocol>|<get-protocol>(){}[0]
+
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd/AccessReport.toString|toString(){}[0]
+}
+
 final class io.lightine.tessera.emrtd/ApduTransportException : kotlin/Exception { // io.lightine.tessera.emrtd/ApduTransportException|null[0]
     constructor <init>(io.lightine.tessera.types.errors/NfcError, kotlin/Throwable? = ...) // io.lightine.tessera.emrtd/ApduTransportException.<init>|<init>(io.lightine.tessera.types.errors.NfcError;kotlin.Throwable?){}[0]
 
@@ -564,24 +792,188 @@ final class io.lightine.tessera.emrtd/ApduTransportException : kotlin/Exception 
         final fun <get-error>(): io.lightine.tessera.types.errors/NfcError // io.lightine.tessera.emrtd/ApduTransportException.error.<get-error>|<get-error>(){}[0]
 }
 
-sealed class <#A: out kotlin/Any?> io.lightine.tessera.emrtd.lds/ImageGroupParse { // io.lightine.tessera.emrtd.lds/ImageGroupParse|null[0]
-    final class <#A1: out kotlin/Any?> Parsed : io.lightine.tessera.emrtd.lds/ImageGroupParse<#A1> { // io.lightine.tessera.emrtd.lds/ImageGroupParse.Parsed|null[0]
-        constructor <init>(#A1) // io.lightine.tessera.emrtd.lds/ImageGroupParse.Parsed.<init>|<init>(1:0){}[0]
+final class io.lightine.tessera.emrtd/ChipCheck { // io.lightine.tessera.emrtd/ChipCheck|null[0]
+    final val detail // io.lightine.tessera.emrtd/ChipCheck.detail|{}detail[0]
+        final fun <get-detail>(): io.lightine.tessera.emrtd/ChipCheckDetail? // io.lightine.tessera.emrtd/ChipCheck.detail.<get-detail>|<get-detail>(){}[0]
+    final val kind // io.lightine.tessera.emrtd/ChipCheck.kind|{}kind[0]
+        final fun <get-kind>(): io.lightine.tessera.emrtd/ChipCheckKind // io.lightine.tessera.emrtd/ChipCheck.kind.<get-kind>|<get-kind>(){}[0]
+    final val outcome // io.lightine.tessera.emrtd/ChipCheck.outcome|{}outcome[0]
+        final fun <get-outcome>(): io.lightine.tessera.emrtd/CheckOutcome // io.lightine.tessera.emrtd/ChipCheck.outcome.<get-outcome>|<get-outcome>(){}[0]
 
-        final val value // io.lightine.tessera.emrtd.lds/ImageGroupParse.Parsed.value|{}value[0]
-            final fun <get-value>(): #A1 // io.lightine.tessera.emrtd.lds/ImageGroupParse.Parsed.value.<get-value>|<get-value>(){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheck.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheck.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheck.toString|toString(){}[0]
+}
 
-        final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/ImageGroupParse.Parsed.toString|toString(){}[0]
+final class io.lightine.tessera.emrtd/ChipFile { // io.lightine.tessera.emrtd/ChipFile|null[0]
+    final val dataGroup // io.lightine.tessera.emrtd/ChipFile.dataGroup|{}dataGroup[0]
+        final fun <get-dataGroup>(): kotlin/Int? // io.lightine.tessera.emrtd/ChipFile.dataGroup.<get-dataGroup>|<get-dataGroup>(){}[0]
+    final val fileId // io.lightine.tessera.emrtd/ChipFile.fileId|{}fileId[0]
+        final fun <get-fileId>(): kotlin/Int // io.lightine.tessera.emrtd/ChipFile.fileId.<get-fileId>|<get-fileId>(){}[0]
+    final val inMasterFile // io.lightine.tessera.emrtd/ChipFile.inMasterFile|{}inMasterFile[0]
+        final fun <get-inMasterFile>(): kotlin/Boolean // io.lightine.tessera.emrtd/ChipFile.inMasterFile.<get-inMasterFile>|<get-inMasterFile>(){}[0]
+    final val size // io.lightine.tessera.emrtd/ChipFile.size|{}size[0]
+        final fun <get-size>(): kotlin/Int // io.lightine.tessera.emrtd/ChipFile.size.<get-size>|<get-size>(){}[0]
+
+    final fun bytes(): kotlin/ByteArray // io.lightine.tessera.emrtd/ChipFile.bytes|bytes(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipFile.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.emrtd/ChipFileError { // io.lightine.tessera.emrtd/ChipFileError|null[0]
+    final val error // io.lightine.tessera.emrtd/ChipFileError.error|{}error[0]
+        final fun <get-error>(): io.lightine.tessera.types.errors/ChipError // io.lightine.tessera.emrtd/ChipFileError.error.<get-error>|<get-error>(){}[0]
+    final val fileId // io.lightine.tessera.emrtd/ChipFileError.fileId|{}fileId[0]
+        final fun <get-fileId>(): kotlin/Int // io.lightine.tessera.emrtd/ChipFileError.fileId.<get-fileId>|<get-fileId>(){}[0]
+    final val inMasterFile // io.lightine.tessera.emrtd/ChipFileError.inMasterFile|{}inMasterFile[0]
+        final fun <get-inMasterFile>(): kotlin/Boolean // io.lightine.tessera.emrtd/ChipFileError.inMasterFile.<get-inMasterFile>|<get-inMasterFile>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipFileError.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipFileError.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipFileError.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.emrtd/ChipPaceOffer { // io.lightine.tessera.emrtd/ChipPaceOffer|null[0]
+    final val mapping // io.lightine.tessera.emrtd/ChipPaceOffer.mapping|{}mapping[0]
+        final fun <get-mapping>(): io.lightine.tessera.emrtd/ChipPaceMapping? // io.lightine.tessera.emrtd/ChipPaceOffer.mapping.<get-mapping>|<get-mapping>(){}[0]
+    final val parameterId // io.lightine.tessera.emrtd/ChipPaceOffer.parameterId|{}parameterId[0]
+        final fun <get-parameterId>(): kotlin/Int? // io.lightine.tessera.emrtd/ChipPaceOffer.parameterId.<get-parameterId>|<get-parameterId>(){}[0]
+    final val protocolOid // io.lightine.tessera.emrtd/ChipPaceOffer.protocolOid|{}protocolOid[0]
+        final fun <get-protocolOid>(): kotlin/String // io.lightine.tessera.emrtd/ChipPaceOffer.protocolOid.<get-protocolOid>|<get-protocolOid>(){}[0]
+    final val readerCanRun // io.lightine.tessera.emrtd/ChipPaceOffer.readerCanRun|{}readerCanRun[0]
+        final fun <get-readerCanRun>(): kotlin/Boolean // io.lightine.tessera.emrtd/ChipPaceOffer.readerCanRun.<get-readerCanRun>|<get-readerCanRun>(){}[0]
+
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipPaceOffer.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.emrtd/ChipRead { // io.lightine.tessera.emrtd/ChipRead|null[0]
+    final val access // io.lightine.tessera.emrtd/ChipRead.access|{}access[0]
+        final fun <get-access>(): io.lightine.tessera.emrtd/AccessReport // io.lightine.tessera.emrtd/ChipRead.access.<get-access>|<get-access>(){}[0]
+    final val checks // io.lightine.tessera.emrtd/ChipRead.checks|{}checks[0]
+        final fun <get-checks>(): kotlin.collections/List<io.lightine.tessera.emrtd/ChipCheck> // io.lightine.tessera.emrtd/ChipRead.checks.<get-checks>|<get-checks>(){}[0]
+    final val dg1 // io.lightine.tessera.emrtd/ChipRead.dg1|{}dg1[0]
+        final fun <get-dg1>(): io.lightine.tessera.emrtd.lds/Dg1View? // io.lightine.tessera.emrtd/ChipRead.dg1.<get-dg1>|<get-dg1>(){}[0]
+    final val dg11 // io.lightine.tessera.emrtd/ChipRead.dg11|{}dg11[0]
+        final fun <get-dg11>(): io.lightine.tessera.emrtd.lds/Dg11View? // io.lightine.tessera.emrtd/ChipRead.dg11.<get-dg11>|<get-dg11>(){}[0]
+    final val dg12 // io.lightine.tessera.emrtd/ChipRead.dg12|{}dg12[0]
+        final fun <get-dg12>(): io.lightine.tessera.emrtd.lds/Dg12View? // io.lightine.tessera.emrtd/ChipRead.dg12.<get-dg12>|<get-dg12>(){}[0]
+    final val dg13 // io.lightine.tessera.emrtd/ChipRead.dg13|{}dg13[0]
+        final fun <get-dg13>(): io.lightine.tessera.emrtd.lds/Dg13View? // io.lightine.tessera.emrtd/ChipRead.dg13.<get-dg13>|<get-dg13>(){}[0]
+    final val dg16 // io.lightine.tessera.emrtd/ChipRead.dg16|{}dg16[0]
+        final fun <get-dg16>(): io.lightine.tessera.emrtd.lds/Dg16View? // io.lightine.tessera.emrtd/ChipRead.dg16.<get-dg16>|<get-dg16>(){}[0]
+    final val dg2 // io.lightine.tessera.emrtd/ChipRead.dg2|{}dg2[0]
+        final fun <get-dg2>(): io.lightine.tessera.emrtd.lds/BiometricGroup? // io.lightine.tessera.emrtd/ChipRead.dg2.<get-dg2>|<get-dg2>(){}[0]
+    final val dg5 // io.lightine.tessera.emrtd/ChipRead.dg5|{}dg5[0]
+        final fun <get-dg5>(): io.lightine.tessera.emrtd.lds/DisplayedImageGroup? // io.lightine.tessera.emrtd/ChipRead.dg5.<get-dg5>|<get-dg5>(){}[0]
+    final val dg7 // io.lightine.tessera.emrtd/ChipRead.dg7|{}dg7[0]
+        final fun <get-dg7>(): io.lightine.tessera.emrtd.lds/DisplayedImageGroup? // io.lightine.tessera.emrtd/ChipRead.dg7.<get-dg7>|<get-dg7>(){}[0]
+    final val efCom // io.lightine.tessera.emrtd/ChipRead.efCom|{}efCom[0]
+        final fun <get-efCom>(): io.lightine.tessera.emrtd.lds/EfComView? // io.lightine.tessera.emrtd/ChipRead.efCom.<get-efCom>|<get-efCom>(){}[0]
+    final val fileErrors // io.lightine.tessera.emrtd/ChipRead.fileErrors|{}fileErrors[0]
+        final fun <get-fileErrors>(): kotlin.collections/List<io.lightine.tessera.emrtd/ChipFileError> // io.lightine.tessera.emrtd/ChipRead.fileErrors.<get-fileErrors>|<get-fileErrors>(){}[0]
+    final val files // io.lightine.tessera.emrtd/ChipRead.files|{}files[0]
+        final fun <get-files>(): kotlin.collections/List<io.lightine.tessera.emrtd/ChipFile> // io.lightine.tessera.emrtd/ChipRead.files.<get-files>|<get-files>(){}[0]
+    final val securityObject // io.lightine.tessera.emrtd/ChipRead.securityObject|{}securityObject[0]
+        final fun <get-securityObject>(): io.lightine.tessera.emrtd.lds/SecurityObjectView? // io.lightine.tessera.emrtd/ChipRead.securityObject.<get-securityObject>|<get-securityObject>(){}[0]
+
+    final fun applicationFile(kotlin/Int): io.lightine.tessera.emrtd/ChipFile? // io.lightine.tessera.emrtd/ChipRead.applicationFile|applicationFile(kotlin.Int){}[0]
+    final fun dataGroup(kotlin/Int): io.lightine.tessera.emrtd/ChipFile? // io.lightine.tessera.emrtd/ChipRead.dataGroup|dataGroup(kotlin.Int){}[0]
+    final fun masterFile(kotlin/Int): io.lightine.tessera.emrtd/ChipFile? // io.lightine.tessera.emrtd/ChipRead.masterFile|masterFile(kotlin.Int){}[0]
+    final fun outcomeOf(io.lightine.tessera.emrtd/ChipCheckKind): io.lightine.tessera.emrtd/CheckOutcome? // io.lightine.tessera.emrtd/ChipRead.outcomeOf|outcomeOf(io.lightine.tessera.emrtd.ChipCheckKind){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipRead.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.emrtd/ChipReadEvent : io.lightine.tessera.telemetry/TelemetryEvent { // io.lightine.tessera.emrtd/ChipReadEvent|null[0]
+    final val byteCount // io.lightine.tessera.emrtd/ChipReadEvent.byteCount|{}byteCount[0]
+        final fun <get-byteCount>(): kotlin/Int? // io.lightine.tessera.emrtd/ChipReadEvent.byteCount.<get-byteCount>|<get-byteCount>(){}[0]
+    final val durationMillis // io.lightine.tessera.emrtd/ChipReadEvent.durationMillis|{}durationMillis[0]
+        final fun <get-durationMillis>(): kotlin/Long // io.lightine.tessera.emrtd/ChipReadEvent.durationMillis.<get-durationMillis>|<get-durationMillis>(){}[0]
+    final val fileId // io.lightine.tessera.emrtd/ChipReadEvent.fileId|{}fileId[0]
+        final fun <get-fileId>(): kotlin/Int? // io.lightine.tessera.emrtd/ChipReadEvent.fileId.<get-fileId>|<get-fileId>(){}[0]
+    final val name // io.lightine.tessera.emrtd/ChipReadEvent.name|{}name[0]
+        final fun <get-name>(): kotlin/String // io.lightine.tessera.emrtd/ChipReadEvent.name.<get-name>|<get-name>(){}[0]
+    final val outcome // io.lightine.tessera.emrtd/ChipReadEvent.outcome|{}outcome[0]
+        final fun <get-outcome>(): io.lightine.tessera.emrtd/ChipReadStepOutcome // io.lightine.tessera.emrtd/ChipReadEvent.outcome.<get-outcome>|<get-outcome>(){}[0]
+    final val protocol // io.lightine.tessera.emrtd/ChipReadEvent.protocol|{}protocol[0]
+        final fun <get-protocol>(): kotlin/String? // io.lightine.tessera.emrtd/ChipReadEvent.protocol.<get-protocol>|<get-protocol>(){}[0]
+    final val statusWord // io.lightine.tessera.emrtd/ChipReadEvent.statusWord|{}statusWord[0]
+        final fun <get-statusWord>(): kotlin/Int? // io.lightine.tessera.emrtd/ChipReadEvent.statusWord.<get-statusWord>|<get-statusWord>(){}[0]
+    final val step // io.lightine.tessera.emrtd/ChipReadEvent.step|{}step[0]
+        final fun <get-step>(): io.lightine.tessera.emrtd/ChipReadStep // io.lightine.tessera.emrtd/ChipReadEvent.step.<get-step>|<get-step>(){}[0]
+
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipReadEvent.toString|toString(){}[0]
+
+    final object Companion { // io.lightine.tessera.emrtd/ChipReadEvent.Companion|null[0]
+        final const val EVENT_NAME // io.lightine.tessera.emrtd/ChipReadEvent.Companion.EVENT_NAME|{}EVENT_NAME[0]
+            final fun <get-EVENT_NAME>(): kotlin/String // io.lightine.tessera.emrtd/ChipReadEvent.Companion.EVENT_NAME.<get-EVENT_NAME>|<get-EVENT_NAME>(){}[0]
     }
+}
 
-    final class Malformed : io.lightine.tessera.emrtd.lds/ImageGroupParse<kotlin/Nothing> { // io.lightine.tessera.emrtd.lds/ImageGroupParse.Malformed|null[0]
-        constructor <init>(io.lightine.tessera.types.errors/ChipImageGroupMalformed) // io.lightine.tessera.emrtd.lds/ImageGroupParse.Malformed.<init>|<init>(io.lightine.tessera.types.errors.ChipImageGroupMalformed){}[0]
+final class io.lightine.tessera.emrtd/ChipReadOptions { // io.lightine.tessera.emrtd/ChipReadOptions|null[0]
+    constructor <init>(io.lightine.tessera.emrtd/ChipAccessKey, kotlin.collections/Set<kotlin/Int> = ..., kotlin.collections/List<io.lightine.tessera.emrtd.trust/TrustAnchor> = ..., kotlin.time/Instant? = ..., kotlin/Boolean = ..., io.lightine.tessera.emrtd.trust/DocumentSignerCertificate? = ...) // io.lightine.tessera.emrtd/ChipReadOptions.<init>|<init>(io.lightine.tessera.emrtd.ChipAccessKey;kotlin.collections.Set<kotlin.Int>;kotlin.collections.List<io.lightine.tessera.emrtd.trust.TrustAnchor>;kotlin.time.Instant?;kotlin.Boolean;io.lightine.tessera.emrtd.trust.DocumentSignerCertificate?){}[0]
 
-        final val error // io.lightine.tessera.emrtd.lds/ImageGroupParse.Malformed.error|{}error[0]
-            final fun <get-error>(): io.lightine.tessera.types.errors/ChipImageGroupMalformed // io.lightine.tessera.emrtd.lds/ImageGroupParse.Malformed.error.<get-error>|<get-error>(){}[0]
+    final val accessKey // io.lightine.tessera.emrtd/ChipReadOptions.accessKey|{}accessKey[0]
+        final fun <get-accessKey>(): io.lightine.tessera.emrtd/ChipAccessKey // io.lightine.tessera.emrtd/ChipReadOptions.accessKey.<get-accessKey>|<get-accessKey>(){}[0]
+    final val allowExtendedLength // io.lightine.tessera.emrtd/ChipReadOptions.allowExtendedLength|{}allowExtendedLength[0]
+        final fun <get-allowExtendedLength>(): kotlin/Boolean // io.lightine.tessera.emrtd/ChipReadOptions.allowExtendedLength.<get-allowExtendedLength>|<get-allowExtendedLength>(){}[0]
+    final val checkTime // io.lightine.tessera.emrtd/ChipReadOptions.checkTime|{}checkTime[0]
+        final fun <get-checkTime>(): kotlin.time/Instant? // io.lightine.tessera.emrtd/ChipReadOptions.checkTime.<get-checkTime>|<get-checkTime>(){}[0]
+    final val dataGroups // io.lightine.tessera.emrtd/ChipReadOptions.dataGroups|{}dataGroups[0]
+        final fun <get-dataGroups>(): kotlin.collections/Set<kotlin/Int> // io.lightine.tessera.emrtd/ChipReadOptions.dataGroups.<get-dataGroups>|<get-dataGroups>(){}[0]
+    final val signerCertificate // io.lightine.tessera.emrtd/ChipReadOptions.signerCertificate|{}signerCertificate[0]
+        final fun <get-signerCertificate>(): io.lightine.tessera.emrtd.trust/DocumentSignerCertificate? // io.lightine.tessera.emrtd/ChipReadOptions.signerCertificate.<get-signerCertificate>|<get-signerCertificate>(){}[0]
+    final val trustAnchors // io.lightine.tessera.emrtd/ChipReadOptions.trustAnchors|{}trustAnchors[0]
+        final fun <get-trustAnchors>(): kotlin.collections/List<io.lightine.tessera.emrtd.trust/TrustAnchor> // io.lightine.tessera.emrtd/ChipReadOptions.trustAnchors.<get-trustAnchors>|<get-trustAnchors>(){}[0]
 
-        final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/ImageGroupParse.Malformed.toString|toString(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipReadOptions.toString|toString(){}[0]
+
+    final class Builder { // io.lightine.tessera.emrtd/ChipReadOptions.Builder|null[0]
+        constructor <init>(io.lightine.tessera.emrtd/ChipAccessKey) // io.lightine.tessera.emrtd/ChipReadOptions.Builder.<init>|<init>(io.lightine.tessera.emrtd.ChipAccessKey){}[0]
+
+        final fun allowExtendedLength(kotlin/Boolean): io.lightine.tessera.emrtd/ChipReadOptions.Builder // io.lightine.tessera.emrtd/ChipReadOptions.Builder.allowExtendedLength|allowExtendedLength(kotlin.Boolean){}[0]
+        final fun build(): io.lightine.tessera.emrtd/ChipReadOptions // io.lightine.tessera.emrtd/ChipReadOptions.Builder.build|build(){}[0]
+        final fun checkTime(kotlin.time/Instant?): io.lightine.tessera.emrtd/ChipReadOptions.Builder // io.lightine.tessera.emrtd/ChipReadOptions.Builder.checkTime|checkTime(kotlin.time.Instant?){}[0]
+        final fun dataGroups(kotlin.collections/Set<kotlin/Int>): io.lightine.tessera.emrtd/ChipReadOptions.Builder // io.lightine.tessera.emrtd/ChipReadOptions.Builder.dataGroups|dataGroups(kotlin.collections.Set<kotlin.Int>){}[0]
+        final fun signerCertificate(io.lightine.tessera.emrtd.trust/DocumentSignerCertificate?): io.lightine.tessera.emrtd/ChipReadOptions.Builder // io.lightine.tessera.emrtd/ChipReadOptions.Builder.signerCertificate|signerCertificate(io.lightine.tessera.emrtd.trust.DocumentSignerCertificate?){}[0]
+        final fun trustAnchors(kotlin.collections/List<io.lightine.tessera.emrtd.trust/TrustAnchor>): io.lightine.tessera.emrtd/ChipReadOptions.Builder // io.lightine.tessera.emrtd/ChipReadOptions.Builder.trustAnchors|trustAnchors(kotlin.collections.List<io.lightine.tessera.emrtd.trust.TrustAnchor>){}[0]
     }
+}
+
+final class io.lightine.tessera.emrtd/ChipReader { // io.lightine.tessera.emrtd/ChipReader|null[0]
+    constructor <init>(io.lightine.tessera.telemetry/TelemetrySink = ...) // io.lightine.tessera.emrtd/ChipReader.<init>|<init>(io.lightine.tessera.telemetry.TelemetrySink){}[0]
+
+    final suspend fun read(io.lightine.tessera.emrtd/ApduTransport, io.lightine.tessera.emrtd/ChipReadOptions): io.lightine.tessera.emrtd/ChipReadResult // io.lightine.tessera.emrtd/ChipReader.read|read(io.lightine.tessera.emrtd.ApduTransport;io.lightine.tessera.emrtd.ChipReadOptions){}[0]
+}
+
+final class io.lightine.tessera.emrtd/CombinedMrzRead { // io.lightine.tessera.emrtd/CombinedMrzRead|null[0]
+    final val check // io.lightine.tessera.emrtd/CombinedMrzRead.check|{}check[0]
+        final fun <get-check>(): io.lightine.tessera.emrtd/ChipCheck // io.lightine.tessera.emrtd/CombinedMrzRead.check.<get-check>|<get-check>(){}[0]
+    final val differingFields // io.lightine.tessera.emrtd/CombinedMrzRead.differingFields|{}differingFields[0]
+        final fun <get-differingFields>(): kotlin.collections/List<io.lightine.tessera.types.vocabulary/MrzField> // io.lightine.tessera.emrtd/CombinedMrzRead.differingFields.<get-differingFields>|<get-differingFields>(){}[0]
+    final val fieldComparisons // io.lightine.tessera.emrtd/CombinedMrzRead.fieldComparisons|{}fieldComparisons[0]
+        final fun <get-fieldComparisons>(): kotlin.collections/List<io.lightine.tessera.emrtd/MrzFieldComparison> // io.lightine.tessera.emrtd/CombinedMrzRead.fieldComparisons.<get-fieldComparisons>|<get-fieldComparisons>(){}[0]
+    final val parseResult // io.lightine.tessera.emrtd/CombinedMrzRead.parseResult|{}parseResult[0]
+        final fun <get-parseResult>(): io.lightine.tessera.mrz.parsing/ParseResult // io.lightine.tessera.emrtd/CombinedMrzRead.parseResult.<get-parseResult>|<get-parseResult>(){}[0]
+    final val printed // io.lightine.tessera.emrtd/CombinedMrzRead.printed|{}printed[0]
+        final fun <get-printed>(): io.lightine.tessera.mrz.model/MrzDocument // io.lightine.tessera.emrtd/CombinedMrzRead.printed.<get-printed>|<get-printed>(){}[0]
+    final val sameFormat // io.lightine.tessera.emrtd/CombinedMrzRead.sameFormat|{}sameFormat[0]
+        final fun <get-sameFormat>(): kotlin/Boolean // io.lightine.tessera.emrtd/CombinedMrzRead.sameFormat.<get-sameFormat>|<get-sameFormat>(){}[0]
+    final val sexSame // io.lightine.tessera.emrtd/CombinedMrzRead.sexSame|{}sexSame[0]
+        final fun <get-sexSame>(): kotlin/Boolean // io.lightine.tessera.emrtd/CombinedMrzRead.sexSame.<get-sexSame>|<get-sexSame>(){}[0]
+
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd/CombinedMrzRead.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.emrtd/MrzFieldComparison { // io.lightine.tessera.emrtd/MrzFieldComparison|null[0]
+    final val field // io.lightine.tessera.emrtd/MrzFieldComparison.field|{}field[0]
+        final fun <get-field>(): io.lightine.tessera.types.vocabulary/MrzField // io.lightine.tessera.emrtd/MrzFieldComparison.field.<get-field>|<get-field>(){}[0]
+    final val sameAsPrinted // io.lightine.tessera.emrtd/MrzFieldComparison.sameAsPrinted|{}sameAsPrinted[0]
+        final fun <get-sameAsPrinted>(): kotlin/Boolean // io.lightine.tessera.emrtd/MrzFieldComparison.sameAsPrinted.<get-sameAsPrinted>|<get-sameAsPrinted>(){}[0]
+
+    final fun component1(): io.lightine.tessera.types.vocabulary/MrzField // io.lightine.tessera.emrtd/MrzFieldComparison.component1|component1(){}[0]
+    final fun component2(): kotlin/Boolean // io.lightine.tessera.emrtd/MrzFieldComparison.component2|component2(){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/MrzFieldComparison.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/MrzFieldComparison.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd/MrzFieldComparison.toString|toString(){}[0]
 }
 
 sealed class <#A: out kotlin/Any?> io.lightine.tessera.emrtd.lds/LdsParseResult { // io.lightine.tessera.emrtd.lds/LdsParseResult|null[0]
@@ -614,13 +1006,26 @@ sealed class io.lightine.tessera.emrtd.lds/SecurityObjectParse { // io.lightine.
     }
 }
 
+sealed class io.lightine.tessera.emrtd.trust/DocumentSignerCertificateParse { // io.lightine.tessera.emrtd.trust/DocumentSignerCertificateParse|null[0]
+    final class Parsed : io.lightine.tessera.emrtd.trust/DocumentSignerCertificateParse { // io.lightine.tessera.emrtd.trust/DocumentSignerCertificateParse.Parsed|null[0]
+        final val certificate // io.lightine.tessera.emrtd.trust/DocumentSignerCertificateParse.Parsed.certificate|{}certificate[0]
+            final fun <get-certificate>(): io.lightine.tessera.emrtd.trust/DocumentSignerCertificate // io.lightine.tessera.emrtd.trust/DocumentSignerCertificateParse.Parsed.certificate.<get-certificate>|<get-certificate>(){}[0]
+    }
+
+    final class Unreadable : io.lightine.tessera.emrtd.trust/DocumentSignerCertificateParse { // io.lightine.tessera.emrtd.trust/DocumentSignerCertificateParse.Unreadable|null[0]
+        final val offset // io.lightine.tessera.emrtd.trust/DocumentSignerCertificateParse.Unreadable.offset|{}offset[0]
+            final fun <get-offset>(): kotlin/Int // io.lightine.tessera.emrtd.trust/DocumentSignerCertificateParse.Unreadable.offset.<get-offset>|<get-offset>(){}[0]
+        final val problem // io.lightine.tessera.emrtd.trust/DocumentSignerCertificateParse.Unreadable.problem|{}problem[0]
+            final fun <get-problem>(): io.lightine.tessera.emrtd.trust/TrustAnchorProblem // io.lightine.tessera.emrtd.trust/DocumentSignerCertificateParse.Unreadable.problem.<get-problem>|<get-problem>(){}[0]
+    }
+}
+
 sealed class io.lightine.tessera.emrtd.trust/MasterListCheckOutcome { // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome|null[0]
     final class Failed : io.lightine.tessera.emrtd.trust/MasterListCheckOutcome { // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Failed|null[0]
         final val reason // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Failed.reason|{}reason[0]
             final fun <get-reason>(): io.lightine.tessera.emrtd.trust/MasterListCheckReason // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Failed.reason.<get-reason>|<get-reason>(){}[0]
 
         final fun component1(): io.lightine.tessera.emrtd.trust/MasterListCheckReason // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Failed.component1|component1(){}[0]
-        final fun copy(io.lightine.tessera.emrtd.trust/MasterListCheckReason = ...): io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Failed // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Failed.copy|copy(io.lightine.tessera.emrtd.trust.MasterListCheckReason){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Failed.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Failed.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.Failed.toString|toString(){}[0]
@@ -631,7 +1036,6 @@ sealed class io.lightine.tessera.emrtd.trust/MasterListCheckOutcome { // io.ligh
             final fun <get-reason>(): io.lightine.tessera.emrtd.trust/MasterListCheckReason // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.NotRun.reason.<get-reason>|<get-reason>(){}[0]
 
         final fun component1(): io.lightine.tessera.emrtd.trust/MasterListCheckReason // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.NotRun.component1|component1(){}[0]
-        final fun copy(io.lightine.tessera.emrtd.trust/MasterListCheckReason = ...): io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.NotRun // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.NotRun.copy|copy(io.lightine.tessera.emrtd.trust.MasterListCheckReason){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.NotRun.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.NotRun.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // io.lightine.tessera.emrtd.trust/MasterListCheckOutcome.NotRun.toString|toString(){}[0]
@@ -672,6 +1076,44 @@ sealed class io.lightine.tessera.emrtd.trust/TrustAnchorParse { // io.lightine.t
     }
 }
 
+sealed class io.lightine.tessera.emrtd/CheckOutcome { // io.lightine.tessera.emrtd/CheckOutcome|null[0]
+    final class Failed : io.lightine.tessera.emrtd/CheckOutcome { // io.lightine.tessera.emrtd/CheckOutcome.Failed|null[0]
+        final val reason // io.lightine.tessera.emrtd/CheckOutcome.Failed.reason|{}reason[0]
+            final fun <get-reason>(): io.lightine.tessera.emrtd/ChipCheckReason // io.lightine.tessera.emrtd/CheckOutcome.Failed.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun component1(): io.lightine.tessera.emrtd/ChipCheckReason // io.lightine.tessera.emrtd/CheckOutcome.Failed.component1|component1(){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/CheckOutcome.Failed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/CheckOutcome.Failed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/CheckOutcome.Failed.toString|toString(){}[0]
+    }
+
+    final class NotApplicable : io.lightine.tessera.emrtd/CheckOutcome { // io.lightine.tessera.emrtd/CheckOutcome.NotApplicable|null[0]
+        final val reason // io.lightine.tessera.emrtd/CheckOutcome.NotApplicable.reason|{}reason[0]
+            final fun <get-reason>(): io.lightine.tessera.emrtd/ChipCheckReason // io.lightine.tessera.emrtd/CheckOutcome.NotApplicable.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun component1(): io.lightine.tessera.emrtd/ChipCheckReason // io.lightine.tessera.emrtd/CheckOutcome.NotApplicable.component1|component1(){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/CheckOutcome.NotApplicable.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/CheckOutcome.NotApplicable.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/CheckOutcome.NotApplicable.toString|toString(){}[0]
+    }
+
+    final class NotRun : io.lightine.tessera.emrtd/CheckOutcome { // io.lightine.tessera.emrtd/CheckOutcome.NotRun|null[0]
+        final val reason // io.lightine.tessera.emrtd/CheckOutcome.NotRun.reason|{}reason[0]
+            final fun <get-reason>(): io.lightine.tessera.emrtd/ChipCheckReason // io.lightine.tessera.emrtd/CheckOutcome.NotRun.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun component1(): io.lightine.tessera.emrtd/ChipCheckReason // io.lightine.tessera.emrtd/CheckOutcome.NotRun.component1|component1(){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/CheckOutcome.NotRun.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/CheckOutcome.NotRun.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/CheckOutcome.NotRun.toString|toString(){}[0]
+    }
+
+    final object Passed : io.lightine.tessera.emrtd/CheckOutcome { // io.lightine.tessera.emrtd/CheckOutcome.Passed|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/CheckOutcome.Passed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/CheckOutcome.Passed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/CheckOutcome.Passed.toString|toString(){}[0]
+    }
+}
+
 sealed class io.lightine.tessera.emrtd/ChipAccessKey { // io.lightine.tessera.emrtd/ChipAccessKey|null[0]
     final val isCleared // io.lightine.tessera.emrtd/ChipAccessKey.isCleared|{}isCleared[0]
         final fun <get-isCleared>(): kotlin/Boolean // io.lightine.tessera.emrtd/ChipAccessKey.isCleared.<get-isCleared>|<get-isCleared>(){}[0]
@@ -695,6 +1137,242 @@ sealed class io.lightine.tessera.emrtd/ChipAccessKey { // io.lightine.tessera.em
     }
 }
 
+sealed class io.lightine.tessera.emrtd/ChipCheckDetail { // io.lightine.tessera.emrtd/ChipCheckDetail|null[0]
+    final class CountrySources : io.lightine.tessera.emrtd/ChipCheckDetail { // io.lightine.tessera.emrtd/ChipCheckDetail.CountrySources|null[0]
+        constructor <init>(io.lightine.tessera.emrtd/ChipCountrySource?, io.lightine.tessera.emrtd/ChipCountrySource?) // io.lightine.tessera.emrtd/ChipCheckDetail.CountrySources.<init>|<init>(io.lightine.tessera.emrtd.ChipCountrySource?;io.lightine.tessera.emrtd.ChipCountrySource?){}[0]
+
+        final val root // io.lightine.tessera.emrtd/ChipCheckDetail.CountrySources.root|{}root[0]
+            final fun <get-root>(): io.lightine.tessera.emrtd/ChipCountrySource? // io.lightine.tessera.emrtd/ChipCheckDetail.CountrySources.root.<get-root>|<get-root>(){}[0]
+        final val signer // io.lightine.tessera.emrtd/ChipCheckDetail.CountrySources.signer|{}signer[0]
+            final fun <get-signer>(): io.lightine.tessera.emrtd/ChipCountrySource? // io.lightine.tessera.emrtd/ChipCheckDetail.CountrySources.signer.<get-signer>|<get-signer>(){}[0]
+
+        final fun component1(): io.lightine.tessera.emrtd/ChipCountrySource? // io.lightine.tessera.emrtd/ChipCheckDetail.CountrySources.component1|component1(){}[0]
+        final fun component2(): io.lightine.tessera.emrtd/ChipCountrySource? // io.lightine.tessera.emrtd/ChipCheckDetail.CountrySources.component2|component2(){}[0]
+        final fun copy(io.lightine.tessera.emrtd/ChipCountrySource? = ..., io.lightine.tessera.emrtd/ChipCountrySource? = ...): io.lightine.tessera.emrtd/ChipCheckDetail.CountrySources // io.lightine.tessera.emrtd/ChipCheckDetail.CountrySources.copy|copy(io.lightine.tessera.emrtd.ChipCountrySource?;io.lightine.tessera.emrtd.ChipCountrySource?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckDetail.CountrySources.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckDetail.CountrySources.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckDetail.CountrySources.toString|toString(){}[0]
+    }
+
+    final class IssuerNameComparison : io.lightine.tessera.emrtd/ChipCheckDetail { // io.lightine.tessera.emrtd/ChipCheckDetail.IssuerNameComparison|null[0]
+        constructor <init>(io.lightine.tessera.emrtd/ChipNameComparison) // io.lightine.tessera.emrtd/ChipCheckDetail.IssuerNameComparison.<init>|<init>(io.lightine.tessera.emrtd.ChipNameComparison){}[0]
+
+        final val comparison // io.lightine.tessera.emrtd/ChipCheckDetail.IssuerNameComparison.comparison|{}comparison[0]
+            final fun <get-comparison>(): io.lightine.tessera.emrtd/ChipNameComparison // io.lightine.tessera.emrtd/ChipCheckDetail.IssuerNameComparison.comparison.<get-comparison>|<get-comparison>(){}[0]
+
+        final fun component1(): io.lightine.tessera.emrtd/ChipNameComparison // io.lightine.tessera.emrtd/ChipCheckDetail.IssuerNameComparison.component1|component1(){}[0]
+        final fun copy(io.lightine.tessera.emrtd/ChipNameComparison = ...): io.lightine.tessera.emrtd/ChipCheckDetail.IssuerNameComparison // io.lightine.tessera.emrtd/ChipCheckDetail.IssuerNameComparison.copy|copy(io.lightine.tessera.emrtd.ChipNameComparison){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckDetail.IssuerNameComparison.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckDetail.IssuerNameComparison.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckDetail.IssuerNameComparison.toString|toString(){}[0]
+    }
+
+    final class SignerCertificate : io.lightine.tessera.emrtd/ChipCheckDetail { // io.lightine.tessera.emrtd/ChipCheckDetail.SignerCertificate|null[0]
+        constructor <init>(io.lightine.tessera.emrtd/ChipSignerOrigin) // io.lightine.tessera.emrtd/ChipCheckDetail.SignerCertificate.<init>|<init>(io.lightine.tessera.emrtd.ChipSignerOrigin){}[0]
+
+        final val origin // io.lightine.tessera.emrtd/ChipCheckDetail.SignerCertificate.origin|{}origin[0]
+            final fun <get-origin>(): io.lightine.tessera.emrtd/ChipSignerOrigin // io.lightine.tessera.emrtd/ChipCheckDetail.SignerCertificate.origin.<get-origin>|<get-origin>(){}[0]
+
+        final fun component1(): io.lightine.tessera.emrtd/ChipSignerOrigin // io.lightine.tessera.emrtd/ChipCheckDetail.SignerCertificate.component1|component1(){}[0]
+        final fun copy(io.lightine.tessera.emrtd/ChipSignerOrigin = ...): io.lightine.tessera.emrtd/ChipCheckDetail.SignerCertificate // io.lightine.tessera.emrtd/ChipCheckDetail.SignerCertificate.copy|copy(io.lightine.tessera.emrtd.ChipSignerOrigin){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckDetail.SignerCertificate.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckDetail.SignerCertificate.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckDetail.SignerCertificate.toString|toString(){}[0]
+    }
+}
+
+sealed class io.lightine.tessera.emrtd/ChipCheckKind { // io.lightine.tessera.emrtd/ChipCheckKind|null[0]
+    final class CardAccessMatchesSignedCopy : io.lightine.tessera.emrtd/ChipCheckKind { // io.lightine.tessera.emrtd/ChipCheckKind.CardAccessMatchesSignedCopy|null[0]
+        constructor <init>(io.lightine.tessera.emrtd/ChipSignedCopy?) // io.lightine.tessera.emrtd/ChipCheckKind.CardAccessMatchesSignedCopy.<init>|<init>(io.lightine.tessera.emrtd.ChipSignedCopy?){}[0]
+
+        final val copy // io.lightine.tessera.emrtd/ChipCheckKind.CardAccessMatchesSignedCopy.copy|{}copy[0]
+            final fun <get-copy>(): io.lightine.tessera.emrtd/ChipSignedCopy? // io.lightine.tessera.emrtd/ChipCheckKind.CardAccessMatchesSignedCopy.copy.<get-copy>|<get-copy>(){}[0]
+
+        final fun component1(): io.lightine.tessera.emrtd/ChipSignedCopy? // io.lightine.tessera.emrtd/ChipCheckKind.CardAccessMatchesSignedCopy.component1|component1(){}[0]
+        final fun copy(io.lightine.tessera.emrtd/ChipSignedCopy? = ...): io.lightine.tessera.emrtd/ChipCheckKind.CardAccessMatchesSignedCopy // io.lightine.tessera.emrtd/ChipCheckKind.CardAccessMatchesSignedCopy.copy|copy(io.lightine.tessera.emrtd.ChipSignedCopy?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckKind.CardAccessMatchesSignedCopy.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.CardAccessMatchesSignedCopy.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckKind.CardAccessMatchesSignedCopy.toString|toString(){}[0]
+    }
+
+    final class ChipAuthentication : io.lightine.tessera.emrtd/ChipCheckKind { // io.lightine.tessera.emrtd/ChipCheckKind.ChipAuthentication|null[0]
+        constructor <init>(io.lightine.tessera.emrtd/ChipFileContext?) // io.lightine.tessera.emrtd/ChipCheckKind.ChipAuthentication.<init>|<init>(io.lightine.tessera.emrtd.ChipFileContext?){}[0]
+
+        final val context // io.lightine.tessera.emrtd/ChipCheckKind.ChipAuthentication.context|{}context[0]
+            final fun <get-context>(): io.lightine.tessera.emrtd/ChipFileContext? // io.lightine.tessera.emrtd/ChipCheckKind.ChipAuthentication.context.<get-context>|<get-context>(){}[0]
+
+        final fun component1(): io.lightine.tessera.emrtd/ChipFileContext? // io.lightine.tessera.emrtd/ChipCheckKind.ChipAuthentication.component1|component1(){}[0]
+        final fun copy(io.lightine.tessera.emrtd/ChipFileContext? = ...): io.lightine.tessera.emrtd/ChipCheckKind.ChipAuthentication // io.lightine.tessera.emrtd/ChipCheckKind.ChipAuthentication.copy|copy(io.lightine.tessera.emrtd.ChipFileContext?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckKind.ChipAuthentication.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.ChipAuthentication.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckKind.ChipAuthentication.toString|toString(){}[0]
+    }
+
+    final class DataGroupHashMatches : io.lightine.tessera.emrtd/ChipCheckKind { // io.lightine.tessera.emrtd/ChipCheckKind.DataGroupHashMatches|null[0]
+        constructor <init>(kotlin/Int) // io.lightine.tessera.emrtd/ChipCheckKind.DataGroupHashMatches.<init>|<init>(kotlin.Int){}[0]
+
+        final val dataGroup // io.lightine.tessera.emrtd/ChipCheckKind.DataGroupHashMatches.dataGroup|{}dataGroup[0]
+            final fun <get-dataGroup>(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.DataGroupHashMatches.dataGroup.<get-dataGroup>|<get-dataGroup>(){}[0]
+
+        final fun component1(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.DataGroupHashMatches.component1|component1(){}[0]
+        final fun copy(kotlin/Int = ...): io.lightine.tessera.emrtd/ChipCheckKind.DataGroupHashMatches // io.lightine.tessera.emrtd/ChipCheckKind.DataGroupHashMatches.copy|copy(kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckKind.DataGroupHashMatches.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.DataGroupHashMatches.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckKind.DataGroupHashMatches.toString|toString(){}[0]
+    }
+
+    final class PaceOfferMatchesSignedCopy : io.lightine.tessera.emrtd/ChipCheckKind { // io.lightine.tessera.emrtd/ChipCheckKind.PaceOfferMatchesSignedCopy|null[0]
+        constructor <init>(io.lightine.tessera.emrtd/ChipSignedCopy?) // io.lightine.tessera.emrtd/ChipCheckKind.PaceOfferMatchesSignedCopy.<init>|<init>(io.lightine.tessera.emrtd.ChipSignedCopy?){}[0]
+
+        final val copy // io.lightine.tessera.emrtd/ChipCheckKind.PaceOfferMatchesSignedCopy.copy|{}copy[0]
+            final fun <get-copy>(): io.lightine.tessera.emrtd/ChipSignedCopy? // io.lightine.tessera.emrtd/ChipCheckKind.PaceOfferMatchesSignedCopy.copy.<get-copy>|<get-copy>(){}[0]
+
+        final fun component1(): io.lightine.tessera.emrtd/ChipSignedCopy? // io.lightine.tessera.emrtd/ChipCheckKind.PaceOfferMatchesSignedCopy.component1|component1(){}[0]
+        final fun copy(io.lightine.tessera.emrtd/ChipSignedCopy? = ...): io.lightine.tessera.emrtd/ChipCheckKind.PaceOfferMatchesSignedCopy // io.lightine.tessera.emrtd/ChipCheckKind.PaceOfferMatchesSignedCopy.copy|copy(io.lightine.tessera.emrtd.ChipSignedCopy?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckKind.PaceOfferMatchesSignedCopy.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.PaceOfferMatchesSignedCopy.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckKind.PaceOfferMatchesSignedCopy.toString|toString(){}[0]
+    }
+
+    final class SignatureVerifies : io.lightine.tessera.emrtd/ChipCheckKind { // io.lightine.tessera.emrtd/ChipCheckKind.SignatureVerifies|null[0]
+        constructor <init>(io.lightine.tessera.emrtd/ChipSignedFile) // io.lightine.tessera.emrtd/ChipCheckKind.SignatureVerifies.<init>|<init>(io.lightine.tessera.emrtd.ChipSignedFile){}[0]
+
+        final val file // io.lightine.tessera.emrtd/ChipCheckKind.SignatureVerifies.file|{}file[0]
+            final fun <get-file>(): io.lightine.tessera.emrtd/ChipSignedFile // io.lightine.tessera.emrtd/ChipCheckKind.SignatureVerifies.file.<get-file>|<get-file>(){}[0]
+
+        final fun component1(): io.lightine.tessera.emrtd/ChipSignedFile // io.lightine.tessera.emrtd/ChipCheckKind.SignatureVerifies.component1|component1(){}[0]
+        final fun copy(io.lightine.tessera.emrtd/ChipSignedFile = ...): io.lightine.tessera.emrtd/ChipCheckKind.SignatureVerifies // io.lightine.tessera.emrtd/ChipCheckKind.SignatureVerifies.copy|copy(io.lightine.tessera.emrtd.ChipSignedFile){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckKind.SignatureVerifies.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.SignatureVerifies.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckKind.SignatureVerifies.toString|toString(){}[0]
+    }
+
+    final class SignerChainsToSuppliedRoot : io.lightine.tessera.emrtd/ChipCheckKind { // io.lightine.tessera.emrtd/ChipCheckKind.SignerChainsToSuppliedRoot|null[0]
+        constructor <init>(io.lightine.tessera.emrtd/ChipSignedFile) // io.lightine.tessera.emrtd/ChipCheckKind.SignerChainsToSuppliedRoot.<init>|<init>(io.lightine.tessera.emrtd.ChipSignedFile){}[0]
+
+        final val file // io.lightine.tessera.emrtd/ChipCheckKind.SignerChainsToSuppliedRoot.file|{}file[0]
+            final fun <get-file>(): io.lightine.tessera.emrtd/ChipSignedFile // io.lightine.tessera.emrtd/ChipCheckKind.SignerChainsToSuppliedRoot.file.<get-file>|<get-file>(){}[0]
+
+        final fun component1(): io.lightine.tessera.emrtd/ChipSignedFile // io.lightine.tessera.emrtd/ChipCheckKind.SignerChainsToSuppliedRoot.component1|component1(){}[0]
+        final fun copy(io.lightine.tessera.emrtd/ChipSignedFile = ...): io.lightine.tessera.emrtd/ChipCheckKind.SignerChainsToSuppliedRoot // io.lightine.tessera.emrtd/ChipCheckKind.SignerChainsToSuppliedRoot.copy|copy(io.lightine.tessera.emrtd.ChipSignedFile){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckKind.SignerChainsToSuppliedRoot.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.SignerChainsToSuppliedRoot.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckKind.SignerChainsToSuppliedRoot.toString|toString(){}[0]
+    }
+
+    final class SignerCriticalExtensionsRecognized : io.lightine.tessera.emrtd/ChipCheckKind { // io.lightine.tessera.emrtd/ChipCheckKind.SignerCriticalExtensionsRecognized|null[0]
+        constructor <init>(io.lightine.tessera.emrtd/ChipSignedFile) // io.lightine.tessera.emrtd/ChipCheckKind.SignerCriticalExtensionsRecognized.<init>|<init>(io.lightine.tessera.emrtd.ChipSignedFile){}[0]
+
+        final val file // io.lightine.tessera.emrtd/ChipCheckKind.SignerCriticalExtensionsRecognized.file|{}file[0]
+            final fun <get-file>(): io.lightine.tessera.emrtd/ChipSignedFile // io.lightine.tessera.emrtd/ChipCheckKind.SignerCriticalExtensionsRecognized.file.<get-file>|<get-file>(){}[0]
+
+        final fun component1(): io.lightine.tessera.emrtd/ChipSignedFile // io.lightine.tessera.emrtd/ChipCheckKind.SignerCriticalExtensionsRecognized.component1|component1(){}[0]
+        final fun copy(io.lightine.tessera.emrtd/ChipSignedFile = ...): io.lightine.tessera.emrtd/ChipCheckKind.SignerCriticalExtensionsRecognized // io.lightine.tessera.emrtd/ChipCheckKind.SignerCriticalExtensionsRecognized.copy|copy(io.lightine.tessera.emrtd.ChipSignedFile){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckKind.SignerCriticalExtensionsRecognized.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.SignerCriticalExtensionsRecognized.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckKind.SignerCriticalExtensionsRecognized.toString|toString(){}[0]
+    }
+
+    final class SignerWithinValidityPeriod : io.lightine.tessera.emrtd/ChipCheckKind { // io.lightine.tessera.emrtd/ChipCheckKind.SignerWithinValidityPeriod|null[0]
+        constructor <init>(io.lightine.tessera.emrtd/ChipSignedFile) // io.lightine.tessera.emrtd/ChipCheckKind.SignerWithinValidityPeriod.<init>|<init>(io.lightine.tessera.emrtd.ChipSignedFile){}[0]
+
+        final val file // io.lightine.tessera.emrtd/ChipCheckKind.SignerWithinValidityPeriod.file|{}file[0]
+            final fun <get-file>(): io.lightine.tessera.emrtd/ChipSignedFile // io.lightine.tessera.emrtd/ChipCheckKind.SignerWithinValidityPeriod.file.<get-file>|<get-file>(){}[0]
+
+        final fun component1(): io.lightine.tessera.emrtd/ChipSignedFile // io.lightine.tessera.emrtd/ChipCheckKind.SignerWithinValidityPeriod.component1|component1(){}[0]
+        final fun copy(io.lightine.tessera.emrtd/ChipSignedFile = ...): io.lightine.tessera.emrtd/ChipCheckKind.SignerWithinValidityPeriod // io.lightine.tessera.emrtd/ChipCheckKind.SignerWithinValidityPeriod.copy|copy(io.lightine.tessera.emrtd.ChipSignedFile){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckKind.SignerWithinValidityPeriod.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.SignerWithinValidityPeriod.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckKind.SignerWithinValidityPeriod.toString|toString(){}[0]
+    }
+
+    final object ActiveAuthentication : io.lightine.tessera.emrtd/ChipCheckKind { // io.lightine.tessera.emrtd/ChipCheckKind.ActiveAuthentication|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckKind.ActiveAuthentication.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.ActiveAuthentication.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckKind.ActiveAuthentication.toString|toString(){}[0]
+    }
+
+    final object Dg1MatchesPrintedMrz : io.lightine.tessera.emrtd/ChipCheckKind { // io.lightine.tessera.emrtd/ChipCheckKind.Dg1MatchesPrintedMrz|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckKind.Dg1MatchesPrintedMrz.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.Dg1MatchesPrintedMrz.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckKind.Dg1MatchesPrintedMrz.toString|toString(){}[0]
+    }
+
+    final object EfDirMatchesSignedCopy : io.lightine.tessera.emrtd/ChipCheckKind { // io.lightine.tessera.emrtd/ChipCheckKind.EfDirMatchesSignedCopy|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckKind.EfDirMatchesSignedCopy.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.EfDirMatchesSignedCopy.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckKind.EfDirMatchesSignedCopy.toString|toString(){}[0]
+    }
+
+    final object IssueDateInSignerUsagePeriod : io.lightine.tessera.emrtd/ChipCheckKind { // io.lightine.tessera.emrtd/ChipCheckKind.IssueDateInSignerUsagePeriod|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckKind.IssueDateInSignerUsagePeriod.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.IssueDateInSignerUsagePeriod.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckKind.IssueDateInSignerUsagePeriod.toString|toString(){}[0]
+    }
+
+    final object PaceChipAuthenticationMapping : io.lightine.tessera.emrtd/ChipCheckKind { // io.lightine.tessera.emrtd/ChipCheckKind.PaceChipAuthenticationMapping|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckKind.PaceChipAuthenticationMapping.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.PaceChipAuthenticationMapping.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckKind.PaceChipAuthenticationMapping.toString|toString(){}[0]
+    }
+
+    final object SignerCountryMatchesRootCountry : io.lightine.tessera.emrtd/ChipCheckKind { // io.lightine.tessera.emrtd/ChipCheckKind.SignerCountryMatchesRootCountry|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckKind.SignerCountryMatchesRootCountry.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.SignerCountryMatchesRootCountry.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckKind.SignerCountryMatchesRootCountry.toString|toString(){}[0]
+    }
+
+    final object SignerDocumentTypeMatches : io.lightine.tessera.emrtd/ChipCheckKind { // io.lightine.tessera.emrtd/ChipCheckKind.SignerDocumentTypeMatches|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckKind.SignerDocumentTypeMatches.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.SignerDocumentTypeMatches.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckKind.SignerDocumentTypeMatches.toString|toString(){}[0]
+    }
+
+    final object SignerKeyUsageIsDigitalSignatureOnly : io.lightine.tessera.emrtd/ChipCheckKind { // io.lightine.tessera.emrtd/ChipCheckKind.SignerKeyUsageIsDigitalSignatureOnly|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckKind.SignerKeyUsageIsDigitalSignatureOnly.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.SignerKeyUsageIsDigitalSignatureOnly.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckKind.SignerKeyUsageIsDigitalSignatureOnly.toString|toString(){}[0]
+    }
+
+    final object SignerNotRevoked : io.lightine.tessera.emrtd/ChipCheckKind { // io.lightine.tessera.emrtd/ChipCheckKind.SignerNotRevoked|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipCheckKind.SignerNotRevoked.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipCheckKind.SignerNotRevoked.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipCheckKind.SignerNotRevoked.toString|toString(){}[0]
+    }
+}
+
+sealed class io.lightine.tessera.emrtd/ChipReadResult { // io.lightine.tessera.emrtd/ChipReadResult|null[0]
+    final class Complete : io.lightine.tessera.emrtd/ChipReadResult { // io.lightine.tessera.emrtd/ChipReadResult.Complete|null[0]
+        final val read // io.lightine.tessera.emrtd/ChipReadResult.Complete.read|{}read[0]
+            final fun <get-read>(): io.lightine.tessera.emrtd/ChipRead // io.lightine.tessera.emrtd/ChipReadResult.Complete.read.<get-read>|<get-read>(){}[0]
+
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipReadResult.Complete.toString|toString(){}[0]
+    }
+
+    final class Failed : io.lightine.tessera.emrtd/ChipReadResult { // io.lightine.tessera.emrtd/ChipReadResult.Failed|null[0]
+        final val access // io.lightine.tessera.emrtd/ChipReadResult.Failed.access|{}access[0]
+            final fun <get-access>(): io.lightine.tessera.emrtd/AccessReport? // io.lightine.tessera.emrtd/ChipReadResult.Failed.access.<get-access>|<get-access>(){}[0]
+        final val error // io.lightine.tessera.emrtd/ChipReadResult.Failed.error|{}error[0]
+            final fun <get-error>(): io.lightine.tessera.types.errors/ChipError // io.lightine.tessera.emrtd/ChipReadResult.Failed.error.<get-error>|<get-error>(){}[0]
+
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipReadResult.Failed.toString|toString(){}[0]
+    }
+
+    final class Partial : io.lightine.tessera.emrtd/ChipReadResult { // io.lightine.tessera.emrtd/ChipReadResult.Partial|null[0]
+        final val read // io.lightine.tessera.emrtd/ChipReadResult.Partial.read|{}read[0]
+            final fun <get-read>(): io.lightine.tessera.emrtd/ChipRead // io.lightine.tessera.emrtd/ChipReadResult.Partial.read.<get-read>|<get-read>(){}[0]
+        final val stoppedBy // io.lightine.tessera.emrtd/ChipReadResult.Partial.stoppedBy|{}stoppedBy[0]
+            final fun <get-stoppedBy>(): io.lightine.tessera.types.errors/ChipError // io.lightine.tessera.emrtd/ChipReadResult.Partial.stoppedBy.<get-stoppedBy>|<get-stoppedBy>(){}[0]
+
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipReadResult.Partial.toString|toString(){}[0]
+    }
+}
+
 final object io.lightine.tessera.emrtd.trust/MasterListReader { // io.lightine.tessera.emrtd.trust/MasterListReader|null[0]
     final fun read(kotlin/ByteArray, kotlin.collections/List<io.lightine.tessera.emrtd.trust/TrustAnchor> = ...): io.lightine.tessera.emrtd.trust/MasterListRead // io.lightine.tessera.emrtd.trust/MasterListReader.read|read(kotlin.ByteArray;kotlin.collections.List<io.lightine.tessera.emrtd.trust.TrustAnchor>){}[0]
+}
+
+final object io.lightine.tessera.emrtd/ChipMrzComparison { // io.lightine.tessera.emrtd/ChipMrzComparison|null[0]
+    final fun combine(io.lightine.tessera.mrz.model/MrzDocument, io.lightine.tessera.emrtd.lds/Dg1View): io.lightine.tessera.emrtd/CombinedMrzRead // io.lightine.tessera.emrtd/ChipMrzComparison.combine|combine(io.lightine.tessera.mrz.model.MrzDocument;io.lightine.tessera.emrtd.lds.Dg1View){}[0]
+    final fun combine(io.lightine.tessera.mrz.model/MrzDocument, io.lightine.tessera.emrtd/ChipRead): io.lightine.tessera.emrtd/CombinedMrzRead? // io.lightine.tessera.emrtd/ChipMrzComparison.combine|combine(io.lightine.tessera.mrz.model.MrzDocument;io.lightine.tessera.emrtd.ChipRead){}[0]
 }

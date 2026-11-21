@@ -31,6 +31,11 @@ import io.lightine.tessera.emrtd.internal.tlv.TlvWriter
 internal class FakeSm(
     private val crypto: ChipCrypto,
     val accessControl: Boolean = true,
+    /**
+     * Master-file EFs a reader may select and read before any session, as real chips allow for
+     * EF.CardAccess and EF.ATR/INFO (Part 10, 3.11.3 and 3.10). Empty by default.
+     */
+    val openFiles: Set<Int> = emptySet(),
 ) : FakeCommandHandler {
     private class Session(
         val cipher: SmCipher,
@@ -65,6 +70,17 @@ internal class FakeSm(
         session = Session(cipher, kEnc.copyOf(), kMac.copyOf(), ssc.copyOf())
     }
 
+    private fun isOpenFileCommand(
+        chip: FakeChip,
+        c: CommandApdu,
+    ): Boolean {
+        if (openFiles.isEmpty() || chip.currentApplication != null) return false
+        if (c.ins == ChipCommands.INS_READ_BINARY) return chip.currentEf in openFiles
+        if (c.ins != ChipCommands.INS_SELECT || c.data.size != 2) return false
+        val fid = ((c.data[0].toInt() and 0xFF) shl 8) or (c.data[1].toInt() and 0xFF)
+        return (c.p1 == 0x00 && fid == FakeChip.MF_FID) || (c.p1 == ChipCommands.SELECT_EF_UNDER_CURRENT_DF && fid in openFiles)
+    }
+
     private fun abort(sw: Int): ResponseApdu {
         session = null
         sessionsAborted++
@@ -82,6 +98,7 @@ internal class FakeSm(
             if (!accessControl) return null
             val open = command.ins == ChipCommands.INS_SELECT && command.p1 == ChipCommands.SELECT_BY_AID
             return if (open ||
+                isOpenFileCommand(chip, command) ||
                 command.ins in ACCESS_PROTOCOL_INS
             ) {
                 null

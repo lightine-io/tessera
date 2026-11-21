@@ -207,11 +207,13 @@ public sealed class MasterListCheckOutcome {
     public data object Passed : MasterListCheckOutcome()
 
     /** The calculation did not give the expected result, for [reason]. */
+    @ConsistentCopyVisibility
     public data class Failed internal constructor(
         public val reason: MasterListCheckReason,
     ) : MasterListCheckOutcome()
 
     /** The check could not run, for [reason]. */
+    @ConsistentCopyVisibility
     public data class NotRun internal constructor(
         public val reason: MasterListCheckReason,
     ) : MasterListCheckOutcome()
