@@ -1,19 +1,11 @@
 package io.lightine.tessera.emrtd.internal.crypto
 
 /**
- * Runs [block] with this platform's [ChipCrypto]. On a platform with no backend yet (iOS until the
- * OpenSSL backend lands) the vector tests have nothing to check and return early; iosTest asserts
- * that the backend is indeed absent there, so the skip cannot hide a missing backend elsewhere
- * (jvmTest and androidHostTest assert it is present).
+ * Runs [block] with this platform's [ChipCrypto]. Every platform has a backend (BouncyCastle on JVM
+ * and Android, OpenSSL on iOS), so the vector tests run everywhere and never skip.
  */
 internal inline fun withCrypto(block: (ChipCrypto) -> Unit) {
-    val crypto =
-        try {
-            chipCrypto()
-        } catch (e: ChipCryptoUnavailableException) {
-            return
-        }
-    block(crypto)
+    block(chipCrypto())
 }
 
 internal fun hex(s: String): ByteArray = s.filter { !it.isWhitespace() }.hexToByteArray()

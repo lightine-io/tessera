@@ -57,7 +57,41 @@ kotlin {
             export(project(":mrz-core"))
             export(project(":types"))
             export(project(":telemetry"))
+            // The chip-reading core (experimental), so iOS chip reading ships in the same framework.
+            // It embeds OpenSSL's libcrypto (emrtd-core's cinterop), whose symbols are hidden below.
+            export(project(":emrtd-core"))
             xcframework.add(this)
+            // OpenSSL's symbols must not leak from the framework: an app with its own OpenSSL would
+            // get duplicate symbols, or silently mix two versions. A single-object prelink makes
+            // them local after each link (scripts/hide-openssl-symbols.sh, which fails if any
+            // stays global). The symbol list comes from the OpenSSL build for the same slice.
+            val hideScript =
+                rootProject.layout.projectDirectory
+                    .file("scripts/hide-openssl-symbols.sh")
+                    .asFile
+            val opensslSymbols =
+                project(":emrtd-core")
+                    .layout.buildDirectory
+                    .file("openssl/${opensslSlice(iosTarget.name)}/openssl-symbols.txt")
+                    .get()
+                    .asFile
+            // The minimum iOS version matches osVersionMin above. The platform goes into the merged
+            // object's build version, which the XCFramework step reads.
+            val platform = if (iosTarget.name == "iosArm64") "ios" else "ios-simulator"
+            linkTaskProvider.configure {
+                inputs.file(hideScript)
+                doLast {
+                    val binary = outputFile.get().resolve("Tessera")
+                    val process =
+                        ProcessBuilder("bash", hideScript.path, binary.path, opensslSymbols.path, platform, "18.0")
+                            .redirectErrorStream(true)
+                            .start()
+                    val output = process.inputStream.bufferedReader().readText()
+                    val exit = process.waitFor()
+                    check(exit == 0) { "hiding OpenSSL's symbols in $binary failed (exit $exit):\n$output" }
+                    logger.lifecycle(output.trim())
+                }
+            }
         }
     }
 
@@ -69,6 +103,8 @@ kotlin {
                 // core types — so the core is `api`, seen transitively (it re-exports types / mrz-core
                 // / telemetry / coroutines in turn).
                 api(project(":mrz-camera-core"))
+                // Exported from the framework (above), which needs an `api` dependency.
+                api(project(":emrtd-core"))
             }
         }
         // The tests are iOS-only (they drive Apple Vision on the Simulator), so the test framework
@@ -96,4 +132,39 @@ tasks.register<Zip>("packTesseraXCFramework") {
     include("Tessera.xcframework/**")
     archiveFileName.set("Tessera.xcframework.zip")
     destinationDirectory.set(layout.buildDirectory.dir("distributions"))
+}
+
+/** emrtd-core's OpenSSL build folder for a Kotlin iOS target (scripts/build-openssl-ios.sh slices). */
+fun opensslSlice(targetName: String): String =
+    when (targetName) {
+        "iosArm64" -> "ios-arm64"
+        "iosSimulatorArm64" -> "ios-simulator-arm64"
+        else -> error("no OpenSSL slice for $targetName")
+    }
+
+// Link test (TES-320): an app that links its own OpenSSL next to the framework gets no duplicate
+// symbols (scripts/test-openssl-symbol-clash.sh). It links the debug simulator framework against the
+// same libcrypto build, standing in for the app's own copy. Runs in the ios-compile CI job.
+tasks.register<Exec>("checkOpenSslSymbolClash") {
+    group = "verification"
+    description = "Links an app with its own OpenSSL next to the Tessera framework; fails on duplicate symbols."
+    dependsOn("linkDebugFrameworkIosSimulatorArm64")
+    val openssl =
+        project(":emrtd-core")
+            .layout.buildDirectory
+            .dir("openssl/ios-simulator-arm64")
+            .get()
+            .asFile
+    val framework =
+        layout.buildDirectory
+            .dir("bin/iosSimulatorArm64/debugFramework/Tessera.framework")
+            .get()
+            .asFile
+    executable = "bash"
+    args(
+        rootProject.file("scripts/test-openssl-symbol-clash.sh").path,
+        framework.path,
+        openssl.resolve("lib/libcrypto.a").path,
+        openssl.resolve("include").path,
+    )
 }

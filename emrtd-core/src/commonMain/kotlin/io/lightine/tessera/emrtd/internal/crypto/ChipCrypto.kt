@@ -3,7 +3,7 @@ package io.lightine.tessera.emrtd.internal.crypto
 /**
  * The cryptography the chip protocols need (ADR-031 point 2), behind one internal interface so the
  * protocol code stays in common Kotlin and each platform plugs in a vetted library: BouncyCastle's
- * lightweight API on JVM and Android ([chipCrypto]), OpenSSL on iOS (planned).
+ * lightweight API on JVM and Android ([chipCrypto]), OpenSSL libcrypto on iOS.
  *
  * Only bytes and the types of this package cross the interface; no library type leaks out, and
  * nothing here is public API. All integers are unsigned big-endian byte arrays; a leading zero byte
@@ -181,13 +181,14 @@ internal open class ChipCryptoException(
 ) : Exception(message, cause)
 
 /**
- * This platform has no cryptography backend yet. iOS gets OpenSSL in a later change; until then
- * chip reading cannot run there.
+ * No cryptography backend is available. Every platform the SDK builds for has one (BouncyCastle on
+ * JVM and Android, OpenSSL on iOS); the callers that catch this keep a typed "not run" path for a
+ * future platform without one, and the tests inject it to check that path.
  */
 internal class ChipCryptoUnavailableException : ChipCryptoException("no chip cryptography on this platform yet")
 
 /**
- * This platform's [ChipCrypto]: BouncyCastle on JVM and Android. Throws
- * [ChipCryptoUnavailableException] on a platform that has none yet (iOS, until OpenSSL lands).
+ * This platform's [ChipCrypto]: BouncyCastle on JVM and Android, OpenSSL's libcrypto on iOS. A
+ * platform with none would throw [ChipCryptoUnavailableException].
  */
 internal expect fun chipCrypto(): ChipCrypto
