@@ -283,8 +283,8 @@ public object MrzValidator {
             personalNumberCheck == '<' -> {
                 // All-filler personal number with a filler check digit: conformant, nothing to report.
                 // ICAO Doc 9303 Part 4 (8th ed., 2021), 4.2.2.2, position 43: when positions 29 to 42
-                // are all filler, "the check digit may be zero or the filler character (<) at the
-                // option of the issuing State or organization". `0` is the computed value, so the
+                // are all filler, the issuer may write either `0` or the filler `<` in the check
+                // digit position. `0` is the computed value, so the
                 // mismatch check below already accepts it (TES-173).
             }
 

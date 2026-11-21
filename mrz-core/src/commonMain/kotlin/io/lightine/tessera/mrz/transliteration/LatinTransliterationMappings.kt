@@ -18,12 +18,11 @@ package io.lightine.tessera.mrz.transliteration
 // the no-expansion variant is chosen and applied consistently — the choice
 // is recorded in IcaoDefaultTransliterationProfile's KDoc.
 //
-// Punctuation handling: per ICAO Doc 9303 Part 3 §4.6, apostrophes shall be
-// omitted (no filler), hyphens shall be converted to the filler character
-// (handled implicitly via the unmapped-character fallback), a comma between two
-// name components is one filler (handled by mapToMrzAlphabet), and "all other
-// punctuation characters shall be omitted from the MRZ (no filler character
-// shall be inserted in their place)." Apostrophe and common Western
+// Punctuation handling, following ICAO Doc 9303 Part 3 §4.6 (summarized here in
+// our own words): an apostrophe is dropped with no filler; a hyphen becomes one
+// filler (handled by the unmapped-character fallback); a comma between two name
+// components is one filler (handled by mapToMrzAlphabet); any other punctuation
+// is dropped with no filler. Apostrophe and common Western
 // punctuation are explicitly mapped to the empty string below so the
 // fallback-to-filler behaviour does not apply to them.
 //
@@ -69,14 +68,14 @@ internal fun buildIcaoLatinMappings(): MutableMap<Char, String> {
     addAll(map, "Ðð", "D")
     addAll(map, "Ĳĳ", "IJ")
 
-    // Per ICAO Doc 9303 Part 3 §4.6: apostrophes shall be omitted (no filler).
+    // ICAO Doc 9303 Part 3 §4.6: an apostrophe is dropped, with no filler.
     // Covers ASCII apostrophe (U+0027), left/right single quotation marks
     // (U+2018 / U+2019), acute accent (U+00B4), and grave accent (U+0060) —
     // characters commonly typed where an apostrophe is intended.
     addAll(map, "'’‘´`", "")
 
-    // Per ICAO Doc 9303 Part 3 §4.6: "All other punctuation characters shall be
-    // omitted from the MRZ (no filler character shall be inserted in their place)."
+    // ICAO Doc 9303 Part 3 §4.6: other punctuation is dropped from the MRZ, with no
+    // filler in its place.
     // Note: '-' (U+002D) is NOT in this list — per §4.6 hyphens convert to filler,
     // which is the unmapped-character fallback the profile already applies.
     // ',' (U+002C) is NOT in this list either: per §4.6 a comma between two name

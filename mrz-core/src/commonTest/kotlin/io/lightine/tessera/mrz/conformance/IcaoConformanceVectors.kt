@@ -433,8 +433,8 @@ internal enum class NameGeneration {
  *   before the first `<<`, with each single `<` read as a space.
  * @property secondaryIdentifier The text after the first `<<`, read the same way.
  * @property sdkReportsTruncation The SDK's documented rule (CommonFields.nameTruncated,
- *   MrzNameTruncated): the field fills its width with no trailing `<`. Doc 9303 says such a field
- *   "must be treated as though truncation had occurred" (Part 4, 4.2.3), so the SDK reports the
+ *   MrzNameTruncated): the field fills its width with no trailing `<`. Doc 9303 (Part 4, 4.2.3)
+ *   has a reader treat such a field as possibly truncated, so the SDK reports the
  *   names that just fit too. That is by design, not a finding.
  * @property doc9303Says What Doc 9303 says about truncation for this example.
  */

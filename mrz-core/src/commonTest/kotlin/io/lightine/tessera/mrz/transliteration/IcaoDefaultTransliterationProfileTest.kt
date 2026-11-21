@@ -105,9 +105,8 @@ class IcaoDefaultTransliterationProfileTest {
 
     @Test
     fun apostrophe_is_omitted_per_icao_part_3_section_4_6() {
-        // Spec: "Apostrophe: This shall be omitted; name components separated by
-        // the apostrophe shall be combined, and no filler character shall be
-        // inserted in its place in the MRZ. Example VIZ: D'ARTAGNAN MRZ: DARTAGNAN."
+        // Doc 9303 Part 3 §4.6: an apostrophe is dropped and the name parts it separated
+        // are joined, with no filler (its example: D'ARTAGNAN becomes DARTAGNAN).
         assertEquals(
             TransliterationResult.Success("DARTAGNAN"),
             IcaoDefaultTransliterationProfile.toMrzAlphabet("D'ARTAGNAN"),
@@ -125,8 +124,8 @@ class IcaoDefaultTransliterationProfileTest {
 
     @Test
     fun common_punctuation_is_omitted_per_icao_part_3_section_4_6() {
-        // Spec: "All other punctuation characters shall be omitted from the MRZ
-        // (no filler character shall be inserted in their place in the MRZ)."
+        // Doc 9303 Part 3 §4.6: other punctuation is dropped from the MRZ, with no
+        // filler in its place.
         assertEquals(
             TransliterationResult.Success("ABC"),
             IcaoDefaultTransliterationProfile.toMrzAlphabet("A.B;C"),
@@ -169,8 +168,8 @@ class IcaoDefaultTransliterationProfileTest {
 
     @Test
     fun hyphen_falls_through_to_filler_per_icao_part_3_section_4_6() {
-        // Spec: "Where a hyphen appears between two name components, it shall
-        // be represented in the MRZ by a single filler character (<)."
+        // Doc 9303 Part 3 §4.6: a hyphen between two name components becomes one
+        // filler character (<).
         // Hyphen is intentionally NOT in the punctuation-omitted set; it uses
         // the unmapped-character fallback to filler.
         assertEquals(
