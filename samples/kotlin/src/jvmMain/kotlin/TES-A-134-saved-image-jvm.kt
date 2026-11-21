@@ -14,23 +14,21 @@ import java.nio.file.Path
 import kotlin.time.Instant
 // endregion
 
-fun main() {
-    // region TES-A-134 block 3
-    val recognizer = MrzTextRecognizer<Path> { image ->
-        // Run your OCR engine on the file at "image" and return every line it read.
-        RecognizedText(
-            listOf(
-                RecognizedLine("P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<", null),
-                RecognizedLine("T220001293UTO9003152F3403141S98765432<<<<<20", null),
-            ),
-        )
+// region TES-A-134 block 3
+class FileOcrEngine : MrzTextRecognizer<Path> {
+    override suspend fun recognize(image: Path): RecognizedText {
+        // Run your OCR engine on the file at "image" here.
+        val engineLines: List<RecognizedLine> = emptyList() // yourEngine.read(image)
+        return RecognizedText(engineLines)
     }
-    // endregion
+}
+// endregion
 
+fun main() {
     // region TES-A-134 block 4
     val reader = SavedImageMrzReader(
         acknowledgement = SavedImageReadingAcknowledgement(),
-        recognizer = recognizer,
+        recognizer = FileOcrEngine(),
         referenceTimeProvider = { Instant.parse("2026-11-21T00:00:00Z") },
     )
     // endregion
