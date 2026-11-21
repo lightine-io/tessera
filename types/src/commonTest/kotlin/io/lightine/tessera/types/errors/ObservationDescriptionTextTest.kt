@@ -19,7 +19,7 @@ class ObservationDescriptionTextTest {
 
     private val warnings: List<MrzWarning> =
         listOf(
-            MrzExpiryDateAfterSingleLetterPassportLimit("P<", date),
+            MrzExpiryDateAfterNonHarmonizedPassportLimit("P<", date),
             MrzExpiryDateCenturyNotInferred("00", "01", "01", date),
             MrzExpiryDateImplausiblyFar(date, date, 20),
             MrzExpiryDatePast(date, date),
@@ -74,7 +74,7 @@ class ObservationDescriptionTextTest {
     // Exhaustive `when`s: a new subtype is a compile error until it is listed here and in the samples.
     private fun exhaustive(w: MrzWarning): Boolean =
         when (w) {
-            is MrzExpiryDateAfterSingleLetterPassportLimit,
+            is MrzExpiryDateAfterNonHarmonizedPassportLimit,
             is MrzExpiryDateCenturyNotInferred,
             is MrzExpiryDateImplausiblyFar,
             is MrzExpiryDatePast,

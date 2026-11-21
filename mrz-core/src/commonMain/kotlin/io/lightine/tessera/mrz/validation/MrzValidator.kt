@@ -23,7 +23,7 @@ import io.lightine.tessera.mrz.recognition.CountryCode
 import io.lightine.tessera.mrz.recognition.DocumentType
 import io.lightine.tessera.types.errors.MrzCheckDigitMismatch
 import io.lightine.tessera.types.errors.MrzDateNotInCalendar
-import io.lightine.tessera.types.errors.MrzExpiryDateAfterSingleLetterPassportLimit
+import io.lightine.tessera.types.errors.MrzExpiryDateAfterNonHarmonizedPassportLimit
 import io.lightine.tessera.types.errors.MrzExpiryDateCenturyNotInferred
 import io.lightine.tessera.types.errors.MrzExpiryDateImplausiblyFar
 import io.lightine.tessera.types.errors.MrzExpiryDatePast
@@ -52,7 +52,7 @@ import kotlin.time.Instant
  *
  * Reports `MrzCheckDigitMismatch`, `MrzDateNotInCalendar`, and `MrzInvalidSexValue` as validation
  * failures. Reports `MrzExpiryDatePast`, `MrzExpiryDateImplausiblyFar`,
- * `MrzExpiryDateCenturyNotInferred`, `MrzExpiryDateAfterSingleLetterPassportLimit`,
+ * `MrzExpiryDateCenturyNotInferred`, `MrzExpiryDateAfterNonHarmonizedPassportLimit`,
  * `MrzNameTruncated`, `MrzUnknownCountryCode`,
  * `MrzUnknownDocumentTypeCode`, `MrzSexCharacterX`, and `MrzPersonalNumberCheckDigitFiller` as
  * warnings. Visa formats have no composite check digit and no optional-data check digit.
@@ -62,9 +62,14 @@ import kotlin.time.Instant
 public object MrzValidator {
     private val VALID_SEX_CHARACTERS = setOf('M', 'F', '<', 'X')
 
-    // ICAO Doc 9303 Part 4 (8th ed.), 4.4: a passport without a second document code letter
-    // expires before this date.
-    private val SINGLE_LETTER_PASSPORT_EXPIRY_LIMIT = LocalDate(2038, 1, 1)
+    // ICAO Doc 9303 Part 4 (8th ed.), 4.4: a passport without a harmonized second document code
+    // letter expires before this date.
+    private val NON_HARMONIZED_PASSPORT_EXPIRY_LIMIT = LocalDate(2038, 1, 1)
+
+    // The second letters of the 4.4 table (PP, PE, PD, PO, PR, PT, PS, PL, PM), plus U: Part 4 notes
+    // that PU is the designated code for single sheet documents (Doc 9303-8), which are not
+    // passports under 4.4, so a PU code is never judged.
+    private const val HARMONIZED_PASSPORT_SECOND_LETTERS = "PEDORTSLMU"
     private const val EXPIRY_IMPLAUSIBLY_FAR_THRESHOLD_YEARS = 10
 
     /**
@@ -76,9 +81,12 @@ public object MrzValidator {
      * than 10 years after it. Both compare UTC dates. Reports [MrzExpiryDateCenturyNotInferred]
      * instead when the expiry parts are digits that form a real date but neither the 2000s nor the
      * 1900s puts the year from 10 years before to 50 years after the reference year, so there is no
-     * expiry date to compare. For a TD3 document whose document code is `P<`, also reports
-     * [MrzExpiryDateAfterSingleLetterPassportLimit] when the computed expiry date is on or after
-     * 2038-01-01 (ICAO Doc 9303 Part 4, section 4.4); never when the expiry century is unknown.
+     * expiry date to compare. For a TD3 document whose document code starts with `P` and whose
+     * second character is not a letter of the Part 4 table (`P`, `E`, `D`, `O`, `R`, `T`, `S`, `L`,
+     * `M`; `U` is also left out, the designated code for single sheet documents), the filler `<`
+     * included, also reports [MrzExpiryDateAfterNonHarmonizedPassportLimit] when the computed
+     * expiry date is on or after 2038-01-01 (ICAO Doc 9303 Part 4, section 4.4); never when the
+     * expiry century is unknown.
      *
      * If `document.rawLines` cannot be read as the document's format, no check runs and
      * `structuralFailure` says why: `MrzInvalidLength` when the line count or a line length does
@@ -344,7 +352,7 @@ public object MrzValidator {
             expiryDate = document.commonFields.dateOfExpiry,
             referenceTime = referenceTime,
         )
-        addSingleLetterPassportExpiryWarningIfApplicable(
+        addNonHarmonizedPassportExpiryWarningIfApplicable(
             into = warnings,
             rawDocumentCode = Td3FormatSpec.documentType.extractFrom(rawLines),
             expiryDate = document.commonFields.dateOfExpiry,
@@ -819,15 +827,16 @@ public object MrzValidator {
     // document code letter shall expire before 1 January 2038. Judged only on a computed expiry
     // date, so it never comes with MrzExpiryDateCenturyNotInferred. The code is read verbatim from
     // the lines; a second letter that is present is not checked against the 4.4 table.
-    private fun addSingleLetterPassportExpiryWarningIfApplicable(
+    private fun addNonHarmonizedPassportExpiryWarningIfApplicable(
         into: MutableList<MrzWarning>,
         rawDocumentCode: String,
         expiryDate: MrzDate,
     ) {
-        if (rawDocumentCode.length != 2 || rawDocumentCode[0] != 'P' || rawDocumentCode[1] != '<') return
+        if (rawDocumentCode.length != 2 || rawDocumentCode[0] != 'P') return
+        if (rawDocumentCode[1] in HARMONIZED_PASSPORT_SECOND_LETTERS) return
         val expiryComputedDate = expiryDate.computedDate ?: return
-        if (expiryComputedDate < SINGLE_LETTER_PASSPORT_EXPIRY_LIMIT) return
-        into += MrzExpiryDateAfterSingleLetterPassportLimit(rawDocumentCode = rawDocumentCode, expiryDate = expiryComputedDate)
+        if (expiryComputedDate < NON_HARMONIZED_PASSPORT_EXPIRY_LIMIT) return
+        into += MrzExpiryDateAfterNonHarmonizedPassportLimit(rawDocumentCode = rawDocumentCode, expiryDate = expiryComputedDate)
     }
 
     // At most one expiry warning per document. A date with no computed date gets

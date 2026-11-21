@@ -30,7 +30,7 @@ class ErrorTextCarriesNoDocumentValuesTest {
 
     private val warnings: List<MrzWarning> =
         listOf(
-            MrzExpiryDateAfterSingleLetterPassportLimit(text, sentinelDate),
+            MrzExpiryDateAfterNonHarmonizedPassportLimit(text, sentinelDate),
             MrzExpiryDateCenturyNotInferred(sentinelYear, sentinelMonth, sentinelDay, sentinelDate),
             MrzExpiryDateImplausiblyFar(sentinelDate, sentinelDate, 11),
             MrzExpiryDatePast(sentinelDate, sentinelDate),
@@ -97,7 +97,7 @@ class ErrorTextCarriesNoDocumentValuesTest {
     // Exhaustive `when`s: a new subtype is a compile error until it is listed here and in the samples.
     private fun exhaustive(w: MrzWarning): Boolean =
         when (w) {
-            is MrzExpiryDateAfterSingleLetterPassportLimit,
+            is MrzExpiryDateAfterNonHarmonizedPassportLimit,
             is MrzExpiryDateCenturyNotInferred,
             is MrzExpiryDateImplausiblyFar,
             is MrzExpiryDatePast,
