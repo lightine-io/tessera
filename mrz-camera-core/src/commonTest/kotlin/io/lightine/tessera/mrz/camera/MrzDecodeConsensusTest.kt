@@ -11,7 +11,7 @@ import kotlin.time.Instant
 /**
  * Host tests for [MrzDecodeConsensus] — the frame-agreement gate that removes transient OCR misreads by
  * requiring the same parsed document on [threshold][MrzDecodeConsensus.threshold] frames before a reading is
- * confirmed. Synthetic MRZ only (the ICAO Doc 9303 Utopia specimen); the "misread" fixture flips one filler
+ * confirmed. Synthetic MRZ only (the project's specimen); the "misread" fixture flips one filler
  * `<` in the name to `K`, reproducing the checksum-invisible `ASGAR<` → `ASGARK` misread the gate exists for.
  */
 class MrzDecodeConsensusTest {
@@ -20,9 +20,10 @@ class MrzDecodeConsensusTest {
     // A well-formed TD3, and the same document with one filler in the given-name field misread as a letter.
     // The name is not covered by any check digit, so both parse to Success — indistinguishable except by
     // their (different) documents, which is exactly what consensus keys on.
-    private val td3Line2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
-    private val goodDecode = decode("P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<", td3Line2)
-    private val misreadDecode = decode("P<UTOERIKSSON<<ANNA<MARIAK<<<<<<<<<<<<<<<<<<", td3Line2)
+    private val td3Line2 = "T220001293UTO9003152F3403141S98765432<<<<<20"
+    private val td3Line1 = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+    private val goodDecode = decode(td3Line1, td3Line2)
+    private val misreadDecode = decode(td3Line1.replace("MORGAN<", "MORGANK"), td3Line2)
 
     private fun decode(
         line1: String,

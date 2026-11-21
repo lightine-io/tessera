@@ -11,11 +11,11 @@ import kotlin.time.Instant
 
 fun main() {
     // region TES-A-33 block 3
-    val referenceTime = Instant.parse("2010-06-01T00:00:00Z")
+    val referenceTime = Instant.parse("2026-11-21T00:00:00Z")
     val document = when (val result = MrzParser.parse(
         listOf(
-            "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-            "L898902C36UTO7408122F1204159ZE184226B<<<<<10",
+            "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<",
+            "T220001293UTO9003152F3403141S98765432<<<<<20",
         ),
         referenceTime,
     )) {
@@ -45,7 +45,7 @@ fun main() {
     // endregion
 
     // region TES-A-33 block 8
-    val late = MrzDate.parseExpiry("12", "04", "15", Instant.parse("2026-10-14T00:00:00Z"))
+    val late = MrzDate.parseExpiry("34", "03", "14", Instant.parse("2046-01-01T00:00:00Z"))
     println("${late.computedDate} ${late.inferenceMethod} ${late.componentsFormCalendarDate}")
     // endregion
 
@@ -57,7 +57,7 @@ fun main() {
 
 internal fun configure() {
     // region TES-A-33 block 10
-    val born = MrzDate.parseBirth("74", "08", "12", Instant.parse("2026-10-14T00:00:00Z"))
+    val born = MrzDate.parseBirth("90", "03", "15", Instant.parse("2026-10-14T00:00:00Z"))
     println(born.computedDate)
     // endregion
 }

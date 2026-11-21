@@ -209,9 +209,10 @@ class AzeTransliterationProfileTest {
 
     @Test
     fun comma_between_name_components_is_one_filler_per_icao_part_3_section_4_6() {
-        for (input in listOf("ANNA, MARIA", "ANNA,MARIA")) {
+        // The components avoid C and X, which this profile writes as J and KH.
+        for (input in listOf("ADAM, MORGAN", "ADAM,MORGAN")) {
             assertEquals(
-                TransliterationResult.Success("ANNA<MARIA"),
+                TransliterationResult.Success("ADAM<MORGAN"),
                 AzeTransliterationProfile.toMrzAlphabet(input),
                 "input: $input",
             )

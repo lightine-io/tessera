@@ -17,14 +17,14 @@ fun main() {
     val result = MrzGenerator.generateTD3(
         documentType = "P",
         issuingState = "UTO",
-        documentNumber = "L898902C3",
-        primaryIdentifier = "ERIKSSON",
-        secondaryIdentifier = "ANNA MARIA",
+        documentNumber = "T22000129",
+        primaryIdentifier = "SPECIMEN",
+        secondaryIdentifier = "ALEX MORGAN",
         nationality = "UTO",
-        dateOfBirth = LocalDate(1974, 8, 12),
+        dateOfBirth = LocalDate(1990, 3, 15),
         sex = Sex.FEMALE,
-        dateOfExpiry = LocalDate(2012, 4, 15),
-        personalNumber = "ZE184226B",
+        dateOfExpiry = LocalDate(2034, 3, 14),
+        personalNumber = "S98765432",
     )
     // endregion
 
@@ -37,20 +37,20 @@ fun main() {
 
     // region TES-A-26 block 5
     val tooLong = MrzGenerator.generateTD3(
-        documentType = "P", issuingState = "UTO", documentNumber = "L898902C36",
-        primaryIdentifier = "ERIKSSON", secondaryIdentifier = "ANNA MARIA", nationality = "UTO",
-        dateOfBirth = LocalDate(1974, 8, 12), sex = Sex.FEMALE, dateOfExpiry = LocalDate(2012, 4, 15),
-        personalNumber = "ZE184226B",
+        documentType = "P", issuingState = "UTO", documentNumber = "T220001293",
+        primaryIdentifier = "SPECIMEN", secondaryIdentifier = "ALEX MORGAN", nationality = "UTO",
+        dateOfBirth = LocalDate(1990, 3, 15), sex = Sex.FEMALE, dateOfExpiry = LocalDate(2034, 3, 14),
+        personalNumber = "S98765432",
     ) as GenerationResult.Failure
     println(tooLong.error.description)
     // endregion
 
     // region TES-A-26 block 6
     val lines = listOf(
-        "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-        "L898902C36UTO7408122F1204159ZE184226B<<<<<10",
+        "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<",
+        "T220001293UTO9003152F3403141S98765432<<<<<20",
     )
-    val parsed = MrzParser.parse(lines, Instant.parse("2010-06-01T00:00:00Z")) as ParseResult.Success
+    val parsed = MrzParser.parse(lines, Instant.parse("2026-11-21T00:00:00Z")) as ParseResult.Success
     val again = MrzGenerator.generate(parsed.document) as GenerationResult.Success
     println(again.mrz == lines)
     // endregion
@@ -59,10 +59,10 @@ fun main() {
 internal fun configure() {
     // region TES-A-26 block 7
     val result = MrzGenerator.generateTD3(
-        documentType = "P", issuingState = "UTO", documentNumber = "L898902C3",
-        primaryIdentifier = "ERIKSSÖN", secondaryIdentifier = "ANNA MARIA", nationality = "UTO",
-        dateOfBirth = LocalDate(1974, 8, 12), sex = Sex.FEMALE, dateOfExpiry = LocalDate(2012, 4, 15),
-        personalNumber = "ZE184226B", transliteration = IcaoDefaultTransliterationProfile,
+        documentType = "P", issuingState = "UTO", documentNumber = "T22000129",
+        primaryIdentifier = "SPÉCIMEN", secondaryIdentifier = "ALEX MORGAN", nationality = "UTO",
+        dateOfBirth = LocalDate(1990, 3, 15), sex = Sex.FEMALE, dateOfExpiry = LocalDate(2034, 3, 14),
+        personalNumber = "S98765432", transliteration = IcaoDefaultTransliterationProfile,
     )
     // endregion
 }

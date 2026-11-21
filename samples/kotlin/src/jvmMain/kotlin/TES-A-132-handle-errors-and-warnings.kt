@@ -25,9 +25,9 @@ fun main() {
             is MrzCharacterSetViolation -> "Character '${error.offendingCharacter}' at position ${error.position}"
         }
 
-    val line1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-    val line2 = "L898902C36UTO7408122F1204159ZE184226B<<<<<10"
-    val referenceTime = Instant.parse("2013-01-01T00:00:00Z")
+    val line1 = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+    val line2 = "T220001293UTO9003152F3403141S98765432<<<<<20"
+    val referenceTime = Instant.parse("2035-01-01T00:00:00Z")
     val bad = MrzParser.parse(listOf(line1.replaceRange(5, 6, "e"), line2), referenceTime) as ParseResult.Failure
     println(explainParseError(bad.error))
     // endregion

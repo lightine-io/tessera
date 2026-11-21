@@ -1,5 +1,6 @@
 package io.lightine.tessera.mrz.validation
 
+import io.lightine.tessera.mrz.Specimens
 import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.types.errors.MrzFormatNotDetected
@@ -20,32 +21,12 @@ import kotlin.time.Instant
 class MrzValidatorStringInputTest {
     private val ref2026 = Instant.parse("2026-05-04T12:00:00Z")
 
-    private val td1Lines =
-        listOf(
-            "I<UTOL898902C<3<<<<<<<<<<<<<<<",
-            "6908061F3008063UTO<<<<<<<<<<<2",
-            "ERIKSSON<<ANNA<MARIA<<<<<<<<<<",
-        )
-    private val td2Lines =
-        listOf(
-            "I<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<",
-            "D231458907UTO6908061F3008063<<<<<<<4",
-        )
-    private val td3Lines =
-        listOf(
-            "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-            "L898902C<3UTO6908061F9406236ZE184226B<<<<<14",
-        )
-    private val mrvALines =
-        listOf(
-            "V<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-            "L898902C<3UTO6908061F3008063<<<<<<<<<<<<<<<<",
-        )
-    private val mrvBLines =
-        listOf(
-            "V<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<",
-            "L898902C<3UTO6908061F3008063<<<<<<<<",
-        )
+    // The project's specimens.
+    private val td1Lines = Specimens.TD1
+    private val td2Lines = Specimens.TD2
+    private val td3Lines = Specimens.TD3
+    private val mrvALines = Specimens.MRV_A
+    private val mrvBLines = Specimens.MRV_B
 
     private fun documentOf(lines: List<String>) =
         when (val parsed = MrzParser.parse(lines, ref2026)) {
@@ -109,7 +90,8 @@ class MrzValidatorStringInputTest {
     fun validate_string_with_check_digit_failure_surfaces_on_validation_failures() {
         // Corrupt the TD3 composite check digit (final character of line 2) — a soft per-field
         // failure on a structurally-valid input, not a structural one.
-        val tampered = listOf(td3Lines[0], td3Lines[1].dropLast(1) + "0")
+        // The specimen's composite is '0'; '9' is wrong on purpose.
+        val tampered = listOf(td3Lines[0], td3Lines[1].dropLast(1) + "9")
         val result = MrzValidator.validate(tampered, ref2026)
         assertTrue(result.validationFailures.isNotEmpty(), "expected a check-digit validation failure")
         assertNull(result.structuralFailure)

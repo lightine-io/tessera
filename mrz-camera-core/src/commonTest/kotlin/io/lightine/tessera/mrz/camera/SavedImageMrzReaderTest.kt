@@ -16,15 +16,15 @@ import kotlin.time.Instant
 
 /**
  * Host tests for [SavedImageMrzReader] — the saved-image convenience — driven by a mock
- * [MrzTextRecognizer] (no device, no real OCR). Synthetic MRZ only: the TD3 lines are the ICAO Doc 9303
- * Utopia specimen. The reader wraps the analyse-frame core, so these assert the saved-image-specific
+ * [MrzTextRecognizer] (no device, no real OCR). Synthetic MRZ only: the TD3 lines are the project's
+ * specimen. The reader wraps the analyse-frame core, so these assert the saved-image-specific
  * contract: PRE_CAPTURED_IMAGE provenance, the wrapped result, and that mode is forwarded.
  */
 class SavedImageMrzReaderTest {
     private val referenceTime = Instant.parse("2026-05-04T12:00:00Z")
 
-    private val td3Line1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-    private val td3Line2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
+    private val td3Line1 = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+    private val td3Line2 = "T220001293UTO9003152F3403141S98765432<<<<<20"
 
     // An opaque stand-in for a platform saved-image reference (e.g. a Uri / NSURL); the core only forwards it.
     private class FakeImage

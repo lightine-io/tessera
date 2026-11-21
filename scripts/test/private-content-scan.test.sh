@@ -29,8 +29,14 @@ expect 0 "MRZ in a test source set passes" "$d" --mrz-only
 d=$(repo); add "$d" "Sources/UI/V.swift" "let x = \"$MRZ\""
 expect 2 "MRZ in Swift Sources blocks" "$d" --mrz-only
 
-d=$(repo); add "$d" "README.md" "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-expect 0 "ICAO specimen passes" "$d" --mrz-only
+d=$(repo); add "$d" "README.md" "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+expect 0 "project specimen TD3 line 1 passes" "$d" --mrz-only
+
+d=$(repo); add "$d" "core/src/commonMain/kotlin/A.kt" "val x = \"T220001293UTO9003152F3403141S98765432<<<<<20\""
+expect 0 "project specimen TD3 line 2 passes" "$d" --mrz-only
+
+d=$(repo); add "$d" "README.md" "9003152F3403141UTO<<<<<<<<<<<2"
+expect 0 "project specimen TD1 line 2 passes" "$d" --mrz-only
 
 d=$(repo); add "$d" "README.md" "$MRZ  <!-- mrz-ok -->"
 expect 0 "mrz-ok marker passes" "$d" --mrz-only

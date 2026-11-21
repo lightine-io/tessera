@@ -1,5 +1,6 @@
 package io.lightine.tessera.mrz.generation
 
+import io.lightine.tessera.mrz.Specimens
 import io.lightine.tessera.mrz.model.MrzDocument
 import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
@@ -11,35 +12,14 @@ import kotlin.time.Instant
 class MrzGeneratorPolymorphicTest {
     private val ref2026 = Instant.parse("2026-05-04T12:00:00Z")
 
-    // One specimen per format. The polymorphic `MrzGenerator.generate(MrzDocument)` overload
+    // One of the project's specimens per format. The polymorphic `MrzGenerator.generate(MrzDocument)` overload
     // must dispatch to the right per-format path for each variant — the sealed-`when` in the
     // dispatcher is the same shape the validator and parsers already use.
-    private val td1Lines =
-        listOf(
-            "I<UTOL898902C<3<<<<<<<<<<<<<<<",
-            "6908061F3008063UTO<<<<<<<<<<<2",
-            "ERIKSSON<<ANNA<MARIA<<<<<<<<<<",
-        )
-    private val td2Lines =
-        listOf(
-            "I<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<",
-            "D231458907UTO6908061F3008063<<<<<<<4",
-        )
-    private val td3Lines =
-        listOf(
-            "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-            "L898902C<3UTO6908061F9406236ZE184226B<<<<<14",
-        )
-    private val mrvALines =
-        listOf(
-            "V<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-            "L898902C<3UTO6908061F3008063<<<<<<<<<<<<<<<<",
-        )
-    private val mrvBLines =
-        listOf(
-            "V<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<",
-            "L898902C<3UTO6908061F3008063<<<<<<<<",
-        )
+    private val td1Lines = Specimens.TD1
+    private val td2Lines = Specimens.TD2
+    private val td3Lines = Specimens.TD3
+    private val mrvALines = Specimens.MRV_A
+    private val mrvBLines = Specimens.MRV_B
 
     @Test
     fun polymorphic_generate_round_trips_every_format() {

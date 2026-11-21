@@ -5,8 +5,9 @@
 #   1. MRZ guard (no secrets, runs everywhere, CI included): a line in a main source set,
 #      Sources/, or a Markdown file holding a 30+ character MRZ-alphabet run with at least
 #      one '<' filler is blocked. Test sources are not scanned: they hold synthetic MRZ from
-#      the SDK's own generator. Always allowed: the ICAO Doc 9303 specimen
-#      (UTOERIKSSON, L898902C3) and lines marked `mrz-ok`.
+#      the SDK's own generator. Always allowed: the project's own specimens
+#      (SPECIMEN<<ALEX, the document numbers T22000129, T42000137, T62000145, T82000153,
+#      and the shared birth, sex, and expiry run 9003152F3403141) and lines marked `mrz-ok`.
 #   2. Terms scan (local only): case-insensitive substrings from the gitignored
 #      .claude/private-content-terms.local, over tracked Markdown, Kotlin, Gradle, Swift,
 #      string catalogs, and YAML. Only the maintainer has the terms file, so this half
@@ -26,7 +27,7 @@ cd "$PROJECT_ROOT"
 MODE="${1:-all}"
 
 # --- 1. MRZ guard -------------------------------------------------------------------
-MRZ_ALLOW='UTOERIKSSON|L898902C3|mrz-ok'
+MRZ_ALLOW='SPECIMEN<<ALEX|T22000129|T42000137|T62000145|T82000153|9003152F3403141|mrz-ok'
 MRZ_HITS=$(
     git ls-files -z -- '*/src/*Main/**' 'Sources/**' '*.md' \
             ':!:*/src/*Test*/**' ':!:Tests/**' \

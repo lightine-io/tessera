@@ -952,12 +952,12 @@ private fun secondaryActionLabel(readMethod: ReadMethod): String =
     )
 
 /**
- * The computed calendar date when mrz-core resolved one (`1969-08-06`), else the raw two-digit components as
+ * The computed calendar date when mrz-core resolved one (`1990-03-15`), else the raw two-digit components as
  * printed, day first ([unresolvedDateText], `23 06 94`) - TES-94, TES-112. mrz-core resolves a century via a
  * sliding plausibility window relative to the parse-time reference clock (see `MrzDate` /
  * `MrzDateInferenceMethod` in mrz-core); a date of birth almost always fits (any century up to ~130 years in
  * the past), but an expiry far outside its narrower window (10 years past / 50 years future of "now") - as any
- * sufficiently old ICAO test specimen or long-expired real document eventually will be - leaves `computedDate`
+ * sufficiently old test specimen or long-expired real document eventually will be - leaves `computedDate`
  * null. This UI never re-derives a century itself (that would duplicate mrz-core's inference and could
  * disagree with it); it only renders what core already resolved. The fallback shows the parts in the
  * day-month-year order of the document's visual zone (ICAO Doc 9303 Part 3) with the two-digit year as
@@ -976,7 +976,7 @@ internal fun unresolvedDateText(date: MrzDate): String = "${date.rawDay} ${date.
 
 /**
  * Strips trailing MRZ filler (`<`) from a parsed field VALUE for display - the fillers are fixed-width padding,
- * not data, so `L898902C<` reads as `L898902C` (matching how the name is already shown). Display-only: the Raw
+ * not data, so `T2200012<` reads as `T2200012` (matching how the name is already shown). Display-only: the Raw
  * MRZ section still renders every character verbatim, so transparency is preserved (Principle 5).
  */
 private fun String.withoutTrailingFiller(): String = trimEnd('<')

@@ -49,7 +49,7 @@ import androidx.compose.ui.unit.sp
 // find it" note. Purely informational; it makes no trust judgement about any document (Principle 1).
 //
 // The illustration is drawn from theme colours (Compose, not a baked image) so it adapts to light / dark and
-// scales with the system font, and the specimen text is the ICAO Doc 9303 published example — never real data.
+// scales with the system font, and the specimen text is the project's own specimen (fictional, Utopia) — never real data.
 
 /** Semantics anchor for the "What's the MRZ?" link on the camera screen. Not user-facing. */
 internal const val EXPLAINER_ACTION_TEST_TAG: String = "tessera-mrz-explainer-action"
@@ -57,11 +57,12 @@ internal const val EXPLAINER_ACTION_TEST_TAG: String = "tessera-mrz-explainer-ac
 /** Semantics anchor for the MRZ explainer dialog. Not user-facing. */
 internal const val EXPLAINER_DIALOG_TEST_TAG: String = "tessera-mrz-explainer-dialog"
 
-// The ICAO Doc 9303 published TD3 specimen (fictional UTOPIA / ERIKSSON ANNA MARIA). Synthetic by definition —
-// this is the standards body's own example, never a real document. Hard-coded in the drawing, not overridable
+// The project's own TD3 specimen (fictional person SPECIMEN ALEX MORGAN of the fictional state Utopia, code UTO,
+// which ICAO Doc 9303 reserves for specimen documents). Synthetic by definition, never a real document. The
+// generator reproduces both lines exactly. Hard-coded in the drawing, not overridable
 // copy: it illustrates the MRZ's *shape*, so translating it would make no sense.
-private const val SPECIMEN_LINE_1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-private const val SPECIMEN_LINE_2 = "L898902C36UTO7408122F1204159ZE184226B<<<<<10"
+private const val SPECIMEN_LINE_1 = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+private const val SPECIMEN_LINE_2 = "T220001293UTO9003152F3403141S98765432<<<<<20"
 
 /**
  * The "What's the MRZ?" affordance shown on the camera screen (inside [MrzGuideOverlay]'s framing state). Owns

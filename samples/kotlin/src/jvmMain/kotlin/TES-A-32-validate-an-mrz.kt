@@ -11,11 +11,11 @@ import kotlin.time.Instant
 
 fun main() {
     // region TES-A-32 block 3
-    val referenceTime = Instant.parse("2010-06-01T00:00:00Z")
+    val referenceTime = Instant.parse("2026-11-21T00:00:00Z")
     val report = MrzValidator.validate(
         """
-        P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<
-        L898902C36UTO7408122F1204159ZE184226B<<<<<11
+        P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<
+        T220001293UTO9003152F3403141S98765432<<<<<21
         """.trimIndent(),
         referenceTime,
     )
@@ -39,12 +39,12 @@ fun main() {
     // region TES-A-32 block 6
     val parsed = MrzParser.parse(
         listOf(
-            "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-            "L898902C36UTO7408122F1204159ZE184226B<<<<<10",
+            "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<",
+            "T220001293UTO9003152F3403141S98765432<<<<<20",
         ),
         referenceTime,
     ) as ParseResult.Success
-    val later = MrzValidator.validate(parsed.document, Instant.parse("2013-01-01T00:00:00Z"))
+    val later = MrzValidator.validate(parsed.document, Instant.parse("2035-01-01T00:00:00Z"))
     later.warnings.forEach { println("Warning: ${it.description}") }
     // endregion
 }
@@ -52,9 +52,9 @@ fun main() {
 internal fun configure() {
     // region TES-A-32 block 7
     val lines = listOf(
-        "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-        "L898902C36UTO7408122F1204159ZE184226B<<<<<10",
+        "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<",
+        "T220001293UTO9003152F3403141S98765432<<<<<20",
     )
-    val report = MrzValidator.validate(lines, MrzFormat.TD3, referenceTime = Instant.parse("2013-01-01T00:00:00Z"))
+    val report = MrzValidator.validate(lines, MrzFormat.TD3, referenceTime = Instant.parse("2035-01-01T00:00:00Z"))
     // endregion
 }

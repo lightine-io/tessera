@@ -1,5 +1,6 @@
 package io.lightine.tessera.mrz.camera
 
+import io.lightine.tessera.mrz.checkdigit.computeCheckDigit
 import io.lightine.tessera.mrz.parsing.ParseResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -9,7 +10,7 @@ import kotlin.time.Instant
 
 /**
  * Host tests for [TolerantMrzMatcher] — the candidate-disambiguation core behind [SavedImageMrzReader]'s
- * `tolerant = true` path. Synthetic MRZ only: the TD3 lines are the ICAO Doc 9303 Utopia specimen, the same
+ * `tolerant = true` path. Synthetic MRZ only: the TD3 lines are the project's specimen, the same
  * fixture [MrzFrameAnalyzerTest] uses.
  *
  * TES-117: the matcher used to keep its own run-based, chevron-blind line detection after [MrzFrameAnalyzer]
@@ -20,9 +21,9 @@ import kotlin.time.Instant
 class TolerantMrzMatcherTest {
     private val referenceTime = Instant.parse("2026-05-04T12:00:00Z")
 
-    // ICAO Doc 9303 Utopia specimen (synthetic).
-    private val td3Line1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-    private val td3Line2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
+    // The project's specimen (synthetic; UTO = Utopia).
+    private val td3Line1 = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+    private val td3Line2 = "T220001293UTO9003152F3403141S98765432<<<<<20"
 
     private fun matcher(mode: ParsingMode = ParsingMode.STRICT): TolerantMrzMatcher =
         TolerantMrzMatcher(mode = mode, referenceTimeProvider = { referenceTime })
@@ -85,8 +86,9 @@ class TolerantMrzMatcherTest {
         assertTrue(result.isEmpty())
     }
 
-    // Line 2 of the specimen with the expiry date's `0` (column 23) read as `O`. Line 1 alone holds more ambiguous
-    // glyphs than the guess budget, all in fields no check digit covers.
+    // Line 2 of the specimen with the expiry date's `0` (column 23) read as `O`. In reading order the guess budget is
+    // spent long before column 23: line 1 holds five ambiguous glyphs no check digit covers, and the document number
+    // seven more.
     private val td3Line2ExpiryMisread = td3Line2.replaceRange(23, 24, "O")
 
     @Test
@@ -122,13 +124,30 @@ class TolerantMrzMatcherTest {
         }
     }
 
+    // The specimen's expiry holds no `6`, so this variant moves it to 2036-03-14 ("360314", a `6` at column 22) and
+    // recomputes the expiry and composite check digits, then misreads the expiry's `0` (column 23) as `O`. The failing
+    // expiry field gets the guess budget first, so its `6` is inside the budget.
+    private val td3Line2SixInExpiryMisread =
+        td3Line2
+            .replaceRange(21, 27, "360314")
+            .let { it.replaceRange(27, 28, computeCheckDigit(it.substring(21, 27)).toString()) }
+            .let {
+                it.replaceRange(
+                    43,
+                    44,
+                    computeCheckDigit(it.substring(0, 10) + it.substring(13, 20) + it.substring(21, 43)).toString(),
+                )
+            }.replaceRange(23, 24, "O")
+
     @Test
     fun a_six_g_swap_is_never_tried_because_no_check_digit_can_see_it() {
-        // `6` and `G` have values 6 and 16, so every check digit is the same either way: the date of birth's `6`
+        // `6` and `G` have values 6 and 16, so every check digit is the same either way: the expiry date's `6`
         // read as `G` would be listed as a fully consistent reading. It must never be tried.
-        val result = matcher().candidates(textOf(td3Line1, td3Line2ExpiryMisread))
+        assertEquals('6', td3Line2SixInExpiryMisread[22], "the fixture puts a 6 in the expiry date")
+        val result = matcher().candidates(textOf(td3Line1, td3Line2SixInExpiryMisread))
 
         assertTrue(result.isNotEmpty())
+        assertTrue(result.any { it.disambiguations == listOf(CharacterDisambiguation(1, 23, 'O', '0')) }, "the expiry fix is found")
         result.flatMap { it.disambiguations }.forEach { d ->
             assertTrue(d.recognized !in "6G" && d.resolved !in "6G", "no 6/G swap: $d")
         }

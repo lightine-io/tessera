@@ -1,5 +1,6 @@
 package io.lightine.tessera.mrz.generation
 
+import io.lightine.tessera.mrz.Specimens
 import io.lightine.tessera.mrz.model.MrvA
 import io.lightine.tessera.mrz.model.MrvB
 import io.lightine.tessera.mrz.model.TD1
@@ -24,8 +25,10 @@ import kotlin.time.Instant
 
 class MrzGeneratorPrimitiveInputTest {
     private val ref2026 = Instant.parse("2026-05-04T12:00:00Z")
-    private val dob = LocalDate(1969, 8, 6)
-    private val doe = LocalDate(1994, 6, 23)
+
+    // The project's specimen person: born 1990-03-15, document expires 2034-03-14.
+    private val dob = LocalDate(1990, 3, 15)
+    private val doe = LocalDate(2034, 3, 14)
 
     // ---------- TD3 ----------
 
@@ -35,21 +38,18 @@ class MrzGeneratorPrimitiveInputTest {
             MrzGenerator.generateTD3(
                 documentType = "P",
                 issuingState = "UTO",
-                documentNumber = "L898902C<",
-                primaryIdentifier = "ERIKSSON",
-                secondaryIdentifier = "ANNA MARIA",
+                documentNumber = "T22000129",
+                primaryIdentifier = "SPECIMEN",
+                secondaryIdentifier = "ALEX MORGAN",
                 nationality = "UTO",
                 dateOfBirth = dob,
                 sex = Sex.FEMALE,
                 dateOfExpiry = doe,
-                personalNumber = "ZE184226B",
+                personalNumber = "S98765432",
             )
         val success = assertIs<GenerationResult.Success>(result)
         assertEquals(
-            listOf(
-                "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-                "L898902C<3UTO6908061F9406236ZE184226B<<<<<14",
-            ),
+            Specimens.TD3,
             success.mrz,
         )
         // No transliteration was applied; details should be null.
@@ -62,23 +62,23 @@ class MrzGeneratorPrimitiveInputTest {
             MrzGenerator.generateTD3(
                 documentType = "P",
                 issuingState = "UTO",
-                documentNumber = "L898902C<",
-                primaryIdentifier = "ERIKSSON",
-                secondaryIdentifier = "ANNA MARIA",
+                documentNumber = "T22000129",
+                primaryIdentifier = "SPECIMEN",
+                secondaryIdentifier = "ALEX MORGAN",
                 nationality = "UTO",
                 dateOfBirth = dob,
                 sex = Sex.FEMALE,
                 dateOfExpiry = doe,
-                personalNumber = "ZE184226B",
+                personalNumber = "S98765432",
             )
         val success = assertIs<GenerationResult.Success>(result)
         val parsed = MrzParser.parseTD3(success.mrz, referenceTime = ref2026)
         val parseSuccess = assertIs<ParseResult.Success>(parsed)
         val td3 = assertIs<TD3>(parseSuccess.document)
-        assertEquals("ERIKSSON", td3.commonFields.primaryIdentifier)
-        assertEquals("ANNA MARIA", td3.commonFields.secondaryIdentifier)
-        assertEquals("L898902C<", td3.commonFields.documentNumber)
-        assertEquals("ZE184226B", td3.personalNumber.trimEnd('<'))
+        assertEquals("SPECIMEN", td3.commonFields.primaryIdentifier)
+        assertEquals("ALEX MORGAN", td3.commonFields.secondaryIdentifier)
+        assertEquals("T22000129", td3.commonFields.documentNumber)
+        assertEquals("S98765432", td3.personalNumber.trimEnd('<'))
     }
 
     @Test
@@ -199,7 +199,7 @@ class MrzGeneratorPrimitiveInputTest {
             MrzGenerator.generateTD3(
                 documentType = "P",
                 issuingState = "UTO",
-                documentNumber = "L898902C<",
+                documentNumber = "T22000129",
                 primaryIdentifier = "CHER",
                 secondaryIdentifier = "",
                 nationality = "UTO",
@@ -223,22 +223,22 @@ class MrzGeneratorPrimitiveInputTest {
             MrzGenerator.generateTD2(
                 documentType = "I",
                 issuingState = "UTO",
-                documentNumber = "D23145890",
-                primaryIdentifier = "ERIKSSON",
-                secondaryIdentifier = "ANNA MARIA",
+                documentNumber = "T62000145",
+                primaryIdentifier = "SPECIMEN",
+                secondaryIdentifier = "ALEX MORGAN",
                 nationality = "UTO",
                 dateOfBirth = dob,
                 sex = Sex.FEMALE,
                 dateOfExpiry = doe,
-                optionalData = "ZE18422",
+                optionalData = "S987654",
             )
         val success = assertIs<GenerationResult.Success>(result)
         val parsed = MrzParser.parseTD2(success.mrz, referenceTime = ref2026)
         val parseSuccess = assertIs<ParseResult.Success>(parsed)
         val td2 = assertIs<TD2>(parseSuccess.document)
-        assertEquals("ERIKSSON", td2.commonFields.primaryIdentifier)
-        assertEquals("ANNA MARIA", td2.commonFields.secondaryIdentifier)
-        assertEquals("D23145890", td2.commonFields.documentNumber)
+        assertEquals("SPECIMEN", td2.commonFields.primaryIdentifier)
+        assertEquals("ALEX MORGAN", td2.commonFields.secondaryIdentifier)
+        assertEquals("T62000145", td2.commonFields.documentNumber)
     }
 
     @Test
@@ -247,7 +247,7 @@ class MrzGeneratorPrimitiveInputTest {
             MrzGenerator.generateTD2(
                 documentType = "I",
                 issuingState = "DEU",
-                documentNumber = "D23145890",
+                documentNumber = "T62000145",
                 primaryIdentifier = "STRAßE",
                 secondaryIdentifier = "JÖRG",
                 nationality = "DEU",
@@ -272,9 +272,9 @@ class MrzGeneratorPrimitiveInputTest {
             MrzGenerator.generateTD1(
                 documentType = "I",
                 issuingState = "UTO",
-                documentNumber = "D23145890",
-                primaryIdentifier = "ERIKSSON",
-                secondaryIdentifier = "ANNA MARIA",
+                documentNumber = "T42000137",
+                primaryIdentifier = "SPECIMEN",
+                secondaryIdentifier = "ALEX MORGAN",
                 nationality = "UTO",
                 dateOfBirth = dob,
                 sex = Sex.FEMALE,
@@ -286,8 +286,8 @@ class MrzGeneratorPrimitiveInputTest {
         val parsed = MrzParser.parseTD1(success.mrz, referenceTime = ref2026)
         val parseSuccess = assertIs<ParseResult.Success>(parsed)
         val td1 = assertIs<TD1>(parseSuccess.document)
-        assertEquals("ERIKSSON", td1.commonFields.primaryIdentifier)
-        assertEquals("ANNA MARIA", td1.commonFields.secondaryIdentifier)
+        assertEquals("SPECIMEN", td1.commonFields.primaryIdentifier)
+        assertEquals("ALEX MORGAN", td1.commonFields.secondaryIdentifier)
         assertEquals("1234567", td1.optionalData1.trimEnd('<'))
     }
 
@@ -299,9 +299,9 @@ class MrzGeneratorPrimitiveInputTest {
             MrzGenerator.generateMrvA(
                 documentType = "V",
                 issuingState = "UTO",
-                documentNumber = "L898902C<",
-                primaryIdentifier = "ERIKSSON",
-                secondaryIdentifier = "ANNA MARIA",
+                documentNumber = "T82000153",
+                primaryIdentifier = "SPECIMEN",
+                secondaryIdentifier = "ALEX MORGAN",
                 nationality = "UTO",
                 dateOfBirth = dob,
                 sex = Sex.FEMALE,
@@ -312,7 +312,7 @@ class MrzGeneratorPrimitiveInputTest {
         val parsed = MrzParser.parseMRVA(success.mrz, referenceTime = ref2026)
         val parseSuccess = assertIs<ParseResult.Success>(parsed)
         val mrvA = assertIs<MrvA>(parseSuccess.document)
-        assertEquals("ERIKSSON", mrvA.commonFields.primaryIdentifier)
+        assertEquals("SPECIMEN", mrvA.commonFields.primaryIdentifier)
     }
 
     // ---------- MRV-B ----------
@@ -323,9 +323,9 @@ class MrzGeneratorPrimitiveInputTest {
             MrzGenerator.generateMrvB(
                 documentType = "V",
                 issuingState = "UTO",
-                documentNumber = "L898902C<",
-                primaryIdentifier = "ERIKSSON",
-                secondaryIdentifier = "ANNA MARIA",
+                documentNumber = "T82000153",
+                primaryIdentifier = "SPECIMEN",
+                secondaryIdentifier = "ALEX MORGAN",
                 nationality = "UTO",
                 dateOfBirth = dob,
                 sex = Sex.FEMALE,
@@ -336,7 +336,7 @@ class MrzGeneratorPrimitiveInputTest {
         val parsed = MrzParser.parseMRVB(success.mrz, referenceTime = ref2026)
         val parseSuccess = assertIs<ParseResult.Success>(parsed)
         val mrvB = assertIs<MrvB>(parseSuccess.document)
-        assertEquals("ERIKSSON", mrvB.commonFields.primaryIdentifier)
+        assertEquals("SPECIMEN", mrvB.commonFields.primaryIdentifier)
     }
 
     // ---------- Cross-cutting ----------
@@ -347,8 +347,8 @@ class MrzGeneratorPrimitiveInputTest {
             MrzGenerator.generateTD3(
                 documentType = "P",
                 issuingState = "UTO",
-                documentNumber = "L898902C<",
-                primaryIdentifier = "ERIKSSON",
+                documentNumber = "T22000129",
+                primaryIdentifier = "SPECIMEN",
                 secondaryIdentifier = "",
                 nationality = "UTO",
                 dateOfBirth = dob,
@@ -367,8 +367,8 @@ class MrzGeneratorPrimitiveInputTest {
             MrzGenerator.generateTD3(
                 documentType = "P",
                 issuingState = "UTO",
-                documentNumber = "L898902C<",
-                primaryIdentifier = "ERIKSSON",
+                documentNumber = "T22000129",
+                primaryIdentifier = "SPECIMEN",
                 secondaryIdentifier = "",
                 nationality = "UTO",
                 dateOfBirth = LocalDate(2003, 1, 15),
@@ -389,7 +389,7 @@ class MrzGeneratorPrimitiveInputTest {
                 documentType = "P",
                 issuingState = "UTO",
                 documentNumber = "",
-                primaryIdentifier = "ERIKSSON",
+                primaryIdentifier = "SPECIMEN",
                 secondaryIdentifier = "",
                 nationality = "UTO",
                 dateOfBirth = dob,
@@ -408,9 +408,9 @@ class MrzGeneratorPrimitiveInputTest {
             MrzGenerator.generateTD3(
                 documentType = "P",
                 issuingState = "UTO",
-                documentNumber = "L898902C<",
+                documentNumber = "T22000129",
                 primaryIdentifier = "SMITH2",
-                secondaryIdentifier = "ANNA",
+                secondaryIdentifier = "ALEX",
                 nationality = "UTO",
                 dateOfBirth = dob,
                 sex = Sex.FEMALE,
@@ -430,9 +430,9 @@ class MrzGeneratorPrimitiveInputTest {
             MrzGenerator.generateTD3(
                 documentType = "P",
                 issuingState = "UTO",
-                documentNumber = "L898902C<",
-                primaryIdentifier = "ERIKSSON",
-                secondaryIdentifier = "ANNA M4RIA",
+                documentNumber = "T22000129",
+                primaryIdentifier = "SPECIMEN",
+                secondaryIdentifier = "ALEX M4RGAN",
                 nationality = "UTO",
                 dateOfBirth = dob,
                 sex = Sex.FEMALE,
@@ -442,7 +442,7 @@ class MrzGeneratorPrimitiveInputTest {
         val failure = assertIs<GenerationResult.Failure>(result)
         val error = assertIs<MrzGenerationNumericInNameField>(failure.error)
         assertEquals(MrzFormat.TD3, error.format)
-        assertEquals("ANNA M4RIA", error.observedValue)
+        assertEquals("ALEX M4RGAN", error.observedValue)
         assertEquals(listOf('4'), error.numericCharacters)
     }
 
@@ -452,9 +452,9 @@ class MrzGeneratorPrimitiveInputTest {
             MrzGenerator.generateTD3(
                 documentType = "P",
                 issuingState = "UTO",
-                documentNumber = "L898902C<",
+                documentNumber = "T22000129",
                 primaryIdentifier = "MÜLLER9",
-                secondaryIdentifier = "ANNA",
+                secondaryIdentifier = "ALEX",
                 nationality = "UTO",
                 dateOfBirth = dob,
                 sex = Sex.FEMALE,

@@ -30,7 +30,7 @@ import kotlin.time.Instant
  *
  * The Compose tests drive [ManualRawContent] directly; the parsing / provenance assertions go through the
  * pure [assembleManualDecoded] seam (extracted so the text→Decoded pipeline is host-testable without the
- * camera, mirroring [routeDecode]). The fixtures use the same synthetic ICAO TD3 specimen the parser tests
+ * camera, mirroring [routeDecode]). The fixtures use the project's synthetic TD3 specimen the other tests
  * and [ReviewScreenTest] use, parsed at a fixed [referenceTime] so date inference is deterministic.
  *
  * TES-100 removed the Auto / Passport / ID card format-hint chip row: reading always auto-detects the format
@@ -43,12 +43,12 @@ class ManualEntryScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    // Fixed so 2-digit year inference is deterministic; at 1994 the specimen parses cleanly to Success.
-    private val referenceTime = Instant.parse("1994-01-01T00:00:00Z")
+    // Fixed so 2-digit year inference is deterministic; at 2026-05-04 the specimen parses cleanly to Success.
+    private val referenceTime = Instant.parse("2026-05-04T12:00:00Z")
 
-    // The clean ICAO TD3 specimen (synthetic; UTO = Utopia, a reserved ICAO test issuer). 2 lines × 44.
-    private val specimenLine1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-    private val specimenLine2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
+    // The project's clean TD3 specimen (synthetic; UTO = Utopia, a reserved ICAO test issuer). 2 lines × 44.
+    private val specimenLine1 = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+    private val specimenLine2 = "T220001293UTO9003152F3403141S98765432<<<<<20"
     private val specimen = "$specimenLine1\n$specimenLine2"
 
     @Test
@@ -71,7 +71,7 @@ class ManualEntryScreenTest {
         composeRule.onNodeWithTag(MANUAL_RAW_TEST_TAG).assertIsDisplayed()
         // The observation is always the plain per-line character count (TES-100 — no format chips to fix an
         // expected length anymore).
-        composeRule.onNodeWithTag(MANUAL_RAW_FIELD_TEST_TAG).performTextInput("P<UTOERIKS")
+        composeRule.onNodeWithTag(MANUAL_RAW_FIELD_TEST_TAG).performTextInput("P<UTOSPECI")
         composeRule.onNodeWithText("Line 1: 10 characters").performScrollTo().assertIsDisplayed()
     }
 

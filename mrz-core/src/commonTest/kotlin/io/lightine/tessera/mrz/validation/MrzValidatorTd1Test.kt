@@ -1,5 +1,6 @@
 package io.lightine.tessera.mrz.validation
 
+import io.lightine.tessera.mrz.Specimens
 import io.lightine.tessera.mrz.model.CommonFields
 import io.lightine.tessera.mrz.model.MrzCheckDigits
 import io.lightine.tessera.mrz.model.MrzDate
@@ -22,9 +23,10 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class MrzValidatorTd1Test {
-    private val specimenLine1 = "I<UTOL898902C<3<<<<<<<<<<<<<<<"
-    private val specimenLine2 = "6908061F3008063UTO<<<<<<<<<<<2"
-    private val specimenLine3 = "ERIKSSON<<ANNA<MARIA<<<<<<<<<<"
+    // The project's TD1 specimen.
+    private val specimenLine1 = Specimens.TD1[0]
+    private val specimenLine2 = Specimens.TD1[1]
+    private val specimenLine3 = Specimens.TD1[2]
 
     private fun specimenCommonFields(
         rawSex: Char = 'F',
@@ -32,9 +34,9 @@ class MrzValidatorTd1Test {
         documentType: DocumentType = DocumentType("I"),
         checkDigits: MrzCheckDigits =
             MrzCheckDigits(
-                documentNumber = '3',
-                dateOfBirth = '1',
-                dateOfExpiry = '3',
+                documentNumber = '0',
+                dateOfBirth = '2',
+                dateOfExpiry = '1',
                 optionalData = null,
                 composite = '2',
             ),
@@ -45,13 +47,13 @@ class MrzValidatorTd1Test {
             primaryIdentifier = "",
             secondaryIdentifier = "",
             nameTruncated = false,
-            rawNameField = "ERIKSSON<<ANNA<MARIA<<<<<<<<<<",
-            documentNumber = "L898902C<",
+            rawNameField = "SPECIMEN<<ALEX<MORGAN<<<<<<<<<",
+            documentNumber = "T42000137",
             nationality = CountryCode("UTO"),
-            dateOfBirth = MrzDate(rawYear = "69", rawMonth = "08", rawDay = "06"),
+            dateOfBirth = MrzDate(rawYear = "90", rawMonth = "03", rawDay = "15"),
             sex = sex,
             rawSex = rawSex,
-            dateOfExpiry = MrzDate(rawYear = "30", rawMonth = "08", rawDay = "06"),
+            dateOfExpiry = MrzDate(rawYear = "34", rawMonth = "03", rawDay = "14"),
             checkDigits = checkDigits,
         )
 
@@ -91,9 +93,9 @@ class MrzValidatorTd1Test {
                     specimenCommonFields(
                         checkDigits =
                             MrzCheckDigits(
-                                documentNumber = '0',
-                                dateOfBirth = '1',
-                                dateOfExpiry = '3',
+                                documentNumber = '9',
+                                dateOfBirth = '2',
+                                dateOfExpiry = '1',
                                 optionalData = null,
                                 composite = '2',
                             ),
@@ -101,8 +103,8 @@ class MrzValidatorTd1Test {
             )
         val result = MrzValidator.validate(td1)
         val mismatch = result.validationFailures.firstOfField(MrzField.DOCUMENT_NUMBER)
-        assertEquals('3', mismatch.expected)
-        assertEquals('0', mismatch.observed)
+        assertEquals('0', mismatch.expected)
+        assertEquals('9', mismatch.observed)
         // TD1 doc number check digit position: line 1 index 14, global = 14
         assertEquals(14, mismatch.position)
     }
@@ -115,9 +117,9 @@ class MrzValidatorTd1Test {
                     specimenCommonFields(
                         checkDigits =
                             MrzCheckDigits(
-                                documentNumber = '3',
+                                documentNumber = '0',
                                 dateOfBirth = '0',
-                                dateOfExpiry = '3',
+                                dateOfExpiry = '1',
                                 optionalData = null,
                                 composite = '2',
                             ),
@@ -125,7 +127,7 @@ class MrzValidatorTd1Test {
             )
         val result = MrzValidator.validate(td1)
         val mismatch = result.validationFailures.firstOfField(MrzField.DATE_OF_BIRTH)
-        assertEquals('1', mismatch.expected)
+        assertEquals('2', mismatch.expected)
         assertEquals('0', mismatch.observed)
         // TD1 DOB check digit position: line 2 index 6, global = 30 + 6 = 36
         assertEquals(36, mismatch.position)
@@ -139,8 +141,8 @@ class MrzValidatorTd1Test {
                     specimenCommonFields(
                         checkDigits =
                             MrzCheckDigits(
-                                documentNumber = '3',
-                                dateOfBirth = '1',
+                                documentNumber = '0',
+                                dateOfBirth = '2',
                                 dateOfExpiry = '0',
                                 optionalData = null,
                                 composite = '2',
@@ -149,7 +151,7 @@ class MrzValidatorTd1Test {
             )
         val result = MrzValidator.validate(td1)
         val mismatch = result.validationFailures.firstOfField(MrzField.DATE_OF_EXPIRY)
-        assertEquals('3', mismatch.expected)
+        assertEquals('1', mismatch.expected)
         assertEquals('0', mismatch.observed)
         // TD1 expiry check digit position: line 2 index 14, global = 30 + 14 = 44
         assertEquals(44, mismatch.position)
@@ -163,9 +165,9 @@ class MrzValidatorTd1Test {
                     specimenCommonFields(
                         checkDigits =
                             MrzCheckDigits(
-                                documentNumber = '3',
-                                dateOfBirth = '1',
-                                dateOfExpiry = '3',
+                                documentNumber = '0',
+                                dateOfBirth = '2',
+                                dateOfExpiry = '1',
                                 optionalData = null,
                                 composite = '0',
                             ),
@@ -190,7 +192,7 @@ class MrzValidatorTd1Test {
                     specimenCommonFields(
                         checkDigits =
                             MrzCheckDigits(
-                                documentNumber = '0',
+                                documentNumber = '9',
                                 dateOfBirth = '0',
                                 dateOfExpiry = '0',
                                 optionalData = null,

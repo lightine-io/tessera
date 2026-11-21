@@ -36,7 +36,8 @@ signed by GitHub. Release tags are signed by the maintainer.
   to release, and what the repository settings and CI enforce.
 - [Conventions](https://lightine.youtrack.cloud/articles/TES-A-20): naming, adding an MRZ
   format, code style, and the API rules, including the testing rule: every public API and
-  error type has a test, and fixtures are synthetic or ICAO test vectors.
+  error type has a test, and fixtures are synthetic: the SDK's generator or the project's own
+  specimen. ICAO's published examples appear only in the conformance tests.
 - [`.claude/git-workflow.md`](.claude/git-workflow.md): branch names, the checks before a
   push, the PR, and the required checks.
 - [Versioning and compatibility](https://lightine.youtrack.cloud/articles/TES-A-8):

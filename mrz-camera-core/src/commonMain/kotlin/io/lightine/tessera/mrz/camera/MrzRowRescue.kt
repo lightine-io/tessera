@@ -46,7 +46,7 @@ public object MrzRowRescue {
     private const val MIN_CANDIDATE_LENGTH: Int = 10
 
     // Re-read crop paddings. Horizontal: a fraction of the neighbour row's width on each side. Vertical: a
-    // fraction of the short row's height above and below. Emulator-verified on the ICAO TD3 specimen.
+    // fraction of the short row's height above and below. Emulator-verified on a TD3 specimen.
     internal const val HORIZONTAL_PAD_FRACTION: Double = 0.03
     internal const val VERTICAL_PAD_FRACTION: Double = 0.6
 

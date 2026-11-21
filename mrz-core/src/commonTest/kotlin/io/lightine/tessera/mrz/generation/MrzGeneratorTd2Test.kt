@@ -1,5 +1,6 @@
 package io.lightine.tessera.mrz.generation
 
+import io.lightine.tessera.mrz.Specimens
 import io.lightine.tessera.mrz.model.TD2
 import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
@@ -15,12 +16,9 @@ import kotlin.time.Instant
 class MrzGeneratorTd2Test {
     private val ref2026 = Instant.parse("2026-05-04T12:00:00Z")
 
-    // Synthetic TD2 specimen — same Anna Eriksson / UTO persona used in MrzParserTd2Test.
-    // Document type `I`, doc number D23145890, DOB 690806, expiry 300806, sex F, optional data
-    // all filler. Check digits pre-computed via the SDK's algorithm.
-    private val specimenLine1 = "I<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<"
-    private val specimenLine2 = "D231458907UTO6908061F3008063<<<<<<<4"
-    private val specimenLines = listOf(specimenLine1, specimenLine2)
+    // The project's TD2 specimen. Document type `I`, doc number T62000145, DOB 900315,
+    // expiry 340314, sex F, optional data all filler.
+    private val specimenLines = Specimens.TD2
 
     private fun specimenTd2(): TD2 {
         val result = MrzParser.parseTD2(specimenLines, referenceTime = ref2026)
@@ -70,7 +68,7 @@ class MrzGeneratorTd2Test {
     @Test
     fun composite_check_digit_is_at_position_35_of_line_2() {
         val success = assertIs<GenerationResult.Success>(MrzGenerator.generate(specimenTd2()))
-        assertEquals('4', success.mrz[1][35])
+        assertEquals('8', success.mrz[1][35])
     }
 
     // --- Field overflow ---

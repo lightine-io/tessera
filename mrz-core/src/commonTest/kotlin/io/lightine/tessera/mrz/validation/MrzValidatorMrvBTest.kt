@@ -1,5 +1,6 @@
 package io.lightine.tessera.mrz.validation
 
+import io.lightine.tessera.mrz.Specimens
 import io.lightine.tessera.mrz.model.CommonFields
 import io.lightine.tessera.mrz.model.MrvB
 import io.lightine.tessera.mrz.model.MrzCheckDigits
@@ -22,8 +23,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class MrzValidatorMrvBTest {
-    private val specimenLine1 = "V<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<"
-    private val specimenLine2 = "L898902C<3UTO6908061F3008063<<<<<<<<"
+    // The project's MRV-B specimen.
+    private val specimenLine1 = Specimens.MRV_B[0]
+    private val specimenLine2 = Specimens.MRV_B[1]
 
     private fun specimenCommonFields(
         rawSex: Char = 'F',
@@ -31,9 +33,9 @@ class MrzValidatorMrvBTest {
         documentType: DocumentType = DocumentType("V"),
         checkDigits: MrzCheckDigits =
             MrzCheckDigits(
-                documentNumber = '3',
-                dateOfBirth = '1',
-                dateOfExpiry = '3',
+                documentNumber = '4',
+                dateOfBirth = '2',
+                dateOfExpiry = '1',
                 optionalData = null,
                 composite = null,
             ),
@@ -44,13 +46,13 @@ class MrzValidatorMrvBTest {
             primaryIdentifier = "",
             secondaryIdentifier = "",
             nameTruncated = false,
-            rawNameField = "ERIKSSON<<ANNA<MARIA<<<<<<<<<<<",
-            documentNumber = "L898902C<",
+            rawNameField = "SPECIMEN<<ALEX<MORGAN<<<<<<<<<<",
+            documentNumber = "T82000153",
             nationality = CountryCode("UTO"),
-            dateOfBirth = MrzDate(rawYear = "69", rawMonth = "08", rawDay = "06"),
+            dateOfBirth = MrzDate(rawYear = "90", rawMonth = "03", rawDay = "15"),
             sex = sex,
             rawSex = rawSex,
-            dateOfExpiry = MrzDate(rawYear = "30", rawMonth = "08", rawDay = "06"),
+            dateOfExpiry = MrzDate(rawYear = "34", rawMonth = "03", rawDay = "14"),
             checkDigits = checkDigits,
         )
 
@@ -89,8 +91,8 @@ class MrzValidatorMrvBTest {
                         checkDigits =
                             MrzCheckDigits(
                                 documentNumber = '0',
-                                dateOfBirth = '1',
-                                dateOfExpiry = '3',
+                                dateOfBirth = '2',
+                                dateOfExpiry = '1',
                                 optionalData = null,
                                 composite = null,
                             ),
@@ -98,7 +100,7 @@ class MrzValidatorMrvBTest {
             )
         val result = MrzValidator.validate(mrvB)
         val mismatch = result.validationFailures.firstOfField(MrzField.DOCUMENT_NUMBER)
-        assertEquals('3', mismatch.expected)
+        assertEquals('4', mismatch.expected)
         assertEquals('0', mismatch.observed)
         // MRV-B doc number check digit position: line 1 index 9, global = 36 + 9 = 45
         assertEquals(45, mismatch.position)
@@ -112,9 +114,9 @@ class MrzValidatorMrvBTest {
                     specimenCommonFields(
                         checkDigits =
                             MrzCheckDigits(
-                                documentNumber = '3',
+                                documentNumber = '4',
                                 dateOfBirth = '0',
-                                dateOfExpiry = '3',
+                                dateOfExpiry = '1',
                                 optionalData = null,
                                 composite = null,
                             ),
@@ -122,7 +124,7 @@ class MrzValidatorMrvBTest {
             )
         val result = MrzValidator.validate(mrvB)
         val mismatch = result.validationFailures.firstOfField(MrzField.DATE_OF_BIRTH)
-        assertEquals('1', mismatch.expected)
+        assertEquals('2', mismatch.expected)
         assertEquals('0', mismatch.observed)
         // MRV-B DOB check digit position: line 1 index 19, global = 36 + 19 = 55
         assertEquals(55, mismatch.position)
@@ -136,8 +138,8 @@ class MrzValidatorMrvBTest {
                     specimenCommonFields(
                         checkDigits =
                             MrzCheckDigits(
-                                documentNumber = '3',
-                                dateOfBirth = '1',
+                                documentNumber = '4',
+                                dateOfBirth = '2',
                                 dateOfExpiry = '0',
                                 optionalData = null,
                                 composite = null,
@@ -146,7 +148,7 @@ class MrzValidatorMrvBTest {
             )
         val result = MrzValidator.validate(mrvB)
         val mismatch = result.validationFailures.firstOfField(MrzField.DATE_OF_EXPIRY)
-        assertEquals('3', mismatch.expected)
+        assertEquals('1', mismatch.expected)
         assertEquals('0', mismatch.observed)
         // MRV-B expiry check digit position: line 1 index 27, global = 36 + 27 = 63
         assertEquals(63, mismatch.position)

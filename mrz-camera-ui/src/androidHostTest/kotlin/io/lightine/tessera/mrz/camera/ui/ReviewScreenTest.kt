@@ -25,6 +25,7 @@ import io.lightine.tessera.mrz.camera.MrzScanResult
 import io.lightine.tessera.mrz.camera.RecognizedLine
 import io.lightine.tessera.mrz.camera.RecognizedText
 import io.lightine.tessera.mrz.camera.ScanQuality
+import io.lightine.tessera.mrz.checkdigit.computeCheckDigit
 import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.mrz.recognition.DocumentType
@@ -52,8 +53,7 @@ import kotlin.time.Instant
  * [MrzScannerScreenTest]), but the review screen is pure UI over an [`MrzScanResult.Decoded`], so it is
  * fully host-testable by handing it a decode built from a synthetic MRZ.
  *
- * The fixtures use the ICAO TD3 specimen the SDK's own parser tests use — synthetic data, generated to the
- * spec — parsed at a fixed [referenceTime] so date inference is deterministic and independent of the wall
+ * The fixtures use the project's TD3 specimen (synthetic data, made with the SDK's own generator), parsed at a fixed [referenceTime] so date inference is deterministic and independent of the wall
  * clock. The clean specimen parses to [`ParseResult.Success`][ParseResult.Success]; the same specimen with
  * a deliberately wrong date-of-birth check digit parses to
  * [`ParseResult.PartialSuccess`][ParseResult.PartialSuccess], which drives the check-digit-mismatch
@@ -66,18 +66,32 @@ class ReviewScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    // Fixed so 2-digit year inference (DOB / expiry) is deterministic. At 1994 the specimen's expiry
-    // (940623) resolves to 1994-06-23 and it parses cleanly to Success.
-    private val referenceTime = Instant.parse("1994-01-01T00:00:00Z")
+    // Fixed so 2-digit year inference (DOB / expiry) is deterministic. At 2026-05-04 the specimen's expiry
+    // (340314) resolves to 2034-03-14, under ten years ahead, and it parses cleanly to Success.
+    private val referenceTime = Instant.parse("2026-05-04T12:00:00Z")
 
-    // The clean ICAO TD3 specimen used across the SDK's parser tests (synthetic; UTO = Utopia, a reserved
-    // ICAO test issuer). Parses to Success under referenceTime.
-    private val specimenLine1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-    private val specimenLine2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
+    // The project's clean TD3 specimen (synthetic; UTO = Utopia, a reserved ICAO test issuer). Parses to
+    // Success under referenceTime.
+    private val specimenLine1 = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+    private val specimenLine2 = "T220001293UTO9003152F3403141S98765432<<<<<20"
 
-    // Same specimen with the date-of-birth check digit corrupted from 1 to 9 → PartialSuccess carrying an
-    // MrzCheckDigitMismatch on DATE_OF_BIRTH (observed 9, computed 1).
-    private val mismatchLine2 = "L898902C<3UTO6908069F9406236ZE184226B<<<<<14"
+    // Same specimen with the date-of-birth check digit (column 19) corrupted from 2 to 9 → PartialSuccess carrying
+    // an MrzCheckDigitMismatch on DATE_OF_BIRTH (observed 9, computed 2).
+    private val mismatchLine2 = specimenLine2.replaceRange(19, 20, "9")
+
+    // The specimen with its expiry date replaced by [yymmdd]; the expiry and composite check digits are
+    // recomputed with the SDK's own function, so the variant still passes every check.
+    private fun specimenLine2WithExpiry(yymmdd: String): String =
+        specimenLine2
+            .replaceRange(21, 27, yymmdd)
+            .let { it.replaceRange(27, 28, computeCheckDigit(it.substring(21, 27)).toString()) }
+            .let {
+                it.replaceRange(
+                    43,
+                    44,
+                    computeCheckDigit(it.substring(0, 10) + it.substring(13, 20) + it.substring(21, 43)).toString(),
+                )
+            }
 
     private fun decoded(
         line1: String,
@@ -132,10 +146,10 @@ class ReviewScreenTest {
         // observations live in a scrollable column, so scroll each into view before asserting it is displayed
         // (the whole set may exceed the test viewport height).
         composeRule.onNodeWithText("P - passport").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("ERIKSSON, ANNA MARIA").performScrollTo().assertIsDisplayed()
-        // The document number is shown WITHOUT its trailing MRZ filler ("L898902C<" → "L898902C") — the
-        // fillers are padding, not data; the Raw MRZ section (expanded view) still shows them verbatim.
-        composeRule.onNodeWithText("L898902C").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("SPECIMEN, ALEX MORGAN").performScrollTo().assertIsDisplayed()
+        // The document number is shown as read ("T22000129"; this specimen's number fills its field, so there is
+        // no trailing filler to drop — fillers are padding, not data, and the Raw MRZ section shows them verbatim).
+        composeRule.onNodeWithText("T22000129").performScrollTo().assertIsDisplayed()
     }
 
     // ----------------------------------------------------------------------------------------------------
@@ -179,7 +193,7 @@ class ReviewScreenTest {
         // The mismatch is stated with both recorded and computed digits — never called "invalid".
         composeRule
             .onNodeWithText(
-                "Date of birth - check number doesn't agree (document shows 9, we get 1)",
+                "Date of birth - check number doesn't agree (document shows 9, we get 2)",
             ).performScrollTo()
             .assertIsDisplayed()
         composeRule.onNodeWithText("Some checks didn't agree. Please compare with your document.").performScrollTo().assertIsDisplayed()
@@ -452,7 +466,7 @@ class ReviewScreenTest {
         // The mismatch, the advisory, and provenance are all present too.
         composeRule
             .onNodeWithText(
-                "Date of birth - check number doesn't agree (document shows 9, we get 1)",
+                "Date of birth - check number doesn't agree (document shows 9, we get 2)",
             ).performScrollTo()
             .assertIsDisplayed()
         composeRule.onNodeWithText("Some checks didn't agree. Please compare with your document.").performScrollTo().assertIsDisplayed()
@@ -468,10 +482,10 @@ class ReviewScreenTest {
     fun non_td3_optional_data_is_labeled_generically_not_personal_number() {
         // An MRV-A (visa) carries generic MRZ optional data, not TD3's "personal number" field — labelling it
         // "Personal number (optional)" would assert a meaning the field's own spec does not give it. Derived
-        // from the SDK's own MrvA specimen (MrzGeneratorMrvATest) by filling the optional-data tail, which
+        // from the project's MRV-A specimen by filling the optional-data tail, which
         // carries no check digit on this format, so the doc-number/DOB/expiry check digits stay valid.
-        val mrvALine1 = "V<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-        val mrvALine2 = "L898902C<3UTO6908061F3008063ABCDEFGHIJKLMNOP"
+        val mrvALine1 = "V<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+        val mrvALine2 = "T820001534UTO9003152F3403141<<<<<<<<<<<<<<<<".replaceRange(28, 44, "ABCDEFGHIJKLMNOP")
         val mrvADecoded = decoded(mrvALine1, mrvALine2)
         assertTrue(mrvADecoded.parse is ParseResult.Success, "the MRV-A optional-data fixture must parse to Success")
 
@@ -577,8 +591,8 @@ class ReviewScreenTest {
             RecognizedText(
                 lines =
                     listOf(
-                        RecognizedLine("P<UT0ERlKSS0N<<ANN A<<<<<<<<<<<<", null),
-                        RecognizedLine("L8989 2C36UT0 74O8122F32O41 9<<<<", null),
+                        RecognizedLine("P<UT0SPEClMEN<<ALE X<<<<<<<<<<<<", null),
+                        RecognizedLine("T220 01293UT0 9OO3152F34O314 1<<<<", null),
                     ),
             )
         var triedAgain = false
@@ -597,7 +611,7 @@ class ReviewScreenTest {
         composeRule.onNodeWithTag(READ_FAILED_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithText("Couldn't read this MRZ").assertIsDisplayed()
         // Garbled captured text is shown verbatim, garbles preserved (Principle 5).
-        composeRule.onNodeWithText("P<UT0ERlKSS0N<<ANN A<<<<<<<<<<<<").assertIsDisplayed()
+        composeRule.onNodeWithText("P<UT0SPEClMEN<<ALE X<<<<<<<<<<<<").assertIsDisplayed()
         composeRule.onNodeWithText("Try again").performClick()
         assertTrue(triedAgain, "Try again must route back to scanning")
     }
@@ -605,28 +619,28 @@ class ReviewScreenTest {
     // ----------------------------------------------------------------------------------------------------
     // TES-94 / TES-112: the resolved date renders wherever mrz-core resolved one; the printed parts (day
     // first, two-digit year, as on the document's visual zone) render only where core genuinely could not
-    // resolve a century. Uses the classic ICAO 9303 published TD3 specimen (also the MRZ explainer's illustration).
+    // resolve a century. Uses the project's TD3 specimen with its expiry moved to 2012 (printed "120314").
     // ----------------------------------------------------------------------------------------------------
 
     @Test
     fun an_expiry_core_cannot_resolve_a_century_for_renders_the_printed_parts_day_first_while_birth_still_resolves() {
-        val icaoLine1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-        val icaoLine2 = "L898902C36UTO7408122F1204159ZE184226B<<<<<10"
-        // A reference time far enough past this specimen's printed expiry (12 → 20xx) that neither century
+        val variantLine1 = specimenLine1
+        val variantLine2 = specimenLine2WithExpiry("120314")
+        // A reference time far enough past this variant's printed expiry (12 → 20xx) that neither century
         // mrz-core tries falls inside its plausibility window relative to "now" — the same structural cause
         // any sufficiently old real document eventually hits (TES-94), not a UI-side century guess.
         val farReferenceTime = Instant.parse("2026-05-04T12:00:00Z")
-        val icaoDecoded =
+        val variantDecoded =
             MrzScanResult.Decoded(
-                parse = MrzParser.parse(listOf(icaoLine1, icaoLine2), referenceTime = farReferenceTime),
-                recognizedText = RecognizedText(listOf(RecognizedLine(icaoLine1, null), RecognizedLine(icaoLine2, null))),
+                parse = MrzParser.parse(listOf(variantLine1, variantLine2), referenceTime = farReferenceTime),
+                recognizedText = RecognizedText(listOf(RecognizedLine(variantLine1, null), RecognizedLine(variantLine2, null))),
                 quality = ScanQuality(mrzRegionFound = true, ocrConfidence = null, recognizedLineCount = 2),
             )
         val document =
-            when (val parse = icaoDecoded.parse) {
+            when (val parse = variantDecoded.parse) {
                 is ParseResult.Success -> parse.document
                 is ParseResult.PartialSuccess -> parse.document
-                is ParseResult.Failure -> error("the ICAO published specimen must parse (got Failure: ${parse.error})")
+                is ParseResult.Failure -> error("the expiry-2012 specimen variant must parse (got Failure: ${parse.error})")
             }
         // Confirms the premise this test is pinning: core resolved a birth-year century but not an expiry one.
         assertTrue(document.commonFields.dateOfBirth.computedDate != null, "date of birth must resolve")
@@ -635,37 +649,37 @@ class ReviewScreenTest {
         composeRule.setContent {
             MrzScannerConfig().let { config ->
                 TesseraScannerTheme(config.theme) {
-                    ReviewContent(decoded = icaoDecoded, expanded = true, onToggleExpanded = {}, onUse = {}, onRescan = {})
+                    ReviewContent(decoded = variantDecoded, expanded = true, onToggleExpanded = {}, onUse = {}, onRescan = {})
                 }
             }
         }
 
-        composeRule.onNodeWithText("1974-08-12").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("1990-03-15").performScrollTo().assertIsDisplayed()
         // TES-112: the printed parts, day first with the two-digit year, like the document's visual zone.
-        composeRule.onNodeWithText("15 04 12").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("14 03 12").performScrollTo().assertIsDisplayed()
     }
 
     @Test
     fun an_expiry_with_no_century_shows_a_note_with_the_printed_year() {
-        // The ICAO published TD3 specimen expiring in 12: at 2026 neither 2012 nor 1912 is inside the window,
-        // so the parser reports MrzExpiryDateCenturyNotInferred and the screen states it as a note.
-        val icaoLine1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-        val icaoLine2 = "L898902C36UTO7408122F1204159ZE184226B<<<<<10"
-        val icaoDecoded =
+        // The project's TD3 specimen with its expiry moved to 12: at 2026 neither 2012 nor 1912 is inside the
+        // window, so the parser reports MrzExpiryDateCenturyNotInferred and the screen states it as a note.
+        val variantLine1 = specimenLine1
+        val variantLine2 = specimenLine2WithExpiry("120314")
+        val variantDecoded =
             MrzScanResult.Decoded(
-                parse = MrzParser.parse(listOf(icaoLine1, icaoLine2), referenceTime = Instant.parse("2026-05-04T12:00:00Z")),
-                recognizedText = RecognizedText(listOf(RecognizedLine(icaoLine1, null), RecognizedLine(icaoLine2, null))),
+                parse = MrzParser.parse(listOf(variantLine1, variantLine2), referenceTime = Instant.parse("2026-05-04T12:00:00Z")),
+                recognizedText = RecognizedText(listOf(RecognizedLine(variantLine1, null), RecognizedLine(variantLine2, null))),
                 quality = ScanQuality(mrzRegionFound = true, ocrConfidence = null, recognizedLineCount = 2),
             )
         assertTrue(
-            icaoDecoded.parse.metadata.warnings
+            variantDecoded.parse.metadata.warnings
                 .any { it is MrzExpiryDateCenturyNotInferred },
             "fixture must carry the warning",
         )
         var texts: List<String> = emptyList()
 
         composeRule.setContent {
-            texts = reviewObservations(icaoDecoded).map { it.text }
+            texts = reviewObservations(variantDecoded).map { it.text }
         }
         composeRule.waitForIdle()
 

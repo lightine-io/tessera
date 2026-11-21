@@ -26,8 +26,8 @@ fun main() {
 
     // region TES-A-133 block 4
     val lines = listOf(
-        "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-        "L898902C36UTO7408122F1204159ZE184226B<<<<<10",
+        "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<",
+        "T220001293UTO9003152F3403141S98765432<<<<<20",
     )
     println(Td3FormatSpec.dateOfBirth.extractFrom(lines))
     println(Td3FormatSpec.sex.extractCharFrom(lines))

@@ -1,5 +1,6 @@
 package io.lightine.tessera.mrz.generation
 
+import io.lightine.tessera.mrz.Specimens
 import io.lightine.tessera.mrz.model.MrvA
 import io.lightine.tessera.mrz.model.MrvB
 import io.lightine.tessera.mrz.model.MrzDocument
@@ -34,32 +35,12 @@ import kotlin.time.Instant
 class MrzGeneratorDocumentInputValidationTest {
     private val ref2026 = Instant.parse("2026-05-04T12:00:00Z")
 
-    private val td3Lines =
-        listOf(
-            "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-            "L898902C<3UTO6908061F9406236ZE184226B<<<<<14",
-        )
-    private val td1Lines =
-        listOf(
-            "I<UTOL898902C<3<<<<<<<<<<<<<<<",
-            "6908061F3008063UTO<<<<<<<<<<<2",
-            "ERIKSSON<<ANNA<MARIA<<<<<<<<<<",
-        )
-    private val td2Lines =
-        listOf(
-            "I<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<",
-            "D231458907UTO6908061F3008063<<<<<<<4",
-        )
-    private val mrvALines =
-        listOf(
-            "V<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-            "L898902C<3UTO6908061F3008063<<<<<<<<<<<<<<<<",
-        )
-    private val mrvBLines =
-        listOf(
-            "V<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<",
-            "L898902C<3UTO6908061F3008063<<<<<<<<",
-        )
+    // The project's specimens.
+    private val td3Lines = Specimens.TD3
+    private val td1Lines = Specimens.TD1
+    private val td2Lines = Specimens.TD2
+    private val mrvALines = Specimens.MRV_A
+    private val mrvBLines = Specimens.MRV_B
 
     private fun parse(lines: List<String>): MrzDocument =
         assertIs<ParseResult.Success>(MrzParser.parse(lines, referenceTime = ref2026)).document
@@ -88,7 +69,7 @@ class MrzGeneratorDocumentInputValidationTest {
         assertEquals(MrzFormat.TD3, error.format)
         assertEquals(MrzField.DATE_OF_BIRTH, error.field)
         assertEquals(listOf(UnmappedCharacter('a', 0), UnmappedCharacter('b', 1)), error.unmappedCharacters)
-        assertEquals("ab0806", error.observedValue)
+        assertEquals("ab0315", error.observedValue)
     }
 
     @Test
@@ -169,11 +150,11 @@ class MrzGeneratorDocumentInputValidationTest {
     @Test
     fun digit_in_name_field_returns_numeric_in_name_field() {
         val td3 = specimenTd3()
-        val bad = td3.copy(commonFields = td3.commonFields.copy(rawNameField = "ERIKSS0N<<ANNA<MAR1A"))
+        val bad = td3.copy(commonFields = td3.commonFields.copy(rawNameField = "SPEC0MEN<<ALEX<M1RGAN"))
         val failure = assertIs<GenerationResult.Failure>(MrzGenerator.generate(bad))
         val error = assertIs<MrzGenerationNumericInNameField>(failure.error)
         assertEquals(MrzFormat.TD3, error.format)
-        assertEquals("ERIKSS0N<<ANNA<MAR1A", error.observedValue)
+        assertEquals("SPEC0MEN<<ALEX<M1RGAN", error.observedValue)
         assertEquals(listOf('0', '1'), error.numericCharacters)
     }
 
@@ -182,7 +163,7 @@ class MrzGeneratorDocumentInputValidationTest {
         // The field-value functions reject a digit before any other check; the document path
         // matches that order.
         val td3 = specimenTd3()
-        val bad = td3.copy(commonFields = td3.commonFields.copy(rawNameField = "ERIKSS0N<<" + "A".repeat(40)))
+        val bad = td3.copy(commonFields = td3.commonFields.copy(rawNameField = "SPEC0MEN<<" + "A".repeat(40)))
         val failure = assertIs<GenerationResult.Failure>(MrzGenerator.generate(bad))
         assertIs<MrzGenerationNumericInNameField>(failure.error)
     }
@@ -190,7 +171,7 @@ class MrzGeneratorDocumentInputValidationTest {
     @Test
     fun digit_in_name_field_fails_in_every_format() {
         for (document in allSpecimens()) {
-            val cf = document.commonFields.copy(rawNameField = "ERIKSS0N<<ANNA")
+            val cf = document.commonFields.copy(rawNameField = "SPEC0MEN<<ALEX")
             val bad =
                 when (document) {
                     is TD1 -> document.copy(commonFields = cf)
@@ -294,23 +275,23 @@ class MrzGeneratorDocumentInputValidationTest {
     ): GenerationResult =
         when (format) {
             MrzFormat.TD3 -> {
-                MrzGenerator.generateTD3("P", "UTO", "D23145890", primary, secondary, "UTO", dob, Sex.FEMALE, doe, "", profile)
+                MrzGenerator.generateTD3("P", "UTO", "T22000129", primary, secondary, "UTO", dob, Sex.FEMALE, doe, "", profile)
             }
 
             MrzFormat.TD2 -> {
-                MrzGenerator.generateTD2("I", "UTO", "D23145890", primary, secondary, "UTO", dob, Sex.FEMALE, doe, "", profile)
+                MrzGenerator.generateTD2("I", "UTO", "T62000145", primary, secondary, "UTO", dob, Sex.FEMALE, doe, "", profile)
             }
 
             MrzFormat.TD1 -> {
-                MrzGenerator.generateTD1("I", "UTO", "D23145890", primary, secondary, "UTO", dob, Sex.FEMALE, doe, "", "", profile)
+                MrzGenerator.generateTD1("I", "UTO", "T42000137", primary, secondary, "UTO", dob, Sex.FEMALE, doe, "", "", profile)
             }
 
             MrzFormat.MRV_A -> {
-                MrzGenerator.generateMrvA("V", "UTO", "D23145890", primary, secondary, "UTO", dob, Sex.FEMALE, doe, "", profile)
+                MrzGenerator.generateMrvA("V", "UTO", "T82000153", primary, secondary, "UTO", dob, Sex.FEMALE, doe, "", profile)
             }
 
             MrzFormat.MRV_B -> {
-                MrzGenerator.generateMrvB("V", "UTO", "D23145890", primary, secondary, "UTO", dob, Sex.FEMALE, doe, "", profile)
+                MrzGenerator.generateMrvB("V", "UTO", "T82000153", primary, secondary, "UTO", dob, Sex.FEMALE, doe, "", profile)
             }
         }
 

@@ -1,6 +1,10 @@
 package io.lightine.tessera.mrz.parsing
 
+import io.lightine.tessera.mrz.Specimens
+import io.lightine.tessera.mrz.formats.FieldSpec
+import io.lightine.tessera.mrz.formats.MrvAFormatSpec
 import io.lightine.tessera.mrz.model.MrvA
+import io.lightine.tessera.mrz.overwrite
 import io.lightine.tessera.types.errors.MrzCharacterSetViolation
 import io.lightine.tessera.types.errors.MrzCheckDigitMismatch
 import io.lightine.tessera.types.errors.MrzInvalidLength
@@ -20,14 +24,17 @@ import kotlin.time.Instant
 class MrzParserMrvATest {
     private val ref2026 = Instant.parse("2026-05-04T12:00:00Z")
 
-    // Synthetic MRV-A specimen — same Anna Eriksson persona used across TD1, TD2, and TD3
-    // fixtures, adapted to a visa. ICAO Doc 9303 Part 7: 2 lines x 44 characters, document
+    // The project's MRV-A specimen. ICAO Doc 9303 Part 7: 2 lines x 44 characters, document
     // type `V` (visa), issuing state UTO (fictional). Optional data is 16 chars of filler.
-    // Check digits computed via the SDK's own algorithm and locked here. MRV-A has no
-    // composite check digit per Part 7.
-    private val specimenLine1 = "V<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-    private val specimenLine2 = "L898902C<3UTO6908061F3008063<<<<<<<<<<<<<<<<"
+    // MRV-A has no composite check digit per Part 7.
+    private val specimenLine1 = Specimens.MRV_A[0]
+    private val specimenLine2 = Specimens.MRV_A[1]
     private val specimenLines = listOf(specimenLine1, specimenLine2)
+
+    private fun line2With(
+        field: FieldSpec,
+        text: String,
+    ): String = Specimens.MRV_A.overwrite(field, text)[1]
 
     // --- Happy path ---
 
@@ -41,12 +48,12 @@ class MrzParserMrvATest {
         assertEquals("V", mrvA.commonFields.documentType.rawCode)
         assertTrue(mrvA.commonFields.documentType.isRecognized)
         assertEquals("UTO", mrvA.commonFields.issuingState.rawCode)
-        assertEquals("L898902C<", mrvA.commonFields.documentNumber)
+        assertEquals("T82000153", mrvA.commonFields.documentNumber)
         assertEquals("UTO", mrvA.commonFields.nationality.rawCode)
         assertEquals(Sex.FEMALE, mrvA.commonFields.sex)
-        assertEquals("ERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<", mrvA.commonFields.rawNameField)
-        assertEquals("ERIKSSON", mrvA.commonFields.primaryIdentifier)
-        assertEquals("ANNA MARIA", mrvA.commonFields.secondaryIdentifier)
+        assertEquals("SPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<", mrvA.commonFields.rawNameField)
+        assertEquals("SPECIMEN", mrvA.commonFields.primaryIdentifier)
+        assertEquals("ALEX MORGAN", mrvA.commonFields.secondaryIdentifier)
         assertEquals(false, mrvA.commonFields.nameTruncated)
     }
 
@@ -56,9 +63,9 @@ class MrzParserMrvATest {
         val mrvA = assertIs<MrvA>(assertIs<ParseResult.Success>(result).document)
         val checks = mrvA.commonFields.checkDigits
 
-        assertEquals('3', checks.documentNumber)
-        assertEquals('1', checks.dateOfBirth)
-        assertEquals('3', checks.dateOfExpiry)
+        assertEquals('4', checks.documentNumber)
+        assertEquals('2', checks.dateOfBirth)
+        assertEquals('1', checks.dateOfExpiry)
         assertNull(checks.optionalData, "MRV-A has no per-field check digit on optional data")
         assertNull(checks.composite, "MRV-A has no composite check digit per ICAO Doc 9303 Part 7")
     }
@@ -67,7 +74,7 @@ class MrzParserMrvATest {
     fun parses_specimen_mrva_into_success_with_expected_optional_data() {
         val result = MrzParser.parseMRVA(specimenLines, referenceTime = ref2026)
         val mrvA = assertIs<MrvA>(assertIs<ParseResult.Success>(result).document)
-        // 16 chars all filler in the synthetic specimen.
+        // 16 chars all filler in the specimen.
         assertEquals("<<<<<<<<<<<<<<<<", mrvA.optionalData)
         assertEquals(16, mrvA.optionalData.length)
     }
@@ -81,8 +88,7 @@ class MrzParserMrvATest {
 
     @Test
     fun success_metadata_has_no_validation_failures_for_clean_specimen() {
-        // Fictional UTO is not in the SDK's deliberate starter set: two MrzUnknownCountryCode
-        // warnings expected. "V" IS in the starter set so no MrzUnknownDocumentTypeCode warning.
+        // "V" IS in the starter set so no MrzUnknownDocumentTypeCode warning.
         val result = MrzParser.parseMRVA(specimenLines, referenceTime = ref2026)
         val success = assertIs<ParseResult.Success>(result)
         assertTrue(success.metadata.validationFailures.isEmpty())
@@ -113,7 +119,7 @@ class MrzParserMrvATest {
 
     @Test
     fun returns_partial_success_with_check_digit_mismatch_when_document_number_check_digit_is_corrupted() {
-        val corrupted = "L898902C<7UTO6908061F3008063<<<<<<<<<<<<<<<<"
+        val corrupted = line2With(MrvAFormatSpec.documentNumberCheckDigit, "7")
         val result = MrzParser.parseMRVA(listOf(specimenLine1, corrupted), referenceTime = ref2026)
         val partial = assertIs<ParseResult.PartialSuccess>(result)
 
@@ -122,7 +128,7 @@ class MrzParserMrvATest {
                 .filterIsInstance<MrzCheckDigitMismatch>()
                 .firstOrNull { it.field == MrzField.DOCUMENT_NUMBER }
         assertTrue(mismatch != null)
-        assertEquals('3', mismatch.expected)
+        assertEquals('4', mismatch.expected)
         assertEquals('7', mismatch.observed)
     }
 
@@ -132,7 +138,7 @@ class MrzParserMrvATest {
         // (ICAO Doc 9303 Part 7). Mutating the optional-data slot of an otherwise-clean MRV-A
         // input MUST NOT produce any MrzCheckDigitMismatch — the visa format simply has no
         // checks covering that slot.
-        val mutated = "L898902C<3UTO6908061F3008063ABCDEFGHIJKLMNOP"
+        val mutated = line2With(MrvAFormatSpec.optionalData, "ABCDEFGHIJKLMNOP")
         val result = MrzParser.parseMRVA(listOf(specimenLine1, mutated), referenceTime = ref2026)
         val success = assertIs<ParseResult.Success>(result)
         val mismatches = success.metadata.validationFailures.filterIsInstance<MrzCheckDigitMismatch>()
@@ -141,7 +147,7 @@ class MrzParserMrvATest {
 
     @Test
     fun returns_partial_success_with_invalid_sex_value_when_sex_character_is_not_in_allowed_set() {
-        val line2WithInvalidSex = "L898902C<3UTO6908061Q3008063<<<<<<<<<<<<<<<<"
+        val line2WithInvalidSex = line2With(MrvAFormatSpec.sex, "Q")
         val result = MrzParser.parseMRVA(listOf(specimenLine1, line2WithInvalidSex), referenceTime = ref2026)
         val partial = assertIs<ParseResult.PartialSuccess>(result)
         val mrvA = assertIs<MrvA>(partial.document)
@@ -176,9 +182,7 @@ class MrzParserMrvATest {
     @Test
     fun fails_with_mrz_invalid_length_when_lines_have_td2_length_instead_of_mrva_length() {
         // MRV-A is 2 x 44. Passing a 2 x 36 TD2-shape input must fail length validation.
-        val td2Line1 = "I<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<"
-        val td2Line2 = "D231458907UTO6908061F3008063<<<<<<<4"
-        val result = MrzParser.parseMRVA(listOf(td2Line1, td2Line2), referenceTime = ref2026)
+        val result = MrzParser.parseMRVA(Specimens.TD2, referenceTime = ref2026)
         val failure = assertIs<ParseResult.Failure>(result)
         val error = assertIs<MrzInvalidLength>(failure.error)
         assertEquals(MrzFormat.MRV_A, error.format)
@@ -188,7 +192,7 @@ class MrzParserMrvATest {
 
     @Test
     fun fails_with_mrz_character_set_violation_for_lowercase_in_line_one() {
-        val line1WithLowercase = "v<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
+        val line1WithLowercase = "v" + specimenLine1.drop(1)
         val result = MrzParser.parseMRVA(listOf(line1WithLowercase, specimenLine2), referenceTime = ref2026)
         val failure = assertIs<ParseResult.Failure>(result)
         val violation = assertIs<MrzCharacterSetViolation>(failure.error)

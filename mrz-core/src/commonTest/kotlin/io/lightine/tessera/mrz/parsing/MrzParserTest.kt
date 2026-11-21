@@ -1,7 +1,12 @@
 package io.lightine.tessera.mrz.parsing
 
+import io.lightine.tessera.mrz.Specimens
+import io.lightine.tessera.mrz.formats.FieldSpec
+import io.lightine.tessera.mrz.formats.Td3FormatSpec
 import io.lightine.tessera.mrz.model.MrzDateInferenceMethod
 import io.lightine.tessera.mrz.model.TD3
+import io.lightine.tessera.mrz.overwrite
+import io.lightine.tessera.mrz.withCheckDigitsRecomputed
 import io.lightine.tessera.types.errors.MrzCharacterSetViolation
 import io.lightine.tessera.types.errors.MrzCheckDigitMismatch
 import io.lightine.tessera.types.errors.MrzDateNotInCalendar
@@ -24,9 +29,15 @@ import kotlin.time.Instant
 class MrzParserTest {
     private val ref2026 = Instant.parse("2026-05-04T12:00:00Z")
 
-    private val specimenLine1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-    private val specimenLine2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
-    private val specimenLines = listOf(specimenLine1, specimenLine2)
+    // The project's TD3 specimen.
+    private val specimenLines = Specimens.TD3
+    private val specimenLine1 = specimenLines[0]
+    private val specimenLine2 = specimenLines[1]
+
+    private fun line2With(
+        field: FieldSpec,
+        text: String,
+    ): String = specimenLines.overwrite(field, text)[1]
 
     // --- Happy path ---
 
@@ -39,12 +50,12 @@ class MrzParserTest {
         assertEquals(MrzFormat.TD3, td3.format)
         assertEquals("P", td3.commonFields.documentType.rawCode)
         assertEquals("UTO", td3.commonFields.issuingState.rawCode)
-        assertEquals("L898902C<", td3.commonFields.documentNumber)
+        assertEquals("T22000129", td3.commonFields.documentNumber)
         assertEquals("UTO", td3.commonFields.nationality.rawCode)
         assertEquals(Sex.FEMALE, td3.commonFields.sex)
-        assertEquals("ERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<", td3.commonFields.rawNameField)
-        assertEquals("ERIKSSON", td3.commonFields.primaryIdentifier)
-        assertEquals("ANNA MARIA", td3.commonFields.secondaryIdentifier)
+        assertEquals("SPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<", td3.commonFields.rawNameField)
+        assertEquals("SPECIMEN", td3.commonFields.primaryIdentifier)
+        assertEquals("ALEX MORGAN", td3.commonFields.secondaryIdentifier)
         assertEquals(false, td3.commonFields.nameTruncated)
     }
 
@@ -53,14 +64,20 @@ class MrzParserTest {
         val result = MrzParser.parseTD3(specimenLines, referenceTime = ref2026)
         val td3 = assertIs<TD3>(assertIs<ParseResult.Success>(result).document)
 
-        // DOB 690806 with ref 2026 → SLIDING_WINDOW_BIRTH yields 1969
-        assertEquals(1969, td3.commonFields.dateOfBirth.computedYear)
+        // DOB 900315 with ref 2026 → SLIDING_WINDOW_BIRTH yields 1990
+        assertEquals(1990, td3.commonFields.dateOfBirth.computedYear)
         assertEquals(MrzDateInferenceMethod.SLIDING_WINDOW_BIRTH, td3.commonFields.dateOfBirth.inferenceMethod)
 
-        // Expiry 940623 with ref 2026 → falls outside [refYear-10, refYear+50] → RAW_ONLY
-        // (locked behavior; see EXPIRY_PAST_WINDOW_YEARS in MrzDate)
-        assertEquals(MrzDateInferenceMethod.RAW_ONLY, td3.commonFields.dateOfExpiry.inferenceMethod)
-        assertEquals("94", td3.commonFields.dateOfExpiry.rawYear)
+        // Expiry 340314 with ref 2026 → inside [refYear-10, refYear+50] → 2034
+        assertEquals(2034, td3.commonFields.dateOfExpiry.computedYear)
+        assertEquals(MrzDateInferenceMethod.SLIDING_WINDOW_EXPIRY, td3.commonFields.dateOfExpiry.inferenceMethod)
+
+        // A variant expiring 940623, check digits recomputed: with ref 2026 it falls outside
+        // [refYear-10, refYear+50] → RAW_ONLY (locked behavior; see EXPIRY_PAST_WINDOW_YEARS in MrzDate)
+        val oldExpiry = specimenLines.overwrite(Td3FormatSpec.dateOfExpiry, "940623").withCheckDigitsRecomputed(Td3FormatSpec)
+        val oldTd3 = assertIs<TD3>(assertIs<ParseResult.Success>(MrzParser.parseTD3(oldExpiry, referenceTime = ref2026)).document)
+        assertEquals(MrzDateInferenceMethod.RAW_ONLY, oldTd3.commonFields.dateOfExpiry.inferenceMethod)
+        assertEquals("94", oldTd3.commonFields.dateOfExpiry.rawYear)
     }
 
     @Test
@@ -70,10 +87,10 @@ class MrzParserTest {
         val checks = td3.commonFields.checkDigits
 
         assertEquals('3', checks.documentNumber)
-        assertEquals('1', checks.dateOfBirth)
-        assertEquals('6', checks.dateOfExpiry)
-        assertEquals('1', checks.optionalData)
-        assertEquals('4', checks.composite)
+        assertEquals('2', checks.dateOfBirth)
+        assertEquals('1', checks.dateOfExpiry)
+        assertEquals('2', checks.optionalData)
+        assertEquals('0', checks.composite)
     }
 
     @Test
@@ -81,8 +98,8 @@ class MrzParserTest {
         val result = MrzParser.parseTD3(specimenLines, referenceTime = ref2026)
         val td3 = assertIs<TD3>(assertIs<ParseResult.Success>(result).document)
 
-        assertEquals("ZE184226B<<<<<", td3.personalNumber)
-        assertEquals('1', td3.personalNumberCheckDigit)
+        assertEquals("S98765432<<<<<", td3.personalNumber)
+        assertEquals('2', td3.personalNumberCheckDigit)
     }
 
     @Test
@@ -94,7 +111,7 @@ class MrzParserTest {
 
     @Test
     fun success_metadata_has_no_validation_failures_for_clean_specimen() {
-        // The ICAO specimen uses code UTO (Utopia) per Doc 9303 Part 3 §5 Part G;
+        // The project's specimen uses code UTO (Utopia) per Doc 9303 Part 3 §5 Part G;
         // recognized as OTHER category after the country-code table expansion. Clean
         // specimen produces no validation failures and no MrzUnknownCountryCode warnings.
         val result = MrzParser.parseTD3(specimenLines, referenceTime = ref2026)
@@ -149,7 +166,7 @@ class MrzParserTest {
 
     @Test
     fun parses_two_character_document_type_code_pp_into_recognized_document_type() {
-        val line1 = "PPUTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
+        val line1 = specimenLines.overwrite(Td3FormatSpec.documentType, "PP")[0]
         val result = MrzParser.parseTD3(listOf(line1, specimenLine2), referenceTime = ref2026)
         val td3 = assertIs<TD3>(assertIs<ParseResult.Success>(result).document)
 
@@ -159,7 +176,7 @@ class MrzParserTest {
 
     @Test
     fun parses_unrecognized_document_type_code_into_unrecognized_value_class() {
-        val line1 = "ZZUTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
+        val line1 = specimenLines.overwrite(Td3FormatSpec.documentType, "ZZ")[0]
         val result = MrzParser.parseTD3(listOf(line1, specimenLine2), referenceTime = ref2026)
         val td3 = assertIs<TD3>(assertIs<ParseResult.Success>(result).document)
 
@@ -169,7 +186,7 @@ class MrzParserTest {
 
     @Test
     fun parses_male_sex_character() {
-        val line2 = "L898902C<3UTO6908061M9406236ZE184226B<<<<<14"
+        val line2 = line2With(Td3FormatSpec.sex, "M")
         val result = MrzParser.parseTD3(listOf(specimenLine1, line2), referenceTime = ref2026)
         val td3 = assertIs<TD3>(assertIs<ParseResult.Success>(result).document)
         assertEquals(Sex.MALE, td3.commonFields.sex)
@@ -177,7 +194,7 @@ class MrzParserTest {
 
     @Test
     fun parses_filler_sex_character_as_unspecified() {
-        val line2 = "L898902C<3UTO6908061<9406236ZE184226B<<<<<14"
+        val line2 = line2With(Td3FormatSpec.sex, "<")
         val result = MrzParser.parseTD3(listOf(specimenLine1, line2), referenceTime = ref2026)
         val td3 = assertIs<TD3>(assertIs<ParseResult.Success>(result).document)
         assertEquals(Sex.UNSPECIFIED, td3.commonFields.sex)
@@ -187,11 +204,11 @@ class MrzParserTest {
 
     @Test
     fun returns_partial_success_with_check_digit_mismatch_when_document_number_check_digit_is_corrupted() {
-        // Specimen line 2 with the document-number check digit flipped from '3' to '7'.
+        // Specimen line 2 with the document-number check digit changed from '3' to '7'.
         // Composite digit must also be invalidated to remain consistent — so we corrupt only
         // the per-field digit and accept that the composite digit will also fail. The test
         // asserts the per-field finding is present.
-        val corrupted = "L898902C<7UTO6908061F9406236ZE184226B<<<<<14"
+        val corrupted = line2With(Td3FormatSpec.documentNumberCheckDigit, "7")
         val result = MrzParser.parseTD3(listOf(specimenLine1, corrupted), referenceTime = ref2026)
         val partial = assertIs<ParseResult.PartialSuccess>(result)
 
@@ -206,7 +223,7 @@ class MrzParserTest {
 
     @Test
     fun returns_partial_success_with_invalid_sex_value_when_sex_character_is_not_in_allowed_set() {
-        val line2WithInvalidSex = "L898902C<3UTO6908061Q9406236ZE184226B<<<<<14"
+        val line2WithInvalidSex = line2With(Td3FormatSpec.sex, "Q")
         val result = MrzParser.parseTD3(listOf(specimenLine1, line2WithInvalidSex), referenceTime = ref2026)
         val partial = assertIs<ParseResult.PartialSuccess>(result)
         val td3 = assertIs<TD3>(partial.document)
@@ -229,7 +246,7 @@ class MrzParserTest {
     fun returns_partial_success_with_MrzDateNotInCalendar_when_birth_date_is_calendar_invalid() {
         // Birth date "900230" — Feb 30 doesn't exist in any year. Birth-date and composite check
         // digits also mismatch; this test asserts the date-in-calendar failure narrowly.
-        val line2 = "L898902C<3UTO9002301F9406236ZE184226B<<<<<14"
+        val line2 = line2With(Td3FormatSpec.dateOfBirth, "900230")
         val result = MrzParser.parseTD3(listOf(specimenLine1, line2), referenceTime = ref2026)
         val partial = assertIs<ParseResult.PartialSuccess>(result)
 
@@ -251,7 +268,7 @@ class MrzParserTest {
     fun returns_partial_success_with_MrzDateNotInCalendar_when_expiry_date_is_calendar_invalid() {
         // Expiry "301301" — month 13 doesn't exist. The expiry and composite check digits will
         // also mismatch; this test asserts the date-in-calendar failure narrowly.
-        val line2 = "L898902C<3UTO6908061F3013016ZE184226B<<<<<14"
+        val line2 = line2With(Td3FormatSpec.dateOfExpiry, "301301")
         val result = MrzParser.parseTD3(listOf(specimenLine1, line2), referenceTime = ref2026)
         val partial = assertIs<ParseResult.PartialSuccess>(result)
 
@@ -277,9 +294,9 @@ class MrzParserTest {
 
     @Test
     fun preserves_raw_sex_character_verbatim_for_each_recognized_value() {
-        val line2Female = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
-        val line2Male = "L898902C<3UTO6908061M9406236ZE184226B<<<<<14"
-        val line2Filler = "L898902C<3UTO6908061<9406236ZE184226B<<<<<14"
+        val line2Female = line2With(Td3FormatSpec.sex, "F")
+        val line2Male = line2With(Td3FormatSpec.sex, "M")
+        val line2Filler = line2With(Td3FormatSpec.sex, "<")
 
         val female = assertIs<TD3>(assertIs<ParseResult.Success>(MrzParser.parseTD3(listOf(specimenLine1, line2Female), ref2026)).document)
         val male = assertIs<TD3>(assertIs<ParseResult.Success>(MrzParser.parseTD3(listOf(specimenLine1, line2Male), ref2026)).document)
@@ -292,12 +309,13 @@ class MrzParserTest {
 
     @Test
     fun returns_success_with_expiry_past_warning_when_reference_time_is_after_expiry() {
-        // Specimen expires 1994-06-23. Reference 1995-01-01 is inside the parser's [-10y, +50y]
+        // A specimen variant expiring 1994-06-23 (check digits recomputed). Reference 1995-01-01 is inside the parser's [-10y, +50y]
         // window so the expiry parses to a real LocalDate; the validator then sees the date as
         // before the reference and emits MrzExpiryDatePast. Warnings do not downgrade Success
         // to PartialSuccess — only validationFailures do — so the result must remain Success.
         val ref1995 = Instant.parse("1995-01-01T00:00:00Z")
-        val result = MrzParser.parseTD3(specimenLines, referenceTime = ref1995)
+        val expired1994 = specimenLines.overwrite(Td3FormatSpec.dateOfExpiry, "940623").withCheckDigitsRecomputed(Td3FormatSpec)
+        val result = MrzParser.parseTD3(expired1994, referenceTime = ref1995)
         val success = assertIs<ParseResult.Success>(result)
         assertTrue(success.metadata.validationFailures.isEmpty())
 
@@ -342,7 +360,7 @@ class MrzParserTest {
 
     @Test
     fun fails_with_mrz_character_set_violation_for_lowercase_in_line_one() {
-        val line1WithLowercase = "p<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
+        val line1WithLowercase = "p" + specimenLine1.drop(1)
         val result = MrzParser.parseTD3(listOf(line1WithLowercase, specimenLine2), referenceTime = ref2026)
         val failure = assertIs<ParseResult.Failure>(result)
         val violation = assertIs<MrzCharacterSetViolation>(failure.error)
@@ -368,7 +386,7 @@ class MrzParserTest {
         // The translation-owed item from prior slices: lowercase input must surface as
         // MrzCharacterSetViolation, never as the IllegalArgumentException that
         // computeCheckDigit would throw for non-MRZ-alphabet input.
-        val line1WithLowercase = "p<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
+        val line1WithLowercase = "p" + specimenLine1.drop(1)
         try {
             val result = MrzParser.parseTD3(listOf(line1WithLowercase, specimenLine2), referenceTime = ref2026)
             assertIs<ParseResult.Failure>(result)

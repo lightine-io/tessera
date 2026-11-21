@@ -46,9 +46,9 @@ class AccessibilityTest {
     val composeRule = createComposeRule()
 
     // Fixed reference time so the specimen parses deterministically (mirrors the sibling screen tests).
-    private val referenceTime = Instant.parse("1994-01-01T00:00:00Z")
-    private val specimenLine1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-    private val specimenLine2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
+    private val referenceTime = Instant.parse("2026-05-04T12:00:00Z")
+    private val specimenLine1 = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+    private val specimenLine2 = "T220001293UTO9003152F3403141S98765432<<<<<20"
 
     private fun decoded(): MrzScanResult.Decoded =
         MrzScanResult.Decoded(

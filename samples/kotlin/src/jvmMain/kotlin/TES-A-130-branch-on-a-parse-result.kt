@@ -18,9 +18,9 @@ fun main() {
     // endregion
 
     // region TES-A-130 block 4
-    val referenceTime = Instant.parse("2010-06-01T00:00:00Z")
-    val line1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-    val line2 = "L898902C36UTO7408122F1204159ZE184226B<<<<<10"
+    val referenceTime = Instant.parse("2026-11-21T00:00:00Z")
+    val line1 = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+    val line2 = "T220001293UTO9003152F3403141S98765432<<<<<20"
 
     println(describe(MrzParser.parse(listOf(line1, line2), referenceTime)))
     println(describe(MrzParser.parse(listOf(line1, line2.dropLast(1) + "1"), referenceTime)))
@@ -28,7 +28,7 @@ fun main() {
     // endregion
 
     // region TES-A-130 block 5
-    val later = MrzParser.parse(listOf(line1, line2), Instant.parse("2013-01-01T00:00:00Z"))
+    val later = MrzParser.parse(listOf(line1, line2), Instant.parse("2035-01-01T00:00:00Z"))
     println(later.metadata.readMethod)
     println(later.metadata.warnings.map { it.description })
     println(later.metadata.validationFailures.size)

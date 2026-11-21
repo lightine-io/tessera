@@ -1,5 +1,6 @@
 package io.lightine.tessera.mrz.parsing
 
+import io.lightine.tessera.mrz.Specimens
 import io.lightine.tessera.mrz.model.MrvA
 import io.lightine.tessera.mrz.model.MrvB
 import io.lightine.tessera.mrz.model.TD1
@@ -17,34 +18,12 @@ import kotlin.time.Instant
 class MrzParserAutoDetectTest {
     private val ref2026 = Instant.parse("2026-05-04T12:00:00Z")
 
-    // Synthetic specimens for each format, reusing the Anna Eriksson / UTO persona consistent
-    // across the format-specific test fixtures. Check digits are pre-computed and locked.
-    private val td1Lines =
-        listOf(
-            "I<UTOL898902C<3<<<<<<<<<<<<<<<",
-            "6908061F3008063UTO<<<<<<<<<<<2",
-            "ERIKSSON<<ANNA<MARIA<<<<<<<<<<",
-        )
-    private val td2Lines =
-        listOf(
-            "I<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<",
-            "D231458907UTO6908061F3008063<<<<<<<4",
-        )
-    private val td3Lines =
-        listOf(
-            "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-            "L898902C<3UTO6908061F9406236ZE184226B<<<<<14",
-        )
-    private val mrvALines =
-        listOf(
-            "V<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-            "L898902C<3UTO6908061F3008063<<<<<<<<<<<<<<<<",
-        )
-    private val mrvBLines =
-        listOf(
-            "V<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<",
-            "L898902C<3UTO6908061F3008063<<<<<<<<",
-        )
+    // The project's specimens for each format.
+    private val td1Lines = Specimens.TD1
+    private val td2Lines = Specimens.TD2
+    private val td3Lines = Specimens.TD3
+    private val mrvALines = Specimens.MRV_A
+    private val mrvBLines = Specimens.MRV_B
 
     // --- Happy path: each format dispatches to the right typed document ---
 
@@ -142,7 +121,7 @@ class MrzParserAutoDetectTest {
     @Test
     fun two_character_visa_code_VA_in_2x44_input_dispatches_to_MRV_A() {
         // "VA" as a two-character visa code starts with V; dispatch follows leading character only.
-        val line1 = "VAUTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
+        val line1 = "VA" + td3Lines[0].drop(2)
         val result = MrzParser.parse(listOf(line1, mrvALines[1]), referenceTime = ref2026)
         val success = assertIs<ParseResult.Success>(result) // line 2 still has valid digits
         assertIs<MrvA>(success.document)
@@ -150,7 +129,7 @@ class MrzParserAutoDetectTest {
 
     @Test
     fun two_character_passport_code_PP_in_2x44_input_dispatches_to_TD3() {
-        val line1 = "PPUTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
+        val line1 = "PP" + td3Lines[0].drop(2)
         val result = MrzParser.parse(listOf(line1, td3Lines[1]), referenceTime = ref2026)
         val success = assertIs<ParseResult.Success>(result)
         assertIs<TD3>(success.document)
@@ -160,7 +139,7 @@ class MrzParserAutoDetectTest {
     fun unrecognized_leading_character_in_2x44_input_dispatches_to_TD3() {
         // Document type "Z<" — not V, so dispatch is TD3. The validator surfaces
         // MrzUnknownDocumentTypeCode as a warning; the document still parses as TD3.
-        val line1 = "Z<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
+        val line1 = "Z<" + td3Lines[0].drop(2)
         val result = MrzParser.parse(listOf(line1, td3Lines[1]), referenceTime = ref2026)
         // Result may be Success or PartialSuccess depending on check-digit alignment, but the
         // document type is TD3.
@@ -175,7 +154,7 @@ class MrzParserAutoDetectTest {
     fun filler_leading_character_in_2x44_input_dispatches_to_TD3() {
         // "<<" is the malformed leading-filler case for the document-type slot. Auto-detect
         // dispatches to TD3 (not visa, because line[0][0] is '<' not 'V').
-        val line1 = "<<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
+        val line1 = "<<" + td3Lines[0].drop(2)
         val result = MrzParser.parse(listOf(line1, td3Lines[1]), referenceTime = ref2026)
         when (result) {
             is ParseResult.Success -> assertIs<TD3>(result.document)
@@ -197,7 +176,7 @@ class MrzParserAutoDetectTest {
 
     @Test
     fun fails_with_MrzFormatNotDetected_for_single_line_input() {
-        val result = MrzParser.parse(listOf("P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"), referenceTime = ref2026)
+        val result = MrzParser.parse(listOf(td3Lines[0]), referenceTime = ref2026)
         val failure = assertIs<ParseResult.Failure>(result)
         val error = assertIs<MrzFormatNotDetected>(failure.error)
         assertEquals(1, error.observedLineCount)
@@ -216,7 +195,7 @@ class MrzParserAutoDetectTest {
     @Test
     fun fails_with_MrzFormatNotDetected_for_2_lines_of_40_chars() {
         // 2x40 is not a supported shape (TD2 is 2x36, TD3 is 2x44).
-        val line = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<"
+        val line = td3Lines[0].take(40)
         val result = MrzParser.parse(listOf(line, line), referenceTime = ref2026)
         val failure = assertIs<ParseResult.Failure>(result)
         val error = assertIs<MrzFormatNotDetected>(failure.error)
@@ -264,7 +243,7 @@ class MrzParserAutoDetectTest {
         // reports the violation. The result is Failure with MrzCharacterSetViolation, NOT
         // MrzFormatNotDetected — the format WAS detected; the input was malformed for the
         // detected format.
-        val line1 = "p<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
+        val line1 = "p<" + td3Lines[0].drop(2)
         val result = MrzParser.parse(listOf(line1, td3Lines[1]), referenceTime = ref2026)
         val failure = assertIs<ParseResult.Failure>(result)
         assertIs<MrzCharacterSetViolation>(failure.error)

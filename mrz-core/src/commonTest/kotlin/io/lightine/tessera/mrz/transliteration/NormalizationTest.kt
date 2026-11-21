@@ -18,7 +18,7 @@ class NormalizationTest {
 
     @Test
     fun mrz_alphabet_including_filler_is_unchanged() {
-        val input = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
+        val input = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
         assertEquals(input, normalizeForTransliteration(input))
     }
 

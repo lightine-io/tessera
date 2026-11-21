@@ -20,8 +20,8 @@ fun main() {
         // Run your OCR engine on the file at "image" and return every line it read.
         RecognizedText(
             listOf(
-                RecognizedLine("P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<", null),
-                RecognizedLine("L898902C36UTO7408122F1204159ZE184226B<<<<<10", null),
+                RecognizedLine("P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<", null),
+                RecognizedLine("T220001293UTO9003152F3403141S98765432<<<<<20", null),
             ),
         )
     }
@@ -31,7 +31,7 @@ fun main() {
     val reader = SavedImageMrzReader(
         acknowledgement = SavedImageReadingAcknowledgement(),
         recognizer = recognizer,
-        referenceTimeProvider = { Instant.parse("2010-06-01T00:00:00Z") },
+        referenceTimeProvider = { Instant.parse("2026-11-21T00:00:00Z") },
     )
     // endregion
 
