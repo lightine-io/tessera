@@ -84,9 +84,14 @@ class NonLatinTransliterationTest {
     @Test
     fun cyrillic_letters_the_table_does_not_list_become_the_filler() {
         // Soft sign, Tshe, Gje: not in Section 6.B.
-        for (char in listOf('Ь', 'ь', 'Ћ', 'Ѓ')) {
+        for (char in listOf('Ь', 'ь', 'Ћ', 'ћ', 'Ѓ', 'ѓ')) {
             assertEquals("<", icao(char.toString()), "U+${char.code.toString(16)}")
         }
+    }
+
+    @Test
+    fun arabic_presentation_forms_are_not_folded_and_become_fillers() {
+        assertEquals("<<", icao("ﭐﻻ"))
     }
 
     @Test
@@ -113,6 +118,38 @@ class NonLatinTransliterationTest {
             )
         for ((profile, text, expected) in cases) {
             assertEquals(expected, run(profile, text), profile.identifier)
+        }
+    }
+
+    @Test
+    fun the_soft_sign_per_profile() {
+        // Section 6.B does not list the soft sign: the default profile and the Belarusian,
+        // Macedonian and Serbian profiles keep the filler, Ukrainian drops it, Bulgarian is Y.
+        assertEquals("<", icao("Ь"))
+        assertEquals("<", icao("ь"))
+        for (profile in listOf(
+            IcaoCyrillicLanguageProfiles.belarusian,
+            IcaoCyrillicLanguageProfiles.macedonian,
+            IcaoCyrillicLanguageProfiles.serbian,
+        )) {
+            assertEquals("<<", run(profile, "Ьь"), profile.identifier)
+        }
+
+        val ukrainian = IcaoCyrillicLanguageProfiles.ukrainian
+        assertEquals("", run(ukrainian, "Ь"))
+        assertEquals("", run(ukrainian, "ь"))
+        assertEquals("OLHA<PETRENKO", run(ukrainian, "Ольга Петренко"))
+
+        val bulgarian = IcaoCyrillicLanguageProfiles.bulgarian
+        assertEquals("YY", run(bulgarian, "Ьь"))
+        assertEquals("MARIIA<PYOTROVA", run(bulgarian, "Мария Пьотрова"))
+    }
+
+    @Test
+    fun tshe_and_gje_stay_the_filler_in_every_profile() {
+        val profiles = listOf<TransliterationProfile>(IcaoDefaultTransliterationProfile) + IcaoCyrillicLanguageProfiles.all
+        for (profile in profiles) {
+            assertEquals("<<<<", run(profile, "ЋћЃѓ"), profile.identifier)
         }
     }
 

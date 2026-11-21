@@ -1,10 +1,13 @@
 package io.lightine.tessera.mrz.transliteration
 
-import io.lightine.tessera.mrz.parsing.isMrzAlphabetCharacter
-
 /**
  * The default profile: the tables of ICAO Doc 9303 Part 3 Section 6 for Latin (6.A, no expansion),
  * Cyrillic (6.B, main values) and Arabic script (6.C).
+ *
+ * Letters the Cyrillic table does not list include the soft sign (`Ь` U+042C, `ь` U+044C), Tshe
+ * (`Ћ` U+040B, `ћ` U+045B), and Gje (`Ѓ` U+0403, `ѓ` U+0453). They become `<` unless the app
+ * overrides them, for example `'Ь' to ""`. Arabic presentation forms in U+FB50 to U+FEFF are not
+ * folded: input is normalized to NFC only, so they become `<`.
  *
  * @since 0.1.0
  */
@@ -29,8 +32,7 @@ public object IcaoDefaultTransliterationProfile : TransliterationProfile {
      *
      * Cyrillic letters follow the main values of Section 6.B, capital and small alike (`Ж` becomes
      * `ZH`, `Щ` becomes `SHCH`). The table's language exceptions are not applied here; they are in
-     * the profiles of [IcaoCyrillicLanguageProfiles]. Letters the table does not list, such as the
-     * soft sign `Ь`, become `<`.
+     * the profiles of [IcaoCyrillicLanguageProfiles].
      *
      * Arabic-script letters follow Section 6.C, plus veh and feh with 3 dots below from Appendix B.
      * Short vowels, sukun, superscript alef, tatweel and the four letters the table marks "not
@@ -71,14 +73,5 @@ public object IcaoDefaultTransliterationProfile : TransliterationProfile {
     public fun withOverrides(
         identifier: String,
         overrides: Map<Char, String>,
-    ): TransliterationProfile {
-        require(identifier.isNotBlank()) { "identifier must not be blank" }
-        for ((key, value) in overrides) {
-            val bad = value.firstOrNull { !isMrzAlphabetCharacter(it) }
-            require(bad == null) {
-                "override for '$key' has '$bad', which is not an MRZ alphabet character (A-Z, 0-9, <)"
-            }
-        }
-        return OverriddenTransliterationProfile(identifier, overrides.toMap())
-    }
+    ): TransliterationProfile = createOverriddenTransliterationProfile(identifier, overrides)
 }
