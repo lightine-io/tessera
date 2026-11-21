@@ -52,7 +52,11 @@ signed by GitHub. Release tags are signed by the maintainer.
 
 1. **Branch off `main`** with `feature/`, `fix/`, `docs/`, or `chore/` and a short
    description. CI rejects other names.
-2. **Check the open GitHub issues** for work in progress and settled decisions.
+2. **Ask before you start.** Day-to-day work is tracked on the maintainer's private
+   board, so the open GitHub issues do not show everything in progress. Open an issue, or
+   comment on an existing one, and say what you plan to do. The maintainer answers within
+   7 days and tells you whether someone is already on it. Open pull requests are public
+   and show what is in review.
 3. **Run the local checks:** `./gradlew check` (compile, tests, Spotless, ktlint) and
    `python3 -I scripts/check-docs.py pointers`.
 4. **Fill in the PR template** at
@@ -70,6 +74,10 @@ Every PR to `main` must pass the required checks before it can merge; branch pro
 enforces that. [`.github/CODEOWNERS`](.github/CODEOWNERS) names the maintainer, who
 reviews and merges. Code-owner approval becomes a requirement when the project has a
 second maintainer.
+
+The maintainer gives a first answer to a question, a bug report or an outside pull
+request within 7 days. That is a first answer, not a promise of a fix or a merge by
+then. Security reports have their own targets in [`SECURITY.md`](SECURITY.md).
 
 ## Reporting issues
 
