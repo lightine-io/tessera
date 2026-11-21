@@ -870,6 +870,21 @@ final object io.lightine.tessera.mrz.transliteration/AzeTransliterationProfile :
     final fun toMrzAlphabet(kotlin/String): io.lightine.tessera.mrz.transliteration/TransliterationResult // io.lightine.tessera.mrz.transliteration/AzeTransliterationProfile.toMrzAlphabet|toMrzAlphabet(kotlin.String){}[0]
 }
 
+final object io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfiles { // io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfiles|null[0]
+    final val all // io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfiles.all|{}all[0]
+        final fun <get-all>(): kotlin.collections/List<io.lightine.tessera.mrz.transliteration/TransliterationProfile> // io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfiles.all.<get-all>|<get-all>(){}[0]
+    final val belarusian // io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfiles.belarusian|{}belarusian[0]
+        final fun <get-belarusian>(): io.lightine.tessera.mrz.transliteration/TransliterationProfile // io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfiles.belarusian.<get-belarusian>|<get-belarusian>(){}[0]
+    final val bulgarian // io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfiles.bulgarian|{}bulgarian[0]
+        final fun <get-bulgarian>(): io.lightine.tessera.mrz.transliteration/TransliterationProfile // io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfiles.bulgarian.<get-bulgarian>|<get-bulgarian>(){}[0]
+    final val macedonian // io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfiles.macedonian|{}macedonian[0]
+        final fun <get-macedonian>(): io.lightine.tessera.mrz.transliteration/TransliterationProfile // io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfiles.macedonian.<get-macedonian>|<get-macedonian>(){}[0]
+    final val serbian // io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfiles.serbian|{}serbian[0]
+        final fun <get-serbian>(): io.lightine.tessera.mrz.transliteration/TransliterationProfile // io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfiles.serbian.<get-serbian>|<get-serbian>(){}[0]
+    final val ukrainian // io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfiles.ukrainian|{}ukrainian[0]
+        final fun <get-ukrainian>(): io.lightine.tessera.mrz.transliteration/TransliterationProfile // io.lightine.tessera.mrz.transliteration/IcaoCyrillicLanguageProfiles.ukrainian.<get-ukrainian>|<get-ukrainian>(){}[0]
+}
+
 final object io.lightine.tessera.mrz.transliteration/IcaoDefaultTransliterationProfile : io.lightine.tessera.mrz.transliteration/TransliterationProfile { // io.lightine.tessera.mrz.transliteration/IcaoDefaultTransliterationProfile|null[0]
     final const val IDENTIFIER // io.lightine.tessera.mrz.transliteration/IcaoDefaultTransliterationProfile.IDENTIFIER|{}IDENTIFIER[0]
         final fun <get-IDENTIFIER>(): kotlin/String // io.lightine.tessera.mrz.transliteration/IcaoDefaultTransliterationProfile.IDENTIFIER.<get-IDENTIFIER>|<get-IDENTIFIER>(){}[0]

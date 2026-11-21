@@ -618,6 +618,16 @@ public final class io/lightine/tessera/mrz/transliteration/AzeTransliterationPro
 	public fun toMrzAlphabet (Ljava/lang/String;)Lio/lightine/tessera/mrz/transliteration/TransliterationResult;
 }
 
+public final class io/lightine/tessera/mrz/transliteration/IcaoCyrillicLanguageProfiles {
+	public static final field INSTANCE Lio/lightine/tessera/mrz/transliteration/IcaoCyrillicLanguageProfiles;
+	public final fun getAll ()Ljava/util/List;
+	public final fun getBelarusian ()Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;
+	public final fun getBulgarian ()Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;
+	public final fun getMacedonian ()Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;
+	public final fun getSerbian ()Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;
+	public final fun getUkrainian ()Lio/lightine/tessera/mrz/transliteration/TransliterationProfile;
+}
+
 public final class io/lightine/tessera/mrz/transliteration/IcaoDefaultTransliterationProfile : io/lightine/tessera/mrz/transliteration/TransliterationProfile {
 	public static final field IDENTIFIER Ljava/lang/String;
 	public static final field INSTANCE Lio/lightine/tessera/mrz/transliteration/IcaoDefaultTransliterationProfile;

@@ -47,7 +47,8 @@ import kotlin.test.fail
  * the examples. Ids map to the source: `P<part>-<kind>-<n>`, where the kind is `A` for a Part 3
  * Appendix A check-digit example (in Part 7, `A` and `B` are the MRV-A and MRV-B name examples),
  * `F` for a full specimen in figure order, `N` for a name example in print order, `AR` and `T` for
- * Part 3 Appendix B, and `VDS` for the visible digital seal. Each entry names the section or
+ * Part 3 Appendix B, `S` for a Part 3 Arabic-script example whose script we wrote out, and `VDS`
+ * for the visible digital seal. Each entry names the section or
  * figure and the PDF page index.
  *
  * Groups: 1, check digits; 2, full specimens (parse, validate, generate); 3, name examples; 4,
@@ -165,6 +166,19 @@ class IcaoConformanceTest {
         assertTrue(P3_T_1.printed.endsWith("<<TERESA"), "P3-T-1 printed secondary")
     }
 
+    // Arabic script through the ICAO profile (Section 6.C and Appendix B). Where Doc 9303 prints
+    // something else, the vector says why and the SDK's documented output is asserted.
+    @Test
+    fun part_3_arabic_script_examples_give_the_printed_mrz_text() =
+        checkEach(SCRIPT_VECTORS) { v ->
+            assertEquals(
+                v.whyDifferent == null,
+                v.sdkOutput == v.printed.trimEnd('<'),
+                "whyDifferent is set exactly when the output differs",
+            )
+            assertEquals(v.sdkOutput, transliterateWithIcaoProfile(v.script))
+        }
+
     // --- Group 4: source anomalies ---
 
     @Test
@@ -252,6 +266,7 @@ class IcaoConformanceTest {
                 SPECIMEN_VECTORS,
                 CONVENTION_VECTORS,
                 listOf(P3_T_1),
+                SCRIPT_VECTORS,
                 NAME_VECTORS,
                 LISTED_VECTORS,
                 ANOMALY_VECTORS,
