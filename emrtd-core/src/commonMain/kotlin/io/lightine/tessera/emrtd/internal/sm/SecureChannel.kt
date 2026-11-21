@@ -1,16 +1,20 @@
 package io.lightine.tessera.emrtd.internal.sm
 
+import io.lightine.tessera.emrtd.internal.apdu.ApduSender
 import io.lightine.tessera.emrtd.internal.apdu.CommandApdu
 import io.lightine.tessera.emrtd.internal.apdu.ResponseApdu
 import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
 
 /**
- * A secure-messaging session as an [ApduExchange]: a decorator over the plain exchange [inner] that
+ * A secure-messaging session as an [ApduSender]: a decorator over the raw sender [inner] that
  * protects every command and checks every answer ([SecureMessaging]).
  *
  * Once a session is open, every command goes through it; the reader never sends a plain command
  * beside it (Part 11, section 4.3.2: "all subsequent communication MUST be protected"; a chip ends
- * its session on a plain command, section 9.8.3).
+ * its session on a plain command, section 9.8.3). Unlike the plain
+ * [io.lightine.tessera.emrtd.internal.apdu.ApduChannel], it never follows the plain 61xx/6Cxx
+ * answer-length hints: inside a session those status words mean the chip answered outside its
+ * protection, so [SecureMessaging] turns them into a [SecureMessagingException].
  *
  * The first failure ends the session for good, because the send sequence counters of reader and
  * chip can no longer be trusted to agree:
@@ -25,11 +29,11 @@ import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
  * the session ends; it copies [ssc].
  */
 internal class SecureChannel(
-    private val inner: ApduExchange,
+    private val inner: ApduSender,
     crypto: ChipCrypto,
     keys: SessionKeys,
     ssc: ByteArray,
-) : ApduExchange {
+) : ApduSender {
     private val sm = SecureMessaging(crypto, keys, ssc)
 
     /** Whether the session is still usable. */

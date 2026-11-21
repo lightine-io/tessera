@@ -1,6 +1,8 @@
 package io.lightine.tessera.emrtd.internal.bac
 
 import io.lightine.tessera.emrtd.ChipAccessKey
+import io.lightine.tessera.emrtd.internal.apdu.ApduChannel
+import io.lightine.tessera.emrtd.internal.apdu.ApduSender
 import io.lightine.tessera.emrtd.internal.apdu.CommandApdu
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
 import io.lightine.tessera.emrtd.internal.crypto.BlockCipher
@@ -10,7 +12,6 @@ import io.lightine.tessera.emrtd.internal.crypto.CryptoBytes
 import io.lightine.tessera.emrtd.internal.crypto.DerivedKeyType
 import io.lightine.tessera.emrtd.internal.crypto.HashAlgorithm
 import io.lightine.tessera.emrtd.internal.crypto.KeyDerivation
-import io.lightine.tessera.emrtd.internal.sm.ApduExchange
 import io.lightine.tessera.emrtd.internal.sm.SecureChannel
 import io.lightine.tessera.emrtd.internal.sm.SessionKeys
 import io.lightine.tessera.emrtd.internal.sm.SmCipher
@@ -103,7 +104,7 @@ internal object Bac {
     }
 
     /**
-     * Runs the BAC protocol of section 4.3.1 over the plain [exchange] and returns the secure channel
+     * Runs the BAC protocol of section 4.3.1 over the raw [exchange] and returns the secure channel
      * it opens. Steps:
      * 1. GET CHALLENGE (`00 84 00 00 08`): the chip's nonce RND.IC.
      * 2. S = RND.IFD || RND.IC || K.IFD, with fresh random RND.IFD (8 bytes) and K.IFD (16 bytes);
@@ -113,13 +114,15 @@ internal object Bac {
      * 5. Session keys from K.IFD xor K.IC (sections 9.7.1, 9.7.4); SSC = the last 4 bytes of
      *    RND.IC || the last 4 bytes of RND.IFD (section 9.8.6.3).
      *
-     * [random] supplies the reader's nonce and key material (the platform's strong random source;
-     * tests pass the values of Appendix D.3). Transport failures pass through unchanged.
+     * BAC's own commands are plain, so it wraps [exchange] in an [ApduChannel] to follow the plain
+     * 61xx/6Cxx answer-length hints; the returned [SecureChannel] decorates the raw [exchange]
+     * directly. [random] supplies the reader's nonce and key material (the platform's strong random
+     * source; tests pass the values of Appendix D.3). Transport failures pass through unchanged.
      *
      * @throws BacException when the chip refuses or answers wrongly.
      */
     suspend fun open(
-        exchange: ApduExchange,
+        exchange: ApduSender,
         crypto: ChipCrypto,
         key: ChipAccessKey.Mrz,
         random: (Int) -> ByteArray = crypto::randomBytes,
@@ -133,12 +136,13 @@ internal object Bac {
     }
 
     private suspend fun run(
-        exchange: ApduExchange,
+        exchange: ApduSender,
         crypto: ChipCrypto,
         keys: BacKeys,
         random: (Int) -> ByteArray,
     ): SecureChannel {
-        val challenge = exchange.send(CommandApdu(0x00, INS_GET_CHALLENGE, 0x00, 0x00, ne = NONCE_LENGTH))
+        val plain = ApduChannel(exchange)
+        val challenge = plain.send(CommandApdu(0x00, INS_GET_CHALLENGE, 0x00, 0x00, ne = NONCE_LENGTH))
         if (challenge.sw != StatusWord.SUCCESS) throw BacException(BacFailure.CHALLENGE_REFUSED, challenge.sw)
         val rndIc = challenge.data
         if (rndIc.size != NONCE_LENGTH) throw BacException(BacFailure.WRONG_CHALLENGE_LENGTH)
@@ -152,7 +156,7 @@ internal object Bac {
         CryptoBytes.wipe(s)
 
         val answer =
-            exchange.send(
+            plain.send(
                 CommandApdu(0x00, INS_EXTERNAL_AUTHENTICATE, 0x00, 0x00, eIfd + mIfd, CRYPTOGRAM_LENGTH + MAC_LENGTH),
             )
         if (answer.sw != StatusWord.SUCCESS) {

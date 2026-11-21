@@ -4,12 +4,12 @@ import io.lightine.tessera.emrtd.ApduTransport
 import io.lightine.tessera.emrtd.ChipAccessKey
 import io.lightine.tessera.emrtd.internal.apdu.ChipCommands
 import io.lightine.tessera.emrtd.internal.apdu.LdsIds
+import io.lightine.tessera.emrtd.internal.apdu.PlainApduSender
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
 import io.lightine.tessera.emrtd.internal.crypto.HashAlgorithm
 import io.lightine.tessera.emrtd.internal.crypto.hex
 import io.lightine.tessera.emrtd.internal.crypto.toHex
 import io.lightine.tessera.emrtd.internal.crypto.withCrypto
-import io.lightine.tessera.emrtd.internal.sm.PlainExchange
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -101,7 +101,7 @@ class BacAppendixDTest {
                 val randoms = ArrayDeque(listOf(hex("781723860C06C226"), hex("0B795240CB7049B01C19B33E32804F0B")))
                 val channel =
                     Bac.open(
-                        PlainExchange(transport),
+                        PlainApduSender(transport),
                         c,
                         nineCharacterKey(),
                     ) { n -> randoms.removeFirst().also { assertEquals(n, it.size) } }
