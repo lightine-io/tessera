@@ -1,0 +1,81 @@
+# API docs site: builds the one aggregated Dokka site (TES-39) and deploys it to GitHub Pages.
+#
+# Runs only on a `v*` release tag, never on a push to main. Each release replaces the site, so the
+# address always shows the latest release. (Older versions stay available in the Maven Central
+# javadoc jars.) One-time setup by the repo owner: Settings > Pages > Source = "GitHub Actions".
+#
+# macOS runner, as in release.yml: the modules have Apple targets and the Android modules need the
+# SDK platform, and Dokka resolves each module's source sets. Every action is pinned to a full
+# commit SHA with a version comment (supply-chain hardening), matching release.yml.
+
+name: docs-site
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-site
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: docs-site · build
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Ensure Android SDK platform 37
+        run: |
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -d "$ANDROID_SDK_ROOT/platforms/android-37.0" ]; then
+            yes 2>/dev/null | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+            "$SDKMANAGER" --install "platforms;android-37.0"
+          fi
+
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: konan-${{ runner.os }}-
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - name: Generate the API docs site
+        run: ./gradlew dokkaGenerate
+
+      - name: Configure Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: build/dokka/html
+
+  deploy:
+    name: docs-site · deploy
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

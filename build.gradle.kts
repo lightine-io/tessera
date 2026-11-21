@@ -6,11 +6,36 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform) apply false
     alias(libs.plugins.android.kotlin.multiplatform.library) apply false
     alias(libs.plugins.maven.publish) apply false
-    alias(libs.plugins.dokka) apply false
+    // Applied here (not `apply false`) for the one aggregated API docs site below (TES-39); the
+    // modules apply the same plugin through tessera.kmp-publishing.
+    alias(libs.plugins.dokka)
 }
 
 allprojects {
     group = "io.lightine.tessera"
+}
+
+// One API docs site for every published module (TES-39). `./gradlew dokkaGenerate` writes it to
+// build/dokka/html. Aggregating the modules in one Dokka run lets a reference in one module
+// (for example a `types` KDoc pointing at an `mrz-core` class) resolve to a real link; the
+// per-module javadoc jars for Maven Central are separate and unchanged. The list is the published
+// modules: add a new published module here too. `mrz-camera-ios` ships by Swift Package only.
+dokka {
+    dokkaPublications.html {
+        moduleName.set("Tessera")
+        outputDirectory.set(layout.buildDirectory.dir("dokka/html"))
+    }
+}
+
+dependencies {
+    dokka(project(":types"))
+    dokka(project(":mrz-core"))
+    dokka(project(":emrtd-core"))
+    dokka(project(":telemetry"))
+    dokka(project(":logging"))
+    dokka(project(":mrz-camera-core"))
+    dokka(project(":mrz-camera"))
+    dokka(project(":mrz-camera-ui"))
 }
 
 // The publishing setup every published module shares (Central Portal, signing, POM metadata,
