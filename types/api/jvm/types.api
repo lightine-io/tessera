@@ -405,6 +405,7 @@ public final class io/lightine/tessera/types/errors/NfcUnavailable : io/lightine
 }
 
 public final class io/lightine/tessera/types/errors/NfcUnavailable$Reason : java/lang/Enum {
+	public static final field CLOSED Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static final field DISABLED Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static final field NOT_PERMITTED Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static final field NOT_SUPPORTED Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
