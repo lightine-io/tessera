@@ -38,7 +38,7 @@ These are targets, not guarantees. Tessera is a small project and timelines depe
 
 ## Scope
 
-Tessera reads and checks MRZ text: parsing, generation, validation, the data model, error taxonomy, lookup tables, transliteration profiles, and the telemetry contract. The core modules do no I/O. The camera modules (`mrz-camera-*`) read camera frames and saved images in memory to locate and read the MRZ, and the Android UI module adds the scanner screens and a system photo picker. Tessera's own code holds no network code, writes no files, stores nothing, and logs nothing. One dependency does use the network: on Android, the text recognition is Google ML Kit (bundled model). It reads images on the device and sends no images or recognized text, but it uploads usage metrics to Google (device, app and performance data) shortly after it runs, may download updates, and adds the `INTERNET` permission to the app. Google documents no way to turn this off, so an app that uses the Android camera modules must declare it, for example in Google Play's Data safety section ([ML Kit data disclosure](https://developers.google.com/ml-kit/android-data-disclosure)).
+Tessera reads and checks MRZ text: parsing, generation, validation, the data model, error taxonomy, lookup tables, transliteration profiles, and the telemetry contract. The core modules do no I/O. The camera modules (`mrz-camera-*`) read camera frames and saved images in memory to locate and read the MRZ, and the Android UI module adds the scanner screens and a system photo picker. Tessera's own code holds no network code, writes no files, stores nothing, and logs nothing. The experimental chip reading code uses BouncyCastle on JVM and Android; on iOS, the `Tessera` framework bundles OpenSSL's libcrypto (symbols hidden, built from a pinned source). One dependency does use the network: on Android, the text recognition is Google ML Kit (bundled model). It reads images on the device and sends no images or recognized text, but it uploads usage metrics to Google (device, app and performance data) shortly after it runs, may download updates, and adds the `INTERNET` permission to the app. Google documents no way to turn this off, so an app that uses the Android camera modules must declare it, for example in Google Play's Data safety section ([ML Kit data disclosure](https://developers.google.com/ml-kit/android-data-disclosure)).
 
 An app that must make no network calls at all can remove the permission in its own manifest. In our tests text recognition kept working and the upload failed quietly, but Google does not document this, so check it again after each ML Kit update:
 
@@ -57,7 +57,7 @@ Reports concerning the following are in scope:
 - Crashes or denial-of-service on malformed input
 - Information leakage through error messages or logging
 - Dependencies with known vulnerabilities that materially affect the SDK
-- Cryptographic concerns, once NFC chip reading ships (BAC, PACE)
+- Cryptographic concerns with the experimental NFC chip reading (BAC, PACE)
 
 Out of scope:
 

@@ -13,6 +13,7 @@ paths:
   - "**/androidInstrumentedTest/**"
   - "**/iosTest/**"
   - "mrz-camera-*/**"
+  - "mrz-camera-core-relocation/**"
   - "mrz-ocr-core/**"
 ---
 
