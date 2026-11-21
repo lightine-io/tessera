@@ -84,8 +84,9 @@ If Next is empty: tell the owner, clear blockers, and stop. Do not pull from Opt
 
 ## Device QA
 
-- Device QA on a real device is done by the owner. An AI session may run checks on emulators and simulators and records them on the card, but they do not replace the device check.
-- A pull request that needs device QA gets the `device-qa` label; after the merge it sits in Test.
+- Emulator first. When an emulator or simulator can fully test the change, the session tests it there and records the result on the card; no real device is needed.
+- Only what a real device alone can show goes to device QA on a real device, done by the owner: for example a live camera, NFC, or hardware an emulator lacks. The card says why the emulator is not enough.
+- A pull request that needs real-device QA gets the `device-qa` label; after the merge it sits in Test.
 - No device available: the item stays in Test, marked blocked.
 - Test is full (2): do not merge more `device-qa` pull requests until one leaves Test.
 - Merged code ships with the next release even if its card is still in Test. So a release goes out only when Test is empty, or when the owner accepts the open Test cards in writing on the release card.
