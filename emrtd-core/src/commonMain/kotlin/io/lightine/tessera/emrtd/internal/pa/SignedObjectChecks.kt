@@ -18,8 +18,10 @@ internal class SignedObjectResult(
 
 /**
  * The four signer facts about one CMS signed object (EF.SOD, EF.CardSecurity, a master list): its
- * signature, its signer's path to a supplied root, the signer's validity at the caller's time, and
- * the signer's critical extensions. Each is its own fact; none implies another.
+ * signature under the signer certificate it names (stored in the file, or supplied by the app when
+ * the file carries none, which the fact records), its signer's path to a supplied root, the signer's
+ * validity at the caller's time, and the signer's critical extensions. Each is its own fact; none
+ * implies another.
  */
 internal object SignedObjectChecks {
     fun run(
@@ -29,6 +31,7 @@ internal object SignedObjectChecks {
         roots: List<X509Certificate>,
         at: CertTime?,
         crypto: ChipCrypto?,
+        appSignerCertificate: X509Certificate? = null,
     ): SignedObjectResult {
         val sd =
             try {
@@ -38,7 +41,7 @@ internal object SignedObjectChecks {
             } catch (e: CmsException) {
                 null
             } ?: return notRun(signed, at, PaNotRun.UNREADABLE_FILE)
-        val lookup = SignatureChecks.findSigner(sd)
+        val lookup = SignatureChecks.findSigner(sd, appSignerCertificate)
         val signer = lookup.certificate
         val info = lookup.signerInfo
         if (signer == null || info == null) {
@@ -50,8 +53,8 @@ internal object SignedObjectChecks {
             val unavailable = PaOutcome.NotRun(PaNotRun.CRYPTO_UNAVAILABLE)
             return SignedObjectResult(
                 listOf(
-                    PaCheck(PaCheckKind.SignatureVerifies(signed), unavailable),
-                    PaCheck(PaCheckKind.SignerChainsToSuppliedRoot(signed), unavailable),
+                    PaCheck(PaCheckKind.SignatureVerifies(signed, lookup.origin), unavailable),
+                    PaCheck(PaCheckKind.SignerChainsToSuppliedRoot(signed, null), unavailable),
                     validity,
                     critical,
                 ),
@@ -71,8 +74,8 @@ internal object SignedObjectChecks {
             }
         return SignedObjectResult(
             listOf(
-                PaCheck(PaCheckKind.SignatureVerifies(signed), signature),
-                PaCheck(PaCheckKind.SignerChainsToSuppliedRoot(signed), match.outcome),
+                PaCheck(PaCheckKind.SignatureVerifies(signed, lookup.origin), signature),
+                PaCheck(PaCheckKind.SignerChainsToSuppliedRoot(signed, match.issuerNameMatch), match.outcome),
                 validity,
                 critical,
             ),
@@ -89,8 +92,8 @@ internal object SignedObjectChecks {
     ): List<PaCheck> {
         val o = PaOutcome.NotRun(reason)
         return listOf(
-            PaCheck(PaCheckKind.SignatureVerifies(signed), o),
-            PaCheck(PaCheckKind.SignerChainsToSuppliedRoot(signed), o),
+            PaCheck(PaCheckKind.SignatureVerifies(signed, null), o),
+            PaCheck(PaCheckKind.SignerChainsToSuppliedRoot(signed, null), o),
             PaCheck(PaCheckKind.SignerValidAt(signed, at), o),
             PaCheck(PaCheckKind.SignerCriticalExtensionsRecognized(signed), o),
         )

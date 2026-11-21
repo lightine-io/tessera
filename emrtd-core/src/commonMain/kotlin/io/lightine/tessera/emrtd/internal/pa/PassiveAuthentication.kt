@@ -34,6 +34,12 @@ internal class PaInputs(
     val efDir: ByteArray? = null,
     /** The roots the app supplied ([io.lightine.tessera.emrtd.trust.TrustAnchor]). Never bundled or downloaded (ADR-031 point 4). */
     val roots: List<X509Certificate> = emptyList(),
+    /**
+     * The document signer certificate the app supplies for an EF.SOD that carries none (Part 10,
+     * App D). It is used only when the file's own certificates name no signer, and the signature
+     * fact then records that the certificate came from the app. `null` when the app supplies none.
+     */
+    val signerCertificate: X509Certificate? = null,
     /** The time the caller asks validity at; `null` means validity is not checked. The SDK never reads a clock for this. */
     val at: CertTime? = null,
     /** The document code from DG1 (for example `P<` or `ID`), for the DocumentType fact. */
@@ -77,6 +83,7 @@ internal class PassiveAuthentication(
                     inputs.roots,
                     inputs.at,
                     crypto,
+                    inputs.signerCertificate,
                 )
             }
         checks += sod.checks
@@ -221,21 +228,19 @@ internal class PassiveAuthentication(
         signer: X509Certificate?,
         root: X509Certificate?,
     ): List<PaCheck> {
-        val kinds =
-            listOf(
-                PaCheckKind.SignerDocumentTypeMatches,
-                PaCheckKind.SignerKeyUsageIsDigitalSignatureOnly,
-                PaCheckKind.SignerCountryMatchesRootCountry,
-                PaCheckKind.IssueDateInSignerUsagePeriod,
-            )
         if (signer == null) {
             val reason = if (inputs.securityObject == null) PaNotRun.FILE_NOT_READ else PaNotRun.NO_SIGNER_CERTIFICATE
-            return kinds.map { PaCheck(it, PaOutcome.NotRun(reason)) }
+            return listOf(
+                PaCheck(PaCheckKind.SignerDocumentTypeMatches, PaOutcome.NotRun(reason)),
+                PaCheck(PaCheckKind.SignerKeyUsageIsDigitalSignatureOnly, PaOutcome.NotRun(reason)),
+                PaCheck(PaCheckKind.SignerCountryMatchesRootCountry(null, null), PaOutcome.NotRun(reason)),
+                PaCheck(PaCheckKind.IssueDateInSignerUsagePeriod, PaOutcome.NotRun(reason)),
+            )
         }
         return listOf(
             PaCheck(PaCheckKind.SignerDocumentTypeMatches, documentType(inputs, signer)),
             PaCheck(PaCheckKind.SignerKeyUsageIsDigitalSignatureOnly, keyUsage(signer)),
-            PaCheck(PaCheckKind.SignerCountryMatchesRootCountry, country(signer, root)),
+            country(signer, root),
             PaCheck(PaCheckKind.IssueDateInSignerUsagePeriod, usagePeriod(inputs, signer)),
         )
     }
@@ -275,15 +280,41 @@ internal class PassiveAuthentication(
         }
     }
 
+    /**
+     * The country fact (Part 11, 5.1.1 best practice 2): each side's country is read from its
+     * certificate's subject name, then the SubjectAltName and IssuerAltName extensions, and the
+     * fact says which source was used on each side.
+     */
     private fun country(
         signer: X509Certificate,
         root: X509Certificate?,
-    ): PaOutcome {
-        if (root == null) return PaOutcome.NotRun(PaNotRun.NO_MATCHED_ROOT)
-        val a = signer.subject.countryName
-        val b = root.subject.countryName
-        if (a == null || b == null) return PaOutcome.NotRun(PaNotRun.COUNTRY_NAME_ABSENT)
-        return if (a == b) PaOutcome.Passed else PaOutcome.Failed(PaFailure.COUNTRY_DIFFERS)
+    ): PaCheck {
+        if (root == null) {
+            return PaCheck(PaCheckKind.SignerCountryMatchesRootCountry(null, null), PaOutcome.NotRun(PaNotRun.NO_MATCHED_ROOT))
+        }
+        val a = countryOf(signer)
+        val b = countryOf(root)
+        if (a == null || b == null) {
+            return PaCheck(
+                PaCheckKind.SignerCountryMatchesRootCountry(a?.source, b?.source),
+                PaOutcome.NotRun(PaNotRun.COUNTRY_NAME_ABSENT),
+            )
+        }
+        val outcome = if (a.value == b.value) PaOutcome.Passed else PaOutcome.Failed(PaFailure.COUNTRY_DIFFERS)
+        return PaCheck(PaCheckKind.SignerCountryMatchesRootCountry(a.source, b.source), outcome)
+    }
+
+    /** One certificate's country, and where it was read from. */
+    private class Country(
+        val value: String,
+        val source: CountrySource,
+    )
+
+    private fun countryOf(certificate: X509Certificate): Country? {
+        certificate.subject.countryName?.let { return Country(it, CountrySource.SUBJECT_NAME) }
+        certificate.decoded.subjectAltNameCountry?.let { return Country(it, CountrySource.SUBJECT_ALT_NAME) }
+        certificate.decoded.issuerAltNameCountry?.let { return Country(it, CountrySource.ISSUER_ALT_NAME) }
+        return null
     }
 
     private fun usagePeriod(

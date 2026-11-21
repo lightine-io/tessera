@@ -5,6 +5,7 @@ import io.lightine.tessera.emrtd.internal.asn1.DerWriter
 import io.lightine.tessera.emrtd.internal.crypto.ChipCryptoUnavailableException
 import io.lightine.tessera.emrtd.internal.crypto.HashAlgorithm
 import io.lightine.tessera.emrtd.internal.x509.CertTime
+import io.lightine.tessera.emrtd.internal.x509.X509Parser
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -21,8 +22,13 @@ class PassiveAuthenticationTest {
 
     private fun List<PaCheck>.outcome(kind: PaCheckKind): PaOutcome = single { it.kind == kind }.outcome
 
-    private val sodSignature = PaCheckKind.SignatureVerifies(SignedObject.SECURITY_OBJECT)
-    private val sodChain = PaCheckKind.SignerChainsToSuppliedRoot(SignedObject.SECURITY_OBJECT)
+    private fun signature(origin: SignerCertificateOrigin?) = PaCheckKind.SignatureVerifies(SignedObject.SECURITY_OBJECT, origin)
+
+    private fun chain(match: IssuerNameMatch?) = PaCheckKind.SignerChainsToSuppliedRoot(SignedObject.SECURITY_OBJECT, match)
+
+    private val sodSignature = signature(SignerCertificateOrigin.STORED_IN_FILE)
+
+    private val sodChain = chain(IssuerNameMatch.BYTE_EQUAL)
 
     private fun failed(reason: PaFailure) = PaOutcome.Failed(reason)
 
@@ -40,6 +46,7 @@ class PassiveAuthenticationTest {
         documentCode: String? = "P<",
         printedDocumentCode: String? = null,
         issueDate: CertTime? = null,
+        signerCertificate: ByteArray? = null,
     ) = pa.run(
         PaInputs(
             securityObject = sod,
@@ -47,15 +54,12 @@ class PassiveAuthenticationTest {
             cardAccess = cardAccess,
             cardSecurity = cardSecurity,
             efDir = efDir,
-            roots =
-                roots.map {
-                    io.lightine.tessera.emrtd.internal.x509.X509Parser
-                        .parse(it)
-                },
+            roots = roots.map { X509Parser.parse(it) },
             at = at,
             documentCode = documentCode,
             printedDocumentCode = printedDocumentCode,
             issueDate = issueDate,
+            signerCertificate = signerCertificate?.let { X509Parser.parse(it) },
         ),
     )
 
@@ -211,10 +215,77 @@ class PassiveAuthenticationTest {
         withKeys { keys ->
             val pki = Pki.rsa(keys)
             val checks = run(pki, sod = pki.sod(groups, certificates = emptyList()))
-            assertEquals(notRun(PaNotRun.NO_SIGNER_CERTIFICATE), checks.outcome(sodSignature))
-            assertEquals(notRun(PaNotRun.NO_SIGNER_CERTIFICATE), checks.outcome(sodChain))
+            assertEquals(notRun(PaNotRun.NO_SIGNER_CERTIFICATE), checks.outcome(signature(null)))
+            assertEquals(notRun(PaNotRun.NO_SIGNER_CERTIFICATE), checks.outcome(chain(null)))
             // The hashes are still compared.
             assertEquals(PaOutcome.Passed, checks.outcome(PaCheckKind.DataGroupHashMatches(1)))
+        }
+
+    // ---- a signer certificate the app supplies (Part 10, App D) ----
+
+    @Test
+    fun aSignerCertificateTheAppSuppliesForAnEmptyFileIsUsedAndReported() =
+        withKeys { keys ->
+            val pki = Pki.rsa(keys)
+            val empty = pki.sod(groups, certificates = emptyList())
+            val fromApp = signature(SignerCertificateOrigin.SUPPLIED_BY_APP)
+            // Without it, nothing about the signer runs; with it, every signer fact runs and the
+            // signature fact says the certificate came from the app.
+            assertEquals(notRun(PaNotRun.NO_SIGNER_CERTIFICATE), run(pki, sod = empty).outcome(signature(null)))
+            val checks = run(pki, sod = empty, signerCertificate = pki.ds)
+            assertEquals(PaOutcome.Passed, checks.outcome(fromApp))
+            assertEquals(PaOutcome.Passed, checks.outcome(chain(IssuerNameMatch.BYTE_EQUAL)))
+            assertEquals(
+                PaOutcome.Passed,
+                checks.outcome(PaCheckKind.SignerCountryMatchesRootCountry(CountrySource.SUBJECT_NAME, CountrySource.SUBJECT_NAME)),
+            )
+            assertEquals(PaOutcome.Passed, checks.outcome(PaCheckKind.SignerValidAt(SignedObject.SECURITY_OBJECT, Pki.IN_VALIDITY)))
+        }
+
+    @Test
+    fun theAppSuppliedCertificateIsNotUsedWhenItIsNotTheOneTheFileNames() =
+        withKeys { keys ->
+            val pki = Pki.rsa(keys)
+            val empty = pki.sod(groups, certificates = emptyList())
+            // Another serial number: the SignerInfo does not name it.
+            assertEquals(
+                notRun(PaNotRun.NO_SIGNER_CERTIFICATE),
+                run(pki, sod = empty, signerCertificate = FakePki.cscaCertificate()).outcome(signature(null)),
+            )
+        }
+
+    @Test
+    fun aSignatureUnderTheAppSuppliedCertificateStillHasToVerify() =
+        withKeys { keys ->
+            val pki = Pki.rsa(keys)
+            val empty = pki.sod(groups, certificates = emptyList())
+            // The SignerInfo names it (issuer and serial), but the key is not the one that signed.
+            val wrongKey =
+                FakePki.certificate(
+                    subject = Pki.DS_NAME,
+                    issuer = Pki.CSCA_NAME,
+                    serial = Pki.DS_SERIAL,
+                    publicKeyInfo = FakePki.publicKeyInfo(keys.rsaOther.publicKey),
+                )
+            assertEquals(
+                failed(PaFailure.SIGNATURE_DOES_NOT_VERIFY),
+                run(pki, sod = empty, signerCertificate = wrongKey).outcome(signature(SignerCertificateOrigin.SUPPLIED_BY_APP)),
+            )
+        }
+
+    @Test
+    fun theFileOwnsTheFirstClaimOnTheSignerCertificateTheAppAlsoSuppliesOneFor() =
+        withKeys { keys ->
+            val pki = Pki.rsa(keys)
+            val wrongKey =
+                FakePki.certificate(
+                    subject = Pki.DS_NAME,
+                    issuer = Pki.CSCA_NAME,
+                    serial = Pki.DS_SERIAL,
+                    publicKeyInfo = FakePki.publicKeyInfo(keys.rsaOther.publicKey),
+                )
+            // The SOD carries the right certificate; the app-supplied one is not used.
+            assertEquals(PaOutcome.Passed, run(pki, signerCertificate = wrongKey).outcome(sodSignature))
         }
 
     // ---- signer to root ----
@@ -223,7 +294,7 @@ class PassiveAuthenticationTest {
     fun withNoRootsTheChainDoesNotRunButTheSignatureStillVerifies() =
         withKeys { keys ->
             val checks = run(Pki.rsa(keys), roots = emptyList())
-            assertEquals(notRun(PaNotRun.NO_ROOTS_SUPPLIED), checks.outcome(sodChain))
+            assertEquals(notRun(PaNotRun.NO_ROOTS_SUPPLIED), checks.outcome(chain(null)))
             assertEquals(PaOutcome.Passed, checks.outcome(sodSignature))
         }
 
@@ -243,7 +314,7 @@ class PassiveAuthenticationTest {
                         0x33
                     },
                 )
-            assertEquals(failed(PaFailure.NO_SUPPLIED_ROOT_MATCHES), run(pki, roots = listOf(stranger)).outcome(sodChain))
+            assertEquals(failed(PaFailure.NO_SUPPLIED_ROOT_MATCHES), run(pki, roots = listOf(stranger)).outcome(chain(null)))
         }
 
     @Test
@@ -251,7 +322,7 @@ class PassiveAuthenticationTest {
         withKeys { keys ->
             val pki = Pki.rsa(keys)
             val impostor = Pki.csca(keys.signer, keys.rsaOther, FakePki.rsaPkcs1(HashAlgorithm.SHA256))
-            assertEquals(failed(PaFailure.SIGNATURE_DOES_NOT_VERIFY), run(pki, roots = listOf(impostor)).outcome(sodChain))
+            assertEquals(failed(PaFailure.SIGNATURE_DOES_NOT_VERIFY), run(pki, roots = listOf(impostor)).outcome(chain(null)))
         }
 
     @Test
@@ -277,7 +348,7 @@ class PassiveAuthenticationTest {
     fun aSignerWhoseIssuerNameIsNotTheRootSubjectFails() =
         withKeys { keys ->
             val pki = Pki.rsa(keys, dsIssuer = FakePki.name("UT", "Another Name"))
-            assertEquals(failed(PaFailure.ISSUER_NAME_DIFFERS), run(pki).outcome(sodChain))
+            assertEquals(failed(PaFailure.ISSUER_NAME_DIFFERS), run(pki).outcome(chain(null)))
         }
 
     @Test
@@ -285,6 +356,28 @@ class PassiveAuthenticationTest {
         withKeys { keys ->
             val ext = Pki.dsExtensions().filter { it.oid != FakePki.OID_AKI }
             assertEquals(PaOutcome.Passed, run(Pki.rsa(keys, dsExtensions = ext)).outcome(sodChain))
+        }
+
+    @Test
+    fun aRootWhoseSubjectDiffersOnlyInEncodingMatchesByTheFallbackComparison() =
+        withKeys { keys ->
+            // The DS issuer name is the CSCA subject in UTF8String, lower case, with a double space:
+            // the bytes differ, the names are the same under RFC 5280, section 7.1.
+            val issuerName = FakePki.nameUtf8("ut", "utopia  csca")
+            assertEquals(PaOutcome.Passed, run(Pki.rsa(keys, dsIssuer = issuerName)).outcome(chain(IssuerNameMatch.NORMALIZED)))
+            // The same fallback finds the root by name when there is no AuthorityKeyId.
+            val ext = Pki.dsExtensions().filter { it.oid != FakePki.OID_AKI }
+            assertEquals(
+                PaOutcome.Passed,
+                run(Pki.rsa(keys, dsExtensions = ext, dsIssuer = issuerName)).outcome(chain(IssuerNameMatch.NORMALIZED)),
+            )
+        }
+
+    @Test
+    fun aRootWhoseSubjectIsAnotherOrderOfAttributesDoesNotMatch() =
+        withKeys { keys ->
+            val swapped = Pki.rsa(keys, dsIssuer = FakePki.nameSwapped("UT", "Utopia CSCA"))
+            assertEquals(failed(PaFailure.ISSUER_NAME_DIFFERS), run(swapped).outcome(chain(null)))
         }
 
     // ---- validity and critical extensions ----
@@ -348,11 +441,14 @@ class PassiveAuthenticationTest {
             val pki = Pki.rsa(keys)
             val cardSecurity = pki.cardSecurity(FakeGroups.securityInfos(FakeGroups.paceInfo, FakeGroups.aaInfo))
             val kind = PaCheckKind.CardAccessMatchesSignedCopy(SignedCopy.CARD_SECURITY)
-            val signature = PaCheckKind.SignatureVerifies(SignedObject.CARD_SECURITY)
+            val signature = PaCheckKind.SignatureVerifies(SignedObject.CARD_SECURITY, SignerCertificateOrigin.STORED_IN_FILE)
             val checks = run(pki, cardAccess = FakeGroups.securityInfos(FakeGroups.paceInfo), cardSecurity = cardSecurity)
             assertEquals(PaOutcome.Passed, checks.outcome(kind))
             assertEquals(PaOutcome.Passed, checks.outcome(signature))
-            assertEquals(PaOutcome.Passed, checks.outcome(PaCheckKind.SignerChainsToSuppliedRoot(SignedObject.CARD_SECURITY)))
+            assertEquals(
+                PaOutcome.Passed,
+                checks.outcome(PaCheckKind.SignerChainsToSuppliedRoot(SignedObject.CARD_SECURITY, IssuerNameMatch.BYTE_EQUAL)),
+            )
             val missing = run(pki, cardAccess = FakeGroups.securityInfos(FakeGroups.otherPaceInfo), cardSecurity = cardSecurity)
             assertEquals(failed(PaFailure.ENTRIES_MISSING_FROM_SIGNED_COPY), missing.outcome(kind))
 
@@ -436,11 +532,75 @@ class PassiveAuthenticationTest {
     @Test
     fun theSignerCountryIsComparedWithTheMatchedRoot() =
         withKeys { keys ->
-            val kind = PaCheckKind.SignerCountryMatchesRootCountry
+            val kind = PaCheckKind.SignerCountryMatchesRootCountry(CountrySource.SUBJECT_NAME, CountrySource.SUBJECT_NAME)
             assertEquals(PaOutcome.Passed, run(Pki.rsa(keys)).outcome(kind))
             val elsewhere = Pki.rsa(keys, dsSubject = FakePki.name("UU", "Document Signer 01"))
             assertEquals(failed(PaFailure.COUNTRY_DIFFERS), run(elsewhere).outcome(kind))
-            assertEquals(notRun(PaNotRun.NO_MATCHED_ROOT), run(Pki.rsa(keys), roots = emptyList()).outcome(kind))
+            assertEquals(
+                notRun(PaNotRun.NO_MATCHED_ROOT),
+                run(Pki.rsa(keys), roots = emptyList()).outcome(PaCheckKind.SignerCountryMatchesRootCountry(null, null)),
+            )
+        }
+
+    @Test
+    fun theSignerCountryIsReadFromTheAltNameExtensionsWhenTheSubjectHasNone() =
+        withKeys { keys ->
+            val noCountrySubject = FakePki.nameWithoutCountry("Utopia Document Signer 01")
+            val fromSan = PaCheckKind.SignerCountryMatchesRootCountry(CountrySource.SUBJECT_ALT_NAME, CountrySource.SUBJECT_NAME)
+            val san =
+                Pki.rsa(
+                    keys,
+                    dsSubject = noCountrySubject,
+                    dsExtensions = Pki.dsExtensions(extra = listOf(FakePki.subjectAltNameDirectory("UT"))),
+                )
+            assertEquals(PaOutcome.Passed, run(san).outcome(fromSan))
+            val otherCountry =
+                Pki.rsa(
+                    keys,
+                    dsSubject = noCountrySubject,
+                    dsExtensions = Pki.dsExtensions(extra = listOf(FakePki.subjectAltNameDirectory("UU"))),
+                )
+            assertEquals(failed(PaFailure.COUNTRY_DIFFERS), run(otherCountry).outcome(fromSan))
+            val fromIan = PaCheckKind.SignerCountryMatchesRootCountry(CountrySource.ISSUER_ALT_NAME, CountrySource.SUBJECT_NAME)
+            val ian =
+                Pki.rsa(
+                    keys,
+                    dsSubject = noCountrySubject,
+                    dsExtensions = Pki.dsExtensions(extra = listOf(FakePki.issuerAltNameDirectory("UT"))),
+                )
+            assertEquals(PaOutcome.Passed, run(ian).outcome(fromIan))
+            // A directoryName without a country attribute is no source at all.
+            val none =
+                Pki.rsa(
+                    keys,
+                    dsSubject = noCountrySubject,
+                    dsExtensions = Pki.dsExtensions(extra = listOf(FakePki.subjectAltNameDirectory(null))),
+                )
+            assertEquals(
+                notRun(PaNotRun.COUNTRY_NAME_ABSENT),
+                run(none).outcome(PaCheckKind.SignerCountryMatchesRootCountry(null, CountrySource.SUBJECT_NAME)),
+            )
+        }
+
+    @Test
+    fun theRootCountryCanBeReadFromItsAltNameToo() =
+        withKeys { keys ->
+            val rootWithSan =
+                Pki.csca(
+                    keys.signer,
+                    keys.rsaCsca,
+                    FakePki.rsaPkcs1(HashAlgorithm.SHA256),
+                    name = FakePki.nameWithoutCountry("Utopia CSCA"),
+                    extensions =
+                        listOf(
+                            FakePki.subjectKeyIdentifier(Pki.CSCA_SKI),
+                            FakePki.keyUsage(5, 6),
+                            FakePki.basicConstraints(true, 0),
+                            FakePki.subjectAltNameDirectory("UT"),
+                        ),
+                )
+            val kind = PaCheckKind.SignerCountryMatchesRootCountry(CountrySource.SUBJECT_NAME, CountrySource.SUBJECT_ALT_NAME)
+            assertEquals(PaOutcome.Passed, run(Pki.rsa(keys), roots = listOf(rootWithSan)).outcome(kind))
         }
 
     @Test
@@ -473,7 +633,7 @@ class PassiveAuthenticationTest {
         val checks = noCrypto.run(PaInputs(placeholderSod, mapOf(1 to FakeGroups.dg1), at = Pki.IN_VALIDITY))
         // The placeholder SignerInfo names the DS certificate by issuer and serial 0x1234, which the placeholder certificate has.
         assertEquals(notRun(PaNotRun.CRYPTO_UNAVAILABLE), checks.outcome(sodSignature))
-        assertEquals(notRun(PaNotRun.CRYPTO_UNAVAILABLE), checks.outcome(sodChain))
+        assertEquals(notRun(PaNotRun.CRYPTO_UNAVAILABLE), checks.outcome(chain(null)))
         assertEquals(notRun(PaNotRun.CRYPTO_UNAVAILABLE), checks.outcome(PaCheckKind.DataGroupHashMatches(1)))
         assertEquals(PaOutcome.Passed, checks.outcome(PaCheckKind.SignerValidAt(SignedObject.SECURITY_OBJECT, Pki.IN_VALIDITY)))
         assertEquals(notRun(PaNotRun.NOT_SUPPORTED), checks.outcome(PaCheckKind.RevocationChecked))
@@ -482,7 +642,7 @@ class PassiveAuthenticationTest {
     @Test
     fun withoutASecurityObjectEverySignerFactIsNotRun() {
         val checks = pa.run(PaInputs(null, mapOf(1 to FakeGroups.dg1)))
-        assertEquals(notRun(PaNotRun.FILE_NOT_READ), checks.outcome(sodSignature))
+        assertEquals(notRun(PaNotRun.FILE_NOT_READ), checks.outcome(signature(null)))
         assertEquals(notRun(PaNotRun.FILE_NOT_READ), checks.outcome(PaCheckKind.DataGroupHashMatches(1)))
         assertEquals(notRun(PaNotRun.FILE_NOT_READ), checks.outcome(PaCheckKind.SignerDocumentTypeMatches))
     }
@@ -490,7 +650,7 @@ class PassiveAuthenticationTest {
     @Test
     fun anUnreadableSecurityObjectIsNotRunNeverAnException() {
         val checks = pa.run(PaInputs(byteArrayOf(0x77, 0x03, 0x30, 0x01, 0x00), mapOf(1 to FakeGroups.dg1)))
-        assertEquals(notRun(PaNotRun.UNREADABLE_FILE), checks.outcome(sodSignature))
+        assertEquals(notRun(PaNotRun.UNREADABLE_FILE), checks.outcome(signature(null)))
         assertEquals(notRun(PaNotRun.UNREADABLE_SECURITY_OBJECT), checks.outcome(PaCheckKind.DataGroupHashMatches(1)))
     }
 
@@ -517,15 +677,15 @@ private fun ByteArray.indexOfSequence(needle: ByteArray): Int {
 private fun checkKindNames(): List<String> =
     listOf(
         PaCheckKind.DataGroupHashMatches(1),
-        PaCheckKind.SignatureVerifies(SignedObject.SECURITY_OBJECT),
-        PaCheckKind.SignerChainsToSuppliedRoot(SignedObject.SECURITY_OBJECT),
+        PaCheckKind.SignatureVerifies(SignedObject.SECURITY_OBJECT, null),
+        PaCheckKind.SignerChainsToSuppliedRoot(SignedObject.SECURITY_OBJECT, null),
         PaCheckKind.SignerValidAt(SignedObject.SECURITY_OBJECT, null),
         PaCheckKind.SignerCriticalExtensionsRecognized(SignedObject.SECURITY_OBJECT),
         PaCheckKind.CardAccessMatchesSignedCopy(null),
         PaCheckKind.EfDirMatchesSignedCopy,
         PaCheckKind.SignerDocumentTypeMatches,
         PaCheckKind.SignerKeyUsageIsDigitalSignatureOnly,
-        PaCheckKind.SignerCountryMatchesRootCountry,
+        PaCheckKind.SignerCountryMatchesRootCountry(null, null),
         PaCheckKind.IssueDateInSignerUsagePeriod,
         PaCheckKind.RevocationChecked,
     ).map { it::class.simpleName ?: "" }
