@@ -32,8 +32,8 @@ import io.lightine.tessera.emrtd.internal.crypto.chipCrypto
  * Two kinds of output. The plain builders ([certificate] without signing, [sod]) write fixed
  * filler for signatures and public keys: enough for the parsing tests and nothing else. The
  * signing builders ([certificate] with a [Signing], [signedData]) write real
- * signatures with keys made at test time by [testSigner] (BouncyCastle on the JVM and Android; none
- * on iOS yet, where those tests skip). No key and no signed file is ever committed.
+ * signatures with keys made at test time by [testSigner] (BouncyCastle on the JVM and Android,
+ * OpenSSL on iOS). No key and no signed file is ever committed.
  */
 internal object FakePki {
     const val OID_SIGNED_DATA = "1.2.840.113549.1.7.2"

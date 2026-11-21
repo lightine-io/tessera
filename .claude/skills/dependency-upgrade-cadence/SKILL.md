@@ -65,6 +65,9 @@ result on the cadence issue:
   `gh api /advisories -f ecosystem=maven -f affects=org.bouncycastle:bcprov-jdk18on`
   and confirm no advisory affects the pinned version. Dependabot also raises
   security alerts for it.
-- **OpenSSL for iOS chip reading** (not added yet; the iOS crypto card will pin it):
+- **OpenSSL for iOS chip reading** (pinned in `scripts/build-openssl-ios.sh`: version, SHA-256 of
+  the source tarball, and the end of the long-term-support series, 2030-04-08):
   Dependabot does not see it, so check the pinned version against
-  https://openssl-library.org/news/vulnerabilities/ and an NVD search for "openssl".
+  https://openssl-library.org/news/vulnerabilities/ and an NVD search for "openssl". To
+  upgrade, change the version and the SHA-256 together in that script (the SHA-256 comes from
+  OpenSSL's release page); the CI cache key holds the script, so it rebuilds.

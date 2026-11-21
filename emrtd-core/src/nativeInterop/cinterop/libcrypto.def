@@ -1,0 +1,9 @@
+# OpenSSL libcrypto (static) for the iOS chip cryptography backend, OpenSslChipCrypto (ADR-031).
+# scripts/build-openssl-ios.sh builds it; build.gradle.kts adds the per-slice include and library
+# paths under build/openssl. Only the non-deprecated OpenSSL 3 API is visible to Kotlin.
+package = io.lightine.tessera.emrtd.internal.openssl
+headers = openssl/evp.h openssl/bn.h openssl/ec.h openssl/rand.h openssl/err.h openssl/rsa.h \
+          openssl/core_names.h openssl/param_build.h
+headerFilter = openssl/**
+compilerOpts = -DOPENSSL_API_COMPAT=30000 -DOPENSSL_NO_DEPRECATED
+staticLibraries = libcrypto.a

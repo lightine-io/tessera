@@ -34,18 +34,14 @@ internal class TestKeys(
     companion object {
         private var cached: TestKeys? = null
 
-        /** The keys, or `null` on a platform with no test signer (iOS until its crypto backend lands). */
-        fun get(): TestKeys? {
-            val s = testSigner() ?: return null
-            return cached ?: TestKeys(s).also { cached = it }
-        }
+        /** The keys, made on first use and shared by the whole test run. */
+        fun get(): TestKeys = cached ?: TestKeys(testSigner()).also { cached = it }
     }
 }
 
-/** Runs [block] with the test keys; returns early where there is no signer (iOS). */
+/** Runs [block] with the test keys (every platform has a signer, so nothing skips). */
 internal inline fun withKeys(block: (TestKeys) -> Unit) {
-    val keys = TestKeys.get() ?: return
-    block(keys)
+    block(TestKeys.get())
 }
 
 /** A synthetic CSCA and Document Signer pair, really signed, for the fictional state Utopia. */

@@ -33,7 +33,7 @@ import java.math.BigInteger
 import java.security.SecureRandom
 
 /** The fake PKI's signer on BouncyCastle's lightweight API (test sources only). */
-internal actual fun testSigner(): TestSigner? = BcTestSigner
+internal actual fun testSigner(): TestSigner = BcTestSigner
 
 private object BcTestSigner : TestSigner {
     private val random = SecureRandom()

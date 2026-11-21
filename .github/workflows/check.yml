@@ -194,6 +194,16 @@ jobs:
             "$SDKMANAGER" --install "platforms;android-37.0"
           fi
 
+      # emrtd-core's iOS targets link OpenSSL's libcrypto, built from the pinned, checksum-checked
+      # source by scripts/build-openssl-ios.sh (about a minute per slice). The cache keeps the built
+      # slices; the script's own stamp skips the build when the restored output matches its inputs.
+      # The key holds the script (the pin and the build options) and the Xcode version.
+      - name: Cache the OpenSSL build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: emrtd-core/build/openssl
+          key: openssl-${{ runner.os }}-xcode-${{ env.XCODE_VERSION }}-${{ hashFiles('scripts/build-openssl-ios.sh') }}
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
@@ -255,6 +265,16 @@ jobs:
           key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
           restore-keys: konan-${{ runner.os }}-
 
+      # emrtd-core's iOS targets link OpenSSL's libcrypto, built from the pinned, checksum-checked
+      # source by scripts/build-openssl-ios.sh (about a minute per slice). The cache keeps the built
+      # slices; the script's own stamp skips the build when the restored output matches its inputs.
+      # The key holds the script (the pin and the build options) and the Xcode version.
+      - name: Cache the OpenSSL build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: emrtd-core/build/openssl
+          key: openssl-${{ runner.os }}-xcode-${{ env.XCODE_VERSION }}-${{ hashFiles('scripts/build-openssl-ios.sh') }}
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
@@ -274,8 +294,10 @@ jobs:
       # modules' common ABI baselines. checkTesseraFrameworkHeader compiles an Objective-C file that
       # names the umbrella's public chip and camera types against the framework's generated header,
       # so a type that drops out of the Swift-facing surface fails here.
-      - name: Compile iOS targets, run simulator tests, assemble the XCFramework, check iOS ABI
-        run: ./gradlew iosSimulatorArm64Test compileKotlinIosArm64 :mrz-camera-ios:assembleTesseraDebugXCFramework :mrz-camera-ios:checkTesseraFrameworkHeader :mrz-camera-ios:checkKotlinAbi :emrtd-nfc-ios:checkKotlinAbi
+      # :mrz-camera-ios:checkOpenSslSymbolClash links an app that has its own OpenSSL next to the
+      # framework and fails on duplicate symbols (the framework hides the OpenSSL it embeds).
+      - name: Compile iOS targets, run simulator tests, assemble the XCFramework, check iOS ABI and OpenSSL symbols
+        run: ./gradlew iosSimulatorArm64Test compileKotlinIosArm64 :mrz-camera-ios:assembleTesseraDebugXCFramework :mrz-camera-ios:checkTesseraFrameworkHeader :mrz-camera-ios:checkKotlinAbi :emrtd-nfc-ios:checkKotlinAbi :mrz-camera-ios:checkOpenSslSymbolClash
 
   # Cheap repository checks, hermetic and fast. Required (branch protection), so every
   # rule here can fail a merge. The hook tests use throwaway temp folders and never touch

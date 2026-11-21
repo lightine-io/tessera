@@ -12,9 +12,8 @@ import kotlin.test.assertTrue
 
 /**
  * Passive authentication on the fake PKI: each check kind has a Passed and a Failed case, with real
- * signatures made at test time (Doc 9303 Part 11, App E gives the steps and no values). Runs on the
- * JVM and the Android host; on iOS the signing tests return early (no crypto backend yet), and the
- * tests that need no signature run everywhere.
+ * signatures made at test time (Doc 9303 Part 11, App E gives the steps and no values). Runs on
+ * every platform: the JVM, the Android host and the iOS simulator.
  */
 class PassiveAuthenticationTest {
     private val pa = PassiveAuthentication()

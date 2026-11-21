@@ -5,7 +5,7 @@
 #import <Tessera/Tessera.h>
 #import <CoreNFC/CoreNFC.h>
 
-// Camera and MRZ (mrz-camera-ios, mrz-camera-core, mrz-core, types).
+// Camera and MRZ (mrz-camera-ios, mrz-ocr-core, mrz-core, types).
 static void tesseraCameraTypes(TesseraAVCaptureMrzScanner *scanner, TesseraMrzParser *parser) {
     (void)scanner;
     (void)parser;
