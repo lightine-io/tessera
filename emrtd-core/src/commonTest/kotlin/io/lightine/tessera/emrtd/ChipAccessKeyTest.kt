@@ -81,4 +81,41 @@ class ChipAccessKeyTest {
             }
         }
     }
+
+    @Test
+    fun a_filler_as_the_document_number_check_digit_is_refused_because_the_number_is_not_complete() {
+        val e = assertFailsWith<IllegalArgumentException> { ChipAccessKey.Mrz("T22000129", '<', "900315", '2', "340314", '5') }
+        assertFalse("T22000129" in e.message.orEmpty())
+    }
+
+    @Test
+    fun printed_fields_join_a_long_document_number_from_the_optional_data() {
+        // Synthetic TD1 fields: a twelve-character number, "T22000129" then "345" and check digit "7".
+        val key = ChipAccessKey.Mrz.fromPrintedFields("T22000129", '<', "3457<<<<<<<<<<<", "900315", '2', "340314", '5')
+        assertContentEquals("T22000129345790031523403145".encodeToByteArray(), key.secretCopy())
+        // All 15 optional-data characters used, no filler after the check digit.
+        val full = ChipAccessKey.Mrz.fromPrintedFields("T22000129", '<', "ABCDEFGHIJKLMN7", "900315", '2', "340314", '5')
+        assertContentEquals("T22000129ABCDEFGHIJKLMN790031523403145".encodeToByteArray(), full.secretCopy())
+    }
+
+    @Test
+    fun printed_fields_with_a_check_digit_ignore_the_optional_data() {
+        val key = ChipAccessKey.Mrz.fromPrintedFields("T22000129", '3', "XYZ<<<<", "900315", '2', "340314", '5')
+        assertContentEquals(specimenKey().secretCopy(), key.secretCopy())
+    }
+
+    @Test
+    fun printed_fields_that_cannot_hold_a_long_number_are_refused() {
+        val cases: List<() -> Unit> =
+            listOf(
+                { ChipAccessKey.Mrz.fromPrintedFields("T22000129", '<', "<<<<<<<", "900315", '2', "340314", '5') },
+                { ChipAccessKey.Mrz.fromPrintedFields("T22000129", '<', "3<<<<<<", "900315", '2', "340314", '5') },
+                { ChipAccessKey.Mrz.fromPrintedFields("T2200012", '3', "", "900315", '2', "340314", '5') },
+                { ChipAccessKey.Mrz.fromPrintedFields("T22000129", '<', "34a7<<<", "900315", '2', "340314", '5') },
+            )
+        cases.forEach { case ->
+            val e = assertFailsWith<IllegalArgumentException> { case() }
+            assertFalse("T22000129" in e.message.orEmpty() || "34a7" in e.message.orEmpty())
+        }
+    }
 }
