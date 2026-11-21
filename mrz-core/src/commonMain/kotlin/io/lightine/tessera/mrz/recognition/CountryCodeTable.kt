@@ -283,6 +283,12 @@ public object CountryCodeTable {
             CountryCodeEntry("UNA", "United Nations specialized agency or one of its officials", CountryCodeCategory.ORGANIZATION),
             CountryCodeEntry("UNK", "Resident of Kosovo, document issued by UNMIK", CountryCodeCategory.STATE),
             // Part D — Codes for other issuing authorities
+            CountryCodeEntry("XBA", "African Development Bank (ADB)", CountryCodeCategory.ORGANIZATION),
+            CountryCodeEntry("XIM", "African Export-Import Bank (AFREXIM bank)", CountryCodeCategory.ORGANIZATION),
+            CountryCodeEntry("XCC", "Caribbean Community or one of its emissaries (CARICOM)", CountryCodeCategory.ORGANIZATION),
+            CountryCodeEntry("XCE", "Council of Europe", CountryCodeCategory.ORGANIZATION),
+            CountryCodeEntry("XCO", "Common Market for Eastern and Southern Africa (COMESA)", CountryCodeCategory.ORGANIZATION),
+            CountryCodeEntry("XEC", "Economic Community of West African States (ECOWAS)", CountryCodeCategory.ORGANIZATION),
             CountryCodeEntry("XPO", "International Criminal Police Organization (INTERPOL)", CountryCodeCategory.ORGANIZATION),
             CountryCodeEntry("XES", "Organization of Eastern Caribbean States (OECS)", CountryCodeCategory.ORGANIZATION),
             CountryCodeEntry("XMP", "Parliamentary Assembly of the Mediterranean (PAM)", CountryCodeCategory.ORGANIZATION),
