@@ -139,8 +139,25 @@ class CountryCodeTableTest {
     @Test
     fun by_category_organization_returns_expected_icao_extensions() {
         val orgCodes = CountryCodeTable.byCategory(CountryCodeCategory.ORGANIZATION).map { it.code }.toSet()
-        // EUE, UNO, UNA from Parts B/C; XPO/XES/XMP/XOM/XDC from Part D; IAO from Part H.
-        val expectedAtLeast = setOf("EUE", "UNO", "UNA", "XPO", "XES", "XMP", "XOM", "XDC", "IAO")
+        // EUE, UNO, UNA from Parts B/C; all eleven codes of Part D (8th edition); IAO from Part H.
+        val expectedAtLeast =
+            setOf(
+                "EUE",
+                "UNO",
+                "UNA",
+                "XBA",
+                "XIM",
+                "XCC",
+                "XCE",
+                "XCO",
+                "XEC",
+                "XPO",
+                "XES",
+                "XMP",
+                "XOM",
+                "XDC",
+                "IAO",
+            )
         for (code in expectedAtLeast) {
             assertTrue(code in orgCodes, "Expected $code in ORGANIZATION category; got $orgCodes")
         }
