@@ -26,17 +26,17 @@ import kotlin.time.Instant
 
 /**
  * Host tests for [MrzFrameAnalyzer] — the analyse-frame core — driven by a mock [MrzTextRecognizer]
- * (no device, no real OCR). Synthetic MRZ data only: the TD3/TD2 lines are the ICAO Doc 9303 Utopia
- * specimen, and the TD1 lines are produced by the SDK's own generator.
+ * (no device, no real OCR). Synthetic MRZ data only: the TD3/TD2 lines are the project's specimen, and
+ * the TD1 lines are produced by the SDK's own generator from the same specimen person.
  */
 class MrzFrameAnalyzerTest {
     private val referenceTime = Instant.parse("2026-05-04T12:00:00Z")
 
-    // ICAO Doc 9303 Utopia specimen (synthetic).
-    private val td3Line1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-    private val td3Line2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
-    private val td2Line1 = "I<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<"
-    private val td2Line2 = "D231458907UTO6908061F3008063<<<<<<<4"
+    // The project's specimen (synthetic; UTO = Utopia).
+    private val td3Line1 = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+    private val td3Line2 = "T220001293UTO9003152F3403141S98765432<<<<<20"
+    private val td2Line1 = "I<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<"
+    private val td2Line2 = "T620001457UTO9003152F3403141<<<<<<<8"
 
     // --- An opaque stand-in for a platform frame: the core never inspects it, only forwards it. ---
     private class FakeFrame
@@ -92,7 +92,7 @@ class MrzFrameAnalyzerTest {
 
             val decoded = assertIs<MrzScanResult.Decoded>(analyzer(recognizerReturning(textOf(ocrLine1, ocrLine2))).analyse(FakeFrame()))
 
-            // Recovered `«`→`<`, so it parses exactly like the clean Utopia specimen.
+            // Recovered `«`→`<`, so it parses exactly like the clean specimen.
             assertIs<ParseResult.Success>(decoded.parse)
             // The raw OCR text is preserved with the chevrons intact — transparency, not silent correction.
             assertEquals(listOf(ocrLine1, ocrLine2), decoded.recognizedText.lines.map { it.text })
@@ -103,7 +103,7 @@ class MrzFrameAnalyzerTest {
         runTest {
             // Real OCR returns the printed name/country lines above the MRZ; only the two 44-char
             // lines form the candidate.
-            val recognizer = recognizerReturning(textOf("UTOPIA", "ERIKSSON, ANNA MARIA", td3Line1, td3Line2))
+            val recognizer = recognizerReturning(textOf("UTOPIA", "SPECIMEN, ALEX MORGAN", td3Line1, td3Line2))
 
             val decoded = assertIs<MrzScanResult.Decoded>(analyzer(recognizer).analyse(FakeFrame()))
             assertIs<ParseResult.Success>(decoded.parse)
@@ -363,8 +363,8 @@ class MrzFrameAnalyzerTest {
             assertEquals(3, event.recognizedLineCount)
             // No document data must leak into telemetry (PII guard).
             val rendered = event.toString()
-            assertFalse(rendered.contains("ERIKSSON"), "telemetry leaked the name field")
-            assertFalse(rendered.contains("L898902"), "telemetry leaked the document number")
+            assertFalse(rendered.contains("SPECIMEN"), "telemetry leaked the name field")
+            assertFalse(rendered.contains("T22000129"), "telemetry leaked the document number")
         }
 
     @Test
@@ -441,13 +441,13 @@ class MrzFrameAnalyzerTest {
             MrzGenerator.generateTD1(
                 documentType = "I",
                 issuingState = "UTO",
-                documentNumber = "D23145890",
-                primaryIdentifier = "ERIKSSON",
-                secondaryIdentifier = "ANNA MARIA",
+                documentNumber = "T42000137",
+                primaryIdentifier = "SPECIMEN",
+                secondaryIdentifier = "ALEX MORGAN",
                 nationality = "UTO",
-                dateOfBirth = LocalDate(1969, 8, 6),
+                dateOfBirth = LocalDate(1990, 3, 15),
                 sex = Sex.FEMALE,
-                dateOfExpiry = LocalDate(2030, 8, 6),
+                dateOfExpiry = LocalDate(2034, 3, 14),
                 optionalData1 = "",
                 optionalData2 = "",
             )

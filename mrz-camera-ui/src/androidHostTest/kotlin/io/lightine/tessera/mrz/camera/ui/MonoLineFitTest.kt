@@ -40,7 +40,7 @@ class MonoLineFitTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    private val td3Line = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
+    private val td3Line = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
 
     // Material 3 default sizes of each rung's style: bodyMedium 14sp, bodySmall 12sp, labelSmall 11sp.
     private fun modelWidthPx(

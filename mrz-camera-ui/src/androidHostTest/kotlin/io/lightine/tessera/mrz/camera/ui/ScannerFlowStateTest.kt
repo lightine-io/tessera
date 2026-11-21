@@ -35,7 +35,7 @@ import kotlin.test.assertTrue
  *    system ends the process.
  *
  * The real ComposeView wiring (its ViewModel-backed store across a real Activity recreation) is not
- * host-testable; it is checked on a device or an emulator. Fixtures are the synthetic ICAO TD3 specimen
+ * host-testable; it is checked on a device or an emulator. Fixtures are the project's synthetic TD3 specimen
  * (UTO = Utopia) - never real document data.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -46,7 +46,7 @@ class ScannerFlowStateTest {
 
     private val allMethods = setOf(ScanMethod.CAMERA, ScanMethod.SAVED_IMAGE, ScanMethod.MANUAL_ENTRY)
     private val specimen =
-        "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<\nL898902C<3UTO6908061F9406236ZE184226B<<<<<14"
+        "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<\nT220001293UTO9003152F3403141S98765432<<<<<20"
 
     private fun review(source: ScanMethod): ScannerUiState.Review {
         val decoded = assembleManualDecoded(specimen)
@@ -55,7 +55,7 @@ class ScannerFlowStateTest {
     }
 
     private val readFailed =
-        ScannerUiState.ReadFailed(RecognizedText(listOf(RecognizedLine("P<UT0ERlKSS0N<<ANN A<<<<", 0.4f))))
+        ScannerUiState.ReadFailed(RecognizedText(listOf(RecognizedLine("P<UT0SPEClMEN<<ALE X<<<<", 0.4f))))
 
     /** Composes [rememberScannerFlowState] under [store]; returns a getter for the latest state holder. */
     private fun StateRestorationTester.compose(store: ManagedRetainedValuesStore): () -> ScannerFlowState {

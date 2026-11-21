@@ -46,8 +46,8 @@ class CameraStatusScreenTest {
     // so GoDecoded carries a genuine decode rather than a hand-built one.
     private val decoded: MrzScanResult.Decoded =
         assembleManualDecoded(
-            text = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<\nL898902C<3UTO6908061F9406236ZE184226B<<<<<14",
-            referenceTime = Instant.parse("1994-01-01T00:00:00Z"),
+            text = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<\nT220001293UTO9003152F3403141S98765432<<<<<20",
+            referenceTime = Instant.parse("2026-05-04T12:00:00Z"),
         )
 
     // ---------------------------------------------------------------------------------------------------------

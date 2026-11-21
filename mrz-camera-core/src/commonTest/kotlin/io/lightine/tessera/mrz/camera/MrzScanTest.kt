@@ -19,13 +19,13 @@ import kotlin.time.Instant
  * Host tests for the streaming layer of camera reading — the [MrzFrameAnalyzer.scan] engine that the
  * owns-the-camera-session [MrzCameraScanner]s build on — and for the capture-availability members of the
  * [CameraError] family. Driven by a mock [MrzTextRecognizer] over fake frames (no device, no real OCR),
- * exactly as the analyse-frame core's tests are. Synthetic MRZ only (the ICAO Doc 9303 Utopia specimen).
+ * exactly as the analyse-frame core's tests are. Synthetic MRZ only (the project's specimen).
  */
 class MrzScanTest {
     private val referenceTime = Instant.parse("2026-05-04T12:00:00Z")
 
-    private val td3Line1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-    private val td3Line2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
+    private val td3Line1 = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+    private val td3Line2 = "T220001293UTO9003152F3403141S98765432<<<<<20"
 
     // An opaque, identifiable stand-in for a platform frame; the engine forwards it and releases it but
     // never inspects it.

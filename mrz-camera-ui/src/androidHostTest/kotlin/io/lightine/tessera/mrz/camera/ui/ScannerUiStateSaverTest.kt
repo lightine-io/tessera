@@ -29,7 +29,7 @@ import kotlin.test.assertTrue
  * ReadFailed, ManualRaw's text) is saved as the data-free start screen of its method, so after process death
  * the reader scans or types again. Surviving a configuration change in memory is `ScannerFlowStateTest`'s job.
  *
- * The [ScannerUiState.Review] fixtures use the clean synthetic ICAO TD3 specimen the rest of this module's
+ * The [ScannerUiState.Review] fixtures use the project's clean synthetic TD3 specimen the rest of this module's
  * tests use (synthetic; UTO = Utopia, a reserved ICAO test issuer) - never real document data.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -38,8 +38,8 @@ class ScannerUiStateSaverTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    private val specimenLine1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-    private val specimenLine2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
+    private val specimenLine1 = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+    private val specimenLine2 = "T220001293UTO9003152F3403141S98765432<<<<<20"
 
     private val allMethods = setOf(ScanMethod.CAMERA, ScanMethod.SAVED_IMAGE, ScanMethod.MANUAL_ENTRY)
 
@@ -65,8 +65,8 @@ class ScannerUiStateSaverTest {
         ScannerUiState.ReadFailed(
             RecognizedText(
                 listOf(
-                    RecognizedLine("P<UT0ERlKSS0N<<ANN A<<<<<<<<<<<<", 0.42f),
-                    RecognizedLine("L8989 2C36UT0 74O8122F32O41 9<<<<", null),
+                    RecognizedLine("P<UT0SPEClMEN<<ALE X<<<<<<<<<<<<", 0.42f),
+                    RecognizedLine("T220 01293UT0 9OO3152F34O314 1<<<<", null),
                 ),
             ),
         )

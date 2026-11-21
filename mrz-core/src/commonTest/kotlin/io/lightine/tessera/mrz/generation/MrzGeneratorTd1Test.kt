@@ -1,5 +1,6 @@
 package io.lightine.tessera.mrz.generation
 
+import io.lightine.tessera.mrz.Specimens
 import io.lightine.tessera.mrz.model.TD1
 import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
@@ -14,12 +15,9 @@ import kotlin.time.Instant
 class MrzGeneratorTd1Test {
     private val ref2026 = Instant.parse("2026-05-04T12:00:00Z")
 
-    // Synthetic TD1 specimen — same Anna Eriksson / UTO persona used in MrzParserTd1Test.
+    // The project's TD1 specimen.
     // Three lines of 30 characters; name field on line 3; doc number on line 1.
-    private val specimenLine1 = "I<UTOL898902C<3<<<<<<<<<<<<<<<"
-    private val specimenLine2 = "6908061F3008063UTO<<<<<<<<<<<2"
-    private val specimenLine3 = "ERIKSSON<<ANNA<MARIA<<<<<<<<<<"
-    private val specimenLines = listOf(specimenLine1, specimenLine2, specimenLine3)
+    private val specimenLines = Specimens.TD1
 
     private fun specimenTd1(): TD1 {
         val result = MrzParser.parseTD1(specimenLines, referenceTime = ref2026)
@@ -68,15 +66,15 @@ class MrzGeneratorTd1Test {
     @Test
     fun name_field_is_on_line_three_not_line_one() {
         val success = assertIs<GenerationResult.Success>(MrzGenerator.generate(specimenTd1()))
-        assertEquals("ERIKSSON<<ANNA<MARIA<<<<<<<<<<", success.mrz[2])
+        assertEquals("SPECIMEN<<ALEX<MORGAN<<<<<<<<<", success.mrz[2])
     }
 
     @Test
     fun document_number_is_on_line_one_at_positions_5_through_13() {
         val success = assertIs<GenerationResult.Success>(MrzGenerator.generate(specimenTd1()))
-        assertEquals("L898902C<", success.mrz[0].substring(5, 14))
+        assertEquals("T42000137", success.mrz[0].substring(5, 14))
         // Document number check digit at line 1 position 14.
-        assertEquals('3', success.mrz[0][14])
+        assertEquals('0', success.mrz[0][14])
     }
 
     @Test

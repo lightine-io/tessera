@@ -11,10 +11,10 @@ class NameFieldParsingTest {
 
     @Test
     fun parses_simple_primary_and_secondary_separated_by_double_filler() {
-        val raw = td3Padded("ERIKSSON<<ANNA<MARIA")
+        val raw = td3Padded("SPECIMEN<<ALEX<MORGAN")
         val result = parseNameField(raw)
-        assertEquals("ERIKSSON", result.primaryIdentifier)
-        assertEquals("ANNA MARIA", result.secondaryIdentifier)
+        assertEquals("SPECIMEN", result.primaryIdentifier)
+        assertEquals("ALEX MORGAN", result.secondaryIdentifier)
         assertFalse(result.nameTruncated)
     }
 
@@ -39,10 +39,10 @@ class NameFieldParsingTest {
 
     @Test
     fun parses_multi_word_secondary_with_internal_single_fillers_as_spaces() {
-        val raw = td3Padded("ERIKSSON<<ANNA<MARIA<JOSE")
+        val raw = td3Padded("SPECIMEN<<ALEX<MORGAN<JOSE")
         val result = parseNameField(raw)
-        assertEquals("ERIKSSON", result.primaryIdentifier)
-        assertEquals("ANNA MARIA JOSE", result.secondaryIdentifier)
+        assertEquals("SPECIMEN", result.primaryIdentifier)
+        assertEquals("ALEX MORGAN JOSE", result.secondaryIdentifier)
         assertFalse(result.nameTruncated)
     }
 
@@ -82,10 +82,10 @@ class NameFieldParsingTest {
 
     @Test
     fun preserves_empty_secondary_when_field_ends_with_double_filler_before_padding() {
-        // 'ERIKSSON<<' with subsequent padding — secondary is genuinely empty.
-        val raw = td3Padded("ERIKSSON<<")
+        // 'SPECIMEN<<' with subsequent padding — secondary is genuinely empty.
+        val raw = td3Padded("SPECIMEN<<")
         val result = parseNameField(raw)
-        assertEquals("ERIKSSON", result.primaryIdentifier)
+        assertEquals("SPECIMEN", result.primaryIdentifier)
         assertEquals("", result.secondaryIdentifier)
         assertFalse(result.nameTruncated)
     }
@@ -104,10 +104,10 @@ class NameFieldParsingTest {
         // Malformed input: '<<' should appear only as the primary/secondary separator.
         // If it appears again within the secondary, only the first occurrence splits;
         // the extra '<<' decodes as double space. No auto-correction.
-        val raw = td3Padded("ERIKSSON<<ANNA<<MARIA")
+        val raw = td3Padded("SPECIMEN<<ALEX<<MORGAN")
         val result = parseNameField(raw)
-        assertEquals("ERIKSSON", result.primaryIdentifier)
-        assertEquals("ANNA  MARIA", result.secondaryIdentifier)
+        assertEquals("SPECIMEN", result.primaryIdentifier)
+        assertEquals("ALEX  MORGAN", result.secondaryIdentifier)
         assertFalse(result.nameTruncated)
     }
 

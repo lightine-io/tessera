@@ -1,5 +1,6 @@
 package io.lightine.tessera.mrz.generation
 
+import io.lightine.tessera.mrz.Specimens
 import io.lightine.tessera.mrz.model.MrvB
 import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
@@ -14,8 +15,9 @@ import kotlin.time.Instant
 class MrzGeneratorMrvBTest {
     private val ref2026 = Instant.parse("2026-05-04T12:00:00Z")
 
-    private val specimenLine1 = "V<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<"
-    private val specimenLine2 = "L898902C<3UTO6908061F3008063<<<<<<<<"
+    // The project's MRV-B specimen.
+    private val specimenLine1 = Specimens.MRV_B[0]
+    private val specimenLine2 = Specimens.MRV_B[1]
     private val specimenLines = listOf(specimenLine1, specimenLine2)
 
     private fun specimenMrvB(): MrvB {

@@ -1,5 +1,6 @@
 package io.lightine.tessera.mrz.validation
 
+import io.lightine.tessera.mrz.Specimens
 import io.lightine.tessera.mrz.model.CommonFields
 import io.lightine.tessera.mrz.model.MrzCheckDigits
 import io.lightine.tessera.mrz.model.MrzDate
@@ -21,8 +22,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class MrzValidatorTd2Test {
-    private val specimenLine1 = "I<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<"
-    private val specimenLine2 = "D231458907UTO6908061F3008063<<<<<<<4"
+    // The project's TD2 specimen.
+    private val specimenLine1 = Specimens.TD2[0]
+    private val specimenLine2 = Specimens.TD2[1]
 
     private fun specimenCommonFields(
         rawSex: Char = 'F',
@@ -30,10 +32,10 @@ class MrzValidatorTd2Test {
         checkDigits: MrzCheckDigits =
             MrzCheckDigits(
                 documentNumber = '7',
-                dateOfBirth = '1',
-                dateOfExpiry = '3',
+                dateOfBirth = '2',
+                dateOfExpiry = '1',
                 optionalData = null,
-                composite = '4',
+                composite = '8',
             ),
     ): CommonFields =
         CommonFields(
@@ -42,13 +44,13 @@ class MrzValidatorTd2Test {
             primaryIdentifier = "",
             secondaryIdentifier = "",
             nameTruncated = false,
-            rawNameField = "ERIKSSON<<ANNA<MARIA<<<<<<<<<<<",
-            documentNumber = "D23145890",
+            rawNameField = "SPECIMEN<<ALEX<MORGAN<<<<<<<<<<",
+            documentNumber = "T62000145",
             nationality = CountryCode("UTO"),
-            dateOfBirth = MrzDate(rawYear = "69", rawMonth = "08", rawDay = "06"),
+            dateOfBirth = MrzDate(rawYear = "90", rawMonth = "03", rawDay = "15"),
             sex = sex,
             rawSex = rawSex,
-            dateOfExpiry = MrzDate(rawYear = "30", rawMonth = "08", rawDay = "06"),
+            dateOfExpiry = MrzDate(rawYear = "34", rawMonth = "03", rawDay = "14"),
             checkDigits = checkDigits,
         )
 
@@ -85,10 +87,10 @@ class MrzValidatorTd2Test {
                         checkDigits =
                             MrzCheckDigits(
                                 documentNumber = '0',
-                                dateOfBirth = '1',
-                                dateOfExpiry = '3',
+                                dateOfBirth = '2',
+                                dateOfExpiry = '1',
                                 optionalData = null,
-                                composite = '4',
+                                composite = '8',
                             ),
                     ),
             )
@@ -110,15 +112,15 @@ class MrzValidatorTd2Test {
                             MrzCheckDigits(
                                 documentNumber = '7',
                                 dateOfBirth = '0',
-                                dateOfExpiry = '3',
+                                dateOfExpiry = '1',
                                 optionalData = null,
-                                composite = '4',
+                                composite = '8',
                             ),
                     ),
             )
         val result = MrzValidator.validate(td2)
         val mismatch = result.validationFailures.firstOfField(MrzField.DATE_OF_BIRTH)
-        assertEquals('1', mismatch.expected)
+        assertEquals('2', mismatch.expected)
         assertEquals('0', mismatch.observed)
         // TD2 DOB check digit position: line 1 index 19, global = 36 + 19 = 55
         assertEquals(55, mismatch.position)
@@ -133,16 +135,16 @@ class MrzValidatorTd2Test {
                         checkDigits =
                             MrzCheckDigits(
                                 documentNumber = '7',
-                                dateOfBirth = '1',
+                                dateOfBirth = '2',
                                 dateOfExpiry = '0',
                                 optionalData = null,
-                                composite = '4',
+                                composite = '8',
                             ),
                     ),
             )
         val result = MrzValidator.validate(td2)
         val mismatch = result.validationFailures.firstOfField(MrzField.DATE_OF_EXPIRY)
-        assertEquals('3', mismatch.expected)
+        assertEquals('1', mismatch.expected)
         assertEquals('0', mismatch.observed)
         // TD2 expiry check digit position: line 1 index 27, global = 36 + 27 = 63
         assertEquals(63, mismatch.position)
@@ -157,8 +159,8 @@ class MrzValidatorTd2Test {
                         checkDigits =
                             MrzCheckDigits(
                                 documentNumber = '7',
-                                dateOfBirth = '1',
-                                dateOfExpiry = '3',
+                                dateOfBirth = '2',
+                                dateOfExpiry = '1',
                                 optionalData = null,
                                 composite = '0',
                             ),
@@ -166,7 +168,7 @@ class MrzValidatorTd2Test {
             )
         val result = MrzValidator.validate(td2)
         val mismatch = result.validationFailures.firstOfField(MrzField.COMPOSITE)
-        assertEquals('4', mismatch.expected)
+        assertEquals('8', mismatch.expected)
         assertEquals('0', mismatch.observed)
         // TD2 composite check digit position: line 1 index 35, global = 36 + 35 = 71
         assertEquals(71, mismatch.position)
@@ -209,8 +211,8 @@ class MrzValidatorTd2Test {
         val result = MrzValidator.validate(td2)
 
         val compositeMismatch = result.validationFailures.firstOfField(MrzField.COMPOSITE)
-        assertEquals('4', compositeMismatch.observed)
-        assertTrue(compositeMismatch.expected != '4', "Mutated optional data should change the composite expected digit")
+        assertEquals('8', compositeMismatch.observed)
+        assertTrue(compositeMismatch.expected != '8', "Mutated optional data should change the composite expected digit")
 
         // No per-field optional-data failure is produced.
         val optionalFailure =

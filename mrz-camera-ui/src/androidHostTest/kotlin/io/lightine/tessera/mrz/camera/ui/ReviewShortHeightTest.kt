@@ -38,7 +38,7 @@ import kotlin.time.Instant
  * The landscape tests use a landscape phone qualifier for the window and host the screen in a [ShortHeight]
  * box, the content area the real scaffold leaves on a Pixel 9 in landscape. Which column scrolls is read from
  * the semantics tree ([SemanticsProperties.VerticalScrollAxisRange] on the screen's tagged column), so nothing
- * depends on timing. The fixture is the synthetic ICAO TD3 specimen [ReviewScreenTest] uses.
+ * depends on timing. The fixture is the project's synthetic TD3 specimen [ReviewScreenTest] uses.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -53,10 +53,10 @@ class ReviewShortHeightTest {
 
     private val decoded: MrzScanResult.Decoded =
         run {
-            val line1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-            val line2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
+            val line1 = "P<UTOSPECIMEN<<ALEX<MORGAN<<<<<<<<<<<<<<<<<<"
+            val line2 = "T220001293UTO9003152F3403141S98765432<<<<<20"
             MrzScanResult.Decoded(
-                parse = MrzParser.parse(listOf(line1, line2), referenceTime = Instant.parse("1994-01-01T00:00:00Z")),
+                parse = MrzParser.parse(listOf(line1, line2), referenceTime = Instant.parse("2026-05-04T12:00:00Z")),
                 recognizedText = RecognizedText(lines = listOf(RecognizedLine(line1, 0.95f), RecognizedLine(line2, 0.93f))),
                 quality = ScanQuality(mrzRegionFound = true, ocrConfidence = 0.94f, recognizedLineCount = 2),
             )
@@ -91,7 +91,7 @@ class ReviewShortHeightTest {
         composeRule.onNodeWithText("Use this result").assertIsNotDisplayed()
 
         // Every summary row (label and value) can be scrolled into view, then the provenance and both buttons.
-        listOf("Document", "P - passport", "Name", "ERIKSSON, ANNA MARIA", "Number", "L898902C", "Expiry")
+        listOf("Document", "P - passport", "Name", "SPECIMEN, ALEX MORGAN", "Number", "T22000129", "Expiry")
             .forEach { composeRule.onNodeWithText(it).performScrollTo().assertIsDisplayed() }
         composeRule.onNodeWithText("Read by live camera").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Use this result").performScrollTo().assertIsDisplayed()
@@ -106,7 +106,7 @@ class ReviewShortHeightTest {
         }
 
         composeRule.onNodeWithTag(REVIEW_EXPANDED_TEST_TAG).assert(scrollsVertically)
-        composeRule.onNodeWithText("L898902C<3UTO6908061F9406236ZE184226B<<<<<14").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("T220001293UTO9003152F3403141S98765432<<<<<20").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Use this result").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Rescan").performScrollTo().assertIsDisplayed()
     }
@@ -114,13 +114,13 @@ class ReviewShortHeightTest {
     @Test
     @Config(qualifiers = "w900dp-h411dp-land")
     fun landscape_read_failed_scrolls_as_one_column_with_the_buttons_reachable() {
-        val captured = RecognizedText(lines = listOf(RecognizedLine("P<UT0ERlKSS0N<<ANN A<<<<<<<<<<<<", null)))
+        val captured = RecognizedText(lines = listOf(RecognizedLine("P<UT0SPEClMEN<<ALE X<<<<<<<<<<<<", null)))
         setScreen(ShortHeight) {
             ReadFailedContent(capturedText = captured, onTryAgain = {}, onManualEntry = {})
         }
 
         composeRule.onNodeWithTag(READ_FAILED_TEST_TAG).assert(scrollsVertically)
-        composeRule.onNodeWithText("P<UT0ERlKSS0N<<ANN A<<<<<<<<<<<<").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("P<UT0SPEClMEN<<ALE X<<<<<<<<<<<<").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Try again").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Enter details manually").performScrollTo().assertIsDisplayed()
     }

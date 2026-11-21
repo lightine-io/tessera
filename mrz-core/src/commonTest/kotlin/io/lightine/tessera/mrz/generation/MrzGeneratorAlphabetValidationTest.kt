@@ -1,5 +1,6 @@
 package io.lightine.tessera.mrz.generation
 
+import io.lightine.tessera.mrz.Specimens
 import io.lightine.tessera.mrz.model.TD3
 import io.lightine.tessera.mrz.parsing.MrzParser
 import io.lightine.tessera.mrz.parsing.ParseResult
@@ -17,11 +18,8 @@ import kotlin.time.Instant
 class MrzGeneratorAlphabetValidationTest {
     private val ref2026 = Instant.parse("2026-05-04T12:00:00Z")
 
-    private val specimenLines =
-        listOf(
-            "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
-            "L898902C<3UTO6908061F9406236ZE184226B<<<<<14",
-        )
+    // The project's TD3 specimen.
+    private val specimenLines = Specimens.TD3
 
     private fun specimenTd3(): TD3 {
         val result = MrzParser.parseTD3(specimenLines, referenceTime = ref2026)
@@ -43,7 +41,7 @@ class MrzGeneratorAlphabetValidationTest {
     @Test
     fun non_mrz_character_in_document_number_returns_unsupported_characters_error() {
         val td3 = specimenTd3()
-        val withBadDocNum = td3.copy(commonFields = td3.commonFields.copy(documentNumber = "L89890ñC<"))
+        val withBadDocNum = td3.copy(commonFields = td3.commonFields.copy(documentNumber = "T22000ñ29"))
         val failure = assertIs<GenerationResult.Failure>(MrzGenerator.generate(withBadDocNum))
         val error = assertIs<MrzGenerationUnsupportedCharacters>(failure.error)
         assertEquals(MrzField.DOCUMENT_NUMBER, error.field)
@@ -55,7 +53,7 @@ class MrzGeneratorAlphabetValidationTest {
     @Test
     fun non_mrz_character_in_personal_number_returns_unsupported_characters_error() {
         val td3 = specimenTd3()
-        val withBadPersonal = td3.copy(personalNumber = "ZE18é226B")
+        val withBadPersonal = td3.copy(personalNumber = "S987é5432")
         val failure = assertIs<GenerationResult.Failure>(MrzGenerator.generate(withBadPersonal))
         val error = assertIs<MrzGenerationUnsupportedCharacters>(failure.error)
         assertEquals(MrzField.OPTIONAL_DATA, error.field)

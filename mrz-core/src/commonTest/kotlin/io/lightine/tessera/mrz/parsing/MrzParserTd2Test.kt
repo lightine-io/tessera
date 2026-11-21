@@ -1,6 +1,10 @@
 package io.lightine.tessera.mrz.parsing
 
+import io.lightine.tessera.mrz.Specimens
+import io.lightine.tessera.mrz.formats.FieldSpec
+import io.lightine.tessera.mrz.formats.Td2FormatSpec
 import io.lightine.tessera.mrz.model.TD2
+import io.lightine.tessera.mrz.overwrite
 import io.lightine.tessera.types.errors.MrzCharacterSetViolation
 import io.lightine.tessera.types.errors.MrzCheckDigitMismatch
 import io.lightine.tessera.types.errors.MrzDateNotInCalendar
@@ -21,14 +25,17 @@ import kotlin.time.Instant
 class MrzParserTd2Test {
     private val ref2026 = Instant.parse("2026-05-04T12:00:00Z")
 
-    // Synthetic TD2 specimen — same Anna Eriksson persona used across TD1 and TD3 test
-    // fixtures. ICAO Doc 9303 Part 6: 2 lines × 36 characters. Document type `I` (identity
-    // card), issuing state UTO (fictional). Document number D23145890, DOB 690806,
-    // expiry 300806, sex F, optional data all-filler. Check digits computed via the SDK's
-    // own algorithm and locked here.
-    private val specimenLine1 = "I<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<"
-    private val specimenLine2 = "D231458907UTO6908061F3008063<<<<<<<4"
-    private val specimenLines = listOf(specimenLine1, specimenLine2)
+    // The project's TD2 specimen. ICAO Doc 9303 Part 6: 2 lines × 36 characters. Document type
+    // `I` (identity card), issuing state UTO (fictional). Document number T62000145, DOB 900315,
+    // expiry 340314, sex F, optional data all-filler.
+    private val specimenLines = Specimens.TD2
+    private val specimenLine1 = specimenLines[0]
+    private val specimenLine2 = specimenLines[1]
+
+    private fun line2With(
+        field: FieldSpec,
+        text: String,
+    ): String = specimenLines.overwrite(field, text)[1]
 
     // --- Happy path ---
 
@@ -41,12 +48,12 @@ class MrzParserTd2Test {
         assertEquals(MrzFormat.TD2, td2.format)
         assertEquals("I", td2.commonFields.documentType.rawCode)
         assertEquals("UTO", td2.commonFields.issuingState.rawCode)
-        assertEquals("D23145890", td2.commonFields.documentNumber)
+        assertEquals("T62000145", td2.commonFields.documentNumber)
         assertEquals("UTO", td2.commonFields.nationality.rawCode)
         assertEquals(Sex.FEMALE, td2.commonFields.sex)
-        assertEquals("ERIKSSON<<ANNA<MARIA<<<<<<<<<<<", td2.commonFields.rawNameField)
-        assertEquals("ERIKSSON", td2.commonFields.primaryIdentifier)
-        assertEquals("ANNA MARIA", td2.commonFields.secondaryIdentifier)
+        assertEquals("SPECIMEN<<ALEX<MORGAN<<<<<<<<<<", td2.commonFields.rawNameField)
+        assertEquals("SPECIMEN", td2.commonFields.primaryIdentifier)
+        assertEquals("ALEX MORGAN", td2.commonFields.secondaryIdentifier)
         assertEquals(false, td2.commonFields.nameTruncated)
     }
 
@@ -57,10 +64,10 @@ class MrzParserTd2Test {
         val checks = td2.commonFields.checkDigits
 
         assertEquals('7', checks.documentNumber)
-        assertEquals('1', checks.dateOfBirth)
-        assertEquals('3', checks.dateOfExpiry)
+        assertEquals('2', checks.dateOfBirth)
+        assertEquals('1', checks.dateOfExpiry)
         assertNull(checks.optionalData, "TD2 has no per-field check digit on optional data")
-        assertEquals('4', checks.composite)
+        assertEquals('8', checks.composite)
     }
 
     @Test
@@ -114,7 +121,7 @@ class MrzParserTd2Test {
     fun returns_partial_success_with_check_digit_mismatch_when_document_number_check_digit_is_corrupted() {
         // Flip docCheck '7' to '0'. Composite digit input is also affected; the test asserts the
         // per-field finding narrowly.
-        val corrupted = "D231458900UTO6908061F3008063<<<<<<<4"
+        val corrupted = line2With(Td2FormatSpec.documentNumberCheckDigit, "0")
         val result = MrzParser.parseTD2(listOf(specimenLine1, corrupted), referenceTime = ref2026)
         val partial = assertIs<ParseResult.PartialSuccess>(result)
 
@@ -132,7 +139,7 @@ class MrzParserTd2Test {
         // TD2 has no per-field check digit on optional data — the composite digit is the only
         // check on the optional-data slot. Corrupting the optional data invalidates ONLY the
         // composite digit (no MrzCheckDigitMismatch for MrzField.OPTIONAL_DATA exists for TD2).
-        val corruptedLine2 = "D231458907UTO6908061F3008063ABCDEFG4"
+        val corruptedLine2 = line2With(Td2FormatSpec.optionalData, "ABCDEFG")
         val result = MrzParser.parseTD2(listOf(specimenLine1, corruptedLine2), referenceTime = ref2026)
         val partial = assertIs<ParseResult.PartialSuccess>(result)
 
@@ -141,7 +148,7 @@ class MrzParserTd2Test {
                 .filterIsInstance<MrzCheckDigitMismatch>()
                 .firstOrNull { it.field == MrzField.COMPOSITE }
         assertTrue(compositeMismatch != null, "Expected MrzCheckDigitMismatch for COMPOSITE; got ${partial.metadata.validationFailures}")
-        assertEquals('4', compositeMismatch.observed)
+        assertEquals('8', compositeMismatch.observed)
 
         val optionalDataMismatch =
             partial.metadata.validationFailures
@@ -152,7 +159,7 @@ class MrzParserTd2Test {
 
     @Test
     fun returns_partial_success_with_invalid_sex_value_when_sex_character_is_not_in_allowed_set() {
-        val line2WithInvalidSex = "D231458907UTO6908061Q3008063<<<<<<<4"
+        val line2WithInvalidSex = line2With(Td2FormatSpec.sex, "Q")
         val result = MrzParser.parseTD2(listOf(specimenLine1, line2WithInvalidSex), referenceTime = ref2026)
         val partial = assertIs<ParseResult.PartialSuccess>(result)
         val td2 = assertIs<TD2>(partial.document)
@@ -173,7 +180,7 @@ class MrzParserTd2Test {
     @Test
     fun returns_partial_success_with_MrzDateNotInCalendar_when_birth_date_is_calendar_invalid() {
         // Birth date "900230" — Feb 30 doesn't exist. Birth and composite check digits also fail.
-        val line2 = "D231458907UTO9002301F3008063<<<<<<<4"
+        val line2 = line2With(Td2FormatSpec.dateOfBirth, "900230")
         val result = MrzParser.parseTD2(listOf(specimenLine1, line2), referenceTime = ref2026)
         val partial = assertIs<ParseResult.PartialSuccess>(result)
 
@@ -218,9 +225,7 @@ class MrzParserTd2Test {
     fun fails_with_mrz_invalid_length_when_lines_have_td3_length_instead_of_td2_length() {
         // TD3-shape input (2 × 44) must fail TD2's line-shape validation rather than being
         // accepted with the wrong slicing.
-        val td3Line1 = "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<"
-        val td3Line2 = "L898902C<3UTO6908061F9406236ZE184226B<<<<<14"
-        val result = MrzParser.parseTD2(listOf(td3Line1, td3Line2), referenceTime = ref2026)
+        val result = MrzParser.parseTD2(Specimens.TD3, referenceTime = ref2026)
         val failure = assertIs<ParseResult.Failure>(result)
         val error = assertIs<MrzInvalidLength>(failure.error)
         assertEquals(MrzFormat.TD2, error.format)
@@ -230,7 +235,7 @@ class MrzParserTd2Test {
 
     @Test
     fun fails_with_mrz_character_set_violation_for_lowercase_in_line_one() {
-        val line1WithLowercase = "i<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<"
+        val line1WithLowercase = "i" + specimenLine1.drop(1)
         val result = MrzParser.parseTD2(listOf(line1WithLowercase, specimenLine2), referenceTime = ref2026)
         val failure = assertIs<ParseResult.Failure>(result)
         val violation = assertIs<MrzCharacterSetViolation>(failure.error)
