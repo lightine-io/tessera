@@ -46,6 +46,9 @@ internal interface FakePaceMapping {
         readerData: ByteArray,
     ): Pair<ByteArray, DomainParameters>?
 
+    /** The length in bytes of the nonce s the chip picks (one block unless the mapping needs more). */
+    fun nonceLength(cipher: SmCipher): Int = cipher.blockCipher.blockSize
+
     /** Data objects the chip adds to its last answer after its token (0x8A for chip authentication mapping). */
     fun finalObjects(
         run: FakePaceRun,
@@ -90,7 +93,7 @@ internal class FakePace(
     private val crypto: ChipCrypto,
     private val sm: FakeSm,
     private val suites: Set<FakePaceSuite>,
-    private val mappings: List<FakePaceMapping> = listOf(FakePaceGm()),
+    private val mappings: List<FakePaceMapping> = listOf(FakePaceGm(), FakePaceIm()),
     private val mrzInformation: String? = null,
     private val can: String? = null,
     private val random: (Int) -> ByteArray = crypto::randomBytes,
@@ -188,7 +191,7 @@ internal class FakePace(
         inner: Map<Int, ByteArray>,
     ): ResponseApdu {
         if (inner.isNotEmpty()) return fail(StatusWord.WRONG_DATA)
-        val s = r.random(r.cipher.blockCipher.blockSize)
+        val s = r.random(r.mapping.nonceLength(r.cipher))
         r.nonce = s
         val z = crypto.encrypt(r.cipher.blockCipher, CipherMode.CBC, r.passwordKey, ByteArray(r.cipher.blockCipher.blockSize), s)
         r.nextStep = 2

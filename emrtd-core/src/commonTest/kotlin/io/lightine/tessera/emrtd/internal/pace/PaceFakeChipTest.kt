@@ -265,9 +265,9 @@ class PaceFakeChipTest {
                 assertEquals(PaceFailure.UNSUPPORTED_SUITE, assertFailsWith<PaceException> { PaceSuite.of(oid, id) }.failure, "$oid $id")
             }
             withCrypto { c ->
-                // Integrated mapping has no reader implementation yet.
-                val im = PaceSuite.of("$ID_PACE.4.2", 13)
-                val s = setup(c, setOf(FakePaceSuite("$ID_PACE.4.2", 13)))
+                // A mapping the reader has no implementation for (here the chip authentication mapping).
+                val im = PaceSuite.of("$ID_PACE.6.2", 13)
+                val s = setup(c, setOf(FakePaceSuite("$ID_PACE.6.2", 13)))
                 assertEquals(
                     PaceFailure.UNSUPPORTED_SUITE,
                     assertFailsWith<PaceException> { Pace.open(s.exchange, c, mrzKey(), im) }.failure,
