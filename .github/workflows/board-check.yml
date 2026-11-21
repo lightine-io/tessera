@@ -1,0 +1,81 @@
+# Counts what the working guide (.claude/how-we-work.md) asks a session to count by hand:
+# the column limits (Next 3, Review 2, Test 2, Staging 8), the 14-day aging rule for Next,
+# Develop, Review and Test, and one health indicator, the share of merged pull requests
+# since the last release that are process work (the `no-changelog` label; target 30% or
+# less). It prints the numbers every Monday and fails when a limit or the aging rule is
+# broken, so GitHub notifies the owner.
+#
+# Privacy: the board is private and this repository is public, so the log shows card ids
+# and counts only, never a card's title or text. Card ids are public already (branch names
+# and pull request titles carry them).
+#
+# Aging is approximate: YouTrack's search has no "days in this column", so a card counts as
+# aging when nothing on it changed for 14 days. A card that was commented on but not moved
+# is missed; the board itself shows the exact days per column.
+#
+# Fails soft without the YOUTRACK_TOKEN secret (forks): YouTrack is never a dependency.
+
+name: board check
+
+on:
+  schedule:
+    - cron: "30 9 * * 1" # 09:30 UTC every Monday
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  count:
+    name: board · limits and aging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Count the columns, aging cards and the process share
+        env:
+          YOUTRACK_TOKEN: ${{ secrets.YOUTRACK_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          [ -n "$YOUTRACK_TOKEN" ] || { echo "No YOUTRACK_TOKEN secret; skipping."; exit 0; }
+          api='https://lightine.youtrack.cloud/api'
+          ids() { # ids <YouTrack query>: card ids, one per line; empty on any error
+            curl -sS -G -H "Authorization: Bearer $YOUTRACK_TOKEN" -H 'Accept: application/json' \
+              --data-urlencode "query=$1" --data-urlencode 'fields=idReadable' --data-urlencode '$top=200' \
+              "$api/issues" | jq -r '.[]?.idReadable' 2>/dev/null || true
+          }
+          broken=0
+          check_limit() { # check_limit <Stage> <limit>
+            local found count
+            found=$(ids "project: TES Stage: {$1}")
+            count=$(printf '%s' "$found" | grep -c . || true)
+            if [ "$count" -gt "$2" ]; then
+              echo "::error::$1 holds $count cards, the limit is $2: $(echo $found)"
+              broken=1
+            else
+              echo "$1: $count of $2"
+            fi
+          }
+          check_limit Next 3
+          check_limit Review 2
+          check_limit Test 2
+          check_limit Staging 8
+          develop=$(ids "project: TES Stage: Develop")
+          echo "Develop: $(printf '%s' "$develop" | grep -c . || true) (limit 1 per worker): $(echo $develop)"
+          aging=$(ids "project: TES Stage: Next, Develop, Review, Test updated: * .. {minus 14d}")
+          if [ -n "$aging" ]; then
+            echo "::error::No change for 14 days or more in Next, Develop, Review or Test: $(echo $aging)"
+            broken=1
+          else
+            echo "Aging: none."
+          fi
+          # Health indicator: share of process work among pull requests merged since the last release.
+          since=$(gh release view -R "$REPO" --json publishedAt --jq .publishedAt 2>/dev/null || true)
+          if [ -n "$since" ]; then
+            all=$(gh pr list -R "$REPO" --state merged --search "merged:>=${since%%T*}" --limit 500 --json number --jq length)
+            process=$(gh pr list -R "$REPO" --state merged --label no-changelog --search "merged:>=${since%%T*}" --limit 500 --json number --jq length)
+            if [ "$all" -gt 0 ]; then
+              echo "Process work since the last release: $process of $all merged pull requests ($(( process * 100 / all ))%, target 30% or less)."
+            fi
+          fi
+          exit "$broken"
