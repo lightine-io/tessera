@@ -719,9 +719,10 @@ class ReviewScreenTest {
     }
 
     @Test
-    fun a_one_letter_passport_expiring_in_2040_shows_a_note_with_the_code() {
+    fun a_non_harmonized_passport_expiring_in_2040_shows_a_note_with_the_code() {
         // The project's TD3 specimen (code P<) with its expiry moved to 2040: ICAO Doc 9303 Part 4, 4.4 says a
-        // passport with no second code letter expires before 2038, so the parser reports the warning (TES-303).
+        // passport with a second code letter outside the ICAO table expires before 2038, so the parser reports
+        // the warning (TES-303).
         val line2 = specimenLine2WithExpiry("400314")
         val decoded =
             MrzScanResult.Decoded(
