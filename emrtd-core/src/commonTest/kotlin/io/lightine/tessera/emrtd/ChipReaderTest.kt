@@ -58,8 +58,8 @@ import kotlin.time.Instant
  * the application and in the master file, active authentication, a tag lost in the middle of DG2,
  * the blank chip, and every error the read returns. The chips are personalized from the project
  * specimen with keys made at test time; these runs check the reader against the independent fake
- * chip, not against ICAO values. They need the crypto backend and a test signer, so they return
- * early on iOS until its backend lands.
+ * chip, not against ICAO values. They need the crypto backend and a test signer, which every
+ * platform has (OpenSSL on iOS), so they run everywhere.
  */
 class ChipReaderTest {
     private val checkTime = Instant.parse("2026-06-01T12:00:00Z")
