@@ -25,4 +25,6 @@ dependencies {
     // The same ML Kit artifact and version as mrz-camera (`mlkit-text-recognition` in
     // gradle/libs.versions.toml): the bundled Latin model.
     implementation("com.google.mlkit:text-recognition:16.0.1")
+    // The ONNX baseline (OnnxBenchActivity): ONNX Runtime for Android, CPU provider.
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.22.0")
 }

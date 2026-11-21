@@ -2,7 +2,11 @@
 // once per condition (clean, blur, glare, skew, combined). Deterministic: the same manifest and
 // seed give the same pixels.
 //
-// Usage: swift render.swift <manifest.tsv> <ocrb-font-file> <out-dir> [seed]
+// Usage: swift render.swift <manifest.tsv> <ocrb-font-file> <out-dir> [seed [lines-dir]]
+//
+// With lines-dir it also writes one crop per MRZ line (`<id>__<condition>__<n>.png`), cut by the
+// geometry the renderer knows (the line box carried through the skew and keystone), for engines
+// that read single text lines (the ONNX baseline).
 //
 // The OCR-B font is not in this repo and must never be copied into it. run.sh finds the one that
 // ships inside the iOS Simulator runtime and passes its path.
@@ -21,6 +25,7 @@ guard args.count >= 4 else {
 }
 let manifestPath = args[1], fontPath = args[2], outDir = args[3]
 let baseSeed = args.count > 4 ? UInt64(args[4])! : 149
+let linesDir: String? = args.count > 5 ? args[5] : nil
 
 // SplitMix64: a small, stable PRNG so the images do not depend on the platform's random source.
 struct Rng {
@@ -117,7 +122,33 @@ func glare(_ image: CIImage, _ rng: inout Rng, strength: Double) -> CIImage {
     return gradient.composited(over: image)
 }
 
-func skew(_ image: CIImage, _ rng: inout Rng, degrees: Double, keystone: Double) -> CIImage {
+typealias PointMap = (CGPoint) -> CGPoint
+
+/// Solves the homography that sends four points to four points (8x8 Gauss elimination).
+func homography(_ src: [CGPoint], _ dst: [CGPoint]) -> PointMap {
+    var m = [[Double]](repeating: [Double](repeating: 0, count: 9), count: 8)
+    for i in 0 ..< 4 {
+        let x = Double(src[i].x), y = Double(src[i].y), u = Double(dst[i].x), v = Double(dst[i].y)
+        m[2 * i] = [x, y, 1, 0, 0, 0, -u * x, -u * y, u]
+        m[2 * i + 1] = [0, 0, 0, x, y, 1, -v * x, -v * y, v]
+    }
+    for c in 0 ..< 8 {
+        let p = (c ..< 8).max { abs(m[$0][c]) < abs(m[$1][c]) }!
+        m.swapAt(c, p)
+        for r in 0 ..< 8 where r != c {
+            let f = m[r][c] / m[c][c]
+            for k in c ... 8 { m[r][k] -= f * m[c][k] }
+        }
+    }
+    let h = (0 ..< 8).map { m[$0][8] / m[$0][$0] } + [1]
+    return { p in
+        let x = Double(p.x), y = Double(p.y)
+        let w = h[6] * x + h[7] * y + h[8]
+        return CGPoint(x: (h[0] * x + h[1] * y + h[2]) / w, y: (h[3] * x + h[4] * y + h[5]) / w)
+    }
+}
+
+func skew(_ image: CIImage, _ rng: inout Rng, degrees: Double, keystone: Double) -> (CIImage, PointMap) {
     let e = image.extent
     let paper = CIImage(color: CIColor(red: 0.5, green: 0.5, blue: 0.52)).cropped(to: e)
     let angle = (rng.unit() < 0.5 ? -1.0 : 1.0) * degrees * .pi / 180
@@ -125,13 +156,23 @@ func skew(_ image: CIImage, _ rng: inout Rng, degrees: Double, keystone: Double)
         .rotated(by: angle).translatedBy(x: -e.midX, y: -e.midY))
     // A mild keystone: one end of the band nearer the lens than the other.
     let k = e.height * keystone
+    let tl = CGPoint(x: e.minX, y: e.maxY + k), tr = CGPoint(x: e.maxX, y: e.maxY - k)
+    let bl = CGPoint(x: e.minX, y: e.minY - k), br = CGPoint(x: e.maxX, y: e.minY + k)
     let perspective = rotated.applyingFilter("CIPerspectiveTransform", parameters: [
-        "inputTopLeft": CIVector(x: e.minX, y: e.maxY + k),
-        "inputTopRight": CIVector(x: e.maxX, y: e.maxY - k),
-        "inputBottomLeft": CIVector(x: e.minX, y: e.minY - k),
-        "inputBottomRight": CIVector(x: e.maxX, y: e.minY + k),
+        "inputTopLeft": CIVector(cgPoint: tl),
+        "inputTopRight": CIVector(cgPoint: tr),
+        "inputBottomLeft": CIVector(cgPoint: bl),
+        "inputBottomRight": CIVector(cgPoint: br),
     ])
-    return perspective.composited(over: paper).cropped(to: e)
+    // Where a point of the clean image ends up: the rotation, then the perspective, which sends
+    // the rotated image's own corners to the four points above.
+    let r = rotated.extent
+    let toRotated = CGAffineTransform(translationX: e.midX, y: e.midY)
+        .rotated(by: angle).translatedBy(x: -e.midX, y: -e.midY)
+    let persp = homography(
+        [CGPoint(x: r.minX, y: r.maxY), CGPoint(x: r.maxX, y: r.maxY), CGPoint(x: r.minX, y: r.minY), CGPoint(x: r.maxX, y: r.minY)],
+        [tl, tr, bl, br])
+    return (perspective.composited(over: paper).cropped(to: e), { persp($0.applying(toRotated)) })
 }
 
 func write(_ image: CIImage, _ path: String) {
@@ -150,18 +191,39 @@ for row in manifest.split(separator: "\n") {
     let id = cols[0], lines = cols[2].split(separator: "|").map(String.init)
     var paperRng = Rng(state: seed(for: id, "paper"))
     let clean = CIImage(cgImage: renderClean(lines, &paperRng))
+    let cleanHeight = clean.extent.height
     for condition in conditions {
         var rng = Rng(state: seed(for: id, condition))
         let image: CIImage
+        var map: PointMap = { $0 }
         switch condition {
         case "blur": image = blur(clean, rng.range(1.6, 2.4))
         case "glare": image = glare(clean, &rng, strength: rng.range(0.75, 0.9))
-        case "skew": image = skew(clean, &rng, degrees: rng.range(3, 6), keystone: rng.range(0.03, 0.06))
+        case "skew":
+            (image, map) = skew(clean, &rng, degrees: rng.range(3, 6), keystone: rng.range(0.03, 0.06))
         case "combined":
-            image = blur(glare(skew(clean, &rng, degrees: rng.range(2, 4), keystone: 0.03), &rng, strength: 0.7), 1.4)
+            let (skewed, skewMap) = skew(clean, &rng, degrees: rng.range(2, 4), keystone: 0.03)
+            map = skewMap
+            image = blur(glare(skewed, &rng, strength: 0.7), 1.4)
         default: image = clean
         }
         write(image, "\(outDir)/\(id)__\(condition).png")
+        if let linesDir {
+            try FileManager.default.createDirectory(atPath: linesDir, withIntermediateDirectories: true)
+            for (n, line) in lines.enumerated() {
+                // The line box in the clean image: its characters plus half a pitch each side,
+                // and a quarter of the cap height above and below.
+                let baseline = cleanHeight - margin - capHeight - CGFloat(n) * linePitch
+                let x0 = margin - pitch / 2, x1 = margin + CGFloat(line.count) * pitch + pitch / 2
+                let y0 = baseline - capHeight * 0.25, y1 = baseline + capHeight * 1.25
+                let q = [CGPoint(x: x0, y: y1), CGPoint(x: x1, y: y1), CGPoint(x: x1, y: y0), CGPoint(x: x0, y: y0)].map(map)
+                let crop = image.applyingFilter("CIPerspectiveCorrection", parameters: [
+                    "inputTopLeft": CIVector(cgPoint: q[0]), "inputTopRight": CIVector(cgPoint: q[1]),
+                    "inputBottomRight": CIVector(cgPoint: q[2]), "inputBottomLeft": CIVector(cgPoint: q[3]),
+                ])
+                write(crop, "\(linesDir)/\(id)__\(condition)__\(n).png")
+            }
+        }
         count += 1
     }
 }
