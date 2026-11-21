@@ -51,6 +51,17 @@ jobs:
           key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
           restore-keys: konan-${{ runner.os }}-
 
+      # emrtd-core's iOS targets link OpenSSL's libcrypto, built from the pinned, checksum-checked
+      # source by scripts/build-openssl-ios.sh (about a minute per slice). The cache keeps the built
+      # slices; the script's own stamp skips the build when the restored output matches its inputs.
+      # The key holds the script (the pin and the build options); this job runs the image's default
+      # Xcode, and the stamp rebuilds if its SDK version changed.
+      - name: Cache the OpenSSL build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: emrtd-core/build/openssl
+          key: openssl-${{ runner.os }}-xcode-default-${{ hashFiles('scripts/build-openssl-ios.sh') }}
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
 

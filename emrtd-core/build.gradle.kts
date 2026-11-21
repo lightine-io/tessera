@@ -56,8 +56,48 @@ kotlin {
     // activate Kotlin's default hierarchy template (shared iosMain/iosTest); the module declares no
     // custom intermediate source set, so the template applies as is. The host tests also run on
     // iosSimulatorArm64 (the ios-compile CI job).
-    iosArm64()
-    iosSimulatorArm64()
+    //
+    // The chip cryptography on iOS is OpenSSL's libcrypto (ADR-031), static, through cinterop
+    // (src/nativeInterop/cinterop/libcrypto.def). scripts/build-openssl-ios.sh builds it per slice
+    // from the pinned, checksum-checked source into build/openssl/<slice>; nothing is committed.
+    // The library is embedded in the iOS klibs, so it reaches every framework that links this
+    // module. CI downloads the source from OpenSSL's GitHub release; to build offline, set
+    // TESSERA_OPENSSL_TARBALL (or -Ptessera.opensslTarball) to a tarball already on disk.
+    val openSslScript = rootProject.layout.projectDirectory.file("scripts/build-openssl-ios.sh")
+    val openSslTarball =
+        providers
+            .gradleProperty("tessera.opensslTarball")
+            .orElse(providers.environmentVariable("TESSERA_OPENSSL_TARBALL"))
+            .orElse("")
+    listOf(iosArm64() to "ios-arm64", iosSimulatorArm64() to "ios-simulator-arm64").forEach { (target, slice) ->
+        val outDir = layout.buildDirectory.dir("openssl/$slice")
+        val buildOpenSsl =
+            tasks.register<Exec>("buildOpenSsl${target.name.replaceFirstChar { it.uppercase() }}") {
+                group = "build"
+                description = "Builds OpenSSL libcrypto for the $slice slice (scripts/build-openssl-ios.sh)."
+                // Apple slices build only on macOS, as Kotlin/Native's own iOS tasks do.
+                onlyIf { System.getProperty("os.name").startsWith("Mac") }
+                inputs.file(openSslScript)
+                inputs.property("tarball", openSslTarball)
+                outputs.dir(outDir)
+                executable = "bash"
+                args(openSslScript.asFile.path, slice, outDir.get().asFile.path)
+                environment("TESSERA_OPENSSL_TARBALL", openSslTarball.get())
+            }
+        val libcrypto =
+            target.compilations.getByName("main").cinterops.create("libcrypto") {
+                definitionFile.set(project.file("src/nativeInterop/cinterop/libcrypto.def"))
+                includeDirs(outDir.map { it.dir("include") })
+                extraOpts(
+                    "-libraryPath",
+                    outDir
+                        .get()
+                        .dir("lib")
+                        .asFile.path,
+                )
+            }
+        tasks.named(libcrypto.interopProcessingTaskName).configure { dependsOn(buildOpenSsl) }
+    }
 
     sourceSets {
         all {
@@ -81,8 +121,8 @@ kotlin {
         // does not support a source set shared by only a JVM and an Android target (Kotlin docs,
         // "Hierarchical project structure"), so common code reaches the backend through an `expect
         // fun chipCrypto()` with a one-line `actual` per target, and the one backend file lives in
-        // src/bouncyCastleMain, a plain folder compiled into both targets. iosMain's `actual` throws
-        // until the OpenSSL backend lands. BouncyCastle is `implementation`: none of its types may
+        // src/bouncyCastleMain, a plain folder compiled into both targets. iosMain's `actual` is the
+        // OpenSSL backend (cinterop above). BouncyCastle is `implementation`: none of its types may
         // reach the public API (repo-rules checks the api/ dumps).
         jvmMain {
             kotlin.srcDir("src/bouncyCastleMain/kotlin")
@@ -94,7 +134,7 @@ kotlin {
         }
         // The test-time signer for the fake PKI (real signatures with keys made at test time, never
         // committed) is BouncyCastle too: one file in src/bouncyCastleTest, compiled into both
-        // host test sets the same way. iosTest's `actual` has no signer, so those tests skip there.
+        // host test sets the same way. iosTest's `actual` signs with OpenSSL, so nothing skips there.
         jvmTest { kotlin.srcDir("src/bouncyCastleTest/kotlin") }
         matching { it.name == "androidHostTest" }.configureEach { kotlin.srcDir("src/bouncyCastleTest/kotlin") }
         commonTest {

@@ -1,0 +1,41 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.lightine.tessera:emrtd-nfc-ios>
+final class io.lightine.tessera.emrtd.nfc/CoreNfcSession { // io.lightine.tessera.emrtd.nfc/CoreNfcSession|null[0]
+    constructor <init>(kotlin/String) // io.lightine.tessera.emrtd.nfc/CoreNfcSession.<init>|<init>(kotlin.String){}[0]
+
+    final var alertMessage // io.lightine.tessera.emrtd.nfc/CoreNfcSession.alertMessage|{}alertMessage[0]
+        final fun <get-alertMessage>(): kotlin/String // io.lightine.tessera.emrtd.nfc/CoreNfcSession.alertMessage.<get-alertMessage>|<get-alertMessage>(){}[0]
+        final fun <set-alertMessage>(kotlin/String) // io.lightine.tessera.emrtd.nfc/CoreNfcSession.alertMessage.<set-alertMessage>|<set-alertMessage>(kotlin.String){}[0]
+
+    final fun end() // io.lightine.tessera.emrtd.nfc/CoreNfcSession.end|end(){}[0]
+    final fun end(kotlin/String) // io.lightine.tessera.emrtd.nfc/CoreNfcSession.end|end(kotlin.String){}[0]
+    final suspend fun connect(): io.lightine.tessera.emrtd.nfc/CoreNfcTransport // io.lightine.tessera.emrtd.nfc/CoreNfcSession.connect|connect(){}[0]
+
+    final object Companion { // io.lightine.tessera.emrtd.nfc/CoreNfcSession.Companion|null[0]
+        final const val EMRTD_APPLICATION_ID // io.lightine.tessera.emrtd.nfc/CoreNfcSession.Companion.EMRTD_APPLICATION_ID|{}EMRTD_APPLICATION_ID[0]
+            final fun <get-EMRTD_APPLICATION_ID>(): kotlin/String // io.lightine.tessera.emrtd.nfc/CoreNfcSession.Companion.EMRTD_APPLICATION_ID.<get-EMRTD_APPLICATION_ID>|<get-EMRTD_APPLICATION_ID>(){}[0]
+
+        final val isReadingAvailable // io.lightine.tessera.emrtd.nfc/CoreNfcSession.Companion.isReadingAvailable|{}isReadingAvailable[0]
+            final fun <get-isReadingAvailable>(): kotlin/Boolean // io.lightine.tessera.emrtd.nfc/CoreNfcSession.Companion.isReadingAvailable.<get-isReadingAvailable>|<get-isReadingAvailable>(){}[0]
+    }
+}
+
+final class io.lightine.tessera.emrtd.nfc/CoreNfcTransport : io.lightine.tessera.emrtd/ApduTransport { // io.lightine.tessera.emrtd.nfc/CoreNfcTransport|null[0]
+    constructor <init>(platform.CoreNFC/NFCISO7816TagProtocol) // io.lightine.tessera.emrtd.nfc/CoreNfcTransport.<init>|<init>(platform.CoreNFC.NFCISO7816TagProtocol){}[0]
+
+    final val maxCommandLength // io.lightine.tessera.emrtd.nfc/CoreNfcTransport.maxCommandLength|{}maxCommandLength[0]
+        final fun <get-maxCommandLength>(): kotlin/Int // io.lightine.tessera.emrtd.nfc/CoreNfcTransport.maxCommandLength.<get-maxCommandLength>|<get-maxCommandLength>(){}[0]
+    final val supportsExtendedLength // io.lightine.tessera.emrtd.nfc/CoreNfcTransport.supportsExtendedLength|{}supportsExtendedLength[0]
+        final fun <get-supportsExtendedLength>(): kotlin/Boolean // io.lightine.tessera.emrtd.nfc/CoreNfcTransport.supportsExtendedLength.<get-supportsExtendedLength>|<get-supportsExtendedLength>(){}[0]
+    final val supportsPace // io.lightine.tessera.emrtd.nfc/CoreNfcTransport.supportsPace|{}supportsPace[0]
+        final fun <get-supportsPace>(): kotlin/Boolean? // io.lightine.tessera.emrtd.nfc/CoreNfcTransport.supportsPace.<get-supportsPace>|<get-supportsPace>(){}[0]
+
+    final fun close() // io.lightine.tessera.emrtd.nfc/CoreNfcTransport.close|close(){}[0]
+    final suspend fun transceive(kotlin/ByteArray): kotlin/ByteArray // io.lightine.tessera.emrtd.nfc/CoreNfcTransport.transceive|transceive(kotlin.ByteArray){}[0]
+}

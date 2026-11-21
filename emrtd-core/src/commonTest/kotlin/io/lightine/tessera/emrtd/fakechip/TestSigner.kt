@@ -30,7 +30,7 @@ internal class TestKeyPair(
 /**
  * Makes keys and real signatures for the fake PKI, in tests only. The SDK verifies signatures but
  * never makes them, so signing lives in the test sources: BouncyCastle in jvmTest and
- * androidHostTest (src/bouncyCastleTest). Keys are made fresh in each test run and never written to
+ * androidHostTest (src/bouncyCastleTest), OpenSSL in iosTest. Keys are made fresh in each test run and never written to
  * disk.
  */
 internal interface TestSigner {
@@ -44,5 +44,5 @@ internal interface TestSigner {
     ): ByteArray
 }
 
-/** This platform's test signer, or `null` where there is no crypto backend yet (iOS): those tests return early. */
-internal expect fun testSigner(): TestSigner?
+/** This platform's test signer: BouncyCastle on the JVM and Android, OpenSSL on iOS. */
+internal expect fun testSigner(): TestSigner

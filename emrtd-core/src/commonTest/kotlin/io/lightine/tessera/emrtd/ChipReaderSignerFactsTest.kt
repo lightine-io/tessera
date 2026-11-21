@@ -23,7 +23,7 @@ import kotlin.time.Instant
  * The signer facts of passive authentication as the read reports them: where the signer
  * certificate came from (the file, or the app through [ChipReadOptions.signerCertificate]), how the
  * root's name matched (byte for byte, or the RFC 5280 comparison), and where each country was read
- * from. Synthetic Utopia certificates made at test time; skipped on iOS like the other crypto tests.
+ * from. Synthetic Utopia certificates made at test time.
  */
 class ChipReaderSignerFactsTest {
     private val checkTime = Instant.parse("2026-06-01T12:00:00Z")

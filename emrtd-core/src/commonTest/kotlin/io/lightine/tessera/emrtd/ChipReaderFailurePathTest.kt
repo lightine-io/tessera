@@ -44,7 +44,7 @@ import kotlin.time.Instant
  * confirm, a stripped or broken EF.CardAccess against its signed copy, chip authentication refused
  * then active authentication, CAM data faults, a malformed DG14, a throwing telemetry sink, wiped
  * keys after every kind of result, PACE that needs extended length, and cryptography that throws.
- * Fake chips from the project specimen; they skip on iOS like the other crypto tests.
+ * Fake chips from the project specimen; they run on every platform.
  */
 class ChipReaderFailurePathTest {
     private val checkTime = Instant.parse("2026-06-01T12:00:00Z")
