@@ -6,6 +6,29 @@
 // - Show declarations: true
 
 // Library unique name: <io.lightine.tessera:emrtd-core>
+final enum class io.lightine.tessera.emrtd.lds/BiometricStandard : kotlin/Enum<io.lightine.tessera.emrtd.lds/BiometricStandard> { // io.lightine.tessera.emrtd.lds/BiometricStandard|null[0]
+    enum entry ISO_19794 // io.lightine.tessera.emrtd.lds/BiometricStandard.ISO_19794|null[0]
+    enum entry ISO_39794 // io.lightine.tessera.emrtd.lds/BiometricStandard.ISO_39794|null[0]
+
+    final val entries // io.lightine.tessera.emrtd.lds/BiometricStandard.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd.lds/BiometricStandard> // io.lightine.tessera.emrtd.lds/BiometricStandard.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd.lds/BiometricStandard // io.lightine.tessera.emrtd.lds/BiometricStandard.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd.lds/BiometricStandard> // io.lightine.tessera.emrtd.lds/BiometricStandard.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.emrtd.lds/Iso39794Part : kotlin/Enum<io.lightine.tessera.emrtd.lds/Iso39794Part> { // io.lightine.tessera.emrtd.lds/Iso39794Part|null[0]
+    enum entry PART_4 // io.lightine.tessera.emrtd.lds/Iso39794Part.PART_4|null[0]
+    enum entry PART_5 // io.lightine.tessera.emrtd.lds/Iso39794Part.PART_5|null[0]
+    enum entry PART_6 // io.lightine.tessera.emrtd.lds/Iso39794Part.PART_6|null[0]
+
+    final val entries // io.lightine.tessera.emrtd.lds/Iso39794Part.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd.lds/Iso39794Part> // io.lightine.tessera.emrtd.lds/Iso39794Part.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd.lds/Iso39794Part // io.lightine.tessera.emrtd.lds/Iso39794Part.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd.lds/Iso39794Part> // io.lightine.tessera.emrtd.lds/Iso39794Part.values|values#static(){}[0]
+}
+
 abstract interface io.lightine.tessera.emrtd/ApduTransport { // io.lightine.tessera.emrtd/ApduTransport|null[0]
     abstract val maxCommandLength // io.lightine.tessera.emrtd/ApduTransport.maxCommandLength|{}maxCommandLength[0]
         abstract fun <get-maxCommandLength>(): kotlin/Int // io.lightine.tessera.emrtd/ApduTransport.maxCommandLength.<get-maxCommandLength>|<get-maxCommandLength>(){}[0]
@@ -15,11 +38,101 @@ abstract interface io.lightine.tessera.emrtd/ApduTransport { // io.lightine.tess
     abstract suspend fun transceive(kotlin/ByteArray): kotlin/ByteArray // io.lightine.tessera.emrtd/ApduTransport.transceive|transceive(kotlin.ByteArray){}[0]
 }
 
+final class io.lightine.tessera.emrtd.lds/BiometricDataBlock { // io.lightine.tessera.emrtd.lds/BiometricDataBlock|null[0]
+    final val bytes // io.lightine.tessera.emrtd.lds/BiometricDataBlock.bytes|{}bytes[0]
+        final fun <get-bytes>(): kotlin/ByteArray // io.lightine.tessera.emrtd.lds/BiometricDataBlock.bytes.<get-bytes>|<get-bytes>(){}[0]
+    final val iso39794Data // io.lightine.tessera.emrtd.lds/BiometricDataBlock.iso39794Data|{}iso39794Data[0]
+        final fun <get-iso39794Data>(): kotlin/ByteArray? // io.lightine.tessera.emrtd.lds/BiometricDataBlock.iso39794Data.<get-iso39794Data>|<get-iso39794Data>(){}[0]
+    final val iso39794Part // io.lightine.tessera.emrtd.lds/BiometricDataBlock.iso39794Part|{}iso39794Part[0]
+        final fun <get-iso39794Part>(): io.lightine.tessera.emrtd.lds/Iso39794Part? // io.lightine.tessera.emrtd.lds/BiometricDataBlock.iso39794Part.<get-iso39794Part>|<get-iso39794Part>(){}[0]
+    final val standard // io.lightine.tessera.emrtd.lds/BiometricDataBlock.standard|{}standard[0]
+        final fun <get-standard>(): io.lightine.tessera.emrtd.lds/BiometricStandard // io.lightine.tessera.emrtd.lds/BiometricDataBlock.standard.<get-standard>|<get-standard>(){}[0]
+
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/BiometricDataBlock.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.emrtd.lds/BiometricGroup { // io.lightine.tessera.emrtd.lds/BiometricGroup|null[0]
+    final val declaredInstances // io.lightine.tessera.emrtd.lds/BiometricGroup.declaredInstances|{}declaredInstances[0]
+        final fun <get-declaredInstances>(): kotlin/Int? // io.lightine.tessera.emrtd.lds/BiometricGroup.declaredInstances.<get-declaredInstances>|<get-declaredInstances>(){}[0]
+    final val templates // io.lightine.tessera.emrtd.lds/BiometricGroup.templates|{}templates[0]
+        final fun <get-templates>(): kotlin.collections/List<io.lightine.tessera.emrtd.lds/BiometricTemplate> // io.lightine.tessera.emrtd.lds/BiometricGroup.templates.<get-templates>|<get-templates>(){}[0]
+
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/BiometricGroup.toString|toString(){}[0]
+
+    final object Companion { // io.lightine.tessera.emrtd.lds/BiometricGroup.Companion|null[0]
+        final fun parse(kotlin/ByteArray): io.lightine.tessera.emrtd.lds/ImageGroupParse<io.lightine.tessera.emrtd.lds/BiometricGroup> // io.lightine.tessera.emrtd.lds/BiometricGroup.Companion.parse|parse(kotlin.ByteArray){}[0]
+    }
+}
+
+final class io.lightine.tessera.emrtd.lds/BiometricHeader { // io.lightine.tessera.emrtd.lds/BiometricHeader|null[0]
+    final val biometricSubType // io.lightine.tessera.emrtd.lds/BiometricHeader.biometricSubType|{}biometricSubType[0]
+        final fun <get-biometricSubType>(): kotlin/ByteArray? // io.lightine.tessera.emrtd.lds/BiometricHeader.biometricSubType.<get-biometricSubType>|<get-biometricSubType>(){}[0]
+    final val biometricType // io.lightine.tessera.emrtd.lds/BiometricHeader.biometricType|{}biometricType[0]
+        final fun <get-biometricType>(): kotlin/ByteArray? // io.lightine.tessera.emrtd.lds/BiometricHeader.biometricType.<get-biometricType>|<get-biometricType>(){}[0]
+    final val creationDateTime // io.lightine.tessera.emrtd.lds/BiometricHeader.creationDateTime|{}creationDateTime[0]
+        final fun <get-creationDateTime>(): kotlin/ByteArray? // io.lightine.tessera.emrtd.lds/BiometricHeader.creationDateTime.<get-creationDateTime>|<get-creationDateTime>(){}[0]
+    final val creatorPid // io.lightine.tessera.emrtd.lds/BiometricHeader.creatorPid|{}creatorPid[0]
+        final fun <get-creatorPid>(): kotlin/ByteArray? // io.lightine.tessera.emrtd.lds/BiometricHeader.creatorPid.<get-creatorPid>|<get-creatorPid>(){}[0]
+    final val formatOwner // io.lightine.tessera.emrtd.lds/BiometricHeader.formatOwner|{}formatOwner[0]
+        final fun <get-formatOwner>(): kotlin/ByteArray? // io.lightine.tessera.emrtd.lds/BiometricHeader.formatOwner.<get-formatOwner>|<get-formatOwner>(){}[0]
+    final val formatType // io.lightine.tessera.emrtd.lds/BiometricHeader.formatType|{}formatType[0]
+        final fun <get-formatType>(): kotlin/ByteArray? // io.lightine.tessera.emrtd.lds/BiometricHeader.formatType.<get-formatType>|<get-formatType>(){}[0]
+    final val headerVersion // io.lightine.tessera.emrtd.lds/BiometricHeader.headerVersion|{}headerVersion[0]
+        final fun <get-headerVersion>(): kotlin/ByteArray? // io.lightine.tessera.emrtd.lds/BiometricHeader.headerVersion.<get-headerVersion>|<get-headerVersion>(){}[0]
+    final val validityPeriod // io.lightine.tessera.emrtd.lds/BiometricHeader.validityPeriod|{}validityPeriod[0]
+        final fun <get-validityPeriod>(): kotlin/ByteArray? // io.lightine.tessera.emrtd.lds/BiometricHeader.validityPeriod.<get-validityPeriod>|<get-validityPeriod>(){}[0]
+
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/BiometricHeader.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.emrtd.lds/BiometricTemplate { // io.lightine.tessera.emrtd.lds/BiometricTemplate|null[0]
+    final val block // io.lightine.tessera.emrtd.lds/BiometricTemplate.block|{}block[0]
+        final fun <get-block>(): io.lightine.tessera.emrtd.lds/BiometricDataBlock // io.lightine.tessera.emrtd.lds/BiometricTemplate.block.<get-block>|<get-block>(){}[0]
+    final val header // io.lightine.tessera.emrtd.lds/BiometricTemplate.header|{}header[0]
+        final fun <get-header>(): io.lightine.tessera.emrtd.lds/BiometricHeader // io.lightine.tessera.emrtd.lds/BiometricTemplate.header.<get-header>|<get-header>(){}[0]
+
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/BiometricTemplate.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.emrtd.lds/DisplayedImageGroup { // io.lightine.tessera.emrtd.lds/DisplayedImageGroup|null[0]
+    final val declaredInstances // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.declaredInstances|{}declaredInstances[0]
+        final fun <get-declaredInstances>(): kotlin/Int? // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.declaredInstances.<get-declaredInstances>|<get-declaredInstances>(){}[0]
+    final val images // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.images|{}images[0]
+        final fun <get-images>(): kotlin.collections/List<kotlin/ByteArray> // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.images.<get-images>|<get-images>(){}[0]
+
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.toString|toString(){}[0]
+
+    final object Companion { // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.Companion|null[0]
+        final fun parseDg5(kotlin/ByteArray): io.lightine.tessera.emrtd.lds/ImageGroupParse<io.lightine.tessera.emrtd.lds/DisplayedImageGroup> // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.Companion.parseDg5|parseDg5(kotlin.ByteArray){}[0]
+        final fun parseDg7(kotlin/ByteArray): io.lightine.tessera.emrtd.lds/ImageGroupParse<io.lightine.tessera.emrtd.lds/DisplayedImageGroup> // io.lightine.tessera.emrtd.lds/DisplayedImageGroup.Companion.parseDg7|parseDg7(kotlin.ByteArray){}[0]
+    }
+}
+
 final class io.lightine.tessera.emrtd/ApduTransportException : kotlin/Exception { // io.lightine.tessera.emrtd/ApduTransportException|null[0]
     constructor <init>(io.lightine.tessera.types.errors/NfcError, kotlin/Throwable? = ...) // io.lightine.tessera.emrtd/ApduTransportException.<init>|<init>(io.lightine.tessera.types.errors.NfcError;kotlin.Throwable?){}[0]
 
     final val error // io.lightine.tessera.emrtd/ApduTransportException.error|{}error[0]
         final fun <get-error>(): io.lightine.tessera.types.errors/NfcError // io.lightine.tessera.emrtd/ApduTransportException.error.<get-error>|<get-error>(){}[0]
+}
+
+sealed class <#A: out kotlin/Any?> io.lightine.tessera.emrtd.lds/ImageGroupParse { // io.lightine.tessera.emrtd.lds/ImageGroupParse|null[0]
+    final class <#A1: out kotlin/Any?> Parsed : io.lightine.tessera.emrtd.lds/ImageGroupParse<#A1> { // io.lightine.tessera.emrtd.lds/ImageGroupParse.Parsed|null[0]
+        constructor <init>(#A1) // io.lightine.tessera.emrtd.lds/ImageGroupParse.Parsed.<init>|<init>(1:0){}[0]
+
+        final val value // io.lightine.tessera.emrtd.lds/ImageGroupParse.Parsed.value|{}value[0]
+            final fun <get-value>(): #A1 // io.lightine.tessera.emrtd.lds/ImageGroupParse.Parsed.value.<get-value>|<get-value>(){}[0]
+
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/ImageGroupParse.Parsed.toString|toString(){}[0]
+    }
+
+    final class Malformed : io.lightine.tessera.emrtd.lds/ImageGroupParse<kotlin/Nothing> { // io.lightine.tessera.emrtd.lds/ImageGroupParse.Malformed|null[0]
+        constructor <init>(io.lightine.tessera.types.errors/ChipImageGroupMalformed) // io.lightine.tessera.emrtd.lds/ImageGroupParse.Malformed.<init>|<init>(io.lightine.tessera.types.errors.ChipImageGroupMalformed){}[0]
+
+        final val error // io.lightine.tessera.emrtd.lds/ImageGroupParse.Malformed.error|{}error[0]
+            final fun <get-error>(): io.lightine.tessera.types.errors/ChipImageGroupMalformed // io.lightine.tessera.emrtd.lds/ImageGroupParse.Malformed.error.<get-error>|<get-error>(){}[0]
+
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd.lds/ImageGroupParse.Malformed.toString|toString(){}[0]
+    }
 }
 
 sealed class io.lightine.tessera.emrtd/ChipAccessKey { // io.lightine.tessera.emrtd/ChipAccessKey|null[0]

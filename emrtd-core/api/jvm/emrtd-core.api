@@ -26,3 +26,84 @@ public final class io/lightine/tessera/emrtd/ChipAccessKey$Mrz : io/lightine/tes
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/lightine/tessera/emrtd/lds/BiometricDataBlock {
+	public final fun getBytes ()[B
+	public final fun getIso39794Data ()[B
+	public final fun getIso39794Part ()Lio/lightine/tessera/emrtd/lds/Iso39794Part;
+	public final fun getStandard ()Lio/lightine/tessera/emrtd/lds/BiometricStandard;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/BiometricGroup {
+	public static final field Companion Lio/lightine/tessera/emrtd/lds/BiometricGroup$Companion;
+	public final fun getDeclaredInstances ()Ljava/lang/Integer;
+	public final fun getTemplates ()Ljava/util/List;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/BiometricGroup$Companion {
+	public final fun parse ([B)Lio/lightine/tessera/emrtd/lds/ImageGroupParse;
+}
+
+public final class io/lightine/tessera/emrtd/lds/BiometricHeader {
+	public final fun getBiometricSubType ()[B
+	public final fun getBiometricType ()[B
+	public final fun getCreationDateTime ()[B
+	public final fun getCreatorPid ()[B
+	public final fun getFormatOwner ()[B
+	public final fun getFormatType ()[B
+	public final fun getHeaderVersion ()[B
+	public final fun getValidityPeriod ()[B
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/BiometricStandard : java/lang/Enum {
+	public static final field ISO_19794 Lio/lightine/tessera/emrtd/lds/BiometricStandard;
+	public static final field ISO_39794 Lio/lightine/tessera/emrtd/lds/BiometricStandard;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/lds/BiometricStandard;
+	public static fun values ()[Lio/lightine/tessera/emrtd/lds/BiometricStandard;
+}
+
+public final class io/lightine/tessera/emrtd/lds/BiometricTemplate {
+	public final fun getBlock ()Lio/lightine/tessera/emrtd/lds/BiometricDataBlock;
+	public final fun getHeader ()Lio/lightine/tessera/emrtd/lds/BiometricHeader;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/DisplayedImageGroup {
+	public static final field Companion Lio/lightine/tessera/emrtd/lds/DisplayedImageGroup$Companion;
+	public final fun getDeclaredInstances ()Ljava/lang/Integer;
+	public final fun getImages ()Ljava/util/List;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/DisplayedImageGroup$Companion {
+	public final fun parseDg5 ([B)Lio/lightine/tessera/emrtd/lds/ImageGroupParse;
+	public final fun parseDg7 ([B)Lio/lightine/tessera/emrtd/lds/ImageGroupParse;
+}
+
+public abstract class io/lightine/tessera/emrtd/lds/ImageGroupParse {
+}
+
+public final class io/lightine/tessera/emrtd/lds/ImageGroupParse$Malformed : io/lightine/tessera/emrtd/lds/ImageGroupParse {
+	public fun <init> (Lio/lightine/tessera/types/errors/ChipImageGroupMalformed;)V
+	public final fun getError ()Lio/lightine/tessera/types/errors/ChipImageGroupMalformed;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/ImageGroupParse$Parsed : io/lightine/tessera/emrtd/lds/ImageGroupParse {
+	public fun <init> (Ljava/lang/Object;)V
+	public final fun getValue ()Ljava/lang/Object;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/lds/Iso39794Part : java/lang/Enum {
+	public static final field PART_4 Lio/lightine/tessera/emrtd/lds/Iso39794Part;
+	public static final field PART_5 Lio/lightine/tessera/emrtd/lds/Iso39794Part;
+	public static final field PART_6 Lio/lightine/tessera/emrtd/lds/Iso39794Part;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/lds/Iso39794Part;
+	public static fun values ()[Lio/lightine/tessera/emrtd/lds/Iso39794Part;
+}
+

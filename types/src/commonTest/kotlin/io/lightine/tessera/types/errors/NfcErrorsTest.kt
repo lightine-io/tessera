@@ -83,6 +83,7 @@ class ChipErrorTextTest {
             is NfcTagLost,
             is NfcTimeout,
             is NfcUnavailable,
+            is ChipImageGroupMalformed,
             -> true
         }
 }
