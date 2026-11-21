@@ -3,6 +3,7 @@ package io.lightine.tessera.emrtd.internal.sm
 import io.lightine.tessera.emrtd.internal.apdu.CommandApdu
 import io.lightine.tessera.emrtd.internal.apdu.ResponseApdu
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
+import io.lightine.tessera.emrtd.internal.crypto.CryptoBytes
 import io.lightine.tessera.emrtd.internal.crypto.hex
 import io.lightine.tessera.emrtd.internal.crypto.toHex
 import io.lightine.tessera.emrtd.internal.crypto.withCrypto
@@ -102,6 +103,37 @@ class SecureMessagingTest {
             val e =
                 assertFailsWith<SecureMessagingException> { again.unprotect(ResponseApdu.parse(hex("990262828E08FA855A5D4C50A8ED9000"))) }
             assertEquals(SmFailure.WRONG_MAC, e.failure)
+        }
+
+    @Test
+    fun withoutDataObject99TheOuterStatusIsTrustedOnlyForAnEmpty9000() =
+        withCrypto { c ->
+            // An answer whose MAC is right but which has no DO'99': the MAC is computed here over
+            // the counter the session will use (two increments: the command, then the answer).
+            fun answer(
+                covered: String,
+                outerSw: String,
+            ): ResponseApdu {
+                val counter = ssc.copyOf()
+                SecureMessaging.increment(counter)
+                SecureMessaging.increment(counter)
+                val mac = c.retailMac(keys().macKey, CryptoBytes.pad(counter + hex(covered), 8))
+                return ResponseApdu.parse(hex(covered + "8E08" + mac.toHex() + outerSw))
+            }
+
+            fun session() = SecureMessaging(c, keys(), ssc).also { it.protect(CommandApdu(0x00, 0xB0, 0, 0, ne = 4)) }
+
+            val ok = session().unprotect(answer("", "9000"))
+            assertEquals(StatusWord.SUCCESS, ok.sw)
+            assertContentEquals(ByteArray(0), ok.data)
+
+            // A plain warning or error outside the MAC is never taken as the answer's status.
+            val warning = assertFailsWith<SecureMessagingException> { session().unprotect(answer("", "6282")) }
+            assertEquals(SmFailure.UNAUTHENTICATED_STATUS, warning.failure)
+            assertEquals(0x6282, warning.sw)
+            // Data with no DO'99' is refused even when the outer status says 9000.
+            val withData = assertFailsWith<SecureMessagingException> { session().unprotect(answer("870901" + "00".repeat(8), "9000")) }
+            assertEquals(SmFailure.UNAUTHENTICATED_STATUS, withData.failure)
         }
 
     @Test

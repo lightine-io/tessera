@@ -1,9 +1,11 @@
 package io.lightine.tessera.emrtd.internal.pa
 
+import io.lightine.tessera.emrtd.internal.asn1.Asn1Exception
 import io.lightine.tessera.emrtd.internal.asn1.DerReader
 import io.lightine.tessera.emrtd.internal.asn1.DerTag
 import io.lightine.tessera.emrtd.internal.crypto.EcdsaSignatureFormat
 import io.lightine.tessera.emrtd.internal.crypto.HashAlgorithm
+import io.lightine.tessera.emrtd.internal.crypto.KeyLimits
 import io.lightine.tessera.emrtd.internal.crypto.SignatureScheme
 import io.lightine.tessera.emrtd.internal.x509.AlgorithmIdentifier
 import io.lightine.tessera.emrtd.internal.x509.readAlgorithmIdentifier
@@ -108,7 +110,16 @@ internal object SignatureAlgorithms {
      * RSASSA-PSS-params (RFC 4055, 3.1): hash [0] (default SHA-1), mask generation [1] (MGF1 with a
      * hash, default SHA-1), salt length [2] (default 20), trailer field [3] (only 1 is defined).
      */
-    private fun pss(parameters: ByteArray?): SignatureScheme {
+    private fun pss(parameters: ByteArray?): SignatureScheme =
+        try {
+            readPss(parameters)
+        } catch (e: Asn1Exception) {
+            // Parameters that do not parse (a salt length too long for an Int included) name no
+            // scheme the SDK can run.
+            throw UnsupportedAlgorithmException("PSS parameters")
+        }
+
+    private fun readPss(parameters: ByteArray?): SignatureScheme {
         var hash = HashAlgorithm.SHA1
         var mgfHash = HashAlgorithm.SHA1
         var salt = 20
@@ -138,7 +149,9 @@ internal object SignatureAlgorithms {
             }
             seq.finish()
         }
-        if (salt < 0) throw UnsupportedAlgorithmException("salt length")
+        // The salt length is untrusted: refuse what no key the SDK reads could hold (RFC 8017, 9.1.1).
+        // The exact bound depends on the key: SignatureChecks.verifySignature checks it.
+        if (salt < 0 || salt > KeyLimits.MAX_RSA_MODULUS_BITS / 8) throw UnsupportedAlgorithmException("salt length")
         return SignatureScheme.RsaPss(hash, mgfHash, salt)
     }
 }

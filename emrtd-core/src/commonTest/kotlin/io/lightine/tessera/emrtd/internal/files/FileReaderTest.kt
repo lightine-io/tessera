@@ -206,6 +206,33 @@ class FileReaderTest {
             assertEquals(TlvFailure.TRUNCATED_LENGTH, failure.failure)
         }
 
+    @Test
+    fun a_file_declaring_more_than_the_limit_is_refused_after_one_read() =
+        runTest {
+            // A hostile chip declares a file of 0x7FFFFFFF bytes in all (6 header bytes and a value
+            // length of 0x7FFFFFF9, which still fits an Int) and sends a few.
+            val hostile = byteArrayOf(0x61, 0x84.toByte(), 0x7F, 0xFF.toByte(), 0xFF.toByte(), 0xF9.toByte(), 1, 2, 3)
+            val chip = chip(mapOf(LdsIds.EF_DG1 to hostile))
+            val reader = FileReader(plain(chip))
+            reader.selectApplication()
+            val sentBefore = chip.received.size
+
+            val failure = assertFailsWith<MalformedFile> { reader.readFile(LdsIds.EF_DG1) }
+            assertEquals(TlvFailure.LENGTH_TOO_LONG, failure.failure)
+            assertEquals(sentBefore + 2, chip.received.size, "SELECT and one READ BINARY, then nothing")
+
+            // The limit is the reader's: exactly at it is read, one byte over is refused.
+            val content = ByteArray(996) { it.toByte() }
+            val exact = TlvWriter.encode(0x61, content)
+            val atLimit = chip(mapOf(LdsIds.EF_DG1 to exact))
+            val limited = FileReader(plain(atLimit), maxFileLength = exact.size)
+            limited.selectApplication()
+            assertContentEquals(exact, limited.readFile(LdsIds.EF_DG1))
+            val over = FileReader(plain(chip(mapOf(LdsIds.EF_DG1 to exact))), maxFileLength = exact.size - 1)
+            over.selectApplication()
+            assertEquals(TlvFailure.LENGTH_TOO_LONG, assertFailsWith<MalformedFile> { over.readFile(LdsIds.EF_DG1) }.failure)
+        }
+
     private fun plain(chip: FakeChip): ApduSender = ApduChannel(PlainApduSender(chip))
 
     private fun chip(

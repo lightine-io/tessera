@@ -13,6 +13,12 @@ internal enum class SmFailure {
     /** The answer's data objects are not in the order of Part 11, section 9.8.4, or do not parse. */
     MALFORMED_RESPONSE,
 
+    /**
+     * A protected answer without DO'99' (the status word under the MAC) that carries data or has an
+     * outer status other than 9000: its status would come from bytes nothing authenticates.
+     */
+    UNAUTHENTICATED_STATUS,
+
     /** The decrypted answer does not end in ISO/IEC 9797-1 padding method 2. */
     WRONG_PADDING,
 
@@ -39,7 +45,8 @@ internal enum class SmFailure {
 
 /**
  * The secure-messaging session ended. Carries only the reason and, for [SmFailure.CHIP_ENDED_SESSION],
- * the chip's status word: never key, counter or data bytes.
+ * [SmFailure.PLAIN_ANSWER_LENGTH_HINT] and [SmFailure.UNAUTHENTICATED_STATUS], the chip's status
+ * word: never key, counter or data bytes.
  */
 internal class SecureMessagingException(
     val failure: SmFailure,

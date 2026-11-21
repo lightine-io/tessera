@@ -23,7 +23,10 @@ internal enum class TlvFailure {
     /** The length byte is `80` (indefinite form), which chip data does not use. */
     INDEFINITE_LENGTH,
 
-    /** The length has more than 4 length bytes, or is larger than an `Int`. */
+    /**
+     * The length has more than 4 length bytes, or is larger than an `Int`; or, for a whole chip
+     * file, larger than the file reader's limit.
+     */
     LENGTH_TOO_LONG,
 
     /** The length is not in its shortest form; reported only when the parser is strict. */

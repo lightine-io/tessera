@@ -56,6 +56,9 @@ internal enum class CaSkipReason {
 
     /** The commands would not fit the transport: extended length is needed and not allowed or not supported. */
     COMMAND_TOO_LONG,
+
+    /** The reader could not make its ephemeral key pair or the shared secret on the chip's parameters. */
+    KEY_AGREEMENT_FAILED,
 }
 
 /** An offered suite that was not tried, and why. */
@@ -113,8 +116,13 @@ internal sealed interface CaOutcome {
     /**
      * The chip agreed new keys and secure messaging restarted with them (section 6.2.2) and a send
      * sequence counter of zero (sections 9.8.6.3 and 9.8.7.3).
+     *
+     * The key came from the chip's own security infos (EF.DG14 or EF.CardSecurity), which chip
+     * authentication does not check. Until passive authentication of that file has passed, the
+     * restart shows only that the chip holds the private key of a key it supplied itself: it proves
+     * nothing about the chip being genuine (sections 6.2.1 and 6.2.2, Note).
      */
-    class Restarted(
+    class RestartedWithUnverifiedKey(
         override val context: CaContext,
         val protocol: String,
         val keyId: Int?,

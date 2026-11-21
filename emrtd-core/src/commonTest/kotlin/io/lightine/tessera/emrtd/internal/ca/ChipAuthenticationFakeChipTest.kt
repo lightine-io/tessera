@@ -16,7 +16,12 @@ import io.lightine.tessera.emrtd.internal.apdu.LdsIds
 import io.lightine.tessera.emrtd.internal.apdu.PlainApduSender
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
 import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
+import io.lightine.tessera.emrtd.internal.crypto.ChipCryptoException
 import io.lightine.tessera.emrtd.internal.crypto.CryptoBytes
+import io.lightine.tessera.emrtd.internal.crypto.DhDomainParameters
+import io.lightine.tessera.emrtd.internal.crypto.EcDomainParameters
+import io.lightine.tessera.emrtd.internal.crypto.EcPointCodec
+import io.lightine.tessera.emrtd.internal.crypto.StandardDomainParameterValues
 import io.lightine.tessera.emrtd.internal.crypto.withCrypto
 import io.lightine.tessera.emrtd.internal.securityinfo.ChipSecurityFiles
 import io.lightine.tessera.emrtd.internal.securityinfo.SecurityInfoParser
@@ -121,7 +126,10 @@ class ChipAuthenticationFakeChipTest {
                 for ((cipherCode, cipher) in listOf(2 to SmCipher.AES128, 3 to SmCipher.AES192, 4 to SmCipher.AES256)) {
                     val key = FakeCaKey.generate(c, 13)
                     val s = setup(c, listOf(key), listOf(FakeCaOffer(dh = false, cipherCode = cipherCode)))
-                    val outcome = assertIs<CaOutcome.Restarted>(ChipAuthentication.run(s.channel, c, s.infos, CaContext.EMRTD_APPLICATION))
+                    val outcome =
+                        assertIs<CaOutcome.RestartedWithUnverifiedKey>(
+                            ChipAuthentication.run(s.channel, c, s.infos, CaContext.EMRTD_APPLICATION),
+                        )
                     assertEquals(CaCommands.SET_AT_GENERAL_AUTHENTICATE, outcome.commands)
                     assertEquals(cipher, outcome.cipher)
                     assertEquals(cipher, s.channel.cipher)
@@ -140,7 +148,10 @@ class ChipAuthenticationFakeChipTest {
                 for (encoding in listOf(FakeCaKeyEncoding.EXPLICIT, FakeCaKeyEncoding.PKCS3, FakeCaKeyEncoding.STANDARDIZED)) {
                     val key = FakeCaKey.generate(c, 0, encoding = encoding)
                     val s = setup(c, listOf(key), listOf(FakeCaOffer(dh = true, cipherCode = 1)), oldCipher = SmCipher.AES128)
-                    val outcome = assertIs<CaOutcome.Restarted>(ChipAuthentication.run(s.channel, c, s.infos, CaContext.EMRTD_APPLICATION))
+                    val outcome =
+                        assertIs<CaOutcome.RestartedWithUnverifiedKey>(
+                            ChipAuthentication.run(s.channel, c, s.infos, CaContext.EMRTD_APPLICATION),
+                        )
                     assertEquals(CaCommands.SET_KAT, outcome.commands)
                     assertFalse(outcome.usedSetAtFallback)
                     assertEquals(SmCipher.DESEDE, s.channel.cipher)
@@ -159,7 +170,10 @@ class ChipAuthenticationFakeChipTest {
                 val aesKey = FakeCaKey.generate(c, 12, keyId = 2)
                 val offers = listOf(FakeCaOffer(dh = true, cipherCode = 1, keyId = 1), FakeCaOffer(dh = false, cipherCode = 2, keyId = 2))
                 val s = setup(c, listOf(tdesKey, aesKey), offers)
-                val outcome = assertIs<CaOutcome.Restarted>(ChipAuthentication.run(s.channel, c, s.infos, CaContext.EMRTD_APPLICATION))
+                val outcome =
+                    assertIs<CaOutcome.RestartedWithUnverifiedKey>(
+                        ChipAuthentication.run(s.channel, c, s.infos, CaContext.EMRTD_APPLICATION),
+                    )
                 assertEquals(SmCipher.AES128, outcome.cipher)
                 assertEquals(2, outcome.keyId)
                 // MSE:Set AT carries 80 (the OID value) and 84 02 (the key reference, section 6.2.4.2 Note).
@@ -177,7 +191,10 @@ class ChipAuthenticationFakeChipTest {
             runTest {
                 val key = FakeCaKey.generate(c, 13)
                 val s = setup(c, listOf(key), listOf(FakeCaOffer(dh = false, cipherCode = 1)), setKatSupported = false)
-                val outcome = assertIs<CaOutcome.Restarted>(ChipAuthentication.run(s.channel, c, s.infos, CaContext.EMRTD_APPLICATION))
+                val outcome =
+                    assertIs<CaOutcome.RestartedWithUnverifiedKey>(
+                        ChipAuthentication.run(s.channel, c, s.infos, CaContext.EMRTD_APPLICATION),
+                    )
                 assertTrue(outcome.usedSetAtFallback)
                 assertEquals(SmCipher.DESEDE, outcome.cipher)
                 val refusal = outcome.refusals.single()
@@ -222,7 +239,10 @@ class ChipAuthenticationFakeChipTest {
                 assertEquals(FakeCa.REFERENCED_DATA_NOT_FOUND, inMf.refusals.single().sw)
                 assertTrue(s.channel.isOpen)
                 assertEquals(StatusWord.SUCCESS, s.channel.send(ChipCommands.selectApplication(LdsIds.LDS1_AID)).sw)
-                val inApp = assertIs<CaOutcome.Restarted>(ChipAuthentication.run(s.channel, c, s.infos, CaContext.EMRTD_APPLICATION))
+                val inApp =
+                    assertIs<CaOutcome.RestartedWithUnverifiedKey>(
+                        ChipAuthentication.run(s.channel, c, s.infos, CaContext.EMRTD_APPLICATION),
+                    )
                 assertEquals(CaContext.EMRTD_APPLICATION, inApp.context)
                 assertSessionWorks(s)
             }
@@ -241,7 +261,7 @@ class ChipAuthenticationFakeChipTest {
                         contexts = setOf(CaContext.MASTER_FILE),
                         inApplication = false,
                     )
-                assertIs<CaOutcome.Restarted>(ChipAuthentication.run(s.channel, c, s.infos, CaContext.MASTER_FILE))
+                assertIs<CaOutcome.RestartedWithUnverifiedKey>(ChipAuthentication.run(s.channel, c, s.infos, CaContext.MASTER_FILE))
                 assertEquals(StatusWord.SUCCESS, s.channel.send(ChipCommands.selectApplication(LdsIds.LDS1_AID)).sw)
                 assertSessionWorks(s)
             }
@@ -269,7 +289,9 @@ class ChipAuthenticationFakeChipTest {
                         }
                     val sscBefore = s.channel.sscCopy()
                     val sent = recorder.size
-                    assertIs<CaOutcome.Restarted>(ChipAuthentication.run(s.channel, c, s.infos, CaContext.EMRTD_APPLICATION))
+                    assertIs<CaOutcome.RestartedWithUnverifiedKey>(
+                        ChipAuthentication.run(s.channel, c, s.infos, CaContext.EMRTD_APPLICATION),
+                    )
                     val caExchanges = recorder.size - sent
                     assertEquals(if (offer.dh) 1 else 2, caExchanges)
 
@@ -345,6 +367,68 @@ class ChipAuthenticationFakeChipTest {
         }
 
     @Test
+    fun hostileExplicitParametersInDg14AreSkippedNeverThrown() =
+        withCrypto { c ->
+            runTest {
+                fun planOf(key: FakeCaKey) =
+                    ChipAuthentication.plan(
+                        c,
+                        SecurityInfoParser.parse(FakeCa.securityInfos(listOf(FakeCaOffer(key.isDh, 2)), listOf(key))),
+                    )
+
+                // An explicit curve with order n = 00: every point would pass the subgroup check
+                // and no private key could be drawn. The chip offers its generator as its key.
+                val p256 = StandardDomainParameterValues.forId(12) as EcDomainParameters
+                val zeroOrder = EcDomainParameters(p256.p, p256.a, p256.b, p256.generator, byteArrayOf(0), p256.cofactor)
+                val hostile = FakeCaKey(null, 12, zeroOrder, ByteArray(1), EcPointCodec.encode(zeroOrder, zeroOrder.generator))
+                assertEquals(CaSkipReason.UNSUPPORTED_DOMAIN_PARAMETERS, planOf(hostile).skipped.single().reason)
+
+                // The same through a whole run: read from DG14, nothing sent, the session goes on.
+                val s = setup(c, listOf(hostile), listOf(FakeCaOffer(dh = false, cipherCode = 2)))
+                val sent = s.chip.received.size
+                val outcome = assertIs<CaOutcome.NotRun>(ChipAuthentication.run(s.channel, c, s.infos, CaContext.EMRTD_APPLICATION))
+                assertEquals(CaSkipReason.UNSUPPORTED_DOMAIN_PARAMETERS, outcome.skipped.single().reason)
+                assertEquals(sent, s.chip.received.size)
+                assertSessionWorks(s)
+
+                // An even DH prime and a DH prime over 4096 bits are refused by the size policy.
+                val modp = StandardDomainParameterValues.forId(0) as DhDomainParameters
+                val evenP = DhDomainParameters(modp.p.copyOf().also { it[it.size - 1] = 0 }, modp.g, modp.q)
+                val hugeP =
+                    DhDomainParameters(
+                        ByteArray(513).also {
+                            it[0] = 1
+                            it[it.size - 1] = 1
+                        },
+                        modp.g,
+                        modp.q,
+                    )
+                for (params in listOf(evenP, hugeP)) {
+                    val key = FakeCaKey(null, 0, params, ByteArray(1), CryptoBytes.ofInt(4))
+                    assertEquals(CaSkipReason.UNSUPPORTED_DOMAIN_PARAMETERS, planOf(key).skipped.single().reason)
+                }
+            }
+        }
+
+    @Test
+    fun aCryptoFailureWhileMakingTheEphemeralKeyIsATypedSkip() =
+        withCrypto { c ->
+            runTest {
+                val key = FakeCaKey.generate(c, 13)
+                val s = setup(c, listOf(key), listOf(FakeCaOffer(dh = false, cipherCode = 2)))
+                val sent = s.chip.received.size
+                val failing =
+                    object : ChipCrypto by c {
+                        override fun randomBytes(length: Int): ByteArray = throw ChipCryptoException("no randomness")
+                    }
+                val outcome = assertIs<CaOutcome.NotRun>(ChipAuthentication.run(s.channel, failing, s.infos, CaContext.EMRTD_APPLICATION))
+                assertEquals(CaSkipReason.KEY_AGREEMENT_FAILED, outcome.skipped.single().reason)
+                assertEquals(sent, s.chip.received.size)
+                assertSessionWorks(s)
+            }
+        }
+
+    @Test
     fun aTwoThousandBitDhKeyNeedsExtendedLengthAndIsSkippedWithoutIt() =
         withCrypto { c ->
             runTest {
@@ -366,7 +450,7 @@ class ChipAuthenticationFakeChipTest {
                         CaContext.EMRTD_APPLICATION,
                         extendedLengthAllowed = true,
                     )
-                assertIs<CaOutcome.Restarted>(outcome)
+                assertIs<CaOutcome.RestartedWithUnverifiedKey>(outcome)
                 assertSessionWorks(extended)
             }
         }

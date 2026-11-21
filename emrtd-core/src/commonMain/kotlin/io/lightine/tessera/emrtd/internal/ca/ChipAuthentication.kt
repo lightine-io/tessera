@@ -11,6 +11,8 @@ import io.lightine.tessera.emrtd.internal.crypto.EcDomainParameters
 import io.lightine.tessera.emrtd.internal.crypto.EcPoint
 import io.lightine.tessera.emrtd.internal.crypto.EcPointCodec
 import io.lightine.tessera.emrtd.internal.crypto.EllipticCurves
+import io.lightine.tessera.emrtd.internal.crypto.KeyCheck
+import io.lightine.tessera.emrtd.internal.crypto.KeyLimits
 import io.lightine.tessera.emrtd.internal.crypto.StandardDomainParameterValues
 import io.lightine.tessera.emrtd.internal.securityinfo.KeyAgreement
 import io.lightine.tessera.emrtd.internal.securityinfo.SecurityInfos
@@ -50,7 +52,9 @@ import io.lightine.tessera.emrtd.internal.securityinfo.DomainParameters as InfoD
  * commands ends the session as everywhere else; that exception passes through.
  *
  * Passive authentication of the infos that carried the key is a separate check (section 6.2.1:
- * "SHALL perform"; section 6.2.2, Note): this object neither does it nor assumes it.
+ * "SHALL perform"; section 6.2.2, Note): this object neither does it nor assumes it. Without it, a
+ * restart shows only that the chip holds the private key of a key it supplied itself, which is why
+ * the outcome is [CaOutcome.RestartedWithUnverifiedKey].
  */
 internal object ChipAuthentication {
     const val INS_MSE = 0x22
@@ -93,7 +97,12 @@ internal object ChipAuthentication {
                 skipped += CaSkipped(info.protocol, info.keyId, CaSkipReason.KEY_AGREEMENT_MISMATCH)
                 continue
             }
-            val parameters = domainParameters(crypto, key.key.parameters, info.agreement)
+            val parameters =
+                try {
+                    domainParameters(crypto, key.key.parameters, info.agreement)
+                } catch (e: ChipCryptoException) {
+                    null
+                }
             if (parameters == null) {
                 skipped += CaSkipped(info.protocol, info.keyId, CaSkipReason.UNSUPPORTED_DOMAIN_PARAMETERS)
                 continue
@@ -134,8 +143,8 @@ internal object ChipAuthentication {
         var tried = false
         for (suite in plan.suites) {
             when (val r = attempt(channel, crypto, suite, extendedLengthAllowed, refusals)) {
-                null -> {
-                    skipped += CaSkipped(suite.protocol, suite.keyId, CaSkipReason.COMMAND_TOO_LONG)
+                is AttemptResult.Skipped -> {
+                    skipped += CaSkipped(suite.protocol, suite.keyId, r.reason)
                 }
 
                 AttemptResult.Refused -> {
@@ -143,7 +152,15 @@ internal object ChipAuthentication {
                 }
 
                 is AttemptResult.Accepted -> {
-                    return CaOutcome.Restarted(context, suite.protocol, suite.keyId, r.commands, suite.cipher, skipped, refusals)
+                    return CaOutcome.RestartedWithUnverifiedKey(
+                        context,
+                        suite.protocol,
+                        suite.keyId,
+                        r.commands,
+                        suite.cipher,
+                        skipped,
+                        refusals,
+                    )
                 }
             }
         }
@@ -153,20 +170,33 @@ internal object ChipAuthentication {
     private sealed interface AttemptResult {
         object Refused : AttemptResult
 
+        /** Nothing was sent for the suite. */
+        class Skipped(
+            val reason: CaSkipReason,
+        ) : AttemptResult
+
         class Accepted(
             val commands: CaCommands,
         ) : AttemptResult
     }
 
-    /** One suite. Returns null when its commands do not fit (nothing sent). */
+    /**
+     * One suite. Returns [AttemptResult.Skipped] when nothing was sent: the reader could not make
+     * its key pair or the shared secret on the chip's parameters, or the commands do not fit.
+     */
     private suspend fun attempt(
         channel: SecureChannel,
         crypto: ChipCrypto,
         suite: CaSuite,
         extendedLengthAllowed: Boolean,
         refusals: MutableList<CaRefusal>,
-    ): AttemptResult? {
-        val ephemeral = Ephemeral.generate(crypto, suite.parameters, suite.key.key.publicValue)
+    ): AttemptResult {
+        val ephemeral =
+            try {
+                Ephemeral.generate(crypto, suite.parameters, suite.key.key.publicValue)
+            } catch (e: ChipCryptoException) {
+                return AttemptResult.Skipped(CaSkipReason.KEY_AGREEMENT_FAILED)
+            }
         val keyReference = if (suite.sendKeyReference) TlvWriter.minimalUnsigned(CryptoBytes.ofInt(suite.keyId!!)) else null
         val setKat = if (suite.cipher == SmCipher.DESEDE) setKat(ephemeral.publicKey, keyReference) else null
         val setAt = setAt(suite.protocol, keyReference)
@@ -174,12 +204,17 @@ internal object ChipAuthentication {
         val fits = { c: CommandApdu -> protectedFits(c, suite.cipher, channel, extendedLengthAllowed) }
         // Set KAT carries the same key as GENERAL AUTHENTICATE plus a header, so if GENERAL
         // AUTHENTICATE does not fit, neither does Set KAT; with 3DES a Set KAT that fits is enough.
-        if (!(setKat?.let(fits) ?: false) && !(fits(setAt) && fits(ga))) {
-            ephemeral.wipe()
-            return null
-        }
-        val keys = SessionKeys.derive(crypto, ephemeral.sharedSecret, suite.cipher)
-        ephemeral.wipe()
+        val keys =
+            try {
+                if (!(setKat?.let(fits) ?: false) && !(fits(setAt) && fits(ga))) {
+                    return AttemptResult.Skipped(CaSkipReason.COMMAND_TOO_LONG)
+                }
+                SessionKeys.derive(crypto, ephemeral.sharedSecret, suite.cipher)
+            } catch (e: ChipCryptoException) {
+                return AttemptResult.Skipped(CaSkipReason.KEY_AGREEMENT_FAILED)
+            } finally {
+                ephemeral.wipe()
+            }
         var handedOver = false
         try {
             if (setKat != null && fits(setKat)) {
@@ -258,7 +293,8 @@ internal object ChipAuthentication {
     /**
      * The numbers of a chip key's domain parameters, or null when this reader cannot use them: a
      * standardized id (Table 12) of the right type, explicit prime-curve parameters, or explicit DH
-     * parameters (PKCS #3, or X9.42 as some chips issue, section 8.5 Note 2).
+     * parameters (PKCS #3, or X9.42 as some chips issue, section 8.5 Note 2). Explicit parameters
+     * must pass the shared size policy ([KeyLimits]).
      */
     fun domainParameters(
         crypto: ChipCrypto,
@@ -276,7 +312,11 @@ internal object ChipAuthentication {
             }
 
             is InfoDomainParameters.ExplicitDh -> {
-                if (agreement != KeyAgreement.DH) null else DhDomainParameters(parameters.p, parameters.g, parameters.q)
+                when {
+                    agreement != KeyAgreement.DH -> null
+                    KeyLimits.dh(parameters.p, parameters.g, parameters.q) != KeyCheck.OK -> null
+                    else -> DhDomainParameters(parameters.p, parameters.g, parameters.q)
+                }
             }
 
             is InfoDomainParameters.Unsupported -> {
@@ -288,6 +328,9 @@ internal object ChipAuthentication {
         crypto: ChipCrypto,
         e: InfoDomainParameters.ExplicitEc,
     ): EcDomainParameters? {
+        // The shared size policy first: p odd and at most 640 bits, n at least 2 (an order of 0 or 1
+        // would let any point pass the subgroup check and leave no private key to draw).
+        if (KeyLimits.ecCurve(e.p, e.a, e.b, e.order, e.cofactor) != KeyCheck.OK) return null
         val len = CryptoBytes.stripLeadingZeros(e.p).size
         val g = e.generator
         if (len == 0 || g.size != 1 + 2 * len || g[0] != 0x04.toByte()) return null
@@ -400,19 +443,23 @@ internal object ChipAuthentication {
                 when (parameters) {
                     is DhDomainParameters -> {
                         val sk = DiffieHellman.generatePrivateKey(crypto, parameters)
-                        val pk = TlvWriter.minimalUnsigned(DiffieHellman.publicKey(crypto, parameters, sk))
-                        val k = DiffieHellman.sharedSecret(crypto, parameters, sk, chipPublicValue)
-                        CryptoBytes.wipe(sk)
-                        Ephemeral(pk, k)
+                        try {
+                            val pk = TlvWriter.minimalUnsigned(DiffieHellman.publicKey(crypto, parameters, sk))
+                            Ephemeral(pk, DiffieHellman.sharedSecret(crypto, parameters, sk, chipPublicValue))
+                        } finally {
+                            CryptoBytes.wipe(sk)
+                        }
                     }
 
                     is EcDomainParameters -> {
                         val sk = EllipticCurves.generatePrivateKey(crypto, parameters)
-                        val pk = EcPointCodec.encode(parameters, EllipticCurves.publicKey(crypto, parameters, sk))
-                        val peer = EcPointCodec.decode(crypto, parameters, chipPublicValue)
-                        val k = EllipticCurves.sharedSecret(crypto, parameters, sk, peer)
-                        CryptoBytes.wipe(sk)
-                        Ephemeral(pk, k)
+                        try {
+                            val pk = EcPointCodec.encode(parameters, EllipticCurves.publicKey(crypto, parameters, sk))
+                            val peer = EcPointCodec.decode(crypto, parameters, chipPublicValue)
+                            Ephemeral(pk, EllipticCurves.sharedSecret(crypto, parameters, sk, peer))
+                        } finally {
+                            CryptoBytes.wipe(sk)
+                        }
                     }
                 }
         }

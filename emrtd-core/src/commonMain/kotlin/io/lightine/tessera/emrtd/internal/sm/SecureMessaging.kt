@@ -168,12 +168,23 @@ internal class SecureMessaging(
         val received = macObject.value()
         if (!CryptoBytes.constantTimeEquals(expected, received)) throw SecureMessagingException(SmFailure.WRONG_MAC)
 
+        // The status word is taken from DO'99', which the MAC covers. Without DO'99' the only status
+        // word available is the outer one, which nothing authenticates: it is accepted only for an
+        // answer with no data and 9000, where trusting it changes nothing a caller acts on. Any
+        // other outer status (a warning such as 6282, an error) or any data without DO'99' is a
+        // typed failure, so a forged plain status can never be paired with authenticated data.
+        // Real-device question: Part 11, section 9.8.4 makes DO'99' mandatory when the status is
+        // not 9000, but whether chips in the field omit it on data answers still needs checking.
         val sw =
-            statusObject?.let {
-                val v = it.value()
+            if (statusObject != null) {
+                val v = statusObject.value()
                 if (v.size != 2) throw SecureMessagingException(SmFailure.MALFORMED_RESPONSE)
                 ((v[0].toInt() and 0xFF) shl 8) or (v[1].toInt() and 0xFF)
-            } ?: response.sw
+            } else if (dataObject == null && response.sw == StatusWord.SUCCESS) {
+                response.sw
+            } else {
+                throw SecureMessagingException(SmFailure.UNAUTHENTICATED_STATUS, response.sw)
+            }
 
         val data = dataObject?.let { decryptDataObject(it) } ?: ByteArray(0)
         val plain = ResponseApdu(data, sw)

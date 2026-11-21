@@ -1,6 +1,7 @@
 package io.lightine.tessera.emrtd.internal.bac
 
 import io.lightine.tessera.emrtd.ApduTransport
+import io.lightine.tessera.emrtd.ApduTransportException
 import io.lightine.tessera.emrtd.ChipAccessKey
 import io.lightine.tessera.emrtd.internal.apdu.ChipCommands
 import io.lightine.tessera.emrtd.internal.apdu.LdsIds
@@ -10,9 +11,11 @@ import io.lightine.tessera.emrtd.internal.crypto.HashAlgorithm
 import io.lightine.tessera.emrtd.internal.crypto.hex
 import io.lightine.tessera.emrtd.internal.crypto.toHex
 import io.lightine.tessera.emrtd.internal.crypto.withCrypto
+import io.lightine.tessera.types.errors.NfcTagLost
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
@@ -125,6 +128,29 @@ class BacAppendixDTest {
                 assertEquals("60145F0104303130365F36063034303030305C026175", (head.data + rest.data).toHex())
                 transport.assertDone()
                 assertTrue(channel.isOpen)
+            }
+        }
+
+    @Test
+    fun theReadersNonceAndKeyMaterialAreWipedWhenTheConnectionIsLostMidProtocol() =
+        withCrypto { c ->
+            runTest {
+                val transport =
+                    object : ApduTransport {
+                        override val maxCommandLength: Int = 261
+                        override val supportsExtendedLength: Boolean = false
+
+                        override suspend fun transceive(command: ByteArray): ByteArray =
+                            if (command[1] == 0x84.toByte()) hex("4608F91988702212" + "9000") else throw ApduTransportException(NfcTagLost)
+                    }
+                val drawn = mutableListOf<ByteArray>()
+                assertFailsWith<ApduTransportException> {
+                    Bac.open(PlainApduSender(transport), c, nineCharacterKey(), random = { n ->
+                        ByteArray(n) { 0x5A }.also { drawn += it }
+                    })
+                }
+                assertEquals(2, drawn.size)
+                assertTrue(drawn.all { b -> b.all { it == 0.toByte() } }, "RND.IFD and K.IFD are wiped on the exception path")
             }
         }
 }
