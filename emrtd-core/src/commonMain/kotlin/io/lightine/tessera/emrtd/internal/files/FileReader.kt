@@ -24,6 +24,10 @@ import kotlin.coroutines.cancellation.CancellationException
  * holds; the default, [DEFAULT_MAX_FILE_LENGTH], leaves room for the largest image groups (DG2 to
  * DG4 with several high-resolution images) while keeping a hostile declaration from making the
  * reader buffer or poll for gigabytes. A caller that reads only small files may pass less.
+ *
+ * A file's content is its outer BER-TLV: when a chip returns more bytes than that TLV declares
+ * (some chips send a short file's whole padded length with 6282), the reader keeps exactly the
+ * declared length, drops the trailing bytes and stops reading.
  */
 internal class FileReader(
     private val sender: ApduSender,
@@ -95,8 +99,10 @@ internal class FileReader(
                 throw MalformedFile(e.failure)
             }
         if (totalLength > maxFileLength) throw MalformedFile(TlvFailure.LENGTH_TOO_LONG)
-        if (firstBytes.size > totalLength) throw MalformedFile(null)
-        if (first.sw == StatusWord.END_OF_FILE_BEFORE_NE || firstBytes.size == totalLength) return firstBytes
+        // Bytes past the declared end of the outer TLV are not part of the file (trailing fill on
+        // the chip): keep exactly the declared length and stop reading.
+        if (firstBytes.size >= totalLength) return firstBytes.copyOfRange(0, totalLength)
+        if (first.sw == StatusWord.END_OF_FILE_BEFORE_NE) return firstBytes
 
         val content = ByteSink()
         content.write(firstBytes)
@@ -106,6 +112,11 @@ internal class FileReader(
             val response = sendRead(offset, requested, extendedLengthAllowed)
             validateReadStatus(response, fid)
             if (response.data.size > requested) throw MalformedFile(null)
+            if (response.data.size > totalLength - content.size) {
+                // This answer reaches past the declared end: keep what the TLV needs and stop.
+                content.write(response.data, 0, totalLength - content.size)
+                break
+            }
             content.write(response.data)
             if (response.sw == StatusWord.END_OF_FILE_BEFORE_NE) break
             if (response.data.isEmpty()) throw FileProtocolFailure()

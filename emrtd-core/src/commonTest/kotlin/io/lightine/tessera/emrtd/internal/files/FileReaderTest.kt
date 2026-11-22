@@ -143,6 +143,75 @@ class FileReaderTest {
         }
 
     @Test
+    fun a_short_file_with_trailing_zero_bytes_past_its_tlv_reads_as_exactly_the_tlv() =
+        runTest {
+            val tlv = TlvWriter.encode(0x61, byteArrayOf(1, 2, 3))
+            // The chip's physical file is the TLV plus fill bytes; one short read returns it all with 6282.
+            val chip = chip(mapOf(LdsIds.EF_DG1 to tlv + ByteArray(20)))
+            val reader = FileReader(plain(chip))
+            reader.selectApplication()
+
+            assertContentEquals(tlv, reader.readFile(LdsIds.EF_DG1))
+            val reads =
+                chip.received
+                    .mapNotNull(CommandApdu::decode)
+                    .filter { it.ins == ChipCommands.INS_READ_BINARY }
+            assertEquals(1, reads.size, "one READ BINARY, then the reader stops at the declared length")
+        }
+
+    @Test
+    fun a_short_file_with_non_zero_trailing_bytes_past_its_tlv_reads_as_exactly_the_tlv() =
+        runTest {
+            val tlv = TlvWriter.encode(0x61, byteArrayOf(1, 2, 3))
+            val chip = chip(mapOf(LdsIds.EF_DG1 to tlv + ByteArray(20) { 0xA5.toByte() }))
+            val reader = FileReader(plain(chip))
+            reader.selectApplication()
+
+            assertContentEquals(tlv, reader.readFile(LdsIds.EF_DG1))
+        }
+
+    @Test
+    fun a_short_file_with_trailing_bytes_and_status_9000_reads_as_exactly_the_tlv() =
+        runTest {
+            val tlv = TlvWriter.encode(0x61, byteArrayOf(1, 2, 3))
+            // Sized to exactly one short chunk, so the chip answers 9000 with the whole padded file.
+            val padded = tlv + ByteArray(FileReader.DEFAULT_SHORT_CHUNK - tlv.size) { 0x5A.toByte() }
+            val chip = chip(mapOf(LdsIds.EF_DG1 to padded))
+            val reader = FileReader(plain(chip))
+            reader.selectApplication()
+
+            assertContentEquals(tlv, reader.readFile(LdsIds.EF_DG1))
+        }
+
+    @Test
+    fun reading_by_sfi_drops_trailing_bytes_past_the_tlv() =
+        runTest {
+            val tlv = TlvWriter.encode(0x61, byteArrayOf(9, 8, 7))
+            val chip = chip(mapOf(LdsIds.EF_COM to tlv + ByteArray(12) { 0x33.toByte() }))
+            val reader = FileReader(plain(chip))
+            reader.selectApplication()
+
+            assertContentEquals(tlv, reader.readFileBySfi(LdsIds.sfi(LdsIds.EF_COM)))
+        }
+
+    @Test
+    fun a_multi_chunk_file_with_trailing_bytes_past_its_tlv_reads_as_exactly_the_tlv() =
+        runTest {
+            // 404 bytes: the first chunk does not reach the declared end, so the read continues.
+            val tlv = TlvWriter.encode(0x61, ByteArray(400) { (it % 251).toByte() })
+            val chip = chip(mapOf(LdsIds.EF_DG1 to tlv + ByteArray(30) { 0xFF.toByte() }))
+            val reader = FileReader(plain(chip))
+            reader.selectApplication()
+
+            assertContentEquals(tlv, reader.readFile(LdsIds.EF_DG1))
+            val reads =
+                chip.received
+                    .mapNotNull(CommandApdu::decode)
+                    .filter { it.ins == ChipCommands.INS_READ_BINARY }
+            assertEquals(2, reads.size, "the reader stops once the declared length is reached")
+        }
+
+    @Test
     fun missing_file_is_typed() =
         runTest {
             val reader = FileReader(plain(chip(emptyMap())))

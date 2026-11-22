@@ -13,6 +13,7 @@ import io.lightine.tessera.emrtd.fakechip.FakeReadFlowChip.ECDH_IM_AES128
 import io.lightine.tessera.emrtd.fakechip.FakeTagLoss
 import io.lightine.tessera.emrtd.fakechip.FlowAccess
 import io.lightine.tessera.emrtd.fakechip.FlowChip
+import io.lightine.tessera.emrtd.internal.apdu.LdsIds
 import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
 import io.lightine.tessera.emrtd.internal.crypto.ChipCryptoUnavailableException
 import io.lightine.tessera.emrtd.internal.crypto.EcDomainParameters
@@ -147,6 +148,38 @@ class ChipReaderTest {
                 val read = complete(read(flow))
                 assertEquals(ChipAccessProtocol.BAC, read.access.protocol)
                 assertEquals(ChipPassword.MRZ, read.access.password)
+                assertPassiveAuthenticationPassed(read)
+            }
+        }
+
+    @Test
+    fun aChipThatPadsShortFilesPastTheirTlvStillReadsOverBac() =
+        runTest {
+            withChips { c, keys ->
+                val dg1 = FakeChipData.dg1(FakeReadFlowChip.lines)
+                val efCom = FakeChipData.efCom(listOf(0x61, 0x75))
+                // The physical EF.COM and DG1 are longer than their outer TLV: trailing fill bytes
+                // the chip returns whole, with 6282, on the first READ BINARY of each file.
+                val flow =
+                    FakeReadFlowChip.build(
+                        c,
+                        keys,
+                        FlowAccess.BAC,
+                        extraApplicationFiles =
+                            mapOf(
+                                LdsIds.EF_COM to efCom + ByteArray(8),
+                                LdsIds.EF_DG1 to dg1 + ByteArray(16) { 0x5A.toByte() },
+                            ),
+                    )
+                val read = complete(read(flow))
+                assertTrue(
+                    read.files
+                        .first { it.fileId == LdsIds.EF_COM }
+                        .bytes()
+                        .contentEquals(efCom),
+                )
+                assertTrue(read.dataGroup(1)!!.bytes().contentEquals(dg1))
+                // The hash in the security object still judges the kept bytes.
                 assertPassiveAuthenticationPassed(read)
             }
         }
