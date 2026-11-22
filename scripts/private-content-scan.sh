@@ -74,7 +74,10 @@ fi
 
 # Generic words that contain a term. Each entry needs a reason here.
 #   InvalidData - an English compound in CHANGELOG history, not private content.
-FALSE_POSITIVES='InvalidData'
+#   hasAny - a helper function name ("has" + "any") in emrtd-pcsc, not private content.
+#   theReaderHasAnIntegratedMapping - a test name ("has" + "an") in emrtd-core, not
+#     private content.
+FALSE_POSITIVES='InvalidData|hasAny|theReaderHasAnIntegratedMapping'
 
 HITS=$(
     git ls-files -z -- '*.md' '*.kt' '*.gradle*' '*.swift' '*.xcstrings' '*.yml' \
