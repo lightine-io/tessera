@@ -307,11 +307,11 @@ private fun ScannerFlow(
     // failure shows the "couldn't read" screen, instant-return hands the decode straight back, and review
     // mode parks it on the review screen. Kept pure (no camera, no Compose) so it is host-unit-testable.
     //
-    // TES-103: a reading of a kind the app does not accept (config.acceptedDocumentTypes) is never reviewed or
-    // returned; each method states it in its own place and lets the person go on: the photo method shows its
-    // not-accepted screen, manual entry stays on the entry screen with a note, and the camera shows a notice
-    // over the preview (the camera path filters before it gets here, in stepLiveDecode, so the CAMERA branch is
-    // only a fallback).
+    // TES-103: a reading the app does not accept (config.acceptedDocumentTypes) - a kind outside the set, or a
+    // kind that could not be told under a limited set - is never reviewed or returned; each method states it
+    // in its own place and lets the person go on: the photo method shows its not-accepted screen, manual
+    // entry stays on the entry screen with a note, and the camera shows a notice over the preview (the camera
+    // path filters before it gets here, in stepLiveDecode, so the CAMERA branch is only a fallback).
     val routeDecoded = { decoded: MrzScanResult.Decoded, source: ScanMethod ->
         when (val route = routeDecode(decoded, config.reviewMode, config.acceptedDocumentTypes)) {
             is DecodeRoute.ShowReadFailed -> {
@@ -828,12 +828,13 @@ internal sealed interface DecodeRoute {
     ) : DecodeRoute
 
     /**
-     * TES-103: the reading is of category [read], which the app's
-     * [`acceptedDocumentTypes`][MrzScannerConfig.acceptedDocumentTypes] does not include. Not reviewed, not
-     * returned; the screen states what was read and what the app accepts.
+     * TES-103: the reading is of kind [read], which the app's
+     * [`acceptedDocumentTypes`][MrzScannerConfig.acceptedDocumentTypes] does not accept - a category outside
+     * the set, or a kind the SDK could not tell under a limited set. Not reviewed, not returned; the screen
+     * states what was read (or that it could not be told) and what the app accepts.
      */
     data class NotAccepted(
-        val read: DocumentCategory,
+        val read: NotAcceptedKind,
     ) : DecodeRoute
 }
 
@@ -844,10 +845,11 @@ internal sealed interface DecodeRoute {
  * (check-digit mismatch) is a non-failure and follows the same path as `Success` - the UI never treats a
  * mismatch as a failure or diverts it (Principle 1).
  *
- * TES-103: a non-failure reading whose category the app does not accept ([notAcceptedCategory] under
- * [acceptedDocumentTypes]) routes to [DecodeRoute.NotAccepted] in BOTH modes, so it is never returned under
- * instant-return. A reading with no category (`broadCategory` is `null`) is not filtered. With every category
- * accepted (the default) the routing is exactly as before.
+ * TES-103: a non-failure reading the app does not accept ([notAcceptedKind] under [acceptedDocumentTypes])
+ * routes to [DecodeRoute.NotAccepted] in BOTH modes, so it is never returned under instant-return. TES-341: a
+ * reading whose kind could not be told (`broadCategory` is `null`) is refused the same way when the app
+ * limits the kinds, and is not filtered with the default. With every category accepted (the default) the
+ * routing is exactly as before.
  */
 internal fun routeDecode(
     decoded: MrzScanResult.Decoded,
@@ -855,7 +857,7 @@ internal fun routeDecode(
     acceptedDocumentTypes: Set<DocumentCategory> = DocumentCategory.entries.toSet(),
 ): DecodeRoute {
     if (decoded.parse is ParseResult.Failure) return DecodeRoute.ShowReadFailed(decoded.recognizedText)
-    notAcceptedCategory(decoded, acceptedDocumentTypes)?.let { return DecodeRoute.NotAccepted(it) }
+    notAcceptedKind(decoded, acceptedDocumentTypes)?.let { return DecodeRoute.NotAccepted(it) }
     return if (reviewMode == ReviewMode.INSTANT_RETURN) DecodeRoute.ReturnConfirmed(decoded) else DecodeRoute.ShowReview(decoded)
 }
 
@@ -1141,8 +1143,9 @@ internal fun formatCountdown(remaining: Duration): String {
  * @param struggling whether the "still looking / type it instead" hint is overlaid on the preview.
  * @param gathering whether the "hold steady" gathering cue is overlaid on the preview (a read is being
  *   confirmed across frames); takes render precedence over [struggling].
- * @param notAccepted the category of the last agreed reading the app does not accept, shown as a notice over
- *   the preview (TES-103); `null` when there is none.
+ * @param notAccepted the kind of the last agreed reading the app does not accept (a category outside the
+ *   set, or unknown when the SDK could not tell the kind under a limited set), shown as a notice over the
+ *   preview (TES-103); `null` when there is none.
  * @param onCameraResult every scanner result off the stream, for the flow's continuous reducer.
  * @param onStruggling fired once the struggle timeout elapses with no decode (flips the flow to struggling).
  * @param onManualEntry the "type it instead" escape into manual entry.
@@ -1157,7 +1160,7 @@ private fun CameraCapture(
     config: MrzScannerConfig,
     struggling: Boolean,
     gathering: Boolean,
-    notAccepted: DocumentCategory?,
+    notAccepted: NotAcceptedKind?,
     onCameraResult: (MrzScanResult) -> Unit,
     onStruggling: () -> Unit,
     onManualEntry: () -> Unit,
@@ -1325,7 +1328,7 @@ private fun CameraPreview(
     struggleTimeout: Duration,
     struggling: Boolean,
     gathering: Boolean,
-    notAccepted: DocumentCategory?,
+    notAccepted: NotAcceptedKind?,
     acceptedDocumentTypes: Set<DocumentCategory>,
     showTorchButton: Boolean,
     torchOnByDefault: Boolean,
@@ -1724,7 +1727,7 @@ internal fun MrzGuideOverlay(
     struggling: Boolean = false,
     onManualEntry: () -> Unit = {},
     showManualEntry: Boolean = true,
-    notAccepted: DocumentCategory? = null,
+    notAccepted: NotAcceptedKind? = null,
     acceptedDocumentTypes: Set<DocumentCategory> = DocumentCategory.entries.toSet(),
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {

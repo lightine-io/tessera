@@ -345,7 +345,7 @@ class ScannerUiStateSaverTest {
                 ScannerUiState.Scanning(
                     struggling = true,
                     gathering = true,
-                    notAccepted = DocumentCategory.PASSPORT,
+                    notAccepted = NotAcceptedKind.OfCategory(DocumentCategory.PASSPORT),
                 ),
             ScannerUiState.CameraInUse::class to ScannerUiState.CameraInUse,
             ScannerUiState.CameraUnavailable::class to ScannerUiState.CameraUnavailable,
@@ -353,8 +353,8 @@ class ScannerUiStateSaverTest {
             ScannerUiState.SavedImageAnalyzing::class to ScannerUiState.SavedImageAnalyzing,
             ScannerUiState.SavedImageEmpty::class to ScannerUiState.SavedImageEmpty,
             ScannerUiState.SavedImageNotAccepted::class to
-                ScannerUiState.SavedImageNotAccepted(DocumentCategory.PASSPORT),
-            ScannerUiState.ManualRaw::class to typed.copy(notAccepted = DocumentCategory.VISA),
+                ScannerUiState.SavedImageNotAccepted(NotAcceptedKind.Unknown),
+            ScannerUiState.ManualRaw::class to typed.copy(notAccepted = NotAcceptedKind.OfCategory(DocumentCategory.VISA)),
             ScannerUiState.ReadFailed::class to readFailed,
             ScannerUiState.Review::class to review(ScanMethod.CAMERA),
         )

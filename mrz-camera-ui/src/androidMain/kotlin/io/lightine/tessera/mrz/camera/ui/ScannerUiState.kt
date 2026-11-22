@@ -2,7 +2,6 @@ package io.lightine.tessera.mrz.camera.ui
 
 import io.lightine.tessera.mrz.camera.MrzScanResult
 import io.lightine.tessera.mrz.camera.RecognizedText
-import io.lightine.tessera.types.vocabulary.DocumentCategory
 
 /**
  * The screen the default scanner UI is currently showing - the single state the flow ([ScannerFlow])
@@ -33,16 +32,17 @@ internal sealed interface ScannerUiState {
      * lag. The two are mutually exclusive in effect: an incoming decode (gathering) means we are *not* stuck,
      * so gathering takes render precedence over struggling.
      *
-     * [notAccepted] (TES-103) is the category of the last reading the frames agreed on whose category is not
-     * in [`acceptedDocumentTypes`][MrzScannerConfig.acceptedDocumentTypes]; while set, the preview shows a
-     * notice saying what kind was read and what kinds the app accepts. The camera keeps scanning under it. It
-     * renders below gathering and above struggling, and clears when an accepted reading starts gathering or
-     * after a short while with no such reading (see `ScannerFlow`).
+     * [notAccepted] (TES-103) is the kind of the last reading the frames agreed on that the app does not
+     * accept: a category outside [`acceptedDocumentTypes`][MrzScannerConfig.acceptedDocumentTypes], or a kind
+     * the SDK could not tell when the app limits the kinds (TES-341). While set, the preview shows a notice
+     * saying what kind was read (or that it could not be told) and what kinds the app accepts. The camera keeps
+     * scanning under it. It renders below gathering and above struggling, and clears when an accepted reading
+     * starts gathering or after a short while with no such reading (see `ScannerFlow`).
      */
     data class Scanning(
         val struggling: Boolean = false,
         val gathering: Boolean = false,
-        val notAccepted: DocumentCategory? = null,
+        val notAccepted: NotAcceptedKind? = null,
     ) : ScannerUiState
 
     /** Another app holds the camera, so this session cannot open it (mockup 05). */
@@ -94,25 +94,28 @@ internal sealed interface ScannerUiState {
     data object SavedImageEmpty : ScannerUiState
 
     /**
-     * A picked photo read as a document of category [read], which is not in the app's
-     * [`acceptedDocumentTypes`][MrzScannerConfig.acceptedDocumentTypes] (TES-103). The screen states what kind
-     * was read and what kinds the app accepts, and offers another photo. The reading itself is not kept.
+     * A picked photo read as a document of kind [read], which the app does not accept: a category not in the
+     * app's [`acceptedDocumentTypes`][MrzScannerConfig.acceptedDocumentTypes], or a kind the SDK could not
+     * tell under a limited set (TES-103). The screen states what kind was read (or that it could not be told)
+     * and what kinds the app accepts, and offers another photo. The reading itself is not kept.
      */
     data class SavedImageNotAccepted(
-        val read: DocumentCategory,
+        val read: NotAcceptedKind,
     ) : ScannerUiState
 
     /**
      * Manual entry of the MRZ lines as raw text (mockup 06). [text] is the in-progress input. [parseFailed] is
      * set when a "Read" attempt did not parse as any MRZ format - the screen then shows an inline note and
      * keeps the typed text (rather than navigating to the camera-flavoured read-failed screen); it clears on the
-     * next edit. [notAccepted] (TES-103) is set when the typed lines read as a document whose category is not in
-     * the app's [`acceptedDocumentTypes`][MrzScannerConfig.acceptedDocumentTypes]: the screen keeps the text and
-     * shows an inline notice instead of going to review; it also clears on the next edit.
+     * next edit. [notAccepted] (TES-103) is set when the typed lines read as a document the app does not
+     * accept: a category not in the app's
+     * [`acceptedDocumentTypes`][MrzScannerConfig.acceptedDocumentTypes], or a kind the SDK could not tell
+     * under a limited set. The screen keeps the text and shows an inline notice instead of going to review; it
+     * also clears on the next edit.
      */
     data class ManualRaw(
         val text: String = "",
         val parseFailed: Boolean = false,
-        val notAccepted: DocumentCategory? = null,
+        val notAccepted: NotAcceptedKind? = null,
     ) : ScannerUiState
 }

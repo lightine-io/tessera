@@ -41,6 +41,8 @@ import kotlin.time.Instant
 
 /**
  * TES-103: `MrzScannerConfig.acceptedDocumentTypes`, the app's intake rule, across the three reading methods.
+ * TES-341: with a limited set, a reading whose kind the SDK cannot tell (`broadCategory` is `null`) is refused
+ * like a kind outside the set; with the default (every category) it goes to review as before.
  *
  * The pure seams ([routeDecode], [stepLiveDecode], [notAcceptedStateFor], the saver) are tested directly; the
  * manual-entry path is driven end to end through [MrzScannerScreen] (it needs no camera); the camera notice
@@ -48,8 +50,9 @@ import kotlin.time.Instant
  * picker cannot run under Robolectric.
  *
  * Fixtures: the project's TD3 specimen (UTO, the reserved test issuer) as the passport, and lines built with
- * the SDK's own [MrzGenerator] from the same specimen person for an ID card (TD1, code `I`; this is the project's
- * TD1 specimen) and for a code with no category (`X`).
+ * the SDK's own [MrzGenerator] from the same specimen person for an ID card (TD1, code `I`; this is the
+ * project's TD1 specimen) and for a TD1 code whose first character is a digit (`1`) - the shape a camera
+ * misread of the ID-card code's first letter produces, whose kind the SDK cannot tell.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -82,20 +85,22 @@ class AcceptedDocumentTypesTest {
             ),
         )
 
-    // A document type code whose first letter is none of P, I, A, C, V: broadCategory is null.
+    // A document type code whose first character is a digit: broadCategory is null. The camera on a real
+    // device produced exactly this shape - it misread the first letter of an ID card's code as a digit.
     private val uncategorizedLines: List<String> =
         generated(
-            MrzGenerator.generateTD3(
-                documentType = "X",
+            MrzGenerator.generateTD1(
+                documentType = "1",
                 issuingState = "UTO",
-                documentNumber = "T22000129",
+                documentNumber = "T42000137",
                 primaryIdentifier = "SPECIMEN",
                 secondaryIdentifier = "ALEX MORGAN",
                 nationality = "UTO",
                 dateOfBirth = LocalDate(1990, 3, 15),
                 sex = Sex.FEMALE,
                 dateOfExpiry = LocalDate(2034, 3, 14),
-                personalNumber = "",
+                optionalData1 = "",
+                optionalData2 = "",
             ),
         )
 
@@ -165,10 +170,13 @@ class AcceptedDocumentTypesTest {
 
     @Test
     fun a_reading_the_app_does_not_accept_is_neither_reviewed_nor_returned() {
-        assertEquals(DecodeRoute.NotAccepted(DocumentCategory.PASSPORT), routeDecode(passport, ReviewMode.REVIEW, idCardOnly))
+        assertEquals(
+            DecodeRoute.NotAccepted(NotAcceptedKind.OfCategory(DocumentCategory.PASSPORT)),
+            routeDecode(passport, ReviewMode.REVIEW, idCardOnly),
+        )
         // Instant-return never hands it back either.
         assertEquals(
-            DecodeRoute.NotAccepted(DocumentCategory.PASSPORT),
+            DecodeRoute.NotAccepted(NotAcceptedKind.OfCategory(DocumentCategory.PASSPORT)),
             routeDecode(passport, ReviewMode.INSTANT_RETURN, idCardOnly),
         )
         assertIs<DecodeRoute.ShowReview>(routeDecode(idCard, ReviewMode.REVIEW, idCardOnly))
@@ -176,9 +184,20 @@ class AcceptedDocumentTypesTest {
     }
 
     @Test
-    fun a_reading_with_no_category_is_not_filtered() {
-        assertIs<DecodeRoute.ShowReview>(routeDecode(uncategorized, ReviewMode.REVIEW, passportOnly))
-        assertIs<DecodeRoute.ReturnConfirmed>(routeDecode(uncategorized, ReviewMode.INSTANT_RETURN, passportOnly))
+    fun a_reading_whose_kind_could_not_be_told_is_refused_when_the_app_limits_the_kinds() {
+        assertEquals(DecodeRoute.NotAccepted(NotAcceptedKind.Unknown), routeDecode(uncategorized, ReviewMode.REVIEW, passportOnly))
+        // Instant-return never hands it back either.
+        assertEquals(
+            DecodeRoute.NotAccepted(NotAcceptedKind.Unknown),
+            routeDecode(uncategorized, ReviewMode.INSTANT_RETURN, passportOnly),
+        )
+    }
+
+    @Test
+    fun a_reading_whose_kind_could_not_be_told_goes_to_review_with_the_default() {
+        val all = DocumentCategory.entries.toSet()
+        assertIs<DecodeRoute.ShowReview>(routeDecode(uncategorized, ReviewMode.REVIEW, all))
+        assertIs<DecodeRoute.ReturnConfirmed>(routeDecode(uncategorized, ReviewMode.INSTANT_RETURN, all))
     }
 
     @Test
@@ -192,16 +211,47 @@ class AcceptedDocumentTypesTest {
     fun each_method_lands_on_its_own_not_accepted_state() {
         val struggling = ScannerUiState.Scanning(struggling = true, gathering = true)
         assertEquals(
-            ScannerUiState.Scanning(struggling = true, gathering = false, notAccepted = DocumentCategory.PASSPORT),
-            notAcceptedStateFor(ScanMethod.CAMERA, DocumentCategory.PASSPORT, struggling, manualDraft = ""),
+            ScannerUiState.Scanning(
+                struggling = true,
+                gathering = false,
+                notAccepted = NotAcceptedKind.OfCategory(DocumentCategory.PASSPORT),
+            ),
+            notAcceptedStateFor(ScanMethod.CAMERA, NotAcceptedKind.OfCategory(DocumentCategory.PASSPORT), struggling, manualDraft = ""),
         )
         assertEquals(
-            ScannerUiState.SavedImageNotAccepted(DocumentCategory.PASSPORT),
-            notAcceptedStateFor(ScanMethod.SAVED_IMAGE, DocumentCategory.PASSPORT, ScannerUiState.SavedImageAnalyzing, ""),
+            ScannerUiState.SavedImageNotAccepted(NotAcceptedKind.OfCategory(DocumentCategory.PASSPORT)),
+            notAcceptedStateFor(
+                ScanMethod.SAVED_IMAGE,
+                NotAcceptedKind.OfCategory(DocumentCategory.PASSPORT),
+                ScannerUiState.SavedImageAnalyzing,
+                "",
+            ),
         )
         assertEquals(
-            ScannerUiState.ManualRaw(text = "typed", notAccepted = DocumentCategory.PASSPORT),
-            notAcceptedStateFor(ScanMethod.MANUAL_ENTRY, DocumentCategory.PASSPORT, ScannerUiState.ManualRaw("typed"), "typed"),
+            ScannerUiState.ManualRaw(text = "typed", notAccepted = NotAcceptedKind.OfCategory(DocumentCategory.PASSPORT)),
+            notAcceptedStateFor(
+                ScanMethod.MANUAL_ENTRY,
+                NotAcceptedKind.OfCategory(DocumentCategory.PASSPORT),
+                ScannerUiState.ManualRaw("typed"),
+                "typed",
+            ),
+        )
+    }
+
+    @Test
+    fun each_method_lands_on_its_own_state_for_a_kind_that_could_not_be_told() {
+        val struggling = ScannerUiState.Scanning(struggling = true, gathering = true)
+        assertEquals(
+            ScannerUiState.Scanning(struggling = true, gathering = false, notAccepted = NotAcceptedKind.Unknown),
+            notAcceptedStateFor(ScanMethod.CAMERA, NotAcceptedKind.Unknown, struggling, manualDraft = ""),
+        )
+        assertEquals(
+            ScannerUiState.SavedImageNotAccepted(NotAcceptedKind.Unknown),
+            notAcceptedStateFor(ScanMethod.SAVED_IMAGE, NotAcceptedKind.Unknown, ScannerUiState.SavedImageAnalyzing, ""),
+        )
+        assertEquals(
+            ScannerUiState.ManualRaw(text = "typed", notAccepted = NotAcceptedKind.Unknown),
+            notAcceptedStateFor(ScanMethod.MANUAL_ENTRY, NotAcceptedKind.Unknown, ScannerUiState.ManualRaw("typed"), "typed"),
         )
     }
 
@@ -230,11 +280,11 @@ class AcceptedDocumentTypesTest {
         }
 
         // The ID card gathers (no "hold steady" cue), then the frames agree: a notice, not a route.
-        assertEquals(LiveDecodeStep.NotAcceptedGathering(DocumentCategory.IDENTITY_CARD), step(idCard))
-        assertEquals(LiveDecodeStep.NotAccepted(DocumentCategory.IDENTITY_CARD), step(idCard))
+        assertEquals(LiveDecodeStep.NotAcceptedGathering(NotAcceptedKind.OfCategory(DocumentCategory.IDENTITY_CARD)), step(idCard))
+        assertEquals(LiveDecodeStep.NotAccepted(NotAcceptedKind.OfCategory(DocumentCategory.IDENTITY_CARD)), step(idCard))
         assertTrue(!routed, "a not-accepted reading must not latch the session")
         // The consensus was reset: one more ID card frame gathers again rather than confirming at once.
-        assertEquals(LiveDecodeStep.NotAcceptedGathering(DocumentCategory.IDENTITY_CARD), step(idCard))
+        assertEquals(LiveDecodeStep.NotAcceptedGathering(NotAcceptedKind.OfCategory(DocumentCategory.IDENTITY_CARD)), step(idCard))
         // A passport now: gathers, then routes.
         assertEquals(LiveDecodeStep.Gathering, step(passport))
         val route = assertIs<LiveDecodeStep.Route>(step(passport))
@@ -243,19 +293,67 @@ class AcceptedDocumentTypesTest {
     }
 
     @Test
-    fun live_single_frame_consensus_and_unknown_category() {
+    fun live_unknown_kind_does_not_latch_and_a_later_accepted_document_routes() {
+        val consensus = MrzDecodeConsensus(2)
+        var routed = false
+
+        fun step(d: MrzScanResult.Decoded): LiveDecodeStep {
+            val s = stepLiveDecode(d, routed, consensus, passportOnly)
+            if (s is LiveDecodeStep.Route) routed = true
+            return s
+        }
+
+        // The digit-code reading gathers (no "hold steady" cue - it is not heading for review), then the
+        // frames agree: the unknown-kind notice, not a route.
+        assertEquals(LiveDecodeStep.NotAcceptedGathering(NotAcceptedKind.Unknown), step(uncategorized))
+        assertEquals(LiveDecodeStep.NotAccepted(NotAcceptedKind.Unknown), step(uncategorized))
+        assertTrue(!routed, "a refused reading must not latch the session")
+        // The consensus was reset: one more frame gathers again rather than confirming at once.
+        assertEquals(LiveDecodeStep.NotAcceptedGathering(NotAcceptedKind.Unknown), step(uncategorized))
+        // A passport now: gathers, then routes.
+        assertEquals(LiveDecodeStep.Gathering, step(passport))
+        val route = assertIs<LiveDecodeStep.Route>(step(passport))
+        assertEquals(passport, route.decoded)
+        assertTrue(routed)
+    }
+
+    @Test
+    fun live_single_frame_consensus_refuses_an_unknown_kind_under_a_limited_set() {
         val consensus = MrzDecodeConsensus(1)
-        assertEquals(LiveDecodeStep.NotAccepted(DocumentCategory.IDENTITY_CARD), stepLiveDecode(idCard, false, consensus, passportOnly))
-        assertEquals(LiveDecodeStep.NotAccepted(DocumentCategory.IDENTITY_CARD), stepLiveDecode(idCard, false, consensus, passportOnly))
-        assertEquals(LiveDecodeStep.Route(uncategorized), stepLiveDecode(uncategorized, false, consensus, passportOnly))
+        assertEquals(
+            LiveDecodeStep.NotAccepted(NotAcceptedKind.OfCategory(DocumentCategory.IDENTITY_CARD)),
+            stepLiveDecode(idCard, false, consensus, passportOnly),
+        )
+        assertEquals(
+            LiveDecodeStep.NotAccepted(NotAcceptedKind.OfCategory(DocumentCategory.IDENTITY_CARD)),
+            stepLiveDecode(idCard, false, consensus, passportOnly),
+        )
+        assertEquals(LiveDecodeStep.NotAccepted(NotAcceptedKind.Unknown), stepLiveDecode(uncategorized, false, consensus, passportOnly))
+        // With every kind accepted (the default) the same digit-code reading routes as before.
+        assertEquals(
+            LiveDecodeStep.Route(uncategorized),
+            stepLiveDecode(uncategorized, false, MrzDecodeConsensus(1), DocumentCategory.entries.toSet()),
+        )
     }
 
     @Test
     fun live_notice_keeps_struggling_and_drops_the_gathering_cue() {
-        val next = showNotAcceptedNotice(ScannerUiState.Scanning(struggling = true, gathering = true), DocumentCategory.VISA)
-        assertEquals(ScannerUiState.Scanning(struggling = true, gathering = false, notAccepted = DocumentCategory.VISA), next)
+        val next =
+            showNotAcceptedNotice(
+                ScannerUiState.Scanning(struggling = true, gathering = true),
+                NotAcceptedKind.OfCategory(DocumentCategory.VISA),
+            )
+        assertEquals(
+            ScannerUiState.Scanning(struggling = true, gathering = false, notAccepted = NotAcceptedKind.OfCategory(DocumentCategory.VISA)),
+            next,
+        )
+        // The unknown-kind notice behaves the same way.
+        assertEquals(
+            ScannerUiState.Scanning(gathering = false, notAccepted = NotAcceptedKind.Unknown),
+            showNotAcceptedNotice(ScannerUiState.Scanning(gathering = true), NotAcceptedKind.Unknown),
+        )
         // Off the live preview it changes nothing.
-        assertEquals(ScannerUiState.CameraInUse, showNotAcceptedNotice(ScannerUiState.CameraInUse, DocumentCategory.VISA))
+        assertEquals(ScannerUiState.CameraInUse, showNotAcceptedNotice(ScannerUiState.CameraInUse, NotAcceptedKind.Unknown))
     }
 
     // ---------------------------------------------------------------------------------------------------
@@ -266,21 +364,23 @@ class AcceptedDocumentTypesTest {
     fun not_accepted_states_hold_no_document_data_after_process_death_or_recreation() {
         assertEquals(
             ScannerUiState.AwaitingSavedImagePick,
-            decodeScannerUiState(encodeScannerUiState(ScannerUiState.SavedImageNotAccepted(DocumentCategory.PASSPORT))),
+            decodeScannerUiState(
+                encodeScannerUiState(ScannerUiState.SavedImageNotAccepted(NotAcceptedKind.OfCategory(DocumentCategory.PASSPORT))),
+            ),
         )
         assertEquals(
             ScannerUiState.ManualRaw(),
-            decodeScannerUiState(encodeScannerUiState(ScannerUiState.ManualRaw("x", notAccepted = DocumentCategory.PASSPORT))),
+            decodeScannerUiState(encodeScannerUiState(ScannerUiState.ManualRaw("x", notAccepted = NotAcceptedKind.Unknown))),
         )
         assertEquals(
             ScannerUiState.Scanning(),
-            settleAfterRecreation(ScannerUiState.Scanning(notAccepted = DocumentCategory.PASSPORT)),
+            settleAfterRecreation(ScannerUiState.Scanning(notAccepted = NotAcceptedKind.Unknown)),
         )
     }
 
     @Test
     fun the_photo_not_accepted_screen_behaves_like_the_other_photo_prompts() {
-        val state = ScannerUiState.SavedImageNotAccepted(DocumentCategory.PASSPORT)
+        val state = ScannerUiState.SavedImageNotAccepted(NotAcceptedKind.Unknown)
         assertEquals(BackEffect.ReturnToCamera, backEffect(state, cameraEnabled = true))
         assertEquals(BackEffect.Cancel, backEffect(state, cameraEnabled = false))
         assertTrue(showsMethodSwitcher(state))
@@ -387,7 +487,8 @@ class AcceptedDocumentTypesTest {
     }
 
     @Test
-    fun manual_entry_with_the_default_and_with_an_unknown_category_goes_to_review() {
+    fun manual_entry_refuses_a_reading_whose_kind_could_not_be_told() {
+        val results = mutableListOf<MrzScannerResult>()
         composeRule.setContent {
             MrzScannerScreen(
                 config =
@@ -395,8 +496,32 @@ class AcceptedDocumentTypesTest {
                         enabledMethods = setOf(ScanMethod.MANUAL_ENTRY)
                         acceptedDocumentTypes = passportOnly
                     },
-                onResult = {},
+                onResult = { results += it },
             )
+        }
+
+        typeAndRead(uncategorizedLines)
+        composeRule.onNodeWithTag(REVIEW_TEST_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(MANUAL_RAW_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(MANUAL_NOT_ACCEPTED_TEST_TAG).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("We could not tell what kind of document this is", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("This app accepts: passport.", useUnmergedTree = true).assertExists()
+        composeRule
+            .onNodeWithTag(MANUAL_NOT_ACCEPTED_TEST_TAG)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+        assertTrue(results.isEmpty(), "a refused reading must not be returned")
+
+        // The note clears on the next edit, and a passport - a kind the app accepts - goes to review.
+        typeAndRead(passportLines)
+        composeRule.onNodeWithTag(MANUAL_NOT_ACCEPTED_TEST_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(REVIEW_TEST_TAG).assertIsDisplayed()
+        assertTrue(results.isEmpty())
+    }
+
+    @Test
+    fun manual_entry_with_the_default_reviews_a_reading_whose_kind_could_not_be_told() {
+        composeRule.setContent {
+            MrzScannerScreen(config = MrzScannerConfig { enabledMethods = setOf(ScanMethod.MANUAL_ENTRY) }, onResult = {})
         }
         typeAndRead(uncategorizedLines)
         composeRule.onNodeWithTag(MANUAL_NOT_ACCEPTED_TEST_TAG).assertDoesNotExist()
@@ -422,7 +547,7 @@ class AcceptedDocumentTypesTest {
             TesseraScannerTheme(MrzScannerConfig().theme) {
                 MrzGuideOverlay(
                     struggling = true,
-                    notAccepted = DocumentCategory.IDENTITY_CARD,
+                    notAccepted = NotAcceptedKind.OfCategory(DocumentCategory.IDENTITY_CARD),
                     acceptedDocumentTypes = setOf(DocumentCategory.VISA, DocumentCategory.PASSPORT),
                 )
             }
@@ -435,6 +560,27 @@ class AcceptedDocumentTypesTest {
             .onNodeWithTag(NOT_ACCEPTED_HINT_TEST_TAG)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
         // The notice ranks above the struggling hint.
+        composeRule.onNodeWithTag(STRUGGLING_TEST_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun camera_notice_for_an_unknown_kind_is_announced() {
+        composeRule.setContent {
+            TesseraScannerTheme(MrzScannerConfig().theme) {
+                MrzGuideOverlay(
+                    struggling = true,
+                    notAccepted = NotAcceptedKind.Unknown,
+                    acceptedDocumentTypes = passportOnly,
+                )
+            }
+        }
+        composeRule.onNodeWithTag(NOT_ACCEPTED_HINT_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithText("We could not tell what kind of document this is", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("This app accepts: passport.", useUnmergedTree = true).assertExists()
+        composeRule
+            .onNodeWithTag(NOT_ACCEPTED_HINT_TEST_TAG)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+        // The notice ranks above the struggling hint, like the known-category one.
         composeRule.onNodeWithTag(STRUGGLING_TEST_TAG).assertDoesNotExist()
     }
 
@@ -454,7 +600,7 @@ class AcceptedDocumentTypesTest {
         composeRule.setContent {
             TesseraScannerTheme(MrzScannerConfig().theme) {
                 SavedImageNotAcceptedContent(
-                    read = DocumentCategory.OTHER,
+                    read = NotAcceptedKind.OfCategory(DocumentCategory.OTHER),
                     acceptedDocumentTypes = passportOnly,
                     onChooseDifferent = { chooseDifferent++ },
                     onManualEntry = { manual++ },
@@ -464,6 +610,32 @@ class AcceptedDocumentTypesTest {
         composeRule.onNodeWithTag(SAVED_IMAGE_NOT_ACCEPTED_TEST_TAG).assertIsDisplayed()
         composeRule
             .onNodeWithText("This looks like another kind of document")
+            .assertIsDisplayed()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Assertive))
+        composeRule.onNodeWithText("This app accepts: passport.").assertIsDisplayed()
+        composeRule.onNodeWithText("Choose different photo").performClick()
+        composeRule.onNodeWithText("Enter details manually").performClick()
+        assertEquals(1, chooseDifferent)
+        assertEquals(1, manual)
+    }
+
+    @Test
+    fun photo_screen_for_an_unknown_kind_offers_another_photo_and_manual_entry() {
+        var chooseDifferent = 0
+        var manual = 0
+        composeRule.setContent {
+            TesseraScannerTheme(MrzScannerConfig().theme) {
+                SavedImageNotAcceptedContent(
+                    read = NotAcceptedKind.Unknown,
+                    acceptedDocumentTypes = passportOnly,
+                    onChooseDifferent = { chooseDifferent++ },
+                    onManualEntry = { manual++ },
+                )
+            }
+        }
+        composeRule.onNodeWithTag(SAVED_IMAGE_NOT_ACCEPTED_TEST_TAG).assertIsDisplayed()
+        composeRule
+            .onNodeWithText("We could not tell what kind of document this is")
             .assertIsDisplayed()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Assertive))
         composeRule.onNodeWithText("This app accepts: passport.").assertIsDisplayed()

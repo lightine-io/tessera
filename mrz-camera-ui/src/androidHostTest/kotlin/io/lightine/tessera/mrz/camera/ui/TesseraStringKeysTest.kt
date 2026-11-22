@@ -147,6 +147,7 @@ class TesseraStringKeysTest {
                 "tessera_scanner_not_accepted_title_other",
                 "tessera_scanner_not_accepted_title_passport",
                 "tessera_scanner_not_accepted_title_residence_permit",
+                "tessera_scanner_not_accepted_title_unknown",
                 "tessera_scanner_not_accepted_title_visa",
                 "tessera_scanner_obs_check_match",
                 "tessera_scanner_obs_check_mismatch",

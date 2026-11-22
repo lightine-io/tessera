@@ -223,8 +223,9 @@ internal fun ManualRawContent(
             )
         }
 
-        // TES-103: the typed lines read as a kind of document the app does not accept. The text stays; the note
-        // states what kind was read and what kinds the app accepts, and clears on the next edit.
+        // TES-103: the typed lines read as a kind of document the app does not accept, or as a kind that could
+        // not be told under a limited set. The text stays; the note states what kind was read (or that it
+        // could not be told) and what kinds the app accepts, and clears on the next edit.
         state.notAccepted?.let { read ->
             ManualNotAcceptedNote(read = read, acceptedDocumentTypes = acceptedDocumentTypes)
         }
