@@ -182,6 +182,31 @@ internal object FakePki {
         commonName: String = "Utopia Directory Name",
     ) = Ext(OID_IAN, false, altNameDirectory(country, commonName))
 
+    /**
+     * The GeneralNames of an alt-name extension whose directoryName is in the standard form: the
+     * whole Name SEQUENCE sits inside the `[4]` (a tag on a CHOICE is explicit). An rfc822Name
+     * comes first.
+     * With the 20-character default address and a 3-letter country this is 42 bytes.
+     */
+    fun altNameRfc822AndExplicitDirectory(
+        rfc822: String = "ds001@utopia.example",
+        country: String = "UTO",
+    ): ByteArray =
+        sequence(
+            implicitPrimitive(1, rfc822.encodeToByteArray()),
+            DerWriter.tlv(0xA4, sequence(set(sequence(oid("2.5.4.6"), printableString(country))))),
+        )
+
+    fun subjectAltNameRfc822AndExplicitDirectory(
+        rfc822: String = "ds001@utopia.example",
+        country: String = "UTO",
+    ) = Ext(OID_SAN, false, altNameRfc822AndExplicitDirectory(rfc822, country))
+
+    fun issuerAltNameRfc822AndExplicitDirectory(
+        rfc822: String = "ds001@utopia.example",
+        country: String = "UTO",
+    ) = Ext(OID_IAN, false, altNameRfc822AndExplicitDirectory(rfc822, country))
+
     fun crlDistributionPoint(uri: String) =
         Ext(OID_CRL_DP, false, sequence(sequence(explicit(0, explicit(0, implicitPrimitive(6, uri.encodeToByteArray()))))))
 
@@ -190,8 +215,10 @@ internal object FakePki {
     /**
      * A certificate. Without [signing] its signature and public key are placeholders; with it, the
      * key is [publicKeyInfo] and the signature is real, made by [Signing.issuerKey] under
-     * [Signing.algorithm] over the TBSCertificate. Times are given as ready elements ([utcTime] or
-     * [generalizedTime]); the default is a 2024 to 2034 validity.
+     * [Signing.algorithm] over the TBSCertificate. Without a signer, [signatureAlgorithm] writes
+     * that AlgorithmIdentifier as the certificate's (placeholder content, structure only). Times
+     * are given as ready elements ([utcTime] or [generalizedTime]); the default is a 2024 to 2034
+     * validity.
      */
     fun certificate(
         subject: ByteArray = name("UT", "Utopia Document Signer 01"),
@@ -202,10 +229,11 @@ internal object FakePki {
         extensions: List<Ext> = emptyList(),
         version: Int = 3,
         signatureNull: Boolean = false,
+        signatureAlgorithm: ByteArray? = null,
         publicKeyInfo: ByteArray? = null,
         signing: Signing? = null,
     ): ByteArray {
-        val sigAlg = signing?.algorithm?.identifier ?: algorithm(OID_ECDSA_SHA256, signatureNull)
+        val sigAlg = signing?.algorithm?.identifier ?: signatureAlgorithm ?: algorithm(OID_ECDSA_SHA256, signatureNull)
         val spki =
             publicKeyInfo ?: sequence(
                 sequence(oid(OID_EC_PUBLIC_KEY), oid(OID_PRIME256V1)),

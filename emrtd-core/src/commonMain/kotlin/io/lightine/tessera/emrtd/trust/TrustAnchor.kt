@@ -56,8 +56,9 @@ public class TrustAnchor internal constructor(
         /**
          * Reads one X.509 certificate in DER.
          *
-         * @return [TrustAnchorParse.Parsed] with the anchor, or [TrustAnchorParse.Unreadable] with the
-         * reason and where in the bytes it was found. Never throws for bad data.
+         * @return [TrustAnchorParse.Parsed] with the anchor, or [TrustAnchorParse.Unreadable] with
+         * the reason and where in the bytes it was found, as an offset counted from the first byte
+         * of the DER passed here. Never throws for bad data.
          */
         public fun fromDer(der: ByteArray): TrustAnchorParse =
             try {
@@ -87,7 +88,7 @@ public sealed class TrustAnchorParse {
     /** The bytes are not a certificate the SDK can read. */
     public class Unreadable internal constructor(
         public val problem: TrustAnchorProblem,
-        /** The byte offset where the problem was found. */
+        /** The byte offset, counted from the first byte of the DER that was passed to `fromDer`, where the problem was found. */
         public val offset: Int,
     ) : TrustAnchorParse()
 }

@@ -165,6 +165,30 @@ class SecureMessagingTest {
         }
 
     @Test
+    fun a_protected_answer_with_warning_6282_and_data_is_unwrapped() =
+        withCrypto { c ->
+            val k = keys()
+            val sm = SecureMessaging(c, k, ssc)
+            sm.protect(CommandApdu(0x00, 0xB0, 0, 0, ne = 8))
+            // The answer's counter is the start value incremented twice: once by protect, once by unprotect.
+            val answerSsc =
+                ssc.copyOf().also {
+                    SecureMessaging.increment(it)
+                    SecureMessaging.increment(it)
+                }
+            val data = hex("0102030405")
+            val encrypted = c.encrypt(BlockCipher.DESEDE, CipherMode.CBC, k.encKey, ByteArray(8), CryptoBytes.pad(data, 8))
+            val warning = StatusWord.END_OF_FILE_BEFORE_NE
+            val covered =
+                TlvWriter.encode(0x87, byteArrayOf(0x01) + encrypted) +
+                    TlvWriter.encode(0x99, byteArrayOf((warning shr 8).toByte(), (warning and 0xFF).toByte()))
+            val mac = c.retailMac(k.macKey, CryptoBytes.pad(answerSsc + covered, 8))
+            val r = sm.unprotect(ResponseApdu.parse(covered + TlvWriter.encode(0x8E, mac) + hex("6282")))
+            assertEquals(warning, r.sw)
+            assertContentEquals(data, r.data)
+        }
+
+    @Test
     fun errorTextCarriesNoBytes() {
         val e = SecureMessagingException(SmFailure.CHIP_ENDED_SESSION, 0x6988)
         assertEquals("Secure messaging ended: CHIP_ENDED_SESSION (status 6988)", e.message)
