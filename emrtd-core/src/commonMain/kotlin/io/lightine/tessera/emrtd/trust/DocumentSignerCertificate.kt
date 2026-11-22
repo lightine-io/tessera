@@ -41,7 +41,8 @@ public class DocumentSignerCertificate internal constructor(
          * Reads a DER X.509 certificate.
          *
          * @return [DocumentSignerCertificateParse.Parsed], or [DocumentSignerCertificateParse.Unreadable]
-         *   with the problem and its byte offset; never an exception.
+         *   with the problem and its byte offset, counted from the start of the DER passed here;
+         *   never an exception.
          */
         public fun fromDer(der: ByteArray): DocumentSignerCertificateParse =
             try {
@@ -68,7 +69,7 @@ public sealed class DocumentSignerCertificateParse {
         public val certificate: DocumentSignerCertificate,
     ) : DocumentSignerCertificateParse()
 
-    /** The bytes are not a certificate the SDK can read, for [problem] at byte [offset]. */
+    /** The bytes are not a certificate the SDK can read, for [problem] at byte [offset], counted from the first byte of the DER that was passed to `fromDer`. */
     public class Unreadable internal constructor(
         public val problem: TrustAnchorProblem,
         public val offset: Int,

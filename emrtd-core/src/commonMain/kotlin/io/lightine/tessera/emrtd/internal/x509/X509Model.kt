@@ -15,6 +15,7 @@ internal enum class X509Failure {
     INVALID_EXTENSION,
 }
 
+/** The byte offset counts from the start of the certificate DER that was given to the parser. */
 internal class X509Exception(
     val failure: X509Failure,
     val offset: Int,
@@ -106,6 +107,8 @@ internal class X509Extension(
     val oid: String,
     val critical: Boolean,
     val value: ByteArray,
+    /** Where [value]'s first byte sits in the certificate's DER, so a failure inside it can name an absolute place. */
+    val valueOffset: Int,
 ) {
     /** `true` when this parser knows the extension (Doc 9303 Part 12, Table 6, and the RFC 5280 ones it names). */
     val recognized: Boolean get() = oid in X509Extensions.RECOGNIZED
