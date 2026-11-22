@@ -21,7 +21,8 @@ internal fun DerReader.readAlgorithmIdentifier(): AlgorithmIdentifier {
  * [X509Certificate.unrecognizedCriticalExtensions], never a failure.
  *
  * DER is required (certificates are signed over their bytes). Hostile bytes fail with
- * [Asn1Exception] or [X509Exception], never an index error.
+ * [Asn1Exception] or [X509Exception], never an index error. Every failure offset, in both
+ * exceptions, counts from the first byte of [der].
  */
 internal object X509Parser {
     fun parse(der: ByteArray): X509Certificate {
@@ -97,7 +98,8 @@ internal object X509Parser {
             val ext = list.readSequence()
             val oid = ext.readOid()
             val critical = if (ext.peekTag() == DerTag.universal(DerTag.BOOLEAN)) ext.readBoolean() else false
-            out.add(X509Extension(oid, critical, ext.readOctetString()))
+            val value = ext.read(DerTag.universal(DerTag.OCTET_STRING))
+            out.add(X509Extension(oid, critical, value.value(), value.valueOffset))
             ext.finish()
         }
         return out
@@ -108,7 +110,7 @@ internal object X509Parser {
         return DistinguishedName(element.encoded(), readNameAttributes(element.contents()))
     }
 
-    /** The attributes of a name from the RDN SETs [rdns] is positioned at: the content of the Name SEQUENCE, or of its `[4] IMPLICIT` form in a GeneralName. */
+    /** The attributes of a name from the RDN SETs [rdns] is positioned at: the content of the Name SEQUENCE, or of a GeneralName's directoryName with its `[4]` tag already unwrapped (implicit or explicit form). */
     internal fun readNameAttributes(rdns: DerReader): List<NameAttribute> {
         val attributes = ArrayList<NameAttribute>()
         while (rdns.hasMore) {

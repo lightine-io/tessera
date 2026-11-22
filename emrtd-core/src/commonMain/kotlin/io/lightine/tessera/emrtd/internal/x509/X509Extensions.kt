@@ -9,7 +9,8 @@ import io.lightine.tessera.emrtd.internal.asn1.DerTag
  * needs: KeyUsage, BasicConstraints, ExtKeyUsage, SubjectKeyIdentifier, AuthorityKeyIdentifier,
  * PrivateKeyUsagePeriod, DocumentTypeList, NameChange, and the country a directoryName in
  * SubjectAltName or IssuerAltName carries (7.1). The first extension with an OID wins. A known
- * extension with the wrong content fails with [X509Exception]; an unknown one is skipped.
+ * extension with the wrong content fails with [X509Exception], at an offset counted from the start
+ * of the certificate; an unknown one is skipped.
  */
 internal object X509Extensions {
     const val KEY_USAGE = "2.5.29.15"
@@ -49,18 +50,18 @@ internal object X509Extensions {
     fun decode(extensions: List<X509Extension>): DecodedExtensions {
         fun find(oid: String) = extensions.firstOrNull { it.oid == oid }
         return DecodedExtensions(
-            keyUsage = find(KEY_USAGE)?.let { wrap { keyUsage(it.value) } },
-            basicConstraints = find(BASIC_CONSTRAINTS)?.let { wrap { basicConstraints(it.value) } },
-            extendedKeyUsage = find(EXT_KEY_USAGE)?.let { wrap { extKeyUsage(it.value) } },
-            subjectKeyIdentifier = find(SUBJECT_KEY_ID)?.let { wrap { DerReader(it.value).readOctetString().also { _ -> } } },
-            authorityKeyIdentifier = find(AUTHORITY_KEY_ID)?.let { wrap { authorityKeyId(it.value) } },
-            privateKeyUsagePeriod = find(PRIVATE_KEY_USAGE_PERIOD)?.let { wrap { keyUsagePeriod(it.value) } },
-            documentTypeList = find(DOCUMENT_TYPE_LIST)?.let { wrap { documentTypeList(it.value) } },
-            subjectAltNameCountry = find(SUBJECT_ALT_NAME)?.let { wrap { altNameCountry(it.value) } },
-            issuerAltNameCountry = find(ISSUER_ALT_NAME)?.let { wrap { altNameCountry(it.value) } },
+            keyUsage = find(KEY_USAGE)?.let { e -> wrap(e) { keyUsage(e.value) } },
+            basicConstraints = find(BASIC_CONSTRAINTS)?.let { e -> wrap(e) { basicConstraints(e.value) } },
+            extendedKeyUsage = find(EXT_KEY_USAGE)?.let { e -> wrap(e) { extKeyUsage(e.value) } },
+            subjectKeyIdentifier = find(SUBJECT_KEY_ID)?.let { e -> wrap(e) { DerReader(e.value).readOctetString().also { _ -> } } },
+            authorityKeyIdentifier = find(AUTHORITY_KEY_ID)?.let { e -> wrap(e) { authorityKeyId(e.value) } },
+            privateKeyUsagePeriod = find(PRIVATE_KEY_USAGE_PERIOD)?.let { e -> wrap(e) { keyUsagePeriod(e) } },
+            documentTypeList = find(DOCUMENT_TYPE_LIST)?.let { e -> wrap(e) { documentTypeList(e.value) } },
+            subjectAltNameCountry = find(SUBJECT_ALT_NAME)?.let { e -> wrap(e) { altNameCountry(e.value) } },
+            issuerAltNameCountry = find(ISSUER_ALT_NAME)?.let { e -> wrap(e) { altNameCountry(e.value) } },
             nameChange =
                 find(NAME_CHANGE)?.let {
-                    wrap {
+                    wrap(it) {
                         DerReader(it.value).also { r ->
                             r.readNull()
                             r.finish()
@@ -70,12 +71,17 @@ internal object X509Extensions {
         )
     }
 
-    // A malformed known extension is a malformed certificate, reported with one failure kind.
-    private fun <T> wrap(block: () -> T): T =
+    // A malformed known extension is a malformed certificate, reported with one failure kind and an
+    // offset counted from the start of the certificate (the reader inside the value counts from
+    // the value, so the value's own offset is added back).
+    private fun <T> wrap(
+        ext: X509Extension,
+        block: () -> T,
+    ): T =
         try {
             block()
         } catch (e: Asn1Exception) {
-            throw X509Exception(X509Failure.INVALID_EXTENSION, e.offset)
+            throw X509Exception(X509Failure.INVALID_EXTENSION, ext.valueOffset + e.offset)
         }
 
     private fun keyUsage(value: ByteArray): Set<KeyUsageBit> {
@@ -121,8 +127,8 @@ internal object X509Extensions {
         return AuthorityKeyIdentifier(keyId, issuer, serial)
     }
 
-    private fun keyUsagePeriod(value: ByteArray): PrivateKeyUsagePeriod {
-        val reader = DerReader(value)
+    private fun keyUsagePeriod(ext: X509Extension): PrivateKeyUsagePeriod {
+        val reader = DerReader(ext.value)
         val seq = reader.readSequence()
         reader.finish()
         // Both are [n] IMPLICIT GeneralizedTime, so the content is YYYYMMDDHHMMSSZ.
@@ -130,8 +136,8 @@ internal object X509Extensions {
         val after = seq.readOptional(DerTag.context(1, constructed = false))
         seq.finish()
         return PrivateKeyUsagePeriod(
-            before?.let { X509Parser.parseTime(it.value(), twoDigitYear = false, offset = it.offset) },
-            after?.let { X509Parser.parseTime(it.value(), twoDigitYear = false, offset = it.offset) },
+            before?.let { X509Parser.parseTime(it.value(), twoDigitYear = false, offset = ext.valueOffset + it.offset) },
+            after?.let { X509Parser.parseTime(it.value(), twoDigitYear = false, offset = ext.valueOffset + it.offset) },
         )
     }
 
@@ -153,7 +159,11 @@ internal object X509Extensions {
     /**
      * The country of the first `directoryName` GeneralName that carries one (Part 12, 7.1), or
      * `null`. The other GeneralName forms are skipped: this parser names no ICAO `otherName`, so
-     * only a directoryName's country attribute is read.
+     * only a directoryName's country attribute is read. `Name` is a CHOICE, so its `[4]` tag is
+     * explicit under the ASN.1 rules (X.680): the whole Name SEQUENCE sits inside the tag. That is
+     * the standard form and the one read first. A `[4]` whose content starts with the RDN SETs
+     * directly (the tag written as if it were implicit) is also read; anything else inside the
+     * `[4]` fails.
      */
     private fun altNameCountry(value: ByteArray): String? {
         val reader = DerReader(value)
@@ -163,7 +173,18 @@ internal object X509Extensions {
         while (names.hasMore) {
             val e = names.read()
             if (country == null && e.tag == DerTag.context(4, constructed = true)) {
-                country = X509Parser.readNameAttributes(e.contents()).firstOrNull { it.oid == DistinguishedName.OID_COUNTRY }?.value
+                val contents = e.contents()
+                // A Name's own tag is a SEQUENCE and an RDN's is a SET, so the first element tells
+                // the standard explicit form from the bare one.
+                val rdns: DerReader =
+                    if (contents.peekTag() == DerTag.universal(DerTag.SEQUENCE, constructed = true)) {
+                        val name = contents.readSequence()
+                        contents.finish()
+                        name
+                    } else {
+                        contents
+                    }
+                country = X509Parser.readNameAttributes(rdns).firstOrNull { it.oid == DistinguishedName.OID_COUNTRY }?.value
             }
         }
         return country

@@ -60,6 +60,35 @@ class TrustTest {
     }
 
     @Test
+    fun aSignerCertificateWithExplicitlyTaggedAltNameDirectoriesIsRead() {
+        // One issuer's signer certificates carry the alt-name country in a `[4] EXPLICIT`
+        // directoryName (the whole Name SEQUENCE inside the tag); fromDer read those bytes as
+        // unreadable before, which made every signature fact of the chip NotRun.
+        val der =
+            FakePki.certificate(
+                extensions =
+                    listOf(
+                        FakePki.subjectAltNameRfc822AndExplicitDirectory(),
+                        FakePki.issuerAltNameRfc822AndExplicitDirectory(),
+                    ),
+            )
+        val parsed = assertIs<DocumentSignerCertificateParse.Parsed>(DocumentSignerCertificate.fromDer(der))
+        assertEquals("UT", parsed.certificate.subjectCountry)
+    }
+
+    @Test
+    fun anUnreadableCertificateNamesAnOffsetFromTheStartOfItsBytes() {
+        // A problem inside a known extension reports a place in the whole certificate, not a place
+        // inside the extension's own bytes: month 13 in the private key usage period names the
+        // element the time sits in.
+        val der = FakePki.certificate(extensions = listOf(FakePki.privateKeyUsagePeriod("20240101000000Z", "20341301000000Z")))
+        val at = indexOf(der, "20341301000000Z".encodeToByteArray()) - 2
+        val bad = assertIs<TrustAnchorParse.Unreadable>(TrustAnchor.fromDer(der))
+        assertEquals(TrustAnchorProblem.INVALID_CERTIFICATE_FIELD, bad.problem)
+        assertEquals(at, bad.offset)
+    }
+
+    @Test
     fun aMasterListIsReadAndItsSignatureReportedAsFacts() =
         withKeys { keys ->
             // The list's signer is a document-signer-shaped certificate issued by the Utopia CSCA.
