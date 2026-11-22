@@ -132,9 +132,11 @@ public class MrzScannerTheme internal constructor(
  *   returned; the screen says what kind it read and what kinds the app accepts, and lets the person
  *   go on (the camera keeps scanning, a photo can be swapped, typed lines stay on the entry screen).
  *   The category comes from `DocumentType.broadCategory`. When that is `null` (a document type code
- *   the SDK cannot place), the reading is not filtered and goes on as usual: the SDK filters only on
- *   a category it has. Applies to all three reading methods. Must not be empty; [Builder.build]
- *   throws [IllegalArgumentException] otherwise. Added in 1.0.0.
+ *   whose kind the SDK cannot tell) and the set is not every category, the reading is treated the
+ *   same way: the screen says the kind could not be told and what the app accepts, and the person
+ *   can go on. With the default (every category) such a reading is not filtered and goes to review
+ *   as usual. Applies to all three reading methods. Must not be empty; [Builder.build] throws
+ *   [IllegalArgumentException] otherwise. Added in 1.0.0.
  * @property onRequestPermission Called when the user taps the grant button on the permission
  *   screen. The screen never requests the permission itself. With `null` (default) the screen
  *   shows no grant button.
@@ -189,7 +191,9 @@ public class MrzScannerConfig internal constructor(
 
         /**
          * Sets [MrzScannerConfig.acceptedDocumentTypes], the app's intake rule. Default: every
-         * [DocumentCategory]. Must not be empty.
+         * [DocumentCategory]. Must not be empty. With a set that is not every category, a reading whose
+         * kind the SDK cannot tell is treated like a kind outside the set; with the default it goes to
+         * review as usual.
          *
          * @since 1.0.0
          */

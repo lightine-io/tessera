@@ -32,8 +32,9 @@ import io.lightine.tessera.types.vocabulary.DocumentCategory
 // TES-103: the app's intake rule (MrzScannerConfig.acceptedDocumentTypes). A reading whose category is not in
 // the accepted set does not go to review and is not returned. The screen states two facts - what kind was read
 // and what kinds the app accepts - and lets the person go on. The SDK does not judge the document: the copy
-// never says invalid, wrong or rejected, and a reading whose category the SDK cannot place
-// (DocumentType.broadCategory is null) is never filtered.
+// never says invalid, wrong or rejected. A reading whose kind the SDK cannot tell
+// (DocumentType.broadCategory is null) is refused the same way when the app limits the kinds it accepts; with
+// the default (every category) it is not filtered and goes on as before.
 
 /** Semantics anchor for the not-accepted notice over the live preview. Not user-facing. */
 internal const val NOT_ACCEPTED_HINT_TEST_TAG: String = "tessera-mrz-not-accepted-hint"
@@ -55,22 +56,53 @@ internal const val NOT_ACCEPTED_NOTICE_LINGER_MS: Long = 3_000L
 // ---------------------------------------------------------------------------------------------------------
 
 /**
- * The category of [decoded] when the app does not accept it, otherwise `null`. `null` also when the reading did
- * not parse, or when its document type code has no category (`broadCategory` is `null`): the SDK filters only on
- * a category it has.
+ * A reading refused under the app's intake rule ([MrzScannerConfig.acceptedDocumentTypes]): either the rule
+ * names the kind the app does not take, or the reading's kind could not be told at all. Carries no document
+ * value - only which of the two refusals happened, so the notice can state it. `null` (wherever this type
+ * appears) always means "no refusal": the reading is accepted and goes on.
+ *
+ * TES-341 widened the model from a bare `DocumentCategory?`: the camera can misread the first letter of a
+ * document code as a digit, and such a reading has no category, which used to read as "no refusal" even
+ * under a passports-only rule.
  */
-internal fun notAcceptedCategory(
+internal sealed interface NotAcceptedKind {
+    /** The reading is of [category], a kind the accepted set does not include. */
+    data class OfCategory(
+        val category: DocumentCategory,
+    ) : NotAcceptedKind
+
+    /**
+     * The SDK could not tell what kind of document this is (`broadCategory` is `null`), and the app limits
+     * the kinds it accepts, so the reading is refused exactly like a kind outside the set. Never produced
+     * when every category is accepted (the default): such a reading goes on as before.
+     */
+    data object Unknown : NotAcceptedKind
+}
+
+/**
+ * The refusal of [decoded] under [acceptedDocumentTypes], otherwise `null`. `null` also when the reading did
+ * not parse: that routes to the read-failed path instead. A category the set does not include refuses the
+ * reading outright. A reading whose kind cannot be told (`broadCategory` is `null`) is refused only when the
+ * app limits the kinds it takes; with the default (every category) it is not filtered - the SDK filters only
+ * on a kind it can name.
+ */
+internal fun notAcceptedKind(
     decoded: MrzScanResult.Decoded,
     acceptedDocumentTypes: Set<DocumentCategory>,
-): DocumentCategory? {
+): NotAcceptedKind? {
     val document =
         when (val parse = decoded.parse) {
             is ParseResult.Success -> parse.document
             is ParseResult.PartialSuccess -> parse.document
             is ParseResult.Failure -> return null
         }
-    val category = document.commonFields.documentType.broadCategory ?: return null
-    return category.takeUnless { it in acceptedDocumentTypes }
+    val category = document.commonFields.documentType.broadCategory
+    if (category != null) {
+        return category.takeUnless { it in acceptedDocumentTypes }?.let { NotAcceptedKind.OfCategory(it) }
+    }
+    // The kind could not be told: refused only when the app limits what it takes. With the default (every
+    // category) the reading goes on as before - there is no kind to compare against the set.
+    return if (acceptedDocumentTypes == DocumentCategory.entries.toSet()) null else NotAcceptedKind.Unknown
 }
 
 /** What one parseable live-camera frame means for the flow, decided by [stepLiveDecode]. */
@@ -83,12 +115,12 @@ internal sealed interface LiveDecodeStep {
         val decoded: MrzScanResult.Decoded,
     ) : LiveDecodeStep
 
-    /** An accepted (or unplaceable) reading is gathering agreement: show the "hold steady" cue. */
+    /** A reading the app accepts (including one whose kind could not be told, under the default set) is gathering agreement: show the "hold steady" cue. */
     data object Gathering : LiveDecodeStep
 
     /** A not-accepted frame, agreement not reached yet: keep any notice alive, show no cue. */
     data class NotAcceptedGathering(
-        val read: DocumentCategory,
+        val read: NotAcceptedKind,
     ) : LiveDecodeStep
 
     /**
@@ -96,7 +128,7 @@ internal sealed interface LiveDecodeStep {
      * can still be agreed on; the session is NOT latched.
      */
     data class NotAccepted(
-        val read: DocumentCategory,
+        val read: NotAcceptedKind,
     ) : LiveDecodeStep
 }
 
@@ -106,7 +138,8 @@ internal sealed interface LiveDecodeStep {
  * consensus, exactly as before TES-103. A confirmed reading the app does not accept resets [consensus] and
  * returns [LiveDecodeStep.NotAccepted]: it never latches the session and never counts as the confirmed
  * reading. With every category accepted (the default) the result is [LiveDecodeStep.Route] or
- * [LiveDecodeStep.Gathering], the same as before.
+ * [LiveDecodeStep.Gathering], the same as before - a reading whose kind could not be told is refused only
+ * when the app limits the kinds it takes.
  */
 internal fun stepLiveDecode(
     decoded: MrzScanResult.Decoded,
@@ -117,7 +150,7 @@ internal fun stepLiveDecode(
     if (alreadyRouted || decoded.parse is ParseResult.Failure) return LiveDecodeStep.Ignore
     return when (val verdict = consensus.offer(decoded)) {
         is ConsensusVerdict.Confirmed -> {
-            val read = notAcceptedCategory(verdict.decoded, acceptedDocumentTypes)
+            val read = notAcceptedKind(verdict.decoded, acceptedDocumentTypes)
             if (read == null) {
                 LiveDecodeStep.Route(verdict.decoded)
             } else {
@@ -127,7 +160,7 @@ internal fun stepLiveDecode(
         }
 
         is ConsensusVerdict.Gathering -> {
-            val read = notAcceptedCategory(decoded, acceptedDocumentTypes)
+            val read = notAcceptedKind(decoded, acceptedDocumentTypes)
             if (read == null) LiveDecodeStep.Gathering else LiveDecodeStep.NotAcceptedGathering(read)
         }
     }
@@ -139,7 +172,7 @@ internal fun stepLiveDecode(
  */
 internal fun showNotAcceptedNotice(
     current: ScannerUiState,
-    read: DocumentCategory,
+    read: NotAcceptedKind,
 ): ScannerUiState = if (current is ScannerUiState.Scanning) current.copy(notAccepted = read, gathering = false) else current
 
 /**
@@ -150,7 +183,7 @@ internal fun showNotAcceptedNotice(
  */
 internal fun notAcceptedStateFor(
     source: ScanMethod,
-    read: DocumentCategory,
+    read: NotAcceptedKind,
     current: ScannerUiState,
     manualDraft: String,
 ): ScannerUiState =
@@ -164,15 +197,23 @@ internal fun notAcceptedStateFor(
 // Copy
 // ---------------------------------------------------------------------------------------------------------
 
-/** The notice title for a reading of [category], for example "This looks like an ID card". */
+/** The notice title for a refused reading of kind [read]: "This looks like an ID card", or "We could not tell what kind of document this is" when the kind could not be told. */
 @StringRes
-internal fun notAcceptedTitleRes(category: DocumentCategory): Int =
-    when (category) {
-        DocumentCategory.PASSPORT -> R.string.tessera_scanner_not_accepted_title_passport
-        DocumentCategory.IDENTITY_CARD -> R.string.tessera_scanner_not_accepted_title_identity_card
-        DocumentCategory.RESIDENCE_PERMIT -> R.string.tessera_scanner_not_accepted_title_residence_permit
-        DocumentCategory.VISA -> R.string.tessera_scanner_not_accepted_title_visa
-        DocumentCategory.OTHER -> R.string.tessera_scanner_not_accepted_title_other
+internal fun notAcceptedTitleRes(read: NotAcceptedKind): Int =
+    when (read) {
+        is NotAcceptedKind.OfCategory -> {
+            when (read.category) {
+                DocumentCategory.PASSPORT -> R.string.tessera_scanner_not_accepted_title_passport
+                DocumentCategory.IDENTITY_CARD -> R.string.tessera_scanner_not_accepted_title_identity_card
+                DocumentCategory.RESIDENCE_PERMIT -> R.string.tessera_scanner_not_accepted_title_residence_permit
+                DocumentCategory.VISA -> R.string.tessera_scanner_not_accepted_title_visa
+                DocumentCategory.OTHER -> R.string.tessera_scanner_not_accepted_title_other
+            }
+        }
+
+        NotAcceptedKind.Unknown -> {
+            R.string.tessera_scanner_not_accepted_title_unknown
+        }
     }
 
 /** The category name used in the accepted list, for example "ID card" (the same keys the review screen uses). */
@@ -202,16 +243,17 @@ private fun acceptedBody(acceptedDocumentTypes: Set<DocumentCategory>): String {
 // ---------------------------------------------------------------------------------------------------------
 
 /**
- * The notice over the live preview after the frames agreed on a reading of [read] that the app does not accept.
- * Shown in the guide overlay's guidance region, white over the dark scrim like the other cues. The camera keeps
- * scanning under it. A polite live region, like the "hold steady" and "still looking" cues: it appears on its
- * own, so a screen reader announces both lines without a focus move.
+ * The notice over the live preview after the frames agreed on a reading of kind [read] that the app does not
+ * accept - a category outside the set, or a kind that could not be told. Shown in the guide overlay's guidance
+ * region, white over the dark scrim like the other cues. The camera keeps scanning under it. A polite live
+ * region, like the "hold steady" and "still looking" cues: it appears on its own, so a screen reader announces
+ * both lines without a focus move.
  *
  * `internal`: the live preview needs a real camera, so this is host-tested directly (like [StrugglingHint]).
  */
 @Composable
 internal fun NotAcceptedHint(
-    read: DocumentCategory,
+    read: NotAcceptedKind,
     acceptedDocumentTypes: Set<DocumentCategory>,
     modifier: Modifier = Modifier,
 ) {
@@ -241,13 +283,14 @@ internal fun NotAcceptedHint(
 }
 
 /**
- * The screen after a picked photo read as [read], a kind the app does not accept. States the two facts and
- * offers another photo (and manual entry when enabled), like the "no MRZ found" screen. The title is an
- * assertive live region, matching that screen: the person did not move focus here.
+ * The screen after a picked photo read as [read], a kind the app does not accept - a category outside the
+ * set, or a kind that could not be told. States the two facts and offers another photo (and manual entry
+ * when enabled), like the "no MRZ found" screen. The title is an assertive live region, matching that
+ * screen: the person did not move focus here.
  */
 @Composable
 internal fun SavedImageNotAcceptedContent(
-    read: DocumentCategory,
+    read: NotAcceptedKind,
     acceptedDocumentTypes: Set<DocumentCategory>,
     onChooseDifferent: () -> Unit,
     onManualEntry: () -> Unit,
@@ -290,11 +333,12 @@ internal fun SavedImageNotAcceptedContent(
 
 /**
  * The inline note on the manual-entry screen after the typed lines read as [read], a kind the app does not
- * accept. The typed text stays. A polite live region, like the parse-failed note on the same screen.
+ * accept - a category outside the set, or a kind that could not be told. The typed text stays. A polite live
+ * region, like the parse-failed note on the same screen.
  */
 @Composable
 internal fun ManualNotAcceptedNote(
-    read: DocumentCategory,
+    read: NotAcceptedKind,
     acceptedDocumentTypes: Set<DocumentCategory>,
 ) {
     Column(

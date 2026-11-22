@@ -228,14 +228,19 @@
     <!-- ============================ Not accepted (the app's intake rule) ============================ -->
     <!-- Shown when a reading is of a kind of document the app does not accept (MrzScannerConfig
          acceptedDocumentTypes): over the live camera preview, on its own screen after a photo, and as a note on
-         the manual-entry screen. Two facts only: what kind was read, and what kinds the app accepts. Never
-         "invalid", "wrong" or "rejected" - the SDK does not judge the document. One title per category, so a
-         translation can get the article and grammar right. -->
+         the manual-entry screen. Two facts only: what kind was read (or that it could not be told), and what
+         kinds the app accepts. Never "invalid", "wrong" or "rejected" - the SDK does not judge the document.
+         One title per category, so a translation can get the article and grammar right, plus one title for a
+         reading whose kind could not be told. -->
     <string name="tessera_scanner_not_accepted_title_passport">This looks like a passport</string>
     <string name="tessera_scanner_not_accepted_title_identity_card">This looks like an ID card</string>
     <string name="tessera_scanner_not_accepted_title_residence_permit">This looks like a residence permit</string>
     <string name="tessera_scanner_not_accepted_title_visa">This looks like a visa</string>
     <string name="tessera_scanner_not_accepted_title_other">This looks like another kind of document</string>
+    <!-- Title shown when the reading's kind could not be told: the document type code is not one the SDK can
+         place, and the app limits the kinds it accepts (with the default, every kind, such a reading is not
+         filtered). The same two-facts shape as the titles above - this line, then what the app accepts. -->
+    <string name="tessera_scanner_not_accepted_title_unknown">We could not tell what kind of document this is</string>
     <!-- The kinds the app accepts. "%1$s" is the list of category names above (tessera_scanner_category_*),
          joined with tessera_scanner_not_accepted_separator. -->
     <string name="tessera_scanner_not_accepted_body">This app accepts: %1$s.</string>
