@@ -20,6 +20,11 @@ composeCompiler {
 }
 
 kotlin {
+    // Chip reading is experimental; the pages tell readers to opt in once in the build script.
+    compilerOptions {
+        optIn.add("io.lightine.tessera.types.ExperimentalTesseraChipApi")
+    }
+
     // Kotlin pages cover the JVM and Android: the core how-tos compile on the JVM target
     // (`check`, job `build & test · JVM`); the Android pages compile on the Android target
     // (`compileAndroidMain`, job `build & test · Android`).
@@ -35,12 +40,19 @@ kotlin {
                 implementation(project(":mrz-core"))
                 implementation(project(":telemetry"))
                 implementation(project(":mrz-ocr-core"))
+                implementation(project(":emrtd-core"))
+            }
+        }
+        jvmMain {
+            dependencies {
+                implementation(project(":emrtd-pcsc"))
             }
         }
         androidMain {
             dependencies {
                 implementation(project(":mrz-camera"))
                 implementation(project(":mrz-camera-ui"))
+                implementation(project(":emrtd-nfc"))
                 implementation(libs.androidx.camera.core)
                 implementation(libs.androidx.camera.lifecycle)
                 implementation(libs.androidx.camera.compose)
