@@ -170,11 +170,18 @@ public class ChipReadCoordinator(
      * @param transport The connected link to the chip.
      * @param readAgainAllowed `false` when the platform cannot start again after this attempt (for
      *   example too little session time left); the read then ends at a lost link.
+     * @param systemEnd Asked once, on the read's own context, when the attempt stopped on an
+     *   [NfcError] (a lost link, for example), before the read decides to start again or to end.
+     *   It returns why the system ended the read, such as NFC switched off, or `null` when the
+     *   platform sees no such cause. A non-null answer ends the read with
+     *   [ChipReadEnding.EndedBySystem] and that reason, never a new attempt. It must return
+     *   quickly; an exception it throws counts as `null`.
      */
     @Throws(CancellationException::class)
     public suspend fun read(
         transport: ApduTransport,
         readAgainAllowed: Boolean = true,
+        systemEnd: () -> NfcError? = { null },
     ): ChipReadAttemptOutcome {
         if (isEnded) return ChipReadAttemptOutcome.ENDED
         val attempt = attemptsStarted.incrementAndFetch()
@@ -211,14 +218,26 @@ public class ChipReadCoordinator(
                     result.error
                 }
             }
+        if (error is NfcError) {
+            val system =
+                try {
+                    systemEnd()
+                } catch (e: Exception) {
+                    null
+                }
+            if (system != null) {
+                end(ChipReadEnding.EndedBySystem(system, attempt, lastProgress.load()))
+                return ChipReadAttemptOutcome.ENDED
+            }
+        }
         val used = restartsUsed.load()
         if (isLinkLoss(error) && readAgainAllowed && used < linkLoss.maxRestarts) {
             restartsUsed.store(used + 1)
             lastLoss.store(error)
             val lost = ChipReadState.LinkLost(linkLoss.maxRestarts - used)
             lastLinkLost.store(lost)
-            publish(lost)
             waitingAfterLoss.store(true)
+            publish(lost)
             return ChipReadAttemptOutcome.LINK_LOST
         }
         end(endingFor(result, error))
@@ -326,12 +345,18 @@ public class ChipReadCoordinator(
         }
     }
 
-    private val attemptShown: Int
-        get() = (attemptsStarted.load() + if (waitingAfterLoss.load()) 1 else 0).coerceAtLeast(1)
+    // The attempt an update belongs to (see ChipReadUpdate.attempt): LinkLost belongs to the
+    // attempt that lost the link, however often it is published; every state after a loss belongs
+    // to the attempt that starts when the document is back.
+    private fun attemptOf(state: ChipReadState?): Int {
+        val started = attemptsStarted.load()
+        val next = if (waitingAfterLoss.load() && state !is ChipReadState.LinkLost) 1 else 0
+        return (started + next).coerceAtLeast(1)
+    }
 
     private fun publish(state: ChipReadState) {
         if (isEnded) return
-        post(listOf(Item.Update(ChipReadUpdate(state, lastProgress.load(), attemptShown, maxAttempts))))
+        post(listOf(Item.Update(ChipReadUpdate(state, lastProgress.load(), attemptOf(state), maxAttempts))))
     }
 
     /** The gate: only the first ending passes; [before] goes out just ahead of it. */
@@ -341,7 +366,7 @@ public class ChipReadCoordinator(
     ): Boolean {
         if (!ended.compareAndSet(false, true)) return false
         val items = ArrayList<Item>(2)
-        if (before != null) items += Item.Update(ChipReadUpdate(before, lastProgress.load(), attemptShown, maxAttempts))
+        if (before != null) items += Item.Update(ChipReadUpdate(before, lastProgress.load(), attemptOf(before), maxAttempts))
         items += Item.End(ending)
         post(items)
         return true

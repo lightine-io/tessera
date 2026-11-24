@@ -294,6 +294,57 @@ class ChipReadCoordinatorTest {
         }
 
     @Test
+    fun linkLostKeepsTheAttemptThatLostTheLinkEachTimeItIsReported() =
+        runTest {
+            val observer = RecordingObserver()
+            val c = coordinator(observer, LinkLossPolicy.ReadAgain(2))
+            c.start()
+            c.waiting(0)
+            c.documentFound()
+            c.connecting()
+            assertEquals(ChipReadAttemptOutcome.LINK_LOST, c.read(FailingTransport(NfcTagLost)))
+            // A connect that fails while the read waits for the document republishes LinkLost.
+            c.documentFound()
+            c.connecting()
+            c.connectionFailed()
+            c.documentFound()
+            val lost = observer.updates.filter { it.state is ChipReadState.LinkLost }
+            assertEquals(2, lost.size)
+            assertTrue(lost.all { it.attempt == 1 }, "$lost")
+            val afterLoss = observer.updates.dropWhile { it.state !is ChipReadState.LinkLost }
+            assertTrue(afterLoss.filter { it.state !is ChipReadState.LinkLost }.all { it.attempt == 2 }, "$afterLoss")
+        }
+
+    @Test
+    fun aSystemEndAfterAFailedAttemptEndsTheReadInsteadOfARestart() =
+        runTest {
+            val observer = RecordingObserver()
+            val c = coordinator(observer, LinkLossPolicy.ReadAgain(2))
+            c.start()
+            var asked = 0
+            val outcome =
+                c.read(FailingTransport(NfcTagLost)) {
+                    asked++
+                    NfcUnavailable(NfcUnavailable.Reason.DISABLED)
+                }
+            assertEquals(ChipReadAttemptOutcome.ENDED, outcome)
+            assertEquals(1, asked)
+            val ending = assertIs<ChipReadEnding.EndedBySystem>(observer.endings.single())
+            assertEquals(NfcUnavailable(NfcUnavailable.Reason.DISABLED), ending.reason)
+            assertEquals(1, ending.attempts)
+            assertTrue(observer.updates.none { it.state is ChipReadState.LinkLost })
+            assertOneEndingLast(observer)
+
+            // A check that throws, or finds nothing, changes nothing.
+            val quiet = RecordingObserver()
+            val q = coordinator(quiet, LinkLossPolicy.ReadAgain(1))
+            q.start()
+            assertEquals(ChipReadAttemptOutcome.LINK_LOST, q.read(FailingTransport(NfcTagLost)) { error("boom") })
+            assertEquals(ChipReadAttemptOutcome.ENDED, q.read(FailingTransport(NfcTagLost)) { null })
+            assertEquals(NfcTagLost, assertIs<ChipReadEnding.Failed>(quiet.endings.single()).error)
+        }
+
+    @Test
     fun aTimeoutCountsAsALinkLossButNoOtherTransportErrorDoes() =
         runTest {
             val timeout = RecordingObserver()

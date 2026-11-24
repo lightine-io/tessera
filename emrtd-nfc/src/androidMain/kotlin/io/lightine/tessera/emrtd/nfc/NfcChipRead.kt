@@ -10,7 +10,11 @@ import io.lightine.tessera.emrtd.ChipReadEnding
 import io.lightine.tessera.emrtd.ChipReadHandle
 import io.lightine.tessera.emrtd.ChipReadObserver
 import io.lightine.tessera.emrtd.ChipReadOptions
+import io.lightine.tessera.emrtd.ChipReadUpdate
+import io.lightine.tessera.emrtd.ChipReader
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
+import io.lightine.tessera.types.errors.NfcError
+import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.errors.NfcTimeout
 import io.lightine.tessera.types.errors.NfcUnavailable
 import kotlinx.coroutines.CancellationException
@@ -20,345 +24,451 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * One chip read on Android, owned by the SDK: it waits for a document on the phone's reader,
- * connects to the chip, reads and checks what [options] ask, and ends with exactly one
- * [ChipReadEnding] to [observer].
+ * Reads a passport or ID card chip on Android, from start to end: the SDK owns the link to the
+ * chip and every way the read can stop; your app owns the screen. This is the main way to read a
+ * chip on Android; [IsoDepTransport] stays the low-level path, where your app owns the link.
  *
- * Hand the read to reader mode: the read is the callback, and [NfcReaderMode] turns the reader on
- * with it. Your app keeps only the lifecycle: reader mode on when the read screen is resumed, off
- * when it is left, and [cancel] when the person gives up. Nothing is left open on any path: the
- * read closes the link to the chip in the background, on every ending.
- *
- * How it runs:
- * - The work never runs on the caller's thread and never on the main thread. [onTagDiscovered]
- *   returns at once; updates and the ending come from the read's own I/O dispatcher, so hand them to
- *   your UI thread yourself and return quickly.
- * - One read is live per process. A second read started while one is live ends at once with
- *   [ChipReadEnding.NotStarted] (`READ_IN_PROGRESS`) and touches no radio.
- * - A tag that arrives while a read runs, or after the ending, is ignored: never two reads at
- *   once, and never an out-of-date `Tag`, which the platform refuses commands on.
- * - When the link is lost, the read closes it and waits for the document to be found again, up to
- *   [NfcReadSettings.waitForReturnMillis], then continues as [settings][NfcReadSettings.linkLoss]
- *   say. A document that does not come back ends the read.
- * - When NFC is switched off mid-read, the read says so through the system ending instead of
- *   waiting for a document that cannot come back.
- *
- * For an app that wants to own the link itself - its own reader-mode wiring, one attempt, no
- * restarts - [IsoDepTransport] stays the low-level path: it carries command bytes, and you own
- * the link.
- *
- * A typical read:
+ * The read is the platform's reader-mode callback: start it, hand it to [NfcReaderMode.enable],
+ * show the updates, and act on the one ending.
  *
  * ```kotlin
- * val options = ChipReadOptions(ChipAccessKey.Can(canFromTheDocument), setOf(1, 2))
- * val read = NfcChipRead(
- *     options,
- *     object : ChipReadObserver {
- *         override fun onUpdate(update: ChipReadUpdate) {
- *             show(update.state)     // a hint such as "hold the document against the phone"
- *         }
+ * // In a ViewModel, or anything else that outlives a configuration change:
+ * val read = NfcChipRead.start(options, NfcAdapter.getDefaultAdapter(context), observer)
  *
- *         override fun onEnding(ending: ChipReadEnding) {
- *             handle(ending)        // show the read, or why it ended
- *         }
- *     },
- *     NfcAdapter.getDefaultAdapter(this),
- * )
- * NfcReaderMode.enable(this, read) ?: showReaderReady()
+ * // In the read screen, once per read, while the screen is shown (onCreate or onResume):
+ * NfcReaderMode.enable(activity, read)?.let { reason ->
+ *     read.cancel()   // the read cannot get a document: free it
+ *     showWhy(reason) // for example "turn NFC on"
+ * }
+ *
+ * // When the person leaves the read screen for good, or in ViewModel.onCleared:
+ * read.cancel()
+ * NfcReaderMode.disable(activity)
  * ```
+ *
+ * ## Your app and the screen
+ *
+ * - Call [NfcReaderMode.enable] once for each read. The platform turns reader mode off when the
+ *   Activity pauses and on again, with the same read, when it resumes: do not call it again in
+ *   `onResume`, and never turn reader mode off while a document may be on the phone. After a
+ *   configuration change, call it once for the new Activity with the same read.
+ * - A pause in the middle of a read (a dialog, another app, the screen locking) drops the link the
+ *   way a moved document does: the read reports [io.lightine.tessera.emrtd.ChipReadState.LinkLost]
+ *   and goes on when the screen is back and the document is found again, within
+ *   [NfcReadSettings.waitForReturnMillis]. Your app may also [cancel] in `onPause`; the SDK does
+ *   not watch the Activity.
+ * - One read at a time in the app: [start] while another read has not ended ends at once with
+ *   [ChipReadEnding.NotStarted] and [NfcUnavailable.Reason.READ_IN_PROGRESS]. A read waiting for a
+ *   document waits until [NfcReadSettings.waitForDocumentMillis] passes, which by default is never:
+ *   cancel a read your app no longer shows, or no other read can start.
+ *
+ * ## What the SDK does
+ *
+ * - Checks the MRZ key's check digits before anything else: a key that does not add up ends with
+ *   [ChipReadEnding.KeyRejected] and nothing is sent (see
+ *   [io.lightine.tessera.emrtd.ChipReadOptions.allowCheckDigitMismatch]).
+ * - Ends with [ChipReadEnding.NotStarted] when the device has no NFC (`NOT_SUPPORTED`) or NFC is
+ *   off (`DISABLED`).
+ * - While no document is found, the observer gets
+ *   [io.lightine.tessera.emrtd.ChipReadState.WaitingForDocument] again every 2 seconds, with the
+ *   time waited. A tag that is not an ISO 14443-4 chip (a transit card, for example) is skipped,
+ *   and the read keeps waiting.
+ * - When a document is found, waits [NfcReadSettings.settleDelayMillis] before the first command,
+ *   connects, and reads. Each command has its own time limit,
+ *   [NfcReadSettings.commandTimeoutMillis]. A link that cannot be set up sends the read back to
+ *   waiting, with no attempt used; after 3 such failures in a row the read ends.
+ * - When the link is lost, follows [NfcReadSettings.linkLoss]: by default it waits for the
+ *   document again and goes on, at most twice. The platform hands over a new `Tag` when the
+ *   document comes back; when it does not, because the document never left the field, the SDK
+ *   tries the earlier `Tag` again every second.
+ * - When NFC is switched off during the read, ends with [ChipReadEnding.EndedBySystem] and
+ *   [NfcUnavailable.Reason.DISABLED], instead of waiting for a document that cannot come.
+ * - Closes the link on every path: the ending goes to the observer first, and the platform's
+ *   close, which talks to the tag and can take up to the command time limit, runs in the
+ *   background after it. The next link, of this read or a later one, waits for that close (at
+ *   most the command time limit), so the two never race on the tag.
+ * - Tags found while a command runs, or after the ending, are ignored: never two reads at once.
+ *
+ * ## Threads
+ *
+ * [start], [cancel] and [onTagDiscovered] return at once, from any thread. The read runs on the
+ * I/O dispatcher. The observer's calls never overlap and come in order; they come from the read's
+ * own thread, or from the thread that calls [start] or [cancel] for the updates and the ending
+ * those cause. Never from the main thread by promise: hand the values to your UI yourself.
+ *
+ * The observer is held until the ending.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
- * @param options The key, the data groups, the roots and the check time; the key is checked before
- *   any radio activity.
- * @param observer Where the updates and the one ending go, never document data in the updates.
- * @param adapter The process's NFC adapter, from `NfcAdapter.getDefaultAdapter(context)`, or `null`
- *   when the device has none: the read then ends with [ChipReadEnding.NotStarted]
- *   (`NOT_SUPPORTED`).
- * @param settings What the read may do beyond the options: the link-loss policy and the platform's
- *   timings.
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
 public class NfcChipRead internal constructor(
-    private val options: ChipReadOptions,
-    private val observer: ChipReadObserver,
+    options: ChipReadOptions,
     private val adapter: NfcAdapter?,
     private val settings: NfcReadSettings,
-    private val io: CoroutineDispatcher,
-    private val platform: NfcChipPlatform,
+    observer: ChipReadObserver,
+    private val env: NfcReadEnvironment,
 ) : NfcAdapter.ReaderCallback,
     ChipReadHandle {
+    private val coordinator = ChipReadCoordinator(options, settings.linkLoss, Forwarder(observer), env.reader)
+    private val scope = CoroutineScope(SupervisorJob() + env.dispatcher)
+
+    // Tags the platform found while the read was willing to take one; only the newest is kept,
+    // because the platform refuses an out-of-date Tag. Guarded by [intakeLock] with [intakeOpen].
+    private val tags = Channel<Tag>(capacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    private val intakeLock = Any()
+    private var intakeOpen = false
+
+    // The link of the running attempt; closed by whoever takes it out first.
+    private val link = AtomicReference<IsoDepTransport?>(null)
+
+    @Volatile
+    private var job: Job? = null
+
+    /** `true` once the read's ending is decided. */
+    override val isEnded: Boolean get() = coordinator.isEnded
+
+    override fun cancel() {
+        if (coordinator.cancel(ChipReadEnding.Cancelled.By.APP)) job?.cancel()
+    }
+
     /**
-     * Reads the chip behind [adapter] as [options] say, with [settings]' timings and link-loss
-     * policy.
+     * Reader mode found a tag. Returns at once, from the platform's binder thread: the read's own
+     * coroutine takes the tag. A tag found while a command runs, or after the ending, is ignored.
      */
-    public constructor(
-        options: ChipReadOptions,
-        observer: ChipReadObserver,
-        adapter: NfcAdapter?,
-        settings: NfcReadSettings = NfcReadSettings(),
-    ) : this(options, observer, adapter, settings, Dispatchers.IO, PlatformNfcChip)
-
-    private val scope = CoroutineScope(SupervisorJob() + io)
-    private val coordinator = ChipReadCoordinator(options, settings.linkLoss, observer)
-    private val tagIntake = Channel<Tag>(capacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    private val intakeOpen = AtomicBoolean(false)
-    private val liveReleased = AtomicBoolean(false)
-
-    // The one live read per process: claimed here, released exactly once on the way out.
-    private val ownsLiveRead: Boolean = LIVE_READ.compareAndSet(false, true)
-
-    init {
-        scope.launch {
-            if (!ownsLiveRead) {
-                // Another read is live in this process: end at once, with no radio activity.
-                coordinator.notStarted(NfcUnavailable.Reason.READ_IN_PROGRESS)
-                return@launch
-            }
-            try {
-                run()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                // Nothing may end without an ending: an unexpected platform fault still gets one.
-                coordinator.fail(NfcUnavailable(NfcUnavailable.Reason.REQUEST_REFUSED))
-            }
+    override fun onTagDiscovered(tag: Tag) {
+        synchronized(intakeLock) {
+            if (intakeOpen && !coordinator.isEnded) tags.trySend(tag)
         }
     }
 
-    /** `true` once the ending is decided, just before or as the observer hears it. */
-    override val isEnded: Boolean
-        get() = coordinator.isEnded
-
-    /**
-     * Stops the read. The cancelled ending goes to the observer at once, on the thread that calls
-     * this; the link to the chip is released in the background after it, so a command blocked in
-     * the platform does not hold the caller. Safe from any thread and safe to call more than
-     * once; a read that already ended stays as it ended.
-     */
-    override fun cancel() {
-        coordinator.cancel(ChipReadEnding.Cancelled.By.APP)
-        releaseLive()
-        scope.cancel()
+    internal fun begin() {
+        if (!coordinator.start()) return
+        if (!env.registry.claim(this)) {
+            coordinator.notStarted(NfcUnavailable.Reason.READ_IN_PROGRESS)
+            return
+        }
+        job =
+            scope.launch {
+                try {
+                    run()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // A platform fault the read does not expect still gets an ending.
+                    coordinator.fail(NfcUnavailable(NfcUnavailable.Reason.REQUEST_REFUSED))
+                } finally {
+                    setIntake(false)
+                    closeLink()
+                    // Every path above ends the read; this only guards against a path that did not.
+                    if (!coordinator.isEnded) coordinator.fail(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
+                }
+            }
+        if (coordinator.isEnded) job?.cancel()
     }
 
-    /**
-     * Reader mode found a tag. Returns at once: the read's own coroutine takes the tag and does all
-     * the work, so this never blocks and never runs on the read's dispatcher. A tag that arrives
-     * while a read runs, or after the ending, is ignored.
-     */
-    override fun onTagDiscovered(tag: Tag) {
-        if (coordinator.isEnded || !intakeOpen.get()) return
-        tagIntake.trySend(tag)
-    }
-
-    // --- The read -----------------------------------------------------------------------------
-
-    /** Which document wait is running: the ticks and the time bound differ per kind. */
-    private enum class WaitKind {
-        /** The first wait for a document: ticks, bounded by the app's document limit. */
-        FIRST_DOCUMENT,
-
-        /** A later wait after a tag that could not be connected: ticks, no bound. */
-        NEXT_TAG,
-
-        /** The wait for the document to come back after a lost link: no ticks, bounded by the return limit. */
-        RETURNING_DOCUMENT,
-    }
-
-    /** The open link of the current attempt, with the signal that says when the platform let go. */
-    private class OpenLink(
-        val transport: IsoDepTransport,
-        val release: CompletableDeferred<Unit>,
+    private class Found(
+        val tag: Tag,
+        val earlier: Boolean,
     )
 
     private suspend fun run() {
-        var open: OpenLink? = null
-        try {
-            if (!coordinator.start()) return
-            val adapter = this.adapter
-            if (adapter == null) {
-                coordinator.notStarted(NfcUnavailable.Reason.NOT_SUPPORTED)
-                return
+        val adapter = this.adapter
+        if (adapter == null) {
+            coordinator.notStarted(NfcUnavailable.Reason.NOT_SUPPORTED)
+            return
+        }
+        if (!env.platform.isEnabled(adapter)) {
+            coordinator.notStarted(NfcUnavailable.Reason.DISABLED)
+            return
+        }
+        setIntake(true)
+        coordinator.waiting(0)
+        val began = env.now()
+        var waitingSince = began
+        // Before the first link: the app's limit on finding a document. After a lost link: the
+        // limit on its return, counted from the loss.
+        var deadline: Long? = settings.waitForDocumentMillis?.let { began + it }
+        var linkedOnce = false
+        var lostTag: Tag? = null
+        var failedConnects = 0
+        while (!coordinator.isEnded) {
+            val found = awaitTag(adapter, waitingSince, deadline, lostTag, linkedOnce) ?: return
+            val release = CompletableDeferred<Unit>()
+            val connection = env.platform.connectionOf(found.tag, settings.commandTimeoutMillis.toInt()) { release.complete(Unit) }
+            if (connection == null) {
+                // Not an ISO 14443-4 chip, so no document this read can use: keep waiting.
+                continue
             }
-            if (!platform.isEnabled(adapter)) {
-                coordinator.notStarted(NfcUnavailable.Reason.DISABLED)
-                return
-            }
-            var waited = 0L
-            var kind = WaitKind.FIRST_DOCUMENT
-            while (true) {
-                val bound =
-                    when (kind) {
-                        WaitKind.FIRST_DOCUMENT -> settings.waitForDocumentMillis
-                        WaitKind.NEXT_TAG -> null
-                        WaitKind.RETURNING_DOCUMENT -> settings.waitForReturnMillis
-                    }
-                if (kind == WaitKind.FIRST_DOCUMENT) coordinator.waiting(0)
-                val ticks: Job? =
-                    if (kind == WaitKind.RETURNING_DOCUMENT) {
-                        null
-                    } else {
-                        // While the read waits for a document, tell the app every 2 seconds how
-                        // long it has waited, so it can change its hint after a while.
-                        scope.launch {
-                            while (true) {
-                                delay(WAITING_TICK_MILLIS)
-                                waited += WAITING_TICK_MILLIS
-                                if (intakeOpen.get()) coordinator.waiting(waited)
-                            }
-                        }
-                    }
-                val tag: Tag?
-                try {
-                    tag = receiveTag(bound)
-                } finally {
-                    ticks?.cancelAndJoin()
-                }
-                if (tag == null) {
-                    if (kind == WaitKind.FIRST_DOCUMENT) {
-                        // The app gave the first wait a limit and no document came: a system-style
-                        // timeout.
-                        coordinator.endedBySystem(NfcTimeout(bound))
-                    } else {
-                        coordinator.documentNotReturned()
-                    }
-                    return
-                }
-                if (coordinator.isEnded) return
-
-                val release = CompletableDeferred<Unit>()
-                val connection = platform.connectionOf(tag, settings.timeoutMillis) { release.complete(Unit) }
-                if (connection == null) {
-                    // A tag that speaks no ISO-DEP is no document this read can use.
-                    coordinator.fail(NfcUnavailable(NfcUnavailable.Reason.NOT_SUPPORTED))
-                    reportNfcOff(adapter)
-                    return
-                }
+            val transport: IsoDepTransport
+            if (found.earlier) {
+                // The same Tag after a lost link: try the link quietly; the person sees LinkLost
+                // until it is up.
+                transport = open(connection, release).getOrNull() ?: continue
+                if (!holdLink(transport)) return
                 coordinator.documentFound()
-                // Frames are often lost in the first moment after the tag is found, while the hand
-                // that holds the document settles: give it the settle time before the first command.
                 delay(settings.settleDelayMillis)
-                if (coordinator.isEnded) return
                 coordinator.connecting()
-                awaitEarlierClose()
-                val transport = openTransport(connection)
-                if (transport == null) {
-                    // The link could not be set up, before any command: back to waiting, with no
-                    // attempt used.
-                    coordinator.connectionFailed()
-                    reportNfcOff(adapter)
-                    if (coordinator.isEnded) return
-                    if (kind == WaitKind.FIRST_DOCUMENT) kind = WaitKind.NEXT_TAG
-                    continue
-                }
-                // The next connect, of this read or a later one, waits for this link's release.
-                pendingRelease.set(release)
-                open = OpenLink(transport, release)
-                when (coordinator.read(transport, readAgainAllowed = true)) {
-                    ChipReadAttemptOutcome.ENDED -> {
-                        return
-                    }
-
-                    ChipReadAttemptOutcome.LINK_LOST -> {
-                        closeLink(open)
-                        open = null
-                        reportNfcOff(adapter)
-                        if (coordinator.isEnded) return
-                        kind = WaitKind.RETURNING_DOCUMENT
-                    }
-                }
-            }
-        } finally {
-            open?.let(::closeLink)
-            releaseLive()
-        }
-    }
-
-    /**
-     * Takes the next discovery, or `null` when [boundMillis] passed. Only a discovery that comes
-     * while this wait is open is used: one that arrived during a read, or in an earlier wait, is
-     * dropped, because the platform refuses commands on an out-of-date `Tag`.
-     */
-    private suspend fun receiveTag(boundMillis: Long?): Tag? {
-        while (tagIntake.tryReceive().isSuccess) {
-            // An out-of-date discovery: dropped.
-        }
-        intakeOpen.set(true)
-        try {
-            return if (boundMillis == null) {
-                tagIntake.receive()
             } else {
-                withTimeoutOrNull(boundMillis) { tagIntake.receive() }
+                coordinator.documentFound()
+                delay(settings.settleDelayMillis)
+                coordinator.connecting()
+                val opened = open(connection, release)
+                val error = opened.exceptionOrNull()
+                if (error != null) {
+                    if (endIfNfcOff(adapter)) return
+                    if (error is ApduTransportException && error.error.isLinkLevel() && ++failedConnects < MAX_CONNECT_ATTEMPTS) {
+                        // No command was sent: back to waiting, with no attempt used.
+                        coordinator.connectionFailed()
+                        continue
+                    }
+                    coordinator.fail((error as? ApduTransportException)?.error ?: NfcTagLost)
+                    return
+                }
+                transport = opened.getOrThrow()
+                if (!holdLink(transport)) return
             }
-        } finally {
-            intakeOpen.set(false)
+            failedConnects = 0
+            linkedOnce = true
+            val outcome =
+                coordinator.read(transport, readAgainAllowed = true) {
+                    if (env.platform.isEnabled(adapter)) null else NfcUnavailable(NfcUnavailable.Reason.DISABLED)
+                }
+            if (outcome == ChipReadAttemptOutcome.ENDED) return
+            closeLink()
+            lostTag = found.tag
+            waitingSince = env.now()
+            deadline = waitingSince + settings.waitForReturnMillis
+            setIntake(true)
         }
     }
 
-    /** Opens the connection the platform built for a tag; `null` when the link could not be set up. */
-    private suspend fun openTransport(connection: IsoDepConnection): IsoDepTransport? =
-        try {
-            connection.open()
+    /**
+     * Waits for a tag: a new discovery, or after a lost link the earlier [lostTag] again, every
+     * [SAME_TAG_RETRY_MILLIS] while no new one comes. Every [WAITING_REPORT_MILLIS] it reports the
+     * time waited and checks that NFC is still on. `null` when the read ended, here or elsewhere.
+     */
+    private suspend fun awaitTag(
+        adapter: NfcAdapter,
+        since: Long,
+        deadline: Long?,
+        lostTag: Tag?,
+        linkedOnce: Boolean,
+    ): Found? {
+        val start = env.now()
+        var nextReport = since + ((start - since) / WAITING_REPORT_MILLIS + 1) * WAITING_REPORT_MILLIS
+        val retryAt = if (lostTag != null) start + SAME_TAG_RETRY_MILLIS else Long.MAX_VALUE
+        while (!coordinator.isEnded) {
+            val now = env.now()
+            if (deadline != null && now >= deadline) {
+                if (linkedOnce) {
+                    coordinator.documentNotReturned()
+                } else {
+                    coordinator.endedBySystem(NfcTimeout(settings.waitForDocumentMillis))
+                }
+                return null
+            }
+            val wake = minOf(nextReport, retryAt, deadline ?: Long.MAX_VALUE)
+            val tag = tags.tryReceive().getOrNull() ?: withTimeoutOrNull((wake - now).coerceAtLeast(0)) { tags.receive() }
+            if (tag != null) return Found(tag, earlier = false)
+            val after = env.now()
+            if (after >= nextReport) {
+                if (endIfNfcOff(adapter)) return null
+                // While the read waits after a lost link, LinkLost stays: the coordinator drops this.
+                coordinator.waiting(after - since)
+                while (nextReport <= after) nextReport += WAITING_REPORT_MILLIS
+            }
+            if (lostTag != null && after >= retryAt) return Found(lostTag, earlier = true)
+        }
+        return null
+    }
+
+    /** Opens the link once every earlier link has been released, or the wait for that ran out. */
+    private suspend fun open(
+        connection: IsoDepConnection,
+        release: CompletableDeferred<Unit>,
+    ): Result<IsoDepTransport> {
+        env.registry.awaitReleased(settings.commandTimeoutMillis)
+        env.registry.track(release)
+        return try {
+            Result.success(connection.open())
         } catch (e: ApduTransportException) {
-            null
-        }
-
-    /**
-     * Waits for the release of the link a read just closed, bounded by the command time limit: the
-     * platform's close talks to the tag and can take up to that limit, and a connect raced against
-     * it can fail. When the bound passes, the connect goes ahead anyway.
-     */
-    private suspend fun awaitEarlierClose() {
-        val earlier = pendingRelease.getAndSet(null) ?: return
-        withTimeoutOrNull(settings.timeoutMillis.toLong()) { earlier.await() }
-    }
-
-    /** Releases the link in the background: the platform close talks to the tag, this returns at once. */
-    private fun closeLink(link: OpenLink) {
-        link.transport.close()
-    }
-
-    /**
-     * After a link problem, when NFC was switched off: report the system ending, so a read that
-     * could otherwise wait for the next document does not wait for one that cannot come back. The
-     * coordinator's one-ending gate keeps whichever cause came first.
-     */
-    private fun reportNfcOff(adapter: NfcAdapter) {
-        if (!platform.isEnabled(adapter)) {
-            coordinator.endedBySystem(NfcUnavailable(NfcUnavailable.Reason.DISABLED))
+            Result.failure(e)
         }
     }
 
-    /** Frees the process's live slot exactly once, and only when this read took it. */
-    private fun releaseLive() {
-        if (ownsLiveRead && liveReleased.compareAndSet(false, true)) LIVE_READ.set(false)
+    /**
+     * Makes [transport] the read's link and stops taking tags until the link is lost; `false`
+     * (with the link closed) when the read ended meanwhile.
+     */
+    private fun holdLink(transport: IsoDepTransport): Boolean {
+        setIntake(false)
+        link.set(transport)
+        if (coordinator.isEnded) {
+            closeLink()
+            return false
+        }
+        return true
     }
 
-    private companion object {
-        /** How often the read tells the app how long it has waited for a document. */
-        private const val WAITING_TICK_MILLIS = 2_000L
+    private fun setIntake(open: Boolean) {
+        synchronized(intakeLock) {
+            intakeOpen = open
+            // A tag taken in while a link was up is either the document of that link or another
+            // one near the phone: never one to read after this link.
+            if (!open) while (tags.tryReceive().isSuccess) Unit
+        }
+    }
 
-        /** The one live read per process: a second read ends at once while one is live. */
-        private val LIVE_READ = AtomicBoolean(false)
+    /** Ends the read when NFC was switched off; `true` when the read has ended, by this or before. */
+    private fun endIfNfcOff(adapter: NfcAdapter): Boolean {
+        if (!env.platform.isEnabled(adapter)) coordinator.endedBySystem(NfcUnavailable(NfcUnavailable.Reason.DISABLED))
+        return coordinator.isEnded
+    }
+
+    /** Releases the link in the background: the platform's close talks to the tag. */
+    private fun closeLink() {
+        link.getAndSet(null)?.close()
+    }
+
+    /** What happens when the ending is decided, before the app hears of it. */
+    private fun finish() {
+        setIntake(false)
+        env.registry.ended(this)
+        closeLink()
+        job?.cancel()
+    }
+
+    /** Hands the coordinator's calls to the app, after the SDK's own work on the ending. */
+    private inner class Forwarder(
+        private val app: ChipReadObserver,
+    ) : ChipReadObserver {
+        override fun onUpdate(update: ChipReadUpdate) = app.onUpdate(update)
+
+        override fun onEnding(ending: ChipReadEnding) {
+            finish()
+            app.onEnding(ending)
+        }
+    }
+
+    /** Starts a read. */
+    public companion object {
+        /**
+         * Starts a read with the default settings. Returns at once; the read waits for reader mode
+         * to hand it a document: pass it to [NfcReaderMode.enable].
+         *
+         * @param options The key, the data groups, the roots and the check time.
+         * @param adapter The device's NFC adapter, from `NfcAdapter.getDefaultAdapter(context)`;
+         *   `null` (no NFC on the device) ends the read with [ChipReadEnding.NotStarted].
+         * @param observer Gets every update and exactly one ending.
+         * @return The read: the reader-mode callback, and the handle to cancel it.
+         */
+        @JvmStatic
+        public fun start(
+            options: ChipReadOptions,
+            adapter: NfcAdapter?,
+            observer: ChipReadObserver,
+        ): NfcChipRead = start(options, adapter, NfcReadSettings(), observer)
 
         /**
-         * The release of the most recent open link, so the next connect can wait for it. A link
-         * registers its own release when it opens; the release completes when the platform let go.
+         * Starts a read. Returns at once; the read waits for reader mode to hand it a document:
+         * pass it to [NfcReaderMode.enable].
+         *
+         * @param options The key, the data groups, the roots and the check time.
+         * @param adapter The device's NFC adapter, from `NfcAdapter.getDefaultAdapter(context)`;
+         *   `null` (no NFC on the device) ends the read with [ChipReadEnding.NotStarted].
+         * @param settings What to do after a lost link, and the time limits.
+         * @param observer Gets every update and exactly one ending.
+         * @return The read: the reader-mode callback, and the handle to cancel it.
          */
-        private val pendingRelease = AtomicReference<CompletableDeferred<Unit>?>(null)
+        @JvmStatic
+        public fun start(
+            options: ChipReadOptions,
+            adapter: NfcAdapter?,
+            settings: NfcReadSettings,
+            observer: ChipReadObserver,
+        ): NfcChipRead = start(options, adapter, settings, observer, NfcReadEnvironment.process)
+
+        internal fun start(
+            options: ChipReadOptions,
+            adapter: NfcAdapter?,
+            settings: NfcReadSettings,
+            observer: ChipReadObserver,
+            env: NfcReadEnvironment,
+        ): NfcChipRead = NfcChipRead(options, adapter, settings, observer, env).also { it.begin() }
+
+        /** How often the waiting state repeats with the time waited, as on iPhone. */
+        internal const val WAITING_REPORT_MILLIS = 2_000L
+
+        /** After a lost link with no new discovery, how often the earlier Tag is tried again. */
+        internal const val SAME_TAG_RETRY_MILLIS = 1_000L
+
+        /** Failed connects in a row after which the read ends, as on iPhone. */
+        internal const val MAX_CONNECT_ATTEMPTS = 3
+
+        /** A failure of the link itself, not a refusal: the connect may work on the next tag. */
+        private fun NfcError.isLinkLevel(): Boolean = this is NfcTagLost || this is NfcTimeout
+    }
+}
+
+/** What an [NfcChipRead] runs on: the platform by default, fakes and a test clock in tests. */
+internal class NfcReadEnvironment(
+    val platform: NfcChipPlatform,
+    val dispatcher: CoroutineDispatcher,
+    val now: () -> Long,
+    val registry: NfcReadRegistry,
+    val reader: ChipReader = ChipReader(),
+) {
+    companion object {
+        /** The real platform, one registry for the whole process. */
+        val process: NfcReadEnvironment by lazy {
+            NfcReadEnvironment(
+                platform = PlatformNfcChip,
+                dispatcher = Dispatchers.IO,
+                now = { System.nanoTime() / NANOS_PER_MILLI },
+                registry = NfcReadRegistry(),
+            )
+        }
+
+        private const val NANOS_PER_MILLI = 1_000_000L
+    }
+}
+
+/**
+ * The reads of one process: at most one live read, and the links whose platform close has not
+ * finished, so a new link never races a close on the tag.
+ */
+internal class NfcReadRegistry {
+    private val live = AtomicReference<Any?>(null)
+    private val releasing: MutableSet<CompletableDeferred<Unit>> = ConcurrentHashMap.newKeySet()
+
+    /** Makes [read] the live read; `false` when another read is live. */
+    fun claim(read: Any): Boolean = live.compareAndSet(null, read)
+
+    /** [read] has its ending: another read may start. */
+    fun ended(read: Any) {
+        live.compareAndSet(read, null)
+    }
+
+    /** A link is about to open; [release] completes when the platform let go of it. */
+    fun track(release: CompletableDeferred<Unit>) {
+        releasing += release
+        release.invokeOnCompletion { releasing -= release }
+    }
+
+    /** Waits until every tracked link was released, or [limitMillis] passed. */
+    suspend fun awaitReleased(limitMillis: Long) {
+        withTimeoutOrNull(limitMillis) { releasing.toList().forEach { it.await() } }
     }
 }
 
@@ -367,46 +477,38 @@ public class NfcChipRead internal constructor(
  * JVM with a fake and no device. The real implementation talks to `NfcAdapter` and `IsoDep`.
  */
 internal interface NfcChipPlatform {
-    /** Whether [adapter] is on and ready to find tags. */
-    public fun isEnabled(adapter: NfcAdapter): Boolean
+    /** Whether [adapter] is on. */
+    fun isEnabled(adapter: NfcAdapter): Boolean
 
     /**
-     * The ISO-DEP connection of a fresh [tag], or `null` when the tag speaks none. Nothing is sent
-     * to the tag here. [onReleased] runs once, after the transport was closed and the platform let
-     * go of the tag.
+     * The ISO-DEP connection of [tag], or `null` when the tag speaks none. Nothing is sent to the
+     * tag here. [onReleased] runs once, after the platform's close of the link returned.
      *
      * @param timeoutMillis How long to wait for the chip's answer to one command.
      */
-    public fun connectionOf(
+    fun connectionOf(
         tag: Tag,
         timeoutMillis: Int,
         onReleased: () -> Unit,
     ): IsoDepConnection?
 }
 
-/**
- * One tag's ISO-DEP connection: opened once, when the read is ready to send, never on the caller's
- * thread. A new one for every discovery; never reused.
- */
+/** One tag's ISO-DEP connection: opened when the read is ready to send, never on the caller's thread. */
 internal fun interface IsoDepConnection {
-    /** A new transport on the tag, connected and with the time limit set. */
-    public suspend fun open(): IsoDepTransport
+    /**
+     * A new transport on the tag, connected and with the time limit set. When it throws, the
+     * tag's link was closed (and its release reported) first.
+     */
+    suspend fun open(): IsoDepTransport
 }
 
-/**
- * A connection over any channel, the wiring the platform and the tests build alike: the transport
- * tells [onReleased] when the platform let go of the tag.
- */
+/** A connection over any channel, the wiring the platform and the tests build alike. */
 internal fun connectionOver(
     channel: IsoDepChannel,
     timeoutMillis: Int,
     io: CoroutineDispatcher,
     onReleased: () -> Unit,
-): IsoDepConnection =
-    object : IsoDepConnection {
-        override suspend fun open(): IsoDepTransport =
-            IsoDepTransport.open(ReleaseSignallingChannel(channel, onReleased), timeoutMillis, io)
-    }
+): IsoDepConnection = IsoDepConnection { IsoDepTransport.open(ReleaseSignallingChannel(channel, onReleased), timeoutMillis, io) }
 
 /** The platform itself: `NfcAdapter` for the state, `IsoDep` for the tag's link. */
 internal object PlatformNfcChip : NfcChipPlatform {

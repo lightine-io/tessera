@@ -21,6 +21,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -32,7 +33,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
-import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -42,28 +42,8 @@ import kotlin.test.assertTrue
 
 /** An EF.COM that claims no data groups: enough of a plain chip for a read to run for real. */
 private val EF_COM_NONE: ByteArray =
-    byteArrayOf(
-        0x60,
-        0x12,
-        0x5F,
-        0x02,
-        0x04,
-        '0'.code.toByte(),
-        '1'.code.toByte(),
-        '0'.code.toByte(),
-        '8'.code.toByte(),
-        0x5F,
-        0x36,
-        0x06,
-        '0'.code.toByte(),
-        '4'.code.toByte(),
-        '3'.code.toByte(),
-        '0'.code.toByte(),
-        '0'.code.toByte(),
-        '0'.code.toByte(),
-        0x5C,
-        0x00,
-    )
+    byteArrayOf(0x60, 0x12, 0x5F, 0x02, 0x04) + "0108".encodeToByteArray() +
+        byteArrayOf(0x5F, 0x36, 0x06) + "040000".encodeToByteArray() + byteArrayOf(0x5C, 0x00)
 
 /** The eMRTD application's identifier, ICAO Doc 9303 Part 10, section 2.1. */
 private val LDS1_AID = byteArrayOf(0xA0.toByte(), 0x00, 0x00, 0x02, 0x47, 0x10, 0x01)
@@ -74,30 +54,34 @@ private val SW_NOT_FOUND = byteArrayOf(0x6A.toByte(), 0x82.toByte())
 /** A plain chip's file map: EF.COM only, everything else missing. */
 private val PLAIN_CHIP = mapOf(0x011E to EF_COM_NONE)
 
+/** The command a plain chip's read fails on to lose the link after access: the 7th. */
+private const val AFTER_ACCESS = 7
+
 /**
- * A scripted stand-in for the platform's IsoDep that answers the reader's commands from an
- * in-memory file map, as a plain chip with no access control does (ICAO Doc 9303 Part 11,
- * section 4.1 Note 1): enough of the ISO-DEP command set for a real read to run, no radio.
+ * A scripted stand-in for the platform's IsoDep that answers from an in-memory file map, as a
+ * plain chip with no access control does (ICAO Doc 9303 Part 11, section 4.1 Note 1).
  *
- * The [failOnCommand]-th command throws [failure], as the platform does when the document leaves
- * the field mid-read; the [blockOnCommand]-th command blocks until the test releases it, as the
- * platform blocks while the chip does not answer. [events], when given, records connect, close,
- * block and release in order, across channels, for ordering assertions.
+ * [connectFailure] makes the connect throw; [failOnCommand] makes that command throw [failure];
+ * [blockOnCommand] or [blockConnect] block until the test releases them, as the platform blocks
+ * while the chip does not answer. [events] records connect, close and blocking in order.
  */
 private class ScriptedChipChannel(
-    private val files: Map<Int, ByteArray>,
+    private val files: Map<Int, ByteArray> = PLAIN_CHIP,
     private val failOnCommand: Int = Int.MAX_VALUE,
     private val failure: Throwable? = null,
+    private val connectFailure: Throwable? = null,
     private val blockOnCommand: Int = Int.MAX_VALUE,
+    private val blockConnect: Boolean = false,
     private val name: String = "chip",
     private val events: MutableList<String>? = null,
 ) : IsoDepChannel {
     override val maxTransceiveLength: Int = 261
     override val isExtendedLengthApduSupported: Boolean = false
 
-    var connected = false
-    var closeCalls = 0
-    val commands = mutableListOf<ByteArray>()
+    @Volatile var connected = false
+
+    @Volatile var closeCalls = 0
+    val commands: MutableList<ByteArray> = Collections.synchronizedList(mutableListOf())
     val entered = CountDownLatch(1)
     val release = CountDownLatch(1)
     val closed = CountDownLatch(1)
@@ -106,8 +90,13 @@ private class ScriptedChipChannel(
     override val isConnected: Boolean get() = connected
 
     override fun connect() {
-        connected = true
         events?.add("$name-connect")
+        if (blockConnect) {
+            entered.countDown()
+            check(release.await(20, TimeUnit.SECONDS)) { "the test never released the connect" }
+        }
+        connectFailure?.let { throw it }
+        connected = true
     }
 
     override fun setTimeout(timeoutMillis: Int) = Unit
@@ -136,7 +125,6 @@ private class ScriptedChipChannel(
     }
 
     private fun select(command: ByteArray): ByteArray {
-        // A 4-byte SELECT is the master file with no data; a longer one carries Lc and the data.
         val data =
             if (command.size > 5) {
                 val length = command[4].toInt() and 0xFF
@@ -146,7 +134,7 @@ private class ScriptedChipChannel(
             }
         return when {
             data.isEmpty() -> {
-                current = null // the master file
+                current = null
                 SW_OK
             }
 
@@ -169,63 +157,88 @@ private class ScriptedChipChannel(
     private fun readBinary(command: ByteArray): ByteArray {
         val file = current ?: return SW_NOT_FOUND
         val offset = ((command[2].toInt() and 0x7F) shl 8) or (command[3].toInt() and 0xFF)
-        if (offset >= file.size) return byteArrayOf(0x62.toByte(), 0x82.toByte()) // end of file before Ne
+        if (offset >= file.size) return byteArrayOf(0x62.toByte(), 0x82.toByte())
         val le = (command.last().toInt() and 0xFF).let { if (it == 0) 256 else it }
         return file.copyOfRange(offset, minOf(file.size, offset + le)) + SW_OK
     }
 }
 
 /**
- * The scripted platform: whether NFC is on, and the channel behind each tag it hands out. It wires
- * every channel exactly as [PlatformNfcChip] does, so the read's release tracking runs for real.
+ * The scripted platform: whether NFC is on, and the channel behind each connection it hands out,
+ * wired exactly as [PlatformNfcChip] does, so the read's release tracking runs for real.
  */
 private class FakeNfcPlatform(
     private val io: CoroutineDispatcher,
 ) : NfcChipPlatform {
-    var enabled = true
+    @Volatile var enabled = true
 
-    /** The channel for the next tag; a fresh plain chip when `null`. */
-    var nextChannel: IsoDepChannel? = null
+    /** Channels for the next connections, in order; a fresh plain chip when empty. */
+    val next = ArrayDeque<IsoDepChannel>()
 
-    /** Says "no ISO-DEP" to the next tag, as a tag that speaks none. */
-    var nextTagSpeaksNone = false
+    /** Tags that speak no ISO-DEP. */
+    val notIsoDep: MutableSet<Tag> = Collections.synchronizedSet(mutableSetOf())
 
-    /** Every connection handed out, in order: the first is the first tag's. */
-    val connections = mutableListOf<IsoDepChannel>()
+    /** Tags that left the field: a connect on them fails, as on the platform. */
+    val gone: MutableSet<Tag> = Collections.synchronizedSet(mutableSetOf())
 
-    override fun isEnabled(adapter: NfcAdapter): Boolean = enabled
+    /** When set, the platform's release of each link is held until the test runs it. */
+    var holdReleases = false
+    val heldReleases = mutableListOf<() -> Unit>()
+
+    val connections: MutableList<IsoDepChannel> = Collections.synchronizedList(mutableListOf())
+    val tagsConnected: MutableList<Tag> = Collections.synchronizedList(mutableListOf())
+
+    var enabledChecks = 0
+
+    override fun isEnabled(adapter: NfcAdapter): Boolean {
+        enabledChecks++
+        return enabled
+    }
 
     override fun connectionOf(
         tag: Tag,
         timeoutMillis: Int,
         onReleased: () -> Unit,
     ): IsoDepConnection? {
-        if (nextTagSpeaksNone) {
-            nextTagSpeaksNone = false
-            return null
-        }
-        val channel = nextChannel ?: ScriptedChipChannel(PLAIN_CHIP)
-        nextChannel = null
+        if (tag in notIsoDep) return null
+        val channel =
+            if (tag in gone) {
+                ScriptedChipChannel(connectFailure = TagLostException("Tag was lost."), name = "gone")
+            } else {
+                synchronized(next) { next.removeFirstOrNull() } ?: ScriptedChipChannel()
+            }
         connections += channel
-        return connectionOver(channel, timeoutMillis, io, onReleased)
+        tagsConnected += tag
+        val released: () -> Unit = if (holdReleases) ({ synchronized(heldReleases) { heldReleases += onReleased } }) else onReleased
+        return connectionOver(channel, timeoutMillis, io, released)
     }
 }
 
-/** Keeps every update and ending, in order. Thread-safe: the read may deliver from its own thread. */
+/** Keeps every update and ending, in order; [waiting] opens once the reader waits for a document. */
 private class RecordingChipObserver : ChipReadObserver {
-    val updates = Collections.synchronizedList(mutableListOf<ChipReadUpdate>())
-    val endings = Collections.synchronizedList(mutableListOf<ChipReadEnding>())
+    val updates: MutableList<ChipReadUpdate> = Collections.synchronizedList(mutableListOf())
+    val endings: MutableList<ChipReadEnding> = Collections.synchronizedList(mutableListOf())
+    val threads: MutableList<String> = Collections.synchronizedList(mutableListOf())
+    val waiting = CountDownLatch(1)
+    val ended = CountDownLatch(1)
 
     override fun onUpdate(update: ChipReadUpdate) {
         updates += update
+        if (update.state is ChipReadState.WaitingForDocument) waiting.countDown()
     }
 
     override fun onEnding(ending: ChipReadEnding) {
         endings += ending
+        threads += Thread.currentThread().name
+        ended.countDown()
     }
+
+    fun states(): List<ChipReadState> = updates.map { it.state }
+
+    fun names(): List<String> = updates.map { it.state.toString() }
 }
 
-/** An empty platform `Tag`, good enough to hand the read: the fake platform never looks at it. */
+/** An empty platform `Tag`, good enough to hand the read: the fake platform never looks inside. */
 private fun aTag(): Tag {
     val constructor =
         Tag::class.java.declaredConstructors.maxByOrNull { it.parameterTypes.size }
@@ -247,10 +260,7 @@ private fun aTag(): Tag {
     return constructor.newInstance(*arguments) as Tag
 }
 
-/**
- * An NFC adapter instance under Robolectric, where the platform's own lookup returns `null`. It is
- * the token the read holds; the fake platform decides what it reports.
- */
+/** An NFC adapter instance under Robolectric; the fake platform decides what it reports. */
 private fun theAdapter(): NfcAdapter =
     NfcAdapter::class.java
         .getDeclaredConstructor()
@@ -258,16 +268,16 @@ private fun theAdapter(): NfcAdapter =
         .newInstance()
 
 /**
- * TES-346: the Android read entry point drives the shared coordinator for real. Every test feeds a
- * scripted tag, runs the read on virtual time (a real pool where a command must block), and asserts
- * the fake channel was closed and the observer got exactly one ending.
+ * TES-346: the Android read entry point drives the shared coordinator for real, on virtual time.
+ * Only the tests that need a command or a connect to block in the platform use a real thread pool,
+ * and those wait on latches, never on the clock.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class NfcChipReadTest {
     private val options = ChipReadOptions(ChipAccessKey.Can("123456"), setOf(1, 2))
-    private val pool = Executors.newFixedThreadPool(4)
+    private val pool = Executors.newFixedThreadPool(4) { Thread(it, "read-pool") }
     private val poolDispatcher: CoroutineDispatcher = pool.asCoroutineDispatcher()
 
     @After
@@ -275,42 +285,49 @@ class NfcChipReadTest {
         pool.shutdownNow()
     }
 
-    private fun TestScope.newRead(
+    private class Rig(
+        val platform: FakeNfcPlatform,
+        val env: NfcReadEnvironment,
+    )
+
+    private fun TestScope.rig(): Rig {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val platform = FakeNfcPlatform(dispatcher)
+        return Rig(platform, NfcReadEnvironment(platform, dispatcher, { testScheduler.currentTime }, NfcReadRegistry()))
+    }
+
+    private fun poolRig(): Rig {
+        val platform = FakeNfcPlatform(poolDispatcher)
+        val clock = System::currentTimeMillis
+        return Rig(platform, NfcReadEnvironment(platform, poolDispatcher, clock, NfcReadRegistry()))
+    }
+
+    private fun Rig.start(
         observer: RecordingChipObserver,
-        platform: FakeNfcPlatform,
         settings: NfcReadSettings = NfcReadSettings(),
         adapter: NfcAdapter? = theAdapter(),
-    ): NfcChipRead =
-        NfcChipRead(
-            options,
-            observer,
-            adapter,
-            settings,
-            StandardTestDispatcher(testScheduler),
-            platform,
-        )
-
-    /** The observer's states, oldest first. */
-    private fun states(observer: RecordingChipObserver): List<ChipReadState> = observer.updates.map { it.state }
+        options: ChipReadOptions = this@NfcChipReadTest.options,
+    ): NfcChipRead = NfcChipRead.start(options, adapter, settings, observer, env)
 
     private fun assertOneEnding(observer: RecordingChipObserver) {
         assertEquals(1, observer.endings.size, "updates: ${observer.updates}")
     }
 
-    // --- The read runs to a complete ending ---------------------------------------------------
+    private fun ScriptedChipChannel.closedOnce() = assertEquals(1, closeCalls, "the link must be closed exactly once")
+
+    // --- A read that runs to its end -----------------------------------------------------------
 
     @Test
     fun `the happy path runs the states in order and ends complete`() =
         runTest {
-            val platform = FakeNfcPlatform(StandardTestDispatcher(testScheduler))
+            val rig = rig()
             val observer = RecordingChipObserver()
-            val read = newRead(observer, platform)
+            val read = rig.start(observer)
 
-            runCurrent() // the read is waiting for a document
+            runCurrent()
             read.onTagDiscovered(aTag())
             advanceUntilIdle()
 
-            // The exact order for a plain chip: the entry point's states around the shared flow's.
             assertEquals(
                 listOf(
                     "Starting",
@@ -322,402 +339,487 @@ class NfcChipReadTest {
                     "ReadingFile(ChipFileRef(011D, application), 0 of ? bytes)",
                     "CheckingFiles",
                 ),
-                observer.updates.map { it.state.toString() },
-                "${observer.updates}",
+                observer.names(),
             )
             assertTrue(observer.updates.all { it.attempt == 1 && it.maxAttempts == 3 })
-            assertOneEnding(observer)
             val ending = assertIs<ChipReadEnding.Complete>(observer.endings.single())
             assertEquals(1, ending.attempts)
             assertEquals(1.0, ending.progress.fraction)
-            assertEquals(1, platform.connections.size)
-            assertEquals(1, (platform.connections.single() as ScriptedChipChannel).closeCalls)
+            (rig.platform.connections.single() as ScriptedChipChannel).closedOnce()
+            assertTrue(read.isEnded)
         }
 
     @Test
-    fun `no command goes out before the settle time has passed`() =
+    fun `no command and no connect before the settle time has passed`() =
         runTest {
-            val platform = FakeNfcPlatform(StandardTestDispatcher(testScheduler))
+            val rig = rig()
             val observer = RecordingChipObserver()
-            val read = newRead(observer, platform)
+            val read = rig.start(observer)
 
             runCurrent()
             read.onTagDiscovered(aTag())
-            advanceTimeBy(399)
+            advanceTimeBy(NfcReadSettings.DEFAULT_SETTLE_DELAY_MILLIS - 1)
+            runCurrent()
 
-            val chip = platform.connections.single() as ScriptedChipChannel
-            assertTrue(chip.commands.isEmpty(), "a command went out before the settle time")
-            assertFalse(chip.connected, "the tag's link was set up before the settle time")
-            assertEquals(0, chip.closeCalls, "nothing was opened yet: nothing to close")
+            val chip = rig.platform.connections.single() as ScriptedChipChannel
+            assertTrue(chip.commands.isEmpty())
+            assertFalse(chip.connected)
 
             advanceUntilIdle()
-            assertOneEnding(observer)
             assertIs<ChipReadEnding.Complete>(observer.endings.single())
-            assertEquals(1, chip.closeCalls, "the chip was never closed")
-            assertTrue(chip.commands.isNotEmpty())
+            chip.closedOnce()
         }
 
     @Test
-    fun `cancel during the settle cuts it short with no link opened`() =
+    fun `cancel during the settle ends at once with nothing opened`() =
         runTest {
-            val platform = FakeNfcPlatform(StandardTestDispatcher(testScheduler))
+            val rig = rig()
             val observer = RecordingChipObserver()
-            val read = newRead(observer, platform)
+            val read = rig.start(observer)
 
             runCurrent()
             read.onTagDiscovered(aTag())
             advanceTimeBy(200)
             read.cancel()
 
-            assertOneEnding(observer)
-            val ending = assertIs<ChipReadEnding.Cancelled>(observer.endings.single())
-            assertEquals(ChipReadEnding.Cancelled.By.APP, ending.by)
-            assertTrue(read.isEnded)
-
-            // The tag was taken but its link never opened: no command went out, nothing to close.
-            val chip = platform.connections.single() as ScriptedChipChannel
-            assertTrue(chip.commands.isEmpty(), "a command went out before the read was cancelled")
-            assertFalse(chip.connected, "the tag's link was opened")
-            assertEquals(0, chip.closeCalls)
-
+            assertEquals(ChipReadState.Stopping, observer.updates.last().state)
+            assertEquals(ChipReadEnding.Cancelled.By.APP, assertIs<ChipReadEnding.Cancelled>(observer.endings.single()).by)
+            read.cancel()
             advanceUntilIdle()
-            assertOneEnding(observer) // the unwind changed nothing
+            assertOneEnding(observer)
+            val chip = rig.platform.connections.single() as ScriptedChipChannel
+            assertTrue(chip.commands.isEmpty())
+            assertFalse(chip.connected)
+            assertEquals(0, chip.closeCalls, "nothing was opened, so nothing is closed")
         }
 
-    // --- The tag is not a document -------------------------------------------------------------
-
-    @Test
-    fun `a tag that speaks no ISO-DEP ends the read with no document found`() =
-        runTest {
-            val platform =
-                FakeNfcPlatform(StandardTestDispatcher(testScheduler)).apply { nextTagSpeaksNone = true }
-            val observer = RecordingChipObserver()
-            val read = newRead(observer, platform)
-
-            runCurrent()
-            read.onTagDiscovered(aTag())
-            advanceUntilIdle()
-
-            assertOneEnding(observer)
-            val ending = assertIs<ChipReadEnding.Failed>(observer.endings.single())
-            assertEquals(NfcUnavailable(NfcUnavailable.Reason.NOT_SUPPORTED), ending.error)
-            assertEquals(0, ending.attempts)
-            assertFalse(states(observer).contains(ChipReadState.DocumentFound), "${states(observer)}")
-            assertEquals(0, platform.connections.size)
-        }
-
-    // --- The read cannot start ----------------------------------------------------------------
+    // --- Before the read can start --------------------------------------------------------------
 
     @Test
     fun `a device without an adapter ends the read as not started`() =
         runTest {
-            val platform = FakeNfcPlatform(StandardTestDispatcher(testScheduler))
+            val rig = rig()
             val observer = RecordingChipObserver()
-
-            newRead(observer, platform, adapter = null)
+            rig.start(observer, adapter = null)
             advanceUntilIdle()
 
-            assertOneEnding(observer)
-            assertEquals(
-                NfcUnavailable.Reason.NOT_SUPPORTED,
-                assertIs<ChipReadEnding.NotStarted>(observer.endings.single()).reason,
-            )
-            assertEquals(0, platform.connections.size)
+            assertEquals(listOf("Starting"), observer.names())
+            assertEquals(NfcUnavailable.Reason.NOT_SUPPORTED, assertIs<ChipReadEnding.NotStarted>(observer.endings.single()).reason)
+            assertTrue(rig.platform.connections.isEmpty())
         }
 
     @Test
-    fun `NFC switched off before the read ends it as not started`() =
+    fun `NFC off at the start ends the read as not started`() =
         runTest {
-            val platform =
-                FakeNfcPlatform(StandardTestDispatcher(testScheduler)).apply { enabled = false }
+            val rig = rig()
+            rig.platform.enabled = false
             val observer = RecordingChipObserver()
-
-            newRead(observer, platform)
+            rig.start(observer)
             advanceUntilIdle()
 
-            assertOneEnding(observer)
-            assertEquals(
-                NfcUnavailable.Reason.DISABLED,
-                assertIs<ChipReadEnding.NotStarted>(observer.endings.single()).reason,
-            )
-            assertEquals(0, platform.connections.size)
+            assertEquals(NfcUnavailable.Reason.DISABLED, assertIs<ChipReadEnding.NotStarted>(observer.endings.single()).reason)
         }
 
-    // --- The lost link ------------------------------------------------------------------------
+    @Test
+    fun `a key whose check digits do not add up ends before anything else and holds no slot`() =
+        runTest {
+            val rig = rig()
+            val observer = RecordingChipObserver()
+            val badKey = ChipAccessKey.Mrz("T22000129", '4', "900315", '2', "340314", '1')
+            rig.start(observer, options = ChipReadOptions(badKey, setOf(1)))
+            assertIs<ChipReadEnding.KeyRejected>(observer.endings.single())
+            assertEquals(0, rig.platform.enabledChecks, "the key check comes before NFC is looked at")
+
+            val next = RecordingChipObserver()
+            val read = rig.start(next)
+            runCurrent()
+            assertTrue(next.endings.isEmpty(), "a rejected key must not hold the one-read slot")
+            read.cancel()
+        }
 
     @Test
-    fun `a lost link then the document again continues on a new transport`() =
+    fun `a second read while one is live ends at once and a read after the ending starts`() =
         runTest {
-            val platform = FakeNfcPlatform(StandardTestDispatcher(testScheduler))
+            val rig = rig()
+            val first = RecordingChipObserver()
+            val read = rig.start(first)
+            runCurrent()
+
+            val second = RecordingChipObserver()
+            rig.start(second)
+            assertEquals(listOf("Starting"), second.names())
+            assertEquals(NfcUnavailable.Reason.READ_IN_PROGRESS, assertIs<ChipReadEnding.NotStarted>(second.endings.single()).reason)
+            assertTrue(first.endings.isEmpty())
+
+            read.cancel()
+            val third = RecordingChipObserver()
+            val again = rig.start(third)
+            runCurrent()
+            assertTrue(third.endings.isEmpty(), "the slot is free once the first read has its ending")
+            again.onTagDiscovered(aTag())
+            advanceUntilIdle()
+            assertIs<ChipReadEnding.Complete>(third.endings.single())
+        }
+
+    // --- Tags the read skips or ignores ----------------------------------------------------------
+
+    @Test
+    fun `a tag that speaks no ISO-DEP is skipped and the read keeps waiting`() =
+        runTest {
+            val rig = rig()
             val observer = RecordingChipObserver()
-            val read = newRead(observer, platform)
-            val chip1 =
-                ScriptedChipChannel(PLAIN_CHIP, failOnCommand = 7, failure = TagLostException("Tag was lost."), name = "chip1")
-            platform.nextChannel = chip1
+            val read = rig.start(observer)
+            val transitCard = aTag()
+            rig.platform.notIsoDep += transitCard
+
+            runCurrent()
+            read.onTagDiscovered(transitCard)
+            advanceTimeBy(1_000)
+            assertTrue(observer.endings.isEmpty())
+            assertFalse(observer.states().contains(ChipReadState.DocumentFound))
+
+            read.onTagDiscovered(aTag())
+            advanceUntilIdle()
+            assertIs<ChipReadEnding.Complete>(observer.endings.single())
+        }
+
+    @Test
+    fun `a tag during a command or after the ending is ignored`() =
+        runTest {
+            val rig = rig()
+            val observer = RecordingChipObserver()
+            val read = rig.start(observer)
+            rig.platform.next += ScriptedChipChannel(failOnCommand = AFTER_ACCESS, failure = TagLostException("Tag was lost."))
+            val first = aTag()
+
+            runCurrent()
+            read.onTagDiscovered(first)
+            advanceTimeBy(NfcReadSettings.DEFAULT_SETTLE_DELAY_MILLIS)
+            // The link is up and the read is between commands: this tag is dropped, not kept for
+            // after the loss.
+            val during = aTag()
+            read.onTagDiscovered(during)
+            runCurrent()
+            assertTrue(observer.states().any { it is ChipReadState.LinkLost })
+            rig.platform.gone += first
+            advanceTimeBy(NfcReadSettings.DEFAULT_WAIT_FOR_RETURN_MILLIS)
+            runCurrent()
+            assertFalse(during in rig.platform.tagsConnected, "a tag found during a command was used")
+            assertIs<ChipReadEnding.Partial>(observer.endings.single())
+
+            val taken = rig.platform.tagsConnected.size
+            read.onTagDiscovered(aTag())
+            advanceUntilIdle()
+            assertOneEnding(observer)
+            assertEquals(taken, rig.platform.tagsConnected.size, "a tag found after the ending was used")
+        }
+
+    // --- Connects that fail -----------------------------------------------------------------------
+
+    @Test
+    fun `a tag found during a failed connect is the one the read uses next`() =
+        runTest {
+            val rig = rig()
+            val observer = RecordingChipObserver()
+            val read = rig.start(observer)
+            rig.platform.next += ScriptedChipChannel(connectFailure = TagLostException("Tag was lost."), name = "bounced")
 
             runCurrent()
             read.onTagDiscovered(aTag())
-            advanceTimeBy(400)
-            runCurrent() // attempt 1 loses the link; the read waits for the document again
+            advanceTimeBy(100)
+            val again = aTag() // the document bounced: the platform hands over a newer Tag
+            read.onTagDiscovered(again)
+            advanceUntilIdle()
 
-            assertTrue(read.isEnded.not(), "the read should wait for the document")
-            assertEquals(1, chip1.closeCalls)
-            assertContains(states(observer), ChipReadState.DocumentFound)
+            assertIs<ChipReadEnding.Complete>(observer.endings.single())
+            assertEquals(again, rig.platform.tagsConnected.last())
+            assertEquals(1, (rig.platform.connections.first() as ScriptedChipChannel).closeCalls, "the failed link was not closed")
+            assertTrue(observer.updates.all { it.attempt == 1 }, "a failed connect uses no attempt")
+        }
 
-            val chip2 = ScriptedChipChannel(PLAIN_CHIP, name = "chip2")
-            platform.nextChannel = chip2
+    @Test
+    fun `three failed connects in a row end the read`() =
+        runTest {
+            val rig = rig()
+            val observer = RecordingChipObserver()
+            val read = rig.start(observer)
+            repeat(3) { rig.platform.next += ScriptedChipChannel(connectFailure = TagLostException("Tag was lost.")) }
+
+            runCurrent()
+            repeat(3) {
+                read.onTagDiscovered(aTag())
+                // Not advanceUntilIdle: a waiting read reports every 2 seconds without end.
+                advanceTimeBy(NfcReadSettings.DEFAULT_SETTLE_DELAY_MILLIS)
+                runCurrent()
+            }
+            val ending = assertIs<ChipReadEnding.Failed>(observer.endings.single())
+            assertEquals(NfcTagLost, ending.error)
+            assertEquals(0, ending.attempts)
+            assertTrue(rig.platform.connections.all { (it as ScriptedChipChannel).closeCalls == 1 })
+        }
+
+    // --- The document waits -----------------------------------------------------------------------
+
+    @Test
+    fun `the wait ticks every 2 seconds and the document limit counts across failed connects`() =
+        runTest {
+            val rig = rig()
+            val observer = RecordingChipObserver()
+            val read = rig.start(observer, NfcReadSettings(waitForDocumentMillis = 5_000))
+            rig.platform.next += ScriptedChipChannel(connectFailure = TagLostException("Tag was lost."))
+
+            runCurrent()
+            advanceTimeBy(1_000)
+            read.onTagDiscovered(aTag()) // found, but the link cannot be set up
+            advanceTimeBy(3_999 - 1_000)
+            runCurrent()
+            assertTrue(observer.endings.isEmpty())
+            advanceTimeBy(1_001)
+            runCurrent()
+
+            val ending = assertIs<ChipReadEnding.EndedBySystem>(observer.endings.single())
+            assertEquals(NfcTimeout(5_000), ending.reason)
+            assertEquals(5_000, currentTime)
+            val waits = observer.states().filterIsInstance<ChipReadState.WaitingForDocument>().map { it.waitedMillis }
+            assertEquals(0L, waits.first())
+            assertTrue(waits.containsAll(listOf(2_000L, 4_000L)), "$waits")
+        }
+
+    @Test
+    fun `NFC switched off while waiting ends the read at the next tick`() =
+        runTest {
+            val rig = rig()
+            val observer = RecordingChipObserver()
+            rig.start(observer)
+            runCurrent()
+            advanceTimeBy(500)
+            rig.platform.enabled = false
+            advanceTimeBy(1_500)
+            runCurrent()
+
+            val ending = assertIs<ChipReadEnding.EndedBySystem>(observer.endings.single())
+            assertEquals(NfcUnavailable(NfcUnavailable.Reason.DISABLED), ending.reason)
+            assertEquals(2_000, currentTime)
+        }
+
+    // --- Lost links -------------------------------------------------------------------------------
+
+    @Test
+    fun `a lost link then a new tag goes on with a new link and counts attempts one way`() =
+        runTest {
+            val rig = rig()
+            val observer = RecordingChipObserver()
+            val read = rig.start(observer)
+            val chip1 = ScriptedChipChannel(failOnCommand = AFTER_ACCESS, failure = TagLostException("Tag was lost."), name = "chip1")
+            val chip2 = ScriptedChipChannel(name = "chip2")
+            rig.platform.next += chip1
+            rig.platform.next += chip2
+
+            runCurrent()
+            read.onTagDiscovered(aTag())
+            advanceTimeBy(NfcReadSettings.DEFAULT_SETTLE_DELAY_MILLIS)
+            runCurrent()
+            assertFalse(read.isEnded)
+            chip1.closedOnce()
             read.onTagDiscovered(aTag())
             advanceUntilIdle()
 
-            assertOneEnding(observer)
             val ending = assertIs<ChipReadEnding.Complete>(observer.endings.single())
             assertEquals(2, ending.attempts)
-            assertTrue(chip1 !== chip2, "the read must use a new transport, never the old tag")
-            assertEquals(1, chip1.closeCalls)
-            assertEquals(1, chip2.closeCalls)
-            assertFalse(chip2.commands.isEmpty())
-            val lost = states(observer).filterIsInstance<ChipReadState.LinkLost>()
-            assertEquals(1, lost.size)
-            assertEquals(2, lost.single().restartsLeft)
-            assertEquals(2, states(observer).count { it == ChipReadState.DocumentFound })
+            chip2.closedOnce()
+            val lost = observer.updates.single { it.state is ChipReadState.LinkLost }
+            assertEquals(2, (lost.state as ChipReadState.LinkLost).restartsLeft)
+            assertEquals(1, lost.attempt, "LinkLost belongs to the attempt that lost the link")
+            val after = observer.updates.dropWhile { it.state !is ChipReadState.LinkLost }.drop(1)
+            assertTrue(after.isNotEmpty() && after.all { it.attempt == 2 }, "$after")
         }
 
     @Test
-    fun `a lost link with no document back ends with what was read`() =
+    fun `with no new tag after a lost link the earlier tag is tried again`() =
         runTest {
-            val platform = FakeNfcPlatform(StandardTestDispatcher(testScheduler))
+            val rig = rig()
             val observer = RecordingChipObserver()
-            val read = newRead(observer, platform)
-            platform.nextChannel =
-                ScriptedChipChannel(PLAIN_CHIP, failOnCommand = 7, failure = TagLostException("Tag was lost."))
+            val read = rig.start(observer)
+            rig.platform.next += ScriptedChipChannel(failOnCommand = AFTER_ACCESS, failure = TagLostException("Tag was lost."))
+            val tag = aTag()
 
             runCurrent()
-            read.onTagDiscovered(aTag())
-            advanceUntilIdle() // no second tag: the return wait runs out
+            read.onTagDiscovered(tag)
+            advanceTimeBy(NfcReadSettings.DEFAULT_SETTLE_DELAY_MILLIS)
+            runCurrent()
+            val lostAt = currentTime
+            advanceUntilIdle()
 
-            assertOneEnding(observer)
+            assertEquals(2, assertIs<ChipReadEnding.Complete>(observer.endings.single()).attempts)
+            assertEquals(listOf(tag, tag), rig.platform.tagsConnected)
+            assertTrue(currentTime >= lostAt + NfcChipRead.SAME_TAG_RETRY_MILLIS)
+            assertTrue(rig.platform.connections.all { (it as ScriptedChipChannel).closeCalls == 1 })
+        }
+
+    @Test
+    fun `a document that does not return ends the read when the return wait runs out`() =
+        runTest {
+            val rig = rig()
+            val observer = RecordingChipObserver()
+            val read = rig.start(observer)
+            rig.platform.next += ScriptedChipChannel(failOnCommand = AFTER_ACCESS, failure = TagLostException("Tag was lost."))
+            val tag = aTag()
+
+            runCurrent()
+            read.onTagDiscovered(tag)
+            advanceTimeBy(NfcReadSettings.DEFAULT_SETTLE_DELAY_MILLIS)
+            runCurrent()
+            rig.platform.gone += tag
+            val lostAt = currentTime
+            advanceTimeBy(NfcReadSettings.DEFAULT_WAIT_FOR_RETURN_MILLIS - 1)
+            runCurrent()
+            assertTrue(observer.endings.isEmpty(), "ended before the return wait ran out")
+            // The quiet tries of the earlier tag show nothing: LinkLost stays.
+            assertTrue(observer.states().last() is ChipReadState.LinkLost)
+            advanceTimeBy(1)
+            runCurrent()
+
             val ending = assertIs<ChipReadEnding.Partial>(observer.endings.single())
             assertEquals(NfcTagLost, ending.stoppedBy)
-            assertEquals(1, ending.attempts)
-            assertEquals(1, platform.connections.size)
-            assertEquals(1, (platform.connections.single() as ScriptedChipChannel).closeCalls)
+            assertEquals(lostAt + NfcReadSettings.DEFAULT_WAIT_FOR_RETURN_MILLIS, currentTime)
+            assertTrue(rig.platform.connections.all { (it as ScriptedChipChannel).closeCalls == 1 })
         }
 
-    // --- Tags that must be ignored ------------------------------------------------------------
-
     @Test
-    fun `a second tag during a read is ignored and never resurfaces`() =
+    fun `NFC switched off mid-read ends through the system ending with no LinkLost`() =
         runTest {
-            val platform = FakeNfcPlatform(StandardTestDispatcher(testScheduler))
+            val rig = rig()
             val observer = RecordingChipObserver()
-            val read = newRead(observer, platform)
+            val read = rig.start(observer)
+            rig.platform.next += ScriptedChipChannel(failOnCommand = AFTER_ACCESS, failure = TagLostException("Tag was lost."))
 
             runCurrent()
             read.onTagDiscovered(aTag())
-            advanceTimeBy(200) // mid-settle: the first tag's read is running
-            read.onTagDiscovered(aTag())
-            assertEquals(1, platform.connections.size, "the tag during the read was taken")
+            advanceTimeBy(NfcReadSettings.DEFAULT_SETTLE_DELAY_MILLIS - 1)
+            rig.platform.enabled = false
+            advanceUntilIdle()
 
-            advanceUntilIdle() // the read completes on the first tag
-            assertOneEnding(observer)
-            assertIs<ChipReadEnding.Complete>(observer.endings.single())
-            assertEquals(1, platform.connections.size)
-
-            read.onTagDiscovered(aTag()) // after the ending
-            assertEquals(1, platform.connections.size, "the tag after the ending was taken")
-            assertEquals(1, (platform.connections.single() as ScriptedChipChannel).closeCalls)
+            val ending = assertIs<ChipReadEnding.EndedBySystem>(observer.endings.single())
+            assertEquals(NfcUnavailable(NfcUnavailable.Reason.DISABLED), ending.reason)
+            assertTrue(observer.states().none { it is ChipReadState.LinkLost })
+            (rig.platform.connections.single() as ScriptedChipChannel).closedOnce()
         }
 
-    // --- Cancel during a blocked command ------------------------------------------------------
+    // --- The earlier link's close -----------------------------------------------------------------
 
     @Test
-    fun `cancel during a blocked command ends at once and closes the transport`() {
-        val platform = FakeNfcPlatform(poolDispatcher)
-        val observer = RecordingChipObserver()
-        val chip = ScriptedChipChannel(PLAIN_CHIP, blockOnCommand = 1)
-        platform.nextChannel = chip
-        val read =
-            NfcChipRead(
-                options,
-                observer,
-                theAdapter(),
-                NfcReadSettings(settleDelayMillis = 0),
-                poolDispatcher,
-                platform,
-            )
+    fun `the next link waits for the earlier close and goes ahead when the wait runs out`() =
+        runTest {
+            val rig = rig()
+            rig.platform.holdReleases = true
+            val firstObserver = RecordingChipObserver()
+            val first = rig.start(firstObserver)
+            runCurrent()
+            first.onTagDiscovered(aTag())
+            advanceUntilIdle()
+            assertIs<ChipReadEnding.Complete>(firstObserver.endings.single())
+            assertEquals(1, rig.platform.heldReleases.size, "the close ran but the platform still holds the tag")
 
-        // Reader mode re-offers a document that stays on the phone: the read takes one of these.
-        val deadline = System.currentTimeMillis() + 10_000
-        while (!chip.entered.await(50, TimeUnit.MILLISECONDS)) {
-            assertTrue(System.currentTimeMillis() < deadline, "no command was blocked")
-            read.onTagDiscovered(aTag())
+            // A read whose earlier close is still out: it connects only once the close is done.
+            val secondObserver = RecordingChipObserver()
+            val second = rig.start(secondObserver)
+            runCurrent()
+            second.onTagDiscovered(aTag())
+            advanceTimeBy(NfcReadSettings.DEFAULT_SETTLE_DELAY_MILLIS + 1_000)
+            runCurrent()
+            val waiting = rig.platform.connections[1] as ScriptedChipChannel
+            assertFalse(waiting.connected || waiting.commands.isNotEmpty(), "connected while the earlier close was out")
+            rig.platform.heldReleases
+                .removeAt(0)
+                .invoke()
+            advanceUntilIdle()
+            assertIs<ChipReadEnding.Complete>(secondObserver.endings.single())
+
+            // A close that never reports back delays the next link by the command time limit only.
+            val thirdObserver = RecordingChipObserver()
+            val third = rig.start(thirdObserver, NfcReadSettings(settleDelayMillis = 0))
+            runCurrent()
+            val began = currentTime
+            third.onTagDiscovered(aTag())
+            advanceUntilIdle()
+            assertIs<ChipReadEnding.Complete>(thirdObserver.endings.single())
+            assertEquals(began + NfcReadSettings.DEFAULT_COMMAND_TIMEOUT_MILLIS, currentTime)
         }
 
-        read.cancel()
-        assertOneEnding(observer) // the ending went out at once, on the cancelling thread
-        val ending = assertIs<ChipReadEnding.Cancelled>(observer.endings.single())
-        assertEquals(ChipReadEnding.Cancelled.By.APP, ending.by)
-        assertTrue(read.isEnded)
+    // --- Blocking platform calls (real threads, latches only) -------------------------------------
 
-        read.cancel() // idempotent
+    @Test
+    fun `cancel during a blocked command ends at once and closes the link after it`() {
+        val rig = poolRig()
+        val observer = RecordingChipObserver()
+        val chip = ScriptedChipChannel(blockOnCommand = 1)
+        rig.platform.next += chip
+        val read = rig.start(observer, NfcReadSettings(settleDelayMillis = 0))
+        assertTrue(observer.waiting.await(10, TimeUnit.SECONDS))
+        read.onTagDiscovered(aTag())
+        assertTrue(chip.entered.await(10, TimeUnit.SECONDS), "no command was blocked")
+
+        read.cancel()
+        assertEquals(Thread.currentThread().name, observer.threads.single(), "the ending must come at once, on the cancelling thread")
+        assertEquals(ChipReadState.Stopping, observer.updates.last().state)
+        assertIs<ChipReadEnding.Cancelled>(observer.endings.single())
+        read.cancel()
         assertOneEnding(observer)
 
         chip.release.countDown()
-        assertTrue(chip.closed.await(10, TimeUnit.SECONDS), "the platform link was not closed")
-        assertEquals(1, chip.closeCalls)
-        assertEquals(1, chip.commands.size, "nothing was sent after the cancelled command")
+        assertTrue(chip.closed.await(10, TimeUnit.SECONDS), "the link was not closed")
+        chip.closedOnce()
+        assertEquals(1, chip.commands.size, "a command went out after the cancelled one")
     }
 
-    // --- NFC off mid-read ----------------------------------------------------------------------
+    @Test
+    fun `cancel during a blocked connect still closes the link`() {
+        val rig = poolRig()
+        val observer = RecordingChipObserver()
+        val chip = ScriptedChipChannel(blockConnect = true)
+        rig.platform.next += chip
+        val read = rig.start(observer, NfcReadSettings(settleDelayMillis = 0))
+        assertTrue(observer.waiting.await(10, TimeUnit.SECONDS))
+        read.onTagDiscovered(aTag())
+        assertTrue(chip.entered.await(10, TimeUnit.SECONDS), "the connect never started")
+
+        read.cancel()
+        assertIs<ChipReadEnding.Cancelled>(observer.endings.single())
+        chip.release.countDown()
+        assertTrue(chip.closed.await(10, TimeUnit.SECONDS), "a connect that finished after the cancel left the tag connected")
+        assertTrue(chip.commands.isEmpty())
+    }
 
     @Test
-    fun `NFC switched off mid-read ends through the system ending`() =
-        runTest {
-            val platform = FakeNfcPlatform(StandardTestDispatcher(testScheduler))
+    fun `cancel racing a lost link and NFC off gives exactly one ending every time`() {
+        repeat(40) { round ->
+            val rig = poolRig()
             val observer = RecordingChipObserver()
-            val read = newRead(observer, platform)
-            platform.nextChannel =
-                ScriptedChipChannel(PLAIN_CHIP, failOnCommand = 7, failure = TagLostException("Tag was lost."))
-
-            runCurrent()
-            platform.enabled = false
+            val chip = ScriptedChipChannel(blockOnCommand = 2, failOnCommand = 2, failure = TagLostException("Tag was lost."))
+            rig.platform.next += chip
+            val read = rig.start(observer, NfcReadSettings(settleDelayMillis = 0))
+            assertTrue(observer.waiting.await(10, TimeUnit.SECONDS))
             read.onTagDiscovered(aTag())
-            advanceTimeBy(400)
-            runCurrent() // the attempt fails, and NFC being off ends the read at once
-
+            assertTrue(chip.entered.await(10, TimeUnit.SECONDS))
+            if (round % 2 == 0) rig.platform.enabled = false
+            val go = CountDownLatch(1)
+            val canceller =
+                Thread {
+                    go.await()
+                    read.cancel()
+                }.apply { start() }
+            go.countDown()
+            chip.release.countDown()
+            canceller.join(10_000)
+            assertTrue(observer.ended.await(10, TimeUnit.SECONDS))
+            assertTrue(chip.closed.await(10, TimeUnit.SECONDS))
+            read.cancel()
             assertOneEnding(observer)
-            val ending = assertIs<ChipReadEnding.EndedBySystem>(observer.endings.single())
-            assertEquals(NfcUnavailable(NfcUnavailable.Reason.DISABLED), ending.reason)
-            assertTrue(read.isEnded, "the read must not wait for a document that cannot come back")
-            assertEquals(1, (platform.connections.single() as ScriptedChipChannel).closeCalls)
+            chip.closedOnce()
         }
-
-    // --- One live read per process -------------------------------------------------------------
-
-    @Test
-    fun `a second read while one is live ends at once as not started`() =
-        runTest {
-            val platform = FakeNfcPlatform(StandardTestDispatcher(testScheduler))
-            val firstObserver = RecordingChipObserver()
-            val secondObserver = RecordingChipObserver()
-            val first = newRead(firstObserver, platform)
-            runCurrent() // the first read is live, waiting for a document
-
-            val second = newRead(secondObserver, platform)
-            runCurrent()
-
-            assertOneEnding(secondObserver)
-            assertEquals(
-                NfcUnavailable.Reason.READ_IN_PROGRESS,
-                assertIs<ChipReadEnding.NotStarted>(secondObserver.endings.single()).reason,
-            )
-            assertEquals(0, secondObserver.updates.size, "a refused read reports nothing else")
-            assertTrue(firstObserver.endings.isEmpty(), "the running read was untouched")
-            assertEquals(0, platform.connections.size)
-
-            first.cancel()
-            assertOneEnding(firstObserver)
-            assertIs<ChipReadEnding.Cancelled>(firstObserver.endings.single())
-        }
-
-    // --- The document wait ---------------------------------------------------------------------
-
-    @Test
-    fun `the wait ticks every 2 seconds and its limit ends the read as a timeout`() =
-        runTest {
-            val platform = FakeNfcPlatform(StandardTestDispatcher(testScheduler))
-            val observer = RecordingChipObserver()
-            newRead(observer, platform, settings = NfcReadSettings(waitForDocumentMillis = 5_000))
-
-            runCurrent() // the read is waiting for a document
-            advanceUntilIdle() // 5 seconds of virtual time pass with no document
-
-            assertOneEnding(observer)
-            val ending = assertIs<ChipReadEnding.EndedBySystem>(observer.endings.single())
-            assertEquals(NfcTimeout(5_000), ending.reason)
-            val waits = states(observer).filterIsInstance<ChipReadState.WaitingForDocument>().map { it.waitedMillis }
-            assertEquals(listOf(0L, 2_000L, 4_000L), waits)
-            assertEquals(0, platform.connections.size)
-        }
-
-    // --- The earlier read's close --------------------------------------------------------------
-
-    @Test
-    fun `a read cancelled mid-command releases the tag before the next read connects`() {
-        val events = Collections.synchronizedList(mutableListOf<String>())
-        val platform = FakeNfcPlatform(poolDispatcher)
-        val firstObserver = RecordingChipObserver()
-        val secondObserver = RecordingChipObserver()
-        val blocked =
-            ScriptedChipChannel(PLAIN_CHIP, blockOnCommand = 1, name = "blocked", events = events)
-        platform.nextChannel = blocked
-        val first =
-            NfcChipRead(
-                options,
-                firstObserver,
-                theAdapter(),
-                NfcReadSettings(settleDelayMillis = 0),
-                poolDispatcher,
-                platform,
-            )
-        first.onTagDiscovered(aTag())
-        val firstDeadline = System.currentTimeMillis() + 10_000
-        while (!blocked.entered.await(50, TimeUnit.MILLISECONDS)) {
-            assertTrue(System.currentTimeMillis() < firstDeadline, "no command was blocked")
-            first.onTagDiscovered(aTag())
-        }
-
-        first.cancel()
-        val second =
-            NfcChipRead(
-                options,
-                secondObserver,
-                theAdapter(),
-                NfcReadSettings(settleDelayMillis = 0),
-                poolDispatcher,
-                platform,
-            )
-        platform.nextChannel = ScriptedChipChannel(PLAIN_CHIP, name = "next", events = events)
-        val secondDeadline = System.currentTimeMillis() + 10_000
-        while (platform.connections.size < 2) {
-            assertTrue(System.currentTimeMillis() < secondDeadline, "the next read never took the tag")
-            second.onTagDiscovered(aTag())
-            Thread.sleep(20)
-        }
-
-        // The earlier close is still talking to the tag: the next read must hold its first command
-        // until the platform released it.
-        val hold = System.currentTimeMillis() + 300
-        while (System.currentTimeMillis() < hold) Thread.sleep(10)
-        assertFalse(events.contains("next-connect"), "the next read connected before the earlier close ended: $events")
-        assertFalse(secondObserver.endings.isNotEmpty(), "the next read ended before the earlier close ended")
-
-        blocked.release.countDown()
-        assertTrue(secondObserver.endings.awaitNotEmpty(10_000), "the next read never ended")
-
-        assertOneEnding(secondObserver)
-        assertIs<ChipReadEnding.Complete>(secondObserver.endings.single())
-        assertOneEnding(firstObserver)
-        assertEquals(1, blocked.closeCalls)
-        assertEquals(1, (platform.connections.last() as ScriptedChipChannel).closeCalls)
-        assertEquals(
-            listOf("blocked-connect", "blocked-blocked", "blocked-released", "blocked-close", "next-connect"),
-            events.filter { it != "next-close" },
-            "the next read must connect only after the earlier close released the tag",
-        )
     }
 
-    /** Waits until the list is not empty; `true` when it is. */
-    private fun <T> List<T>.awaitNotEmpty(
-        millis: Long,
-        sleeper: () -> Unit = { Thread.sleep(10) },
-    ): Boolean {
-        val deadline = System.currentTimeMillis() + millis
-        while (isEmpty() && System.currentTimeMillis() < deadline) sleeper()
-        return isNotEmpty()
-    }
-
-    // --- Reader mode ---------------------------------------------------------------------------
+    // --- Reader mode and settings -----------------------------------------------------------------
 
     @Test
     fun `reader mode flags cover NFC-A and NFC-B and skip the platform's NDEF check`() {
@@ -725,54 +827,43 @@ class NfcChipReadTest {
             NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
             NfcReaderMode.FLAGS,
         )
-        assertEquals(1_000, NfcReaderMode.DEFAULT_PRESENCE_CHECK_DELAY_MILLIS)
-    }
-
-    @Test
-    fun `reader mode extras carry the presence-check delay`() {
-        val extras = NfcReaderMode.extras()
-        assertEquals(1_000, extras.getInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY))
+        assertEquals(1_000, NfcReaderMode.extras().getInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY))
         assertEquals(500, NfcReaderMode.extras(500).getInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY))
     }
 
-    // --- The settings --------------------------------------------------------------------------
-
     @Test
-    fun `the settings defaults match the documented values`() {
+    fun `the settings defaults match the iPhone read's where the meaning is the same`() {
         val settings = NfcReadSettings()
         assertEquals(LinkLossPolicy.Resume(2), settings.linkLoss)
-        assertEquals(5_000, settings.timeoutMillis)
         assertEquals(400L, settings.settleDelayMillis)
+        assertEquals(5_000L, settings.commandTimeoutMillis)
         assertEquals(15_000L, settings.waitForReturnMillis)
         assertNull(settings.waitForDocumentMillis)
         assertEquals(
-            "NfcReadSettings(linkLoss=Resume(2), timeoutMillis=5000, settleDelayMillis=400, " +
+            "NfcReadSettings(linkLoss=Resume(2), settleDelayMillis=400, commandTimeoutMillis=5000, " +
                 "waitForReturnMillis=15000, waitForDocumentMillis=null)",
             settings.toString(),
         )
-    }
-
-    @Test
-    fun `the builder mirrors the constructor`() {
-        val settings =
+        val built =
             NfcReadSettings
                 .Builder()
                 .linkLoss(LinkLossPolicy.ReadAgain(1))
-                .timeoutMillis(3_000)
+                .commandTimeoutMillis(3_000)
                 .settleDelayMillis(100)
                 .waitForReturnMillis(8_000)
                 .waitForDocumentMillis(30_000)
                 .build()
-        assertEquals(LinkLossPolicy.ReadAgain(1), settings.linkLoss)
-        assertEquals(3_000, settings.timeoutMillis)
-        assertEquals(100L, settings.settleDelayMillis)
-        assertEquals(8_000L, settings.waitForReturnMillis)
-        assertEquals(30_000L, settings.waitForDocumentMillis)
+        assertEquals(
+            "NfcReadSettings(linkLoss=ReadAgain(1), settleDelayMillis=100, commandTimeoutMillis=3000, " +
+                "waitForReturnMillis=8000, waitForDocumentMillis=30000)",
+            built.toString(),
+        )
     }
 
     @Test
     fun `the settings refuse values the platform would refuse`() {
-        assertFailsWith<IllegalArgumentException> { NfcReadSettings(timeoutMillis = 0) }
+        assertFailsWith<IllegalArgumentException> { NfcReadSettings(commandTimeoutMillis = 0) }
+        assertFailsWith<IllegalArgumentException> { NfcReadSettings(commandTimeoutMillis = Int.MAX_VALUE + 1L) }
         assertFailsWith<IllegalArgumentException> { NfcReadSettings(settleDelayMillis = -1) }
         assertFailsWith<IllegalArgumentException> { NfcReadSettings(waitForReturnMillis = -1) }
         assertFailsWith<IllegalArgumentException> { NfcReadSettings(waitForDocumentMillis = -1) }

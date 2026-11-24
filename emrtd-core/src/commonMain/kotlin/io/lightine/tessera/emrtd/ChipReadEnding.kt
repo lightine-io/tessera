@@ -123,6 +123,12 @@ public sealed class ChipReadEnding {
     /**
      * The person or the app ended the read.
      *
+     * It carries no files. The ending is given at once, while the running attempt still holds
+     * what it read and has not checked it against the chip's signed hashes; waiting for those
+     * checks would delay the ending, and handing the files over unchecked would make them look
+     * like a [ChipRead], which always comes with its checks. An app that wants what the chip gives
+     * lets the read end on its own: a stop after access was granted ends with [Partial].
+     *
      * @property by Who ended it.
      * @since 1.0.0
      */
@@ -153,6 +159,8 @@ public sealed class ChipReadEnding {
     /**
      * The system ended the read: the NFC session timed out or was ended, NFC was turned off, or
      * the app left the screen.
+     *
+     * It carries no files, for the reason given at [Cancelled].
      *
      * @property reason What the platform reported.
      * @since 1.0.0

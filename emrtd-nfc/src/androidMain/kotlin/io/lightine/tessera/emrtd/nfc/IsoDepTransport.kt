@@ -301,7 +301,8 @@ public class IsoDepTransport internal constructor(
          *
          * @param tag The tag from the `NfcAdapter.ReaderCallback`.
          * @param timeoutMillis How long to wait for the chip to answer one command, in milliseconds.
-         * @return A connected transport.
+         * @return A connected transport. When the connect fails or the caller is cancelled during
+         *   it, the tag's connection is closed before this throws.
          * @throws ApduTransportException with [NfcUnavailable] (`NOT_SUPPORTED`) when the tag does not
          *   speak ISO-DEP, or another error from the list in the class description when it cannot
          *   be connected.
@@ -326,8 +327,15 @@ public class IsoDepTransport internal constructor(
             nanoTime: () -> Long = System::nanoTime,
         ): IsoDepTransport {
             val transport = IsoDepTransport(channel, timeoutMillis, ioDispatcher, nanoTime)
-            transport.lock.withLock {
-                withContext(ioDispatcher) { transport.connectOnce() }
+            try {
+                transport.lock.withLock {
+                    withContext(ioDispatcher) { transport.connectOnce() }
+                }
+            } catch (e: Throwable) {
+                // A connect that failed, or that finished after the caller was cancelled, may have
+                // left the tag connected: release it, since nobody else holds the transport.
+                transport.close()
+                throw e
             }
             return transport
         }

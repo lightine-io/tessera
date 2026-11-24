@@ -7,9 +7,10 @@ import kotlin.jvm.JvmField
 
 /**
  * What a read does when the link to the chip is lost: usually the document moved away from the
- * phone. Your app chooses; there is no default.
+ * phone. The platform read settings (Android `NfcReadSettings`, iOS `CoreNfcReadSettings`) default
+ * to [Resume] with 2 restarts; pass another policy there to change it.
  *
- * **For an ordinary app, choose [Resume] with 2 restarts.** A slip of the document then costs a
+ * **For an ordinary app, keep [Resume] with 2 restarts.** A slip of the document then costs a
  * second of "hold it again", not a new start, and what the app gets is as reliable as one
  * uninterrupted read (see [Resume] for why).
  *
