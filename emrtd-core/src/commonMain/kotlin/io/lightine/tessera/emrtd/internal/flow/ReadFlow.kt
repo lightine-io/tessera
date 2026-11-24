@@ -208,6 +208,7 @@ internal class ReadFlow(
     private var cardAccess: ByteArray? = null
     private var cardSecurity: ByteArray? = null
     private var cardSecurityInfos: SecurityInfos? = null
+    private var efDir: ByteArray? = null
     private var dg14Infos: SecurityInfos? = null
 
     // Chip authentication (one fact per place it was tried) and active authentication.
@@ -647,6 +648,9 @@ internal class ReadFlow(
                 return
             }
         cardSecurityInfos = infos
+        // EF.CardSecurity holds a signed copy of EF.DIR (Part 11, 9.2.11, EFDIRInfo): read EF.DIR
+        // too, while the master file is current, so the copy can be compared (EfDirMatchesSignedCopy).
+        if (infos.efDirInfo != null) efDir = readMasterFile(FILE_EF_DIR, toEnd = true)
         if (camEvidence != null || infos.chipAuthenticationInfos.isEmpty()) return
         runChipAuthentication(infos, CaContext.MASTER_FILE)
     }
@@ -666,7 +670,10 @@ internal class ReadFlow(
      * EF.CardSecurity's identifier is also EF.SOD's in the application, so it is read only once the
      * master file is known to be current.
      */
-    private suspend fun readMasterFile(fid: Int): ByteArray? {
+    private suspend fun readMasterFile(
+        fid: Int,
+        toEnd: Boolean = false,
+    ): ByteArray? {
         val start = TimeSource.Monotonic.markNow()
         startFile(fid, true)
         return try {
@@ -675,7 +682,7 @@ internal class ReadFlow(
                 reporter.fileEnded(fid, true)
                 return null
             }
-            val bytes = reader.readCurrentFile(fid, extended)
+            val bytes = if (toEnd) reader.readCurrentFileToEnd(fid, extended) else reader.readCurrentFile(fid, extended)
             reporter.fileEnded(fid, true)
             files += ChipFile(fid, true, bytes, attempt)
             event(ChipReadStep.READ_FILE, ChipReadStepOutcome.SUCCEEDED, start, fileId = fid, bytes = bytes.size)
@@ -1259,6 +1266,7 @@ internal class ReadFlow(
                 dataGroups = groups,
                 cardAccess = cardAccess,
                 cardSecurity = cardSecurity,
+                efDir = efDir,
                 roots = options.trustAnchors.map { it.certificate },
                 signerCertificate = options.signerCertificate?.certificate,
                 at = options.checkTime?.let { CertTimes.fromEpochSeconds(it.epochSeconds) },
@@ -1366,6 +1374,9 @@ internal class ReadFlow(
 
     private companion object {
         const val FILE_ATR_INFO = 0x2F01
+
+        /** EF.DIR in the master file (Part 10, 3.11.1). */
+        const val FILE_EF_DIR = 0x2F00
         const val FILE_CARD_SECURITY = 0x011D
         const val FILE_DG1 = 0x0101
         const val FILE_DG14 = 0x010E

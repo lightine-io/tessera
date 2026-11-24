@@ -159,6 +159,37 @@ internal class FileReader(
         }
 
     /**
+     * Reads the whole of the current EF to its end, for a file of several data objects with no
+     * outer TLV, such as EF.DIR (Part 10, 3.11.1: one application template per application). The
+     * file's length is not declared anywhere, so the reader reads short chunks until the chip
+     * answers fewer bytes than asked (or 6282, or 6B00 at an offset past the end). A file longer
+     * than the `B0` range is refused as [MalformedFile] with [TlvFailure.LENGTH_TOO_LONG].
+     */
+    suspend fun readCurrentFileToEnd(
+        fid: Int,
+        extendedLengthAllowed: Boolean = false,
+    ): ByteArray =
+        withTypedFailures {
+            bytesReadSoFar = 0
+            inProgress = null
+            val content = ByteSink()
+            while (true) {
+                val offset = content.size
+                if (offset > MAX_SHORT_OFFSET) throw MalformedFile(TlvFailure.LENGTH_TOO_LONG)
+                val requested = minOf(DEFAULT_SHORT_CHUNK, MAX_SHORT_OFFSET + 1 - offset)
+                val response = sendRead(offset, requested, extendedLengthAllowed)
+                if (offset > 0 && response.sw == StatusWord.WRONG_P1_P2) break
+                validateReadStatus(response, fid)
+                if (response.data.size > requested) throw MalformedFile(null)
+                content.write(response.data)
+                bytesReadSoFar = content.size
+                notify(fid, content.size, null)
+                if (response.sw == StatusWord.END_OF_FILE_BEFORE_NE || response.data.size < requested) break
+            }
+            content.toByteArray()
+        }
+
+    /**
      * Reads a file by its short file identifier. The first READ BINARY selects the EF; later chunks
      * use the current EF and its absolute offset.
      */
