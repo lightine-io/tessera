@@ -165,6 +165,7 @@ internal class FlowReporter(
     private var fileSawChunk = false
 
     fun beginAttempt(dataGroups: Set<Int>) {
+        kept.clear()
         tracker.beginAttempt(dataGroups)
         inAccess = true
     }
@@ -226,8 +227,12 @@ internal class FlowReporter(
         if (!inMasterFile) tracker.fileFinished()
     }
 
-    /** A file kept from an earlier attempt: counted as done with no new work. */
+    // Files kept from an earlier attempt: never planned again in this attempt.
+    private val kept = HashSet<Int>()
+
+    /** A file kept from an earlier attempt: counted as done with no new work, and not planned again. */
     fun fileKept(fileId: Int) {
+        kept += fileId
         tracker.drop(ProgressTracker.fileKey(fileId, false))
         tracker.fileFinished()
     }
@@ -237,9 +242,7 @@ internal class FlowReporter(
         for (n in 1..16) {
             val fid = 0x0100 + n
             val key = ProgressTracker.fileKey(fid, false)
-            if (fid !in
-                fileIds
-            ) {
+            if (fid !in fileIds || fid in kept) {
                 tracker.drop(key)
             } else if (!tracker.has(key)) {
                 tracker.estimate(key, ProgressTracker.fileEstimate(fid, false))
