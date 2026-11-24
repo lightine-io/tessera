@@ -115,7 +115,8 @@ internal object Bac {
      *    RND.IC || the last 4 bytes of RND.IFD (section 9.8.6.3).
      *
      * BAC's own commands are plain, so it wraps [exchange] in an [ApduChannel] to follow the plain
-     * 61xx/6Cxx answer-length hints; the returned [SecureChannel] decorates the raw [exchange]
+     * 61xx/6Cxx answer-length hints, except that EXTERNAL AUTHENTICATE goes out exactly once
+     * ([ApduChannel.sendOnce]: no re-send on 6Cxx); the returned [SecureChannel] decorates the raw [exchange]
      * directly. [random] supplies the reader's nonce and key material (the platform's strong random
      * source; tests pass the values of Appendix D.3). Transport failures pass through unchanged.
      *
@@ -163,8 +164,9 @@ internal object Bac {
             val mIfd = crypto.retailMac(keys.macKey, CryptoBytes.pad(eIfd, NONCE_LENGTH))
             CryptoBytes.wipe(s)
 
+            // Sent exactly once: on 6Cxx a second EXTERNAL AUTHENTICATE would be a second attempt.
             val answer =
-                plain.send(
+                plain.sendOnce(
                     CommandApdu(0x00, INS_EXTERNAL_AUTHENTICATE, 0x00, 0x00, eIfd + mIfd, CRYPTOGRAM_LENGTH + MAC_LENGTH),
                 )
             if (answer.sw != StatusWord.SUCCESS) throw BacException(BacFailure.AUTHENTICATION_REFUSED, answer.sw)

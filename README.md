@@ -35,7 +35,7 @@ Tessera's own code makes no network calls and logs nothing. On Android, the text
 
 ## Install
 
-Release 0.7.0. Minimums: minSdk 23, iOS 18, Java 21. Modules: [Choose your pieces](https://lightine.youtrack.cloud/articles/TES-A-140).
+Release 0.7.0. Minimums: minSdk 23, iOS 15, Java 21. Modules: [Choose your pieces](https://lightine.youtrack.cloud/articles/TES-A-140).
 
 `build.gradle.kts` (the JVM needs only the first two lines):
 

@@ -45,9 +45,9 @@ kotlin {
             binaryOption("bundleId", "io.lightine.tessera")
             binaryOption("bundleShortVersionString", project.version.toString())
             binaryOption("bundleVersion", project.version.toString())
-            // iOS 18 is the minimum (the Swift package already requires it). Kotlin/Native has no DSL for it:
+            // iOS 15 is the minimum (the Swift package declares the same). Kotlin/Native has no DSL for it:
             // the override sets the deployment target the framework is linked for, and so MinimumOSVersion.
-            freeCompilerArgs += "-Xoverride-konan-properties=osVersionMin.ios_arm64=18.0;osVersionMin.ios_simulator_arm64=18.0"
+            freeCompilerArgs += "-Xoverride-konan-properties=osVersionMin.ios_arm64=15.0;osVersionMin.ios_simulator_arm64=15.0"
             // Export each module whose public types appear in the umbrella's Swift-facing surface, so
             // they show in the framework's generated Obj-C/Swift headers rather than as opaque handles:
             // the camera contract (mrz-ocr-core), the parser/result types (mrz-core), the shared
@@ -89,7 +89,7 @@ kotlin {
                 doLast {
                     val binary = outputFile.get().resolve("Tessera")
                     val process =
-                        ProcessBuilder("bash", hideScript.path, binary.path, opensslSymbols.path, platform, "18.0")
+                        ProcessBuilder("bash", hideScript.path, binary.path, opensslSymbols.path, platform, "15.0")
                             .redirectErrorStream(true)
                             .start()
                     val output = process.inputStream.bufferedReader().readText()
@@ -163,7 +163,7 @@ tasks.register<Exec>("checkTesseraFrameworkHeader") {
         "-fobjc-arc",
         "-fmodules",
         "-target",
-        "arm64-apple-ios18.0-simulator",
+        "arm64-apple-ios15.0-simulator",
         "-F",
         frameworksDir.get().asFile.absolutePath,
         source.asFile.absolutePath,

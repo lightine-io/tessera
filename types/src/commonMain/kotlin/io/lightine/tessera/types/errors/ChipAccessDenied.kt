@@ -47,6 +47,39 @@ public data class ChipAccessDenied(
 
         /** The chip answered "security status not satisfied" (`6982`) for a file. */
         FILE_PROTECTED,
+
+        /**
+         * The chip reports the key as blocked: "authentication method blocked" (`6983`), or no tries
+         * left (`63C0`). Trying again with this key cannot open the chip.
+         *
+         * @since 1.0.0
+         */
+        KEY_BLOCKED,
+
+        /**
+         * The chip reports the key as suspended (`63C1`, or `6985` during PACE): one try is left,
+         * and the chip asks for its card access number first.
+         *
+         * @since 1.0.0
+         */
+        KEY_SUSPENDED,
+
+        /**
+         * The chip reports the key as deactivated: "reference data not usable" (`6984`), or the
+         * warning `6283` during PACE.
+         *
+         * @since 1.0.0
+         */
+        KEY_DEACTIVATED,
+
+        /**
+         * The chip reports a try counter for the key before any try was made (`63C2` to `63CF`
+         * during PACE: the number of tries left is the last digit of [statusWord]). MRZ values and
+         * card access numbers have no try counter, so the reader stopped without using a try.
+         *
+         * @since 1.0.0
+         */
+        KEY_TRIES_LIMITED,
     }
 
     /** English text for logs: the protocol, the reason and the status word, when known. */
@@ -60,6 +93,10 @@ public data class ChipAccessDenied(
                     Reason.KEY_NEEDS_PACE -> "a card access number needs PACE, which the chip does not offer in a usable form"
                     Reason.KEY_CLEARED -> "the access key was cleared"
                     Reason.FILE_PROTECTED -> "the chip does not allow reading this file with the current access"
+                    Reason.KEY_BLOCKED -> "the chip reports the access key as blocked"
+                    Reason.KEY_SUSPENDED -> "the chip reports the access key as suspended"
+                    Reason.KEY_DEACTIVATED -> "the chip reports the access key as deactivated"
+                    Reason.KEY_TRIES_LIMITED -> "the chip reports a limited number of tries for the access key, so none was used"
                 }
             val sw = statusWord?.let { " (status ${it.toString(16).uppercase().padStart(4, '0')})" } ?: ""
             return "Chip access with protocol $protocol was not granted: $what$sw"

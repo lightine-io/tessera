@@ -85,6 +85,10 @@ class SecureMessagingTest {
             assertEquals(SmFailure.MISSING_MAC, failure("990290009000"))
             assertEquals(SmFailure.CHIP_ENDED_SESSION, failure("6987"))
             assertEquals(SmFailure.CHIP_ENDED_SESSION, failure("6988"))
+            // Any other bare status word too (Part 11, 9.8.4 and 9.8.5): errors and warnings alike.
+            for (sw in listOf("6A82", "6982", "6300", "63C2", "6983", "6282", "6D00")) {
+                assertEquals(SmFailure.CHIP_ENDED_SESSION, failure(sw), sw)
+            }
             assertEquals(SmFailure.MALFORMED_RESPONSE, failure("8E08000000000000000099"))
             // DO'99' before DO'87': wrong order.
             assertEquals(SmFailure.MALFORMED_RESPONSE, failure("99029000" + "870901FFFFFFFFFFFFFFFF" + "8E080000000000000000" + "9000"))

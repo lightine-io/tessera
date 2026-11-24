@@ -244,13 +244,33 @@ class PaceFakeChipTest {
         }
 
     @Test
-    fun a2048BitGroupNeedsExtendedLength() =
+    fun a2048BitGroupNeedsExtendedLengthAndNothingIsSent() =
         runTest {
             withCrypto { c ->
                 val s = setup(c, setOf(FakePaceSuite(DH_GM_3DES, 2)))
                 val e = assertFailsWith<PaceException> { Pace.open(s.exchange, c, mrzKey(), PaceSuite.of(DH_GM_3DES, 2)) }
                 assertEquals(PaceFailure.EXTENDED_LENGTH_REQUIRED, e.failure)
-                assertEquals(PaceStep.MAP_NONCE, e.step)
+                // Found before MSE:Set AT: the password is never used for a suite that cannot finish.
+                assertEquals(PaceStep.SET_AUTHENTICATION_TEMPLATE, e.step)
+                assertTrue(s.chip.received.isEmpty())
+            }
+        }
+
+    @Test
+    fun aPasswordStatusWordToSetAtIsNotASuiteRefusal() =
+        runTest {
+            withCrypto { c ->
+                // TR-03110-3, B.14.1: 63CX is a warning (the password was selected, X tries left);
+                // 6283 deactivated; 6982 to 6985 blocked, deactivated or suspended (B.14.2).
+                for (sw in listOf(0x63C3, 0x63C1, 0x63C0, 0x6283, 0x6982, 0x6983, 0x6984, 0x6985)) {
+                    val s = setup(c, setOf(FakePaceSuite(ECDH_GM_AES128, 13)))
+                    s.pace.refuseSetAt = sw
+                    val e = assertFailsWith<PaceException> { Pace.open(s.exchange, c, mrzKey(), PaceSuite.of(ECDH_GM_AES128, 13)) }
+                    assertEquals(PaceFailure.PASSWORD_STATE, e.failure, sw.toString(16))
+                    assertEquals(PaceStep.SET_AUTHENTICATION_TEMPLATE, e.step)
+                    assertEquals(sw, e.sw)
+                    assertEquals(1, s.chip.received.size, "nothing after MSE:Set AT")
+                }
             }
         }
 

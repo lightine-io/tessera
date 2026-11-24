@@ -5,6 +5,7 @@ package samples.tesa166
 import android.app.Activity
 import android.nfc.NfcAdapter
 import android.nfc.Tag
+import android.os.Bundle
 import io.lightine.tessera.emrtd.ApduTransportException
 import io.lightine.tessera.emrtd.ChipAccessKey
 import io.lightine.tessera.emrtd.ChipCheckKind
@@ -24,6 +25,7 @@ import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.errors.NfcTimeout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Clock
 // endregion
 
@@ -59,16 +61,25 @@ fun startListening(activity: Activity, scope: CoroutineScope, key: ChipAccessKey
     val adapter = NfcAdapter.getDefaultAdapter(activity) ?: return // this device has no NFC reader
     val flags = NfcAdapter.FLAG_READER_NFC_A or
         NfcAdapter.FLAG_READER_NFC_B or
-        NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK
+        NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK or
+        NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS // the system sound can make people move the document
+    val extras = Bundle().apply {
+        // Check every second that the chip is still there: the default 125 ms drops some chips.
+        putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 1000)
+    }
+    val started = AtomicBoolean(false)
     adapter.enableReaderMode(activity, { tag ->
+        if (!started.compareAndSet(false, true)) return@enableReaderMode // one read per call
         scope.launch {
             try {
                 handle(readChip(tag, key))
             } catch (e: ApduTransportException) {
                 show(describe(e.error))
+            } finally {
+                stopListening(activity) // after ChipAccessDenied, listen again only with a new key
             }
         }
-    }, flags, null)
+    }, flags, extras)
 }
 
 fun stopListening(activity: Activity) {

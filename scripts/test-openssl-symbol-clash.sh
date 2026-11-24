@@ -55,7 +55,7 @@ EOF
 
 SDK="$(xcrun --sdk iphonesimulator --show-sdk-path)"
 # -ObjC loads the framework's object (it holds Objective-C classes).
-if ! xcrun --sdk iphonesimulator clang -target arm64-apple-ios18.0-simulator -isysroot "$SDK" \
+if ! xcrun --sdk iphonesimulator clang -target arm64-apple-ios15.0-simulator -isysroot "$SDK" \
   -I "$INCLUDE" "$WORK/main.c" -Wl,-force_load,"$APP_LIBCRYPTO" "$BIN" -ObjC -Wl,-dead_strip \
   -framework Foundation -framework UIKit -framework CoreGraphics -framework CoreMedia \
   -framework CoreVideo -framework AVFoundation -framework Vision -framework ImageIO \

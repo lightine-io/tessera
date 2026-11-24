@@ -1,6 +1,9 @@
 package io.lightine.tessera.emrtd.internal.apdu
 
 import io.lightine.tessera.emrtd.ApduTransport
+import io.lightine.tessera.emrtd.ApduTransportException
+import io.lightine.tessera.types.errors.NfcTagLost
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Sends one command APDU and returns the chip's one answer: the seam the access protocols and the
@@ -32,6 +35,8 @@ internal interface ApduSender {
 /**
  * Sends plain APDUs through the platform transport: one command, one answer, no follow-ups. This is
  * the raw sender that [ApduChannel] (plain 61xx/6Cxx) and the secure-messaging channel decorate.
+ * Any exception from the transport other than [ApduTransportException] and cancellation comes out
+ * as [ApduTransportException] with [NfcTagLost], the exception keeping it as its cause.
  */
 internal class PlainApduSender(
     private val transport: ApduTransport,
@@ -50,7 +55,20 @@ internal class PlainApduSender(
         if (bytes.size > transport.maxCommandLength) {
             throw CommandTooLong(bytes.size, transport.maxCommandLength)
         }
-        return ResponseApdu.parse(transport.transceive(bytes))
+        val answer =
+            try {
+                transport.transceive(bytes)
+            } catch (e: ApduTransportException) {
+                throw e
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // The transport broke its contract (it throws only ApduTransportException). Platform
+                // NFC classes throw such exceptions when the link to the tag is gone (Android's
+                // IsoDep: IllegalStateException, SecurityException), so this is a lost link.
+                throw ApduTransportException(NfcTagLost, e)
+            }
+        return ResponseApdu.parse(answer)
     }
 }
 

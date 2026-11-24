@@ -96,7 +96,12 @@ kotlin {
                         .asFile.path,
                 )
             }
-        tasks.named(libcrypto.interopProcessingTaskName).configure { dependsOn(buildOpenSsl) }
+        tasks.named(libcrypto.interopProcessingTaskName).configure {
+            dependsOn(buildOpenSsl)
+            // The klib embeds libcrypto.a, and the task does not track that file by itself: without
+            // this input a rebuilt library (a new minimum iOS version, new options) stays out of the klib.
+            inputs.files(outDir.map { it.file("stamp.txt") })
+        }
     }
 
     sourceSets {

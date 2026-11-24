@@ -5,7 +5,9 @@ import io.lightine.tessera.emrtd.internal.asn1.DerReader
 import io.lightine.tessera.emrtd.internal.cms.CmsParser
 import io.lightine.tessera.emrtd.internal.cms.LdsSecurityObject
 import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
+import io.lightine.tessera.emrtd.internal.crypto.ChipCryptoException
 import io.lightine.tessera.emrtd.internal.crypto.ChipCryptoUnavailableException
+import io.lightine.tessera.emrtd.internal.crypto.HashAlgorithm
 import io.lightine.tessera.emrtd.internal.crypto.chipCrypto
 import io.lightine.tessera.emrtd.internal.securityinfo.EfDirInfo
 import io.lightine.tessera.emrtd.internal.securityinfo.SecurityInfoException
@@ -130,12 +132,24 @@ internal class PassiveAuthentication(
                     read == null -> PaOutcome.NotRun(PaNotRun.DATA_GROUP_NOT_READ)
                     stored == null -> PaOutcome.Failed(PaFailure.NO_HASH_IN_SECURITY_OBJECT)
                     crypto == null -> PaOutcome.NotRun(PaNotRun.CRYPTO_UNAVAILABLE)
-                    crypto.digest(algorithm, read).contentEquals(stored) -> PaOutcome.Passed
-                    else -> PaOutcome.Failed(PaFailure.HASH_DIFFERS)
+                    else -> hashOutcome(crypto, algorithm, read, stored)
                 }
             PaCheck(PaCheckKind.DataGroupHashMatches(n), outcome)
         }
     }
+
+    /** Compares the hash; a backend that cannot compute it leaves the check not run, never a thrown read. */
+    private fun hashOutcome(
+        crypto: ChipCrypto,
+        algorithm: HashAlgorithm,
+        read: ByteArray,
+        stored: ByteArray,
+    ): PaOutcome =
+        try {
+            if (crypto.digest(algorithm, read).contentEquals(stored)) PaOutcome.Passed else PaOutcome.Failed(PaFailure.HASH_DIFFERS)
+        } catch (e: ChipCryptoException) {
+            PaOutcome.NotRun(PaNotRun.UNSUPPORTED_ALGORITHM)
+        }
 
     private fun parseLds(sod: SignedObjectResult): LdsSecurityObject? =
         sod.signedData?.let {
