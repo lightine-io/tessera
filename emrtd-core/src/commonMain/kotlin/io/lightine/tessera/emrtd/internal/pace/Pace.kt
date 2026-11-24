@@ -11,6 +11,7 @@ import io.lightine.tessera.emrtd.internal.crypto.BlockCipher
 import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
 import io.lightine.tessera.emrtd.internal.crypto.CipherMode
 import io.lightine.tessera.emrtd.internal.crypto.CryptoBytes
+import io.lightine.tessera.emrtd.internal.securityinfo.PaceMapping
 import io.lightine.tessera.emrtd.internal.sm.SecureChannel
 import io.lightine.tessera.emrtd.internal.sm.SessionKeys
 import io.lightine.tessera.emrtd.internal.sm.SmCipher
@@ -82,6 +83,7 @@ internal object Pace {
     const val TAG_EPHEMERAL_KEY_CHIP = 0x84
     const val TAG_TOKEN_READER = 0x85
     const val TAG_TOKEN_CHIP = 0x86
+    const val TAG_CHIP_AUTHENTICATION_DATA = 0x8A
     const val TOKEN_LENGTH = 8
     private const val CLA_PLAIN = 0x00
     private const val CLA_CHAINED = 0x10
@@ -225,7 +227,15 @@ internal object Pace {
             // Step 4: the tokens.
             try {
                 val readerToken = token(keys, ephemeral.tokenInput(oid, chipKey))
-                val answer = generalAuthenticate(PaceStep.MUTUAL_AUTHENTICATION, TAG_TOKEN_READER, readerToken, TAG_TOKEN_CHIP, last = true)
+                val answer =
+                    generalAuthenticate(
+                        PaceStep.MUTUAL_AUTHENTICATION,
+                        TAG_TOKEN_READER,
+                        readerToken,
+                        TAG_TOKEN_CHIP,
+                        last = true,
+                        refused = if (mapping.kind == PaceMapping.CHIP_AUTHENTICATION) emptySet() else setOf(TAG_CHIP_AUTHENTICATION_DATA),
+                    )
                 val expected = token(keys, ephemeral.tokenInput(oid, readerKey))
                 if (!CryptoBytes.constantTimeEquals(expected, answer.getValue(TAG_TOKEN_CHIP))) {
                     throw PaceException(PaceFailure.WRONG_CHIP_TOKEN, PaceStep.MUTUAL_AUTHENTICATION)
@@ -252,7 +262,11 @@ internal object Pace {
         /**
          * One GENERAL AUTHENTICATE step: sends 0x7C holding [tag] with [value] (an empty 0x7C when
          * [tag] is null) and returns the data objects of the chip's 0x7C by tag, which must hold
-         * [expectedTag].
+         * [expectedTag]. In steps 1 to 3 the answer holds that one object and nothing else (Part 11,
+         * 4.4.4.3; TR RF Part 4, ISO7816_C_16, C_17, C_21, C_22: a reader fails after an answer that
+         * holds other objects, such as all the components of a key). In step 4 an object in
+         * [refused] ends the run too (ISO7816_C_35: chip authentication data from a chip whose
+         * mapping is not the chip authentication mapping).
          */
         private suspend fun generalAuthenticate(
             step: PaceStep,
@@ -260,6 +274,7 @@ internal object Pace {
             value: ByteArray,
             expectedTag: Int,
             last: Boolean,
+            refused: Set<Int> = emptySet(),
         ): Map<Int, ByteArray> {
             val answer = send(step, generalAuthenticateCommand(tag, value, last))
             if (answer.sw != StatusWord.SUCCESS) throw PaceException(PaceFailure.STEP_REFUSED, step, answer.sw)
@@ -272,6 +287,8 @@ internal object Pace {
                     throw PaceException(PaceFailure.MALFORMED_RESPONSE, step, cause = e)
                 }
             if (expectedTag !in objects) throw PaceException(PaceFailure.MALFORMED_RESPONSE, step)
+            if (!last && objects.size != 1) throw PaceException(PaceFailure.MALFORMED_RESPONSE, step)
+            if (objects.keys.any { it in refused }) throw PaceException(PaceFailure.MALFORMED_RESPONSE, step)
             return objects
         }
 
