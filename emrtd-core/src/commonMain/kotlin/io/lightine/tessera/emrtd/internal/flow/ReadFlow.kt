@@ -60,6 +60,7 @@ import io.lightine.tessera.emrtd.internal.pace.Pace
 import io.lightine.tessera.emrtd.internal.pace.PaceException
 import io.lightine.tessera.emrtd.internal.pace.PaceFailure
 import io.lightine.tessera.emrtd.internal.pace.PaceOptions
+import io.lightine.tessera.emrtd.internal.pace.PaceStep
 import io.lightine.tessera.emrtd.internal.pace.PaceSuite
 import io.lightine.tessera.emrtd.internal.securityinfo.AtrInfoParser
 import io.lightine.tessera.emrtd.internal.securityinfo.ChipSecurityFiles
@@ -152,6 +153,8 @@ internal class ReadFlow(
 
     // Access.
     private var protocol = ChipAccessProtocol.NONE
+    private var attempting = ChipAccessProtocol.NONE
+    private var applicationSelectedAfterKeySwitch = false
     private var accessDone = false
     private var cardAccessRead = false
     private var offered: List<ChipPaceOffer> = emptyList()
@@ -181,22 +184,25 @@ internal class ReadFlow(
     /** The chip authentication mapping evidence, for tests: wiped when [run] returns. */
     internal val mappingEvidence: ChipAuthMappingEvidence? get() = camEvidence
 
+    /**
+     * Runs the read. Total: every exception other than cancellation becomes a typed Failed or
+     * Partial result ([errorOf]); cancellation passes through as it is. Keys are wiped however the
+     * read ends.
+     */
     suspend fun run(): ChipReadResult {
         val start = TimeSource.Monotonic.markNow()
         val result =
             try {
-                execute()
-                ChipReadResult.Complete(assemble())
-            } catch (s: Stop) {
-                stopped(s.error)
-            } catch (e: ApduTransportException) {
-                stopped(e.error)
-            } catch (e: SecureMessagingException) {
-                stopped(FlowMappings.secureMessaging(e))
-            } catch (e: MalformedResponse) {
-                stopped(ChipUnexpectedAnswer(ChipUnexpectedAnswer.Reason.NO_STATUS_WORD))
-            } catch (e: CommandTooLong) {
-                stopped(ChipUnexpectedAnswer(ChipUnexpectedAnswer.Reason.UNUSABLE_FILE_ANSWER))
+                val error =
+                    try {
+                        execute()
+                        null
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        errorOf(e)
+                    }
+                finish(error)
             } finally {
                 openedChannels.forEach { it.close() }
                 camEvidence?.wipe()
@@ -206,11 +212,75 @@ internal class ReadFlow(
         return result
     }
 
+    /** The result for a read that ended with [error], or Complete when it is `null`; never throws. */
+    private fun finish(error: ChipError?): ChipReadResult =
+        try {
+            if (error == null) ChipReadResult.Complete(assemble()) else stopped(error)
+        } catch (e: Exception) {
+            // Putting the result together failed: the error stands without the read's content.
+            ChipReadResult.Failed(error ?: errorOf(e), if (accessDone) accessReport() else null)
+        }
+
     private fun stopped(error: ChipError): ChipReadResult =
         if (accessDone && error != ChipBlank) {
             ChipReadResult.Partial(assemble(), error)
         } else {
             ChipReadResult.Failed(error, if (accessDone) accessReport() else null)
+        }
+
+    /** The access protocol of the error: the one that opened the chip, or the one being tried. */
+    private val errorProtocol: ChipAccessProtocol get() = if (accessDone) protocol else attempting
+
+    /**
+     * The typed error for an exception that ended the read. Exceptions with a meaning map to it;
+     * the rest are faults the reader did not expect, never left to escape [run]:
+     * - a key cleared while the read ran: [ChipAccessDenied.Reason.KEY_CLEARED];
+     * - a backend cryptography failure: [ChipUnsupportedAlgorithm.Reason.CRYPTOGRAPHY_FAILED];
+     * - an answer that grew past the limit ([ResponseTooLong]) or any other exception: during
+     *   access [ChipAccessDenied.Reason.UNEXPECTED_CHIP_ANSWER], after it
+     *   [ChipUnexpectedAnswer.Reason.UNUSABLE_FILE_ANSWER].
+     */
+    private fun errorOf(e: Exception): ChipError =
+        when (e) {
+            is Stop -> {
+                e.error
+            }
+
+            is ApduTransportException -> {
+                e.error
+            }
+
+            is SecureMessagingException -> {
+                FlowMappings.secureMessaging(e)
+            }
+
+            is MalformedResponse -> {
+                ChipUnexpectedAnswer(ChipUnexpectedAnswer.Reason.NO_STATUS_WORD)
+            }
+
+            is CommandTooLong, is ExtendedLengthRequired -> {
+                ChipUnexpectedAnswer(ChipUnexpectedAnswer.Reason.UNUSABLE_FILE_ANSWER)
+            }
+
+            is PaceException -> {
+                FlowMappings.pace(e)
+            }
+
+            is BacException -> {
+                FlowMappings.bac(e)
+            }
+
+            is ChipCryptoException -> {
+                ChipUnsupportedAlgorithm(errorProtocol, ChipUnsupportedAlgorithm.Reason.CRYPTOGRAPHY_FAILED)
+            }
+
+            else -> {
+                when {
+                    options.accessKey.isCleared -> ChipAccessDenied(errorProtocol, ChipAccessDenied.Reason.KEY_CLEARED)
+                    !accessDone -> ChipAccessDenied(errorProtocol, ChipAccessDenied.Reason.UNEXPECTED_CHIP_ANSWER)
+                    else -> ChipUnexpectedAnswer(ChipUnexpectedAnswer.Reason.UNUSABLE_FILE_ANSWER)
+                }
+            }
         }
 
     private suspend fun execute() {
@@ -229,7 +299,10 @@ internal class ReadFlow(
         if (suites.isNotEmpty()) {
             openWithPace(key, suites, infos!!.paceInfos.size > 1)
             readCardSecurity()
-            selectApplication()
+            // Chip authentication in the master file that switched keys has already selected the
+            // application under the new keys, and its verified 9000 made it current: nothing
+            // between that SELECT and here changes the current DF, so a second one is redundant.
+            if (!applicationSelectedAfterKeySwitch) selectApplication()
         } else {
             openWithoutPace(key, infos)
         }
@@ -318,8 +391,13 @@ internal class ReadFlow(
                 ?: throw Stop(
                     ChipUnsupportedAlgorithm(ChipAccessProtocol.PACE, ChipUnsupportedAlgorithm.Reason.NO_CRYPTOGRAPHY_ON_PLATFORM),
                 )
+        attempting = ChipAccessProtocol.PACE
         var refusedSw: Int? = null
         var needsExtended = false
+        // One authentication attempt per read: another suite is tried only when nothing of this one
+        // reached GENERAL AUTHENTICATE (Pace checks every size it can before MSE:Set AT) and the
+        // chip's answer to MSE:Set AT was about the suite, not the password. Every other failure
+        // ends the read, and BAC is never tried after PACE.
         for (suite in suites) {
             val start = TimeSource.Monotonic.markNow()
             val name = paceName(suite)
@@ -335,16 +413,18 @@ internal class ReadFlow(
                 return
             } catch (e: PaceException) {
                 event(ChipReadStep.PACE, ChipReadStepOutcome.FAILED, start, protocol = name, sw = e.sw)
+                val atSetAt = e.step == PaceStep.SET_AUTHENTICATION_TEMPLATE
                 when {
                     e.failure == PaceFailure.UNSUPPORTED_SUITE -> {
                         // Nothing was sent for this suite; try the next one.
                     }
 
-                    e.failure == PaceFailure.EXTENDED_LENGTH_REQUIRED -> {
+                    atSetAt && e.failure == PaceFailure.EXTENDED_LENGTH_REQUIRED -> {
+                        // Found before MSE:Set AT went out (or MSE:Set AT itself did not fit): nothing was sent.
                         needsExtended = true
                     }
 
-                    e.failure in SET_AT_REFUSALS -> {
+                    atSetAt && e.failure in SET_AT_REFUSALS -> {
                         refusedSw = e.sw
                     }
 
@@ -352,16 +432,15 @@ internal class ReadFlow(
                         throw Stop(FlowMappings.pace(e))
                     }
                 }
-            } catch (e: ExtendedLengthRequired) {
-                event(ChipReadStep.PACE, ChipReadStepOutcome.FAILED, start, protocol = name)
-                needsExtended = true
-            } catch (e: CommandTooLong) {
-                // A command longer than the transport sends: the same limit as a missing extended length.
-                event(ChipReadStep.PACE, ChipReadStepOutcome.FAILED, start, protocol = name)
-                needsExtended = true
             } catch (e: ChipCryptoException) {
                 event(ChipReadStep.PACE, ChipReadStepOutcome.FAILED, start, protocol = name)
                 throw Stop(ChipUnsupportedAlgorithm(ChipAccessProtocol.PACE, ChipUnsupportedAlgorithm.Reason.CRYPTOGRAPHY_FAILED))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Anything else ends the read ([run] types it); no other suite is tried.
+                event(ChipReadStep.PACE, ChipReadStepOutcome.FAILED, start, protocol = name)
+                throw e
             }
         }
         val reason =
@@ -388,6 +467,7 @@ internal class ReadFlow(
         val offersUnusablePace = infos != null && infos.paceInfos.isNotEmpty()
         val c = crypto
         if (key is ChipAccessKey.Mrz && c != null) {
+            attempting = ChipAccessProtocol.BAC
             val start = TimeSource.Monotonic.markNow()
             try {
                 val opened = Bac.open(plain, c, key)
@@ -787,6 +867,7 @@ internal class ReadFlow(
                 try {
                     reader.selectApplication(extended)
                     masterFileCurrent = false
+                    applicationSelectedAfterKeySwitch = true
                 } catch (e: FileReadFailure) {
                     // An answer that verified but is not 9000 does not confirm the keys.
                     event(ChipReadStep.CHIP_AUTHENTICATION, ChipReadStepOutcome.FAILED, start, protocol = "CA")
@@ -1112,7 +1193,11 @@ internal class ReadFlow(
         const val SW_NOT_FOUND = 0x6A82
         const val SW_SECURITY = 0x6982
 
-        /** MSE:Set AT refusals: the chip did not take the suite, so nothing was agreed and the next suite may be tried. */
+        /**
+         * MSE:Set AT refusals about the suite: the chip did not take it, nothing was agreed and the
+         * password was not used, so the next suite may be tried. [PaceFailure.PASSWORD_STATE] is
+         * not one of them.
+         */
         val SET_AT_REFUSALS =
             setOf(
                 PaceFailure.ALGORITHM_NOT_SUPPORTED,

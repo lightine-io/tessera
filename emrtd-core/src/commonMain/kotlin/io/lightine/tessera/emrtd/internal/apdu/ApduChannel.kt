@@ -36,6 +36,27 @@ internal class ApduChannel(
             val le = response.sw2.let { if (it == 0) CommandApdu.MAX_SHORT_NE else it }
             response = inner.send(CommandApdu(command.cla, command.ins, command.p1, command.p2, command.data, le), extendedLengthAllowed)
         }
+        return collectRemaining(command, response, extendedLengthAllowed)
+    }
+
+    /**
+     * Sends an authentication command (EXTERNAL AUTHENTICATE, GENERAL AUTHENTICATE, MSE, INTERNAL
+     * AUTHENTICATE) exactly once. A `6Cxx` answer is returned as it is and never answered with the
+     * same command again: a second command would be a second authentication attempt with the same
+     * cryptogram. `61xx` is still followed with GET RESPONSE, which only fetches the rest of an
+     * answer the chip has already computed (ISO/IEC 7816-4, GET RESPONSE) and repeats no attempt.
+     */
+    suspend fun sendOnce(
+        command: CommandApdu,
+        extendedLengthAllowed: Boolean = false,
+    ): ResponseApdu = collectRemaining(command, inner.send(command, extendedLengthAllowed), extendedLengthAllowed)
+
+    private suspend fun collectRemaining(
+        command: CommandApdu,
+        first: ResponseApdu,
+        extendedLengthAllowed: Boolean,
+    ): ResponseApdu {
+        var response = first
         if (response.sw1 != StatusWord.SW1_BYTES_REMAINING) return response
 
         var collected = response.data

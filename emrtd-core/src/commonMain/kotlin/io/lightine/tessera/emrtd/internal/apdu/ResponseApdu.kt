@@ -52,6 +52,7 @@ internal object StatusWord {
     const val CHAINING_NOT_SUPPORTED = 0x6884
     const val SECURITY_STATUS_NOT_SATISFIED = 0x6982
     const val AUTHENTICATION_METHOD_BLOCKED = 0x6983
+    const val REFERENCE_DATA_NOT_USABLE = 0x6984
     const val CONDITIONS_OF_USE_NOT_SATISFIED = 0x6985
     const val NO_CURRENT_EF = 0x6986
     const val SM_DATA_OBJECTS_MISSING = 0x6987

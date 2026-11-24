@@ -21,9 +21,13 @@ public final class io/lightine/tessera/types/errors/ChipAccessDenied : io/lighti
 public final class io/lightine/tessera/types/errors/ChipAccessDenied$Reason : java/lang/Enum {
 	public static final field CHIP_REFUSED Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
 	public static final field FILE_PROTECTED Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
+	public static final field KEY_BLOCKED Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
 	public static final field KEY_CLEARED Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
+	public static final field KEY_DEACTIVATED Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
 	public static final field KEY_NEEDS_PACE Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
 	public static final field KEY_NOT_MATCHED Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
+	public static final field KEY_SUSPENDED Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
+	public static final field KEY_TRIES_LIMITED Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
 	public static final field UNEXPECTED_CHIP_ANSWER Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/errors/ChipAccessDenied$Reason;

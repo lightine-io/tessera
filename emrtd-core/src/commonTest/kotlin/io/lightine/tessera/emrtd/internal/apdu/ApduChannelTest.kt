@@ -52,6 +52,25 @@ class ApduChannelTest {
         }
 
     @Test
+    fun an_authentication_command_is_never_sent_again_on_wrong_le() =
+        runTest {
+            // A second EXTERNAL AUTHENTICATE would be a second attempt with the same cryptogram.
+            val t = Scripted(answer(ByteArray(0), 0x6C28), answer(ByteArray(40), 0x9000))
+            val r = channel(t).sendOnce(CommandApdu(0x00, 0x82, 0, 0, ByteArray(40), 40))
+            assertEquals(0x6C28, r.sw)
+            assertEquals(listOf(0x82), t.sent.map { it.ins })
+        }
+
+    @Test
+    fun an_authentication_answer_with_bytes_remaining_is_fetched_without_a_second_attempt() =
+        runTest {
+            val t = Scripted(answer(byteArrayOf(1), 0x6101), answer(byteArrayOf(2), 0x9000))
+            val r = channel(t).sendOnce(CommandApdu(0x00, 0x82, 0, 0, ByteArray(40), 40))
+            assertContentEquals(byteArrayOf(1, 2), r.data)
+            assertEquals(listOf(0x82, 0xC0), t.sent.map { it.ins })
+        }
+
+    @Test
     fun bytes_remaining_are_fetched_with_get_response_and_joined() =
         runTest {
             val t =

@@ -3,6 +3,7 @@ package io.lightine.tessera.emrtd.internal.pace
 import io.lightine.tessera.emrtd.ChipAccessKey
 import io.lightine.tessera.emrtd.internal.apdu.ApduSender
 import io.lightine.tessera.emrtd.internal.apdu.CommandApdu
+import io.lightine.tessera.emrtd.internal.apdu.CommandTooLong
 import io.lightine.tessera.emrtd.internal.apdu.ExtendedLengthRequired
 import io.lightine.tessera.emrtd.internal.apdu.ResponseApdu
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
@@ -145,12 +146,19 @@ internal object Pace {
             mapping: Mapping,
             context: MappingContext,
         ): PaceResult {
-            val setAt = send(PaceStep.SET_AUTHENTICATION_TEMPLATE, setAuthenticationTemplate(suite, passwordType, options.sendParameterId))
+            val setAtCommand = setAuthenticationTemplate(suite, passwordType, options.sendParameterId)
+            // A size limit that can be known now is checked before anything is sent: once a GENERAL
+            // AUTHENTICATE has been answered, the password has been used and no other suite may run.
+            if (!fits(setAtCommand) || !fits(largestGeneralAuthenticate())) {
+                throw PaceException(PaceFailure.EXTENDED_LENGTH_REQUIRED, PaceStep.SET_AUTHENTICATION_TEMPLATE)
+            }
+            val setAt = send(PaceStep.SET_AUTHENTICATION_TEMPLATE, setAtCommand)
             if (setAt.sw != StatusWord.SUCCESS) {
                 val failure =
-                    when (setAt.sw) {
-                        SW_WRONG_DATA -> PaceFailure.ALGORITHM_NOT_SUPPORTED
-                        SW_REFERENCED_DATA_NOT_FOUND -> PaceFailure.REFERENCED_DATA_NOT_FOUND
+                    when {
+                        isPasswordState(setAt.sw) -> PaceFailure.PASSWORD_STATE
+                        setAt.sw == SW_WRONG_DATA -> PaceFailure.ALGORITHM_NOT_SUPPORTED
+                        setAt.sw == SW_REFERENCED_DATA_NOT_FOUND -> PaceFailure.REFERENCED_DATA_NOT_FOUND
                         else -> PaceFailure.SET_AUTHENTICATION_TEMPLATE_REFUSED
                     }
                 throw PaceException(failure, PaceStep.SET_AUTHENTICATION_TEMPLATE, setAt.sw)
@@ -253,13 +261,7 @@ internal object Pace {
             expectedTag: Int,
             last: Boolean,
         ): Map<Int, ByteArray> {
-            val inner = if (tag == null) ByteArray(0) else TlvWriter.encode(tag, value)
-            val data = TlvWriter.encode(TAG_DYNAMIC_AUTHENTICATION_DATA, inner)
-            // An answer holds 0x7C around one public key at most, plus a few short objects.
-            val needsLongAnswer = suite.group.maxPublicKeyLength + 16 > CommandApdu.MAX_SHORT_NE
-            val ne = if (needsLongAnswer && options.extendedLengthAllowed) CommandApdu.MAX_EXTENDED_NE else CommandApdu.MAX_SHORT_NE
-            val command = CommandApdu(if (last) CLA_PLAIN else CLA_CHAINED, INS_GENERAL_AUTHENTICATE, 0x00, 0x00, data, ne)
-            val answer = send(step, command)
+            val answer = send(step, generalAuthenticateCommand(tag, value, last))
             if (answer.sw != StatusWord.SUCCESS) throw PaceException(PaceFailure.STEP_REFUSED, step, answer.sw)
             val objects =
                 try {
@@ -273,6 +275,38 @@ internal object Pace {
             return objects
         }
 
+        private fun generalAuthenticateCommand(
+            tag: Int?,
+            value: ByteArray,
+            last: Boolean,
+        ): CommandApdu {
+            val inner = if (tag == null) ByteArray(0) else TlvWriter.encode(tag, value)
+            val data = TlvWriter.encode(TAG_DYNAMIC_AUTHENTICATION_DATA, inner)
+            // An answer holds 0x7C around one public key at most, plus a few short objects.
+            val needsLongAnswer = suite.group.maxPublicKeyLength + 16 > CommandApdu.MAX_SHORT_NE
+            val ne = if (needsLongAnswer && options.extendedLengthAllowed) CommandApdu.MAX_EXTENDED_NE else CommandApdu.MAX_SHORT_NE
+            return CommandApdu(if (last) CLA_PLAIN else CLA_CHAINED, INS_GENERAL_AUTHENTICATE, 0x00, 0x00, data, ne)
+        }
+
+        /**
+         * The longest GENERAL AUTHENTICATE of the run: a public key of the group's largest size
+         * (mapping data of the generic and chip authentication mappings, and the ephemeral keys,
+         * are public keys of this group; the integrated mapping's nonce is shorter).
+         */
+        private fun largestGeneralAuthenticate(): CommandApdu =
+            generalAuthenticateCommand(TAG_EPHEMERAL_KEY_READER, ByteArray(suite.group.maxPublicKeyLength), last = false)
+
+        /** Whether [command] can be sent: short, or extended where allowed, and within the transport's limit. */
+        private fun fits(command: CommandApdu): Boolean {
+            val extendedOk = options.extendedLengthAllowed && exchange.supportsExtendedLength
+            return (command.fitsShort || extendedOk) && command.encodedLength() <= exchange.maxCommandLength
+        }
+
+        /**
+         * Sends one command exactly once ([exchange] is the raw sender: no 61xx or 6Cxx follow-up).
+         * A command the transport cannot carry becomes [PaceFailure.EXTENDED_LENGTH_REQUIRED] at
+         * [step].
+         */
         private suspend fun send(
             step: PaceStep,
             command: CommandApdu,
@@ -281,8 +315,22 @@ internal object Pace {
                 exchange.send(command, options.extendedLengthAllowed)
             } catch (e: ExtendedLengthRequired) {
                 throw PaceException(PaceFailure.EXTENDED_LENGTH_REQUIRED, step, cause = e)
+            } catch (e: CommandTooLong) {
+                throw PaceException(PaceFailure.EXTENDED_LENGTH_REQUIRED, step, cause = e)
             }
     }
+
+    /**
+     * A status word to MSE:Set AT that is about the password, not the suite (TR-03110-3, B.14.1
+     * and B.14.2): a warning 62xx or 63xx (63CX: selected with X tries left) or 6982 to 6985.
+     */
+    internal fun isPasswordState(sw: Int): Boolean =
+        sw shr 8 == 0x62 ||
+            sw shr 8 == 0x63 ||
+            sw == StatusWord.SECURITY_STATUS_NOT_SATISFIED ||
+            sw == StatusWord.AUTHENTICATION_METHOD_BLOCKED ||
+            sw == StatusWord.REFERENCE_DATA_NOT_USABLE ||
+            sw == StatusWord.CONDITIONS_OF_USE_NOT_SATISFIED
 
     /** The content octets of the DER encoding of a dotted [oid] (tag 0x06 left out). */
     internal fun oidContent(oid: String): ByteArray {

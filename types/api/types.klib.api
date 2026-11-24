@@ -183,9 +183,13 @@ final class io.lightine.tessera.types.errors/ChipAccessDenied : io.lightine.tess
     final enum class Reason : kotlin/Enum<io.lightine.tessera.types.errors/ChipAccessDenied.Reason> { // io.lightine.tessera.types.errors/ChipAccessDenied.Reason|null[0]
         enum entry CHIP_REFUSED // io.lightine.tessera.types.errors/ChipAccessDenied.Reason.CHIP_REFUSED|null[0]
         enum entry FILE_PROTECTED // io.lightine.tessera.types.errors/ChipAccessDenied.Reason.FILE_PROTECTED|null[0]
+        enum entry KEY_BLOCKED // io.lightine.tessera.types.errors/ChipAccessDenied.Reason.KEY_BLOCKED|null[0]
         enum entry KEY_CLEARED // io.lightine.tessera.types.errors/ChipAccessDenied.Reason.KEY_CLEARED|null[0]
+        enum entry KEY_DEACTIVATED // io.lightine.tessera.types.errors/ChipAccessDenied.Reason.KEY_DEACTIVATED|null[0]
         enum entry KEY_NEEDS_PACE // io.lightine.tessera.types.errors/ChipAccessDenied.Reason.KEY_NEEDS_PACE|null[0]
         enum entry KEY_NOT_MATCHED // io.lightine.tessera.types.errors/ChipAccessDenied.Reason.KEY_NOT_MATCHED|null[0]
+        enum entry KEY_SUSPENDED // io.lightine.tessera.types.errors/ChipAccessDenied.Reason.KEY_SUSPENDED|null[0]
+        enum entry KEY_TRIES_LIMITED // io.lightine.tessera.types.errors/ChipAccessDenied.Reason.KEY_TRIES_LIMITED|null[0]
         enum entry UNEXPECTED_CHIP_ANSWER // io.lightine.tessera.types.errors/ChipAccessDenied.Reason.UNEXPECTED_CHIP_ANSWER|null[0]
 
         final val entries // io.lightine.tessera.types.errors/ChipAccessDenied.Reason.entries|#static{}entries[0]
