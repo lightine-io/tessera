@@ -117,6 +117,13 @@ internal class FakePace(
     /** Answer step 1 with this encrypted nonce instead of the real one. */
     var nonceOverride: ByteArray? = null
 
+    /**
+     * Rewrites the content of the chip's 0x7C answer at a GENERAL AUTHENTICATE step (1 to 4) before
+     * it goes out: a wrong tag, extra or missing objects (TR-RF Part 4, ISO7816_C_11 to C_35). The
+     * chip's own state goes on as if it had sent the real answer.
+     */
+    var rewriteAnswer: ((step: Int, inner: ByteArray) -> ByteArray)? = null
+
     /** How many reader tokens were refused (wrong password, usually). */
     var refusedTokens: Int = 0
         private set
@@ -208,7 +215,7 @@ internal class FakePace(
             nonceOverride
                 ?: crypto.encrypt(r.cipher.blockCipher, CipherMode.CBC, r.passwordKey, ByteArray(r.cipher.blockCipher.blockSize), s)
         r.nextStep = 2
-        return answer(TlvWriter.encode(0x80, z))
+        return answer(TlvWriter.encode(0x80, z), 1)
     }
 
     private fun step2(
@@ -219,7 +226,7 @@ internal class FakePace(
         val (chipData, ephemeral) = r.mapping.map(r, data) ?: return fail(StatusWord.WRONG_DATA)
         r.ephemeral = ephemeral
         r.nextStep = 3
-        return answer(TlvWriter.encode(0x82, chipData))
+        return answer(TlvWriter.encode(0x82, chipData), 2)
     }
 
     private fun step3(
@@ -239,7 +246,7 @@ internal class FakePace(
         r.readerKey = readerKey
         r.chipKey = chipKey
         r.nextStep = 4
-        return answer(TlvWriter.encode(0x84, chipKey))
+        return answer(TlvWriter.encode(0x84, chipKey), 3)
     }
 
     private fun step4(
@@ -258,7 +265,7 @@ internal class FakePace(
         val extra = r.mapping.finalObjects(r, r.kEnc!!)
         sm.start(r.cipher, r.kEnc!!, r.kMac!!, ByteArray(r.cipher.blockSize))
         run = null
-        return answer(TlvWriter.encode(0x86, chipToken) + extra)
+        return answer(TlvWriter.encode(0x86, chipToken) + extra, 4)
     }
 
     private fun token(
@@ -274,7 +281,13 @@ internal class FakePace(
         }
     }
 
-    private fun answer(inner: ByteArray) = ResponseApdu(TlvWriter.encode(0x7C, inner), StatusWord.SUCCESS)
+    private fun answer(
+        inner: ByteArray,
+        step: Int,
+    ): ResponseApdu {
+        val content = rewriteAnswer?.invoke(step, inner) ?: inner
+        return ResponseApdu(TlvWriter.encode(0x7C, content), StatusWord.SUCCESS)
+    }
 
     private fun fail(sw: Int): ResponseApdu {
         run = null
