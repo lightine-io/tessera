@@ -198,7 +198,7 @@ public class NfcChipRead internal constructor(
         var waitingSince = began
         // Before the first link: the app's limit on finding a document. After a lost link: the
         // limit on its return, counted from the loss.
-        var deadline: Long? = settings.waitForDocumentMillis?.let { began + it }
+        var deadline: Long? = settings.waitForDocumentMillis?.let { saturatingAdd(began, it) }
         var linkedOnce = false
         var lostTag: Tag? = null
         var failedConnects = 0
@@ -248,7 +248,7 @@ public class NfcChipRead internal constructor(
             closeLink()
             lostTag = found.tag
             waitingSince = env.now()
-            deadline = waitingSince + settings.waitForReturnMillis
+            deadline = saturatingAdd(waitingSince, settings.waitForReturnMillis)
             setIntake(true)
         }
     }
@@ -415,6 +415,15 @@ public class NfcChipRead internal constructor(
 
         /** Failed connects in a row after which the read ends, as on iPhone. */
         internal const val MAX_CONNECT_ATTEMPTS = 3
+
+        /**
+         * [time] plus [millis], at most [Long.MAX_VALUE]: a wait the app sets to a very large value
+         * (for example `Long.MAX_VALUE` for "no limit") must not wrap round to a deadline in the past.
+         */
+        internal fun saturatingAdd(
+            time: Long,
+            millis: Long,
+        ): Long = if (millis > Long.MAX_VALUE - time) Long.MAX_VALUE else time + millis
 
         /** A failure of the link itself, not a refusal: the connect may work on the next tag. */
         private fun NfcError.isLinkLevel(): Boolean = this is NfcTagLost || this is NfcTimeout
