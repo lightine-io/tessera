@@ -184,10 +184,19 @@ internal object FakeReadFlowChip {
         dg2Bytes: Int = 900,
         /** Whether the application holds EF.SOD. */
         withSecurityObject: Boolean = true,
+        /** The chip-authentication suites DG14 offers (Part 11, 9.2.5); the default is ECDH with AES-128. */
+        caOffers: List<FakeCaOffer> = listOf(FakeCaOffer(dh = false, cipherCode = 2)),
+        /** When set, DG14 is padded to exactly this many bytes with a SecurityInfo of an unknown protocol, which a reader ignores. */
+        dg14Size: Int? = null,
+        /** The MRZ lines DG1 holds, in place of the specimen TD3 lines. */
+        dg1Lines: List<String> = lines,
+        /** DG15 in place of the active-authentication key's own (the AA handler still answers with its key). */
+        dg15Override: ByteArray? = null,
+        /** Certificates EF.SOD carries in addition to the signer's, to give it another size. */
+        extraSodCertificates: List<ByteArray> = emptyList(),
     ): FlowChip {
-        val groups = linkedMapOf(1 to FakeChipData.dg1(lines), 2 to dg2(dg2Bytes))
+        val groups = linkedMapOf(1 to FakeChipData.dg1(dg1Lines), 2 to dg2(dg2Bytes))
         val caKey = if (caInApplication || caInMasterFile) FakeCaKey.generate(c, 13) else null
-        val caOffers = listOf(FakeCaOffer(dh = false, cipherCode = 2))
         if (caInApplication || signedPaceSuites != null) {
             val entries = ArrayList<ByteArray>()
             if (caInApplication) {
@@ -196,14 +205,17 @@ internal object FakeReadFlowChip {
             }
             signedPaceSuites?.forEach { entries += paceInfo(it.oid, it.parameterId) }
             groups[14] = TlvWriter.encode(0x6E, DerWriter.set(*entries.toTypedArray()))
+            if (dg14Size != null) groups[14] = paddedDg14(entries, dg14Size)
         }
         val aa = if (activeAuthentication) FakeAa(FakeAaKey.rsa(c), c, HashAlgorithm.SHA256) else null
         if (aa != null) groups[15] = aa.dg15
+        if (dg15Override != null) groups[15] = dg15Override
         val efCom = FakeChipData.efCom(groups.keys.map { tagOf(it) })
         val app = HashMap<Int, ByteArray>()
         app[LdsIds.EF_COM] = efCom
         if (withSecurityObject) {
-            app[LdsIds.EF_SOD] = if (sodCertificates == null) pki.sod(groups) else pki.sod(groups, certificates = sodCertificates)
+            val certificates = (sodCertificates ?: listOf(pki.ds)) + extraSodCertificates
+            app[LdsIds.EF_SOD] = pki.sod(groups, certificates = certificates)
         }
         groups.forEach { (n, bytes) -> app[0x0100 + n] = bytes }
         app.putAll(extraApplicationFiles)
@@ -259,6 +271,21 @@ internal object FakeReadFlowChip {
         val flow = FlowChip(chip, pki, groups, sm, pace, bac, ca, aa)
         leadingHandlers.filterIsInstance<FakeAfterKeySwitch>().forEach { it.flow = flow }
         return flow
+    }
+
+    /** An OID under the example arc (ITU-T X.660, 2.999): no reader knows it, so the entry is skipped. */
+    private const val UNKNOWN_PROTOCOL = "2.999.1"
+
+    private fun paddedDg14(
+        entries: List<ByteArray>,
+        size: Int,
+    ): ByteArray {
+        for (filler in 0 until size) {
+            val pad = DerWriter.sequence(DerWriter.oid(UNKNOWN_PROTOCOL), DerWriter.integer(1), DerWriter.octetString(ByteArray(filler)))
+            val dg14 = TlvWriter.encode(0x6E, DerWriter.set(*(entries + pad).toTypedArray()))
+            if (dg14.size == size) return dg14
+        }
+        error("DG14 cannot be padded to $size bytes")
     }
 
     private fun tagOf(dataGroup: Int): Int =

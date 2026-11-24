@@ -85,7 +85,14 @@ internal class FakeChip(
         currentEf = null
     }
 
-    override suspend fun transceive(command: ByteArray): ByteArray {
+    override suspend fun transceive(command: ByteArray): ByteArray = answer(command)
+
+    /**
+     * [transceive] without suspending: the scripted links of the platform tests ([ScriptedChip])
+     * call it from a platform callback or a blocking call. Throws [ApduTransportException] for a
+     * lost link, as [transceive] does.
+     */
+    fun answer(command: ByteArray): ByteArray {
         check(command.size <= maxCommandLength) { "command of ${command.size} bytes exceeds $maxCommandLength" }
         val index = received.size
         received += command.copyOf()

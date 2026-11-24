@@ -97,8 +97,12 @@ internal class FakeSessionPort(
         onBegin(this)
     }
 
+    /** Called by restartPolling(), like Core NFC polling again (a document still near is found again). */
+    var onRestart: (FakeSessionPort) -> Unit = {}
+
     override fun restartPolling() {
         restarts++
+        onRestart(this)
     }
 
     override fun invalidate() {
