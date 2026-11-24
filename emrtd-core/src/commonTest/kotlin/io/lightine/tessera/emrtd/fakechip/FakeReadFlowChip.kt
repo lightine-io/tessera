@@ -172,6 +172,12 @@ internal object FakeReadFlowChip {
         pki: Pki = Pki.rsa(keys),
         /** The certificates EF.SOD carries; empty for a file that names no signer of its own. */
         sodCertificates: List<ByteArray>? = null,
+        /** Start with the eMRTD application current, as on iOS; otherwise the master file, as on Android. */
+        startInApplication: Boolean = false,
+        /** Whether the chip takes SELECT MF as Part 10, Table 1 gives it (`00 A4 00 0C`). */
+        acceptsSelectMf: Boolean = true,
+        /** Whether the chip takes SELECT MF with the identifier 3F00 as data. */
+        acceptsSelectMfById: Boolean = true,
     ): FlowChip {
         val groups = linkedMapOf(1 to FakeChipData.dg1(lines), 2 to dg2())
         val caKey = if (caInApplication || caInMasterFile) FakeCaKey.generate(c, 13) else null
@@ -234,7 +240,15 @@ internal object FakeReadFlowChip {
         // The chip-authentication handler goes before PACE's: both answer GENERAL AUTHENTICATE, and only
         // the CA handler checks that its own MSE came first.
         val handlers = leadingHandlers + listOfNotNull(sm, tagLoss) + extraHandlers + listOfNotNull(ca, pace, bac, aa)
-        val flow = FlowChip(FakeChip(files, handlers = handlers), pki, groups, sm, pace, bac, ca, aa)
+        val chip =
+            FakeChip(
+                files,
+                handlers = handlers,
+                startIn = if (startInApplication) LdsIds.LDS1_AID.toList() else null,
+                acceptsSelectMf = acceptsSelectMf,
+                acceptsSelectMfById = acceptsSelectMfById,
+            )
+        val flow = FlowChip(chip, pki, groups, sm, pace, bac, ca, aa)
         leadingHandlers.filterIsInstance<FakeAfterKeySwitch>().forEach { it.flow = flow }
         return flow
     }

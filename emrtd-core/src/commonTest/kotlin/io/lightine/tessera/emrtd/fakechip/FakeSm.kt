@@ -74,11 +74,16 @@ internal class FakeSm(
         chip: FakeChip,
         c: CommandApdu,
     ): Boolean {
-        if (openFiles.isEmpty() || chip.currentApplication != null) return false
+        if (openFiles.isEmpty()) return false
+        // SELECT MF, in either form, from whichever DF is current.
+        if (c.ins == ChipCommands.INS_SELECT && c.p1 == 0x00 && c.data.isEmpty()) return true
+        val fid = if (c.data.size == 2) ((c.data[0].toInt() and 0xFF) shl 8) or (c.data[1].toInt() and 0xFF) else null
+        if (c.ins == ChipCommands.INS_SELECT && c.p1 == 0x00 && fid == FakeChip.MF_FID) return true
+        // An open file only while the master file is current: in the application such a SELECT is
+        // refused with 6982 like any other file command before a session.
+        if (chip.currentApplication != null) return false
         if (c.ins == ChipCommands.INS_READ_BINARY) return chip.currentEf in openFiles
-        if (c.ins != ChipCommands.INS_SELECT || c.data.size != 2) return false
-        val fid = ((c.data[0].toInt() and 0xFF) shl 8) or (c.data[1].toInt() and 0xFF)
-        return (c.p1 == 0x00 && fid == FakeChip.MF_FID) || (c.p1 == ChipCommands.SELECT_EF_UNDER_CURRENT_DF && fid in openFiles)
+        return c.ins == ChipCommands.INS_SELECT && c.p1 == ChipCommands.SELECT_EF_UNDER_CURRENT_DF && fid in openFiles
     }
 
     private fun abort(sw: Int): ResponseApdu {

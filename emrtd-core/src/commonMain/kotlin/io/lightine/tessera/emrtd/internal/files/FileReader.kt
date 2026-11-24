@@ -28,6 +28,11 @@ import kotlin.coroutines.cancellation.CancellationException
  * A file's content is its outer BER-TLV: when a chip returns more bytes than that TLV declares
  * (some chips send a short file's whole padded length with 6282), the reader keeps exactly the
  * declared length, drops the trailing bytes and stops reading.
+ *
+ * Offsets up to 32 767 are read with READ BINARY `B0`, and a `B0` read never reaches past that
+ * offset, because some chips do not let `B0` and `B1` overlap (Part 10, section 3.6.3.1, Note 1).
+ * Later offsets use `B1` with the offset in DO'54'; its answer carries the bytes in DO'53'
+ * (Part 10, Table 6), and only that object's value is kept.
  */
 internal class FileReader(
     private val sender: ApduSender,
@@ -38,15 +43,30 @@ internal class FileReader(
             select(ChipCommands.selectApplication(LdsIds.LDS1_AID), null, extendedLengthAllowed)
         }
 
+    /** How many bytes of the file the last read had received when it ended, for telemetry. */
+    var bytesReadSoFar: Int = 0
+        private set
+
+    /**
+     * Selects the master file: first as Part 10, Table 1 gives it (`00 A4 00 0C`, no data), then,
+     * when the chip answers that with any status other than 9000, by its identifier
+     * (`00 A4 00 0C 02 3F00`), which many chips expect instead. Throws the second answer's failure
+     * when the chip takes neither form; a refused SELECT leaves the current DF as it was.
+     */
     suspend fun selectMasterFile(extendedLengthAllowed: Boolean = false) =
         withTypedFailures {
-            select(ChipCommands.selectMasterFile(), MASTER_FILE_ID, extendedLengthAllowed)
+            try {
+                select(ChipCommands.selectMasterFile(), MASTER_FILE_ID, extendedLengthAllowed)
+            } catch (e: FileReadFailure) {
+                select(ChipCommands.selectMasterFileById(), MASTER_FILE_ID, extendedLengthAllowed)
+            }
         }
 
     suspend fun selectFile(
         fid: Int,
         extendedLengthAllowed: Boolean = false,
     ) = withTypedFailures {
+        bytesReadSoFar = 0
         select(ChipCommands.selectFile(fid), fid, extendedLengthAllowed)
     }
 
@@ -56,7 +76,18 @@ internal class FileReader(
         extendedLengthAllowed: Boolean = false,
     ): ByteArray =
         withTypedFailures {
+            bytesReadSoFar = 0
             select(ChipCommands.selectFile(fid), fid, extendedLengthAllowed)
+            readSelectedFile(fid, extendedLengthAllowed)
+        }
+
+    /** Reads the whole of the current EF, which a [selectFile] of [fid] made current. */
+    suspend fun readCurrentFile(
+        fid: Int,
+        extendedLengthAllowed: Boolean = false,
+    ): ByteArray =
+        withTypedFailures {
+            bytesReadSoFar = 0
             readSelectedFile(fid, extendedLengthAllowed)
         }
 
@@ -69,6 +100,7 @@ internal class FileReader(
         extendedLengthAllowed: Boolean = false,
     ): ByteArray =
         withTypedFailures {
+            bytesReadSoFar = 0
             val firstSize = chunkSize(0, 0, extendedLengthAllowed, sfi)
             val first = sender.send(ChipCommands.readBinaryBySfi(sfi, 0, firstSize), extendedLengthAllowed)
             readAfterFirst(first, firstSize, extendedLengthAllowed)
@@ -92,6 +124,7 @@ internal class FileReader(
         validateReadStatus(first, fid)
         val firstBytes = first.data
         if (firstBytes.size > firstRequested) throw MalformedFile(null)
+        bytesReadSoFar = firstBytes.size
         val totalLength =
             try {
                 TlvParser().declaredTotalLength(firstBytes)
@@ -112,16 +145,35 @@ internal class FileReader(
             val response = sendRead(offset, requested, extendedLengthAllowed)
             validateReadStatus(response, fid)
             if (response.data.size > requested) throw MalformedFile(null)
-            if (response.data.size > totalLength - content.size) {
+            val data = if (offset > MAX_SHORT_OFFSET) offsetAnswerData(response.data) else response.data
+            if (data.size > totalLength - content.size) {
                 // This answer reaches past the declared end: keep what the TLV needs and stop.
-                content.write(response.data, 0, totalLength - content.size)
+                content.write(data, 0, totalLength - content.size)
+                bytesReadSoFar = content.size
                 break
             }
-            content.write(response.data)
+            content.write(data)
+            bytesReadSoFar = content.size
             if (response.sw == StatusWord.END_OF_FILE_BEFORE_NE) break
-            if (response.data.isEmpty()) throw FileProtocolFailure()
+            if (data.isEmpty()) throw FileProtocolFailure()
         }
         return content.toByteArray()
+    }
+
+    /**
+     * The file bytes of a `B1` answer: the value of DO'53' (Part 10, Table 6). An empty answer is
+     * no bytes; anything else that is not exactly one DO'53' is an unusable answer.
+     */
+    private fun offsetAnswerData(answer: ByteArray): ByteArray {
+        if (answer.isEmpty()) return answer
+        val dataObject =
+            try {
+                TlvParser().parseSingle(answer)
+            } catch (e: TlvException) {
+                throw FileProtocolFailure()
+            }
+        if (dataObject.tag != DISCRETIONARY_DATA_TAG) throw FileProtocolFailure()
+        return dataObject.value()
     }
 
     private suspend fun sendRead(
@@ -156,13 +208,21 @@ internal class FileReader(
             extendedLengthAllowed &&
                 sender.supportsExtendedLength &&
                 extendedCommand.encodedLength() <= sender.maxCommandLength
-        val chunk =
+        val wanted =
             if (canUseExtended && remaining > CommandApdu.MAX_SHORT_NE) {
                 minOf(remaining, MAX_EXTENDED_CHUNK)
             } else if (remaining <= 0) {
                 DEFAULT_SHORT_CHUNK
             } else {
                 minOf(remaining, DEFAULT_SHORT_CHUNK)
+            }
+        // A B0 read stops at offset 32 767; B1 reads on from 32 768 (Part 10, 3.6.3.1, Note 1).
+        // A B1 answer also spends up to 4 bytes of Ne on the DO'53' header (Table 6).
+        val chunk =
+            when {
+                offset <= MAX_SHORT_OFFSET -> minOf(wanted, MAX_SHORT_OFFSET + 1 - offset)
+                remaining > 0 -> minOf(wanted + OFFSET_ANSWER_HEADER, chunkLimit(canUseExtended && remaining > CommandApdu.MAX_SHORT_NE))
+                else -> wanted
             }
         val shortCommand =
             if (offset > MAX_SHORT_OFFSET) {
@@ -231,5 +291,13 @@ internal class FileReader(
         const val MAX_EXTENDED_CHUNK = CommandApdu.MAX_EXTENDED_NE - 1
         const val MAX_SHORT_OFFSET = 0x7FFF
         const val MASTER_FILE_ID = 0x3F00
+
+        /** DO'53': the discretionary data object that carries a `B1` answer's bytes. */
+        const val DISCRETIONARY_DATA_TAG = 0x53
+
+        /** The most a DO'53' header takes: the tag and a three-byte length (`53 82 xx xx`). */
+        const val OFFSET_ANSWER_HEADER = 4
+
+        private fun chunkLimit(extended: Boolean): Int = if (extended) MAX_EXTENDED_CHUNK else DEFAULT_SHORT_CHUNK
     }
 }

@@ -29,9 +29,16 @@ internal class FakeFileSystem(
 /**
  * A chip in memory that answers APDUs: an [ApduTransport] for tests, with no device.
  *
- * The core implements a plain (unprotected) chip: SELECT by AID and by file identifier, READ BINARY
- * by offset and by short file identifier, and the ISO/IEC 7816-4 status-word rules. Protocol
- * handlers ([handlers]) run first and can take over any command.
+ * The core implements a plain (unprotected) chip: SELECT by AID, SELECT MF, SELECT of an EF by
+ * file identifier, READ BINARY by offset and by short file identifier, and the ISO/IEC 7816-4
+ * status-word rules. Protocol handlers ([handlers]) run first and can take over any command.
+ *
+ * Like a real chip, SELECT of an EF by file identifier (P1 `02`) finds only an EF under the current
+ * DF and answers 6A82 for any other. The chip starts with the master file current, as on Android
+ * after activation, or with [startIn] current, as on iOS, where the system has already selected
+ * the eMRTD application. SELECT MF takes the Part 10, Table 1 form (`00 A4 00 0C`) when
+ * [acceptsSelectMf] is on and the `02 3F00` form when [acceptsSelectMfById] is on; a refused
+ * SELECT MF answers 6A86 and leaves the current DF as it was.
  *
  * Data comes from the SDK's own generator at test time ([FakeChipData]); no binary chip file is
  * ever committed.
@@ -41,6 +48,9 @@ internal class FakeChip(
     override val maxCommandLength: Int = SHORT_MAX_COMMAND,
     override val supportsExtendedLength: Boolean = false,
     val handlers: List<FakeCommandHandler> = emptyList(),
+    startIn: List<Byte>? = null,
+    val acceptsSelectMf: Boolean = true,
+    val acceptsSelectMfById: Boolean = true,
 ) : ApduTransport {
     /** Every command received, in order, as bytes. */
     val received = mutableListOf<ByteArray>()
@@ -49,7 +59,7 @@ internal class FakeChip(
     var loseTagAtCommand: Int? = null
 
     /** The current DF: `null` for the master file, else the selected application's AID. */
-    var currentApplication: List<Byte>? = null
+    var currentApplication: List<Byte>? = startIn
         private set
 
     /** The current EF's file identifier, or `null`. */
@@ -101,13 +111,10 @@ internal class FakeChip(
             }
 
             0x00, ChipCommands.SELECT_EF_UNDER_CURRENT_DF -> {
+                if (c.p1 == 0x00 && c.data.isEmpty()) return selectMasterFile(acceptsSelectMf)
                 if (c.data.size != 2) return status(StatusWord.WRONG_LENGTH)
                 val fid = ((c.data[0].toInt() and 0xFF) shl 8) or (c.data[1].toInt() and 0xFF)
-                if (c.p1 == 0x00 && fid == MF_FID) {
-                    currentApplication = null
-                    currentEf = null
-                    return status(StatusWord.SUCCESS)
-                }
+                if (c.p1 == 0x00 && fid == MF_FID) return selectMasterFile(acceptsSelectMfById)
                 if (fid !in currentFiles()) return status(StatusWord.FILE_NOT_FOUND)
                 currentEf = fid
                 status(StatusWord.SUCCESS)
@@ -117,6 +124,13 @@ internal class FakeChip(
                 status(StatusWord.INCORRECT_P1_P2)
             }
         }
+    }
+
+    private fun selectMasterFile(accepted: Boolean): ResponseApdu {
+        if (!accepted) return status(StatusWord.INCORRECT_P1_P2)
+        currentApplication = null
+        currentEf = null
+        return status(StatusWord.SUCCESS)
     }
 
     private fun readBinary(c: CommandApdu): ResponseApdu {

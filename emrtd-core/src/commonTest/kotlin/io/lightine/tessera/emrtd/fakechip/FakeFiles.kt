@@ -6,8 +6,13 @@ import io.lightine.tessera.emrtd.internal.apdu.ResponseApdu
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
 import io.lightine.tessera.emrtd.internal.apdu.u
 import io.lightine.tessera.emrtd.internal.tlv.TlvParser
+import io.lightine.tessera.emrtd.internal.tlv.TlvWriter
 
-/** Handles READ BINARY with the offset data object (B1), leaving the fake-chip core unchanged. */
+/**
+ * Handles READ BINARY with the offset data object (B1), leaving the fake-chip core unchanged. The
+ * answer carries the file bytes in DO'53' (Part 10, Table 6), and the whole answer, header included,
+ * fits in Ne.
+ */
 internal object FakeFiles : FakeCommandHandler {
     override fun handle(
         chip: FakeChip,
@@ -32,12 +37,23 @@ internal object FakeFiles : FakeCommandHandler {
         val content = files[fid] ?: return response(StatusWord.FILE_NOT_FOUND)
         if (offset > content.size) return response(StatusWord.WRONG_P1_P2)
         val start = offset.toInt()
-        val size = minOf(command.ne, content.size - start)
-        val data = content.copyOfRange(start, start + size)
-        return ResponseApdu(data, if (size < command.ne) StatusWord.END_OF_FILE_BEFORE_NE else StatusWord.SUCCESS)
+        val room = command.ne - headerSize(command.ne)
+        if (room <= 0) return response(StatusWord.WRONG_LENGTH)
+        val size = minOf(room, content.size - start)
+        val data = TlvWriter.encode(DISCRETIONARY_DATA_TAG, content.copyOfRange(start, start + size))
+        return ResponseApdu(data, if (size < room) StatusWord.END_OF_FILE_BEFORE_NE else StatusWord.SUCCESS)
     }
 
     private fun response(statusWord: Int) = ResponseApdu(ByteArray(0), statusWord)
 
+    /** The DO'53' header for a value that fills the rest of [ne] bytes. */
+    private fun headerSize(ne: Int): Int =
+        when {
+            ne - 2 <= 0x7F -> 2
+            ne - 3 <= 0xFF -> 3
+            else -> 4
+        }
+
     private const val OFFSET_TAG = 0x54
+    private const val DISCRETIONARY_DATA_TAG = 0x53
 }
