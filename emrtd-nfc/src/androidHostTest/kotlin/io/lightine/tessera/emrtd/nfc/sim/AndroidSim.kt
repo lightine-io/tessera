@@ -92,6 +92,7 @@ internal class AndroidSim(
     private val dispatcher = StandardTestDispatcher(test.testScheduler)
 
     @Volatile var chipMillis = 0L
+
     /**
      * The read's clock: the scheduler's time, the chip's time, and an offset like a phone's uptime
      * (the platform clock never starts at 0, so a sum with a large wait can overflow, as on a device).

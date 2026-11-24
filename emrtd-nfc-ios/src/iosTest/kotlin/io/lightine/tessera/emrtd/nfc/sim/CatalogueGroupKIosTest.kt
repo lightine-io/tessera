@@ -1,6 +1,5 @@
 package io.lightine.tessera.emrtd.nfc
 
-import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
 import io.lightine.tessera.emrtd.ChipCheckKind
 import io.lightine.tessera.emrtd.ChipReadEnding
 import io.lightine.tessera.emrtd.ChipReadOptions
@@ -17,6 +16,7 @@ import io.lightine.tessera.emrtd.internal.pa.TestKeys
 import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.errors.NfcUnavailable
 import io.lightine.tessera.types.vocabulary.CheckOutcome
+import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -58,8 +58,14 @@ internal fun assertDeviceChecksPass(ending: ChipReadEnding) {
     val read = assertIs<ChipReadEnding.Complete>(ending, "$ending").read
     assertEquals(ChipAccessProtocol.BAC, read.access.protocol)
     assertTrue(read.checks.none { it.outcome is CheckOutcome.Failed }, "${read.checks}")
-    assertEquals(CheckOutcome.Passed, read.outcomeOf(ChipCheckKind.SignatureVerifies(io.lightine.tessera.emrtd.ChipSignedFile.SECURITY_OBJECT)))
-    assertEquals(CheckOutcome.Passed, read.outcomeOf(ChipCheckKind.ChipAuthentication(io.lightine.tessera.emrtd.ChipFileContext.EMRTD_APPLICATION)))
+    assertEquals(
+        CheckOutcome.Passed,
+        read.outcomeOf(ChipCheckKind.SignatureVerifies(io.lightine.tessera.emrtd.ChipSignedFile.SECURITY_OBJECT)),
+    )
+    assertEquals(
+        CheckOutcome.Passed,
+        read.outcomeOf(ChipCheckKind.ChipAuthentication(io.lightine.tessera.emrtd.ChipFileContext.EMRTD_APPLICATION)),
+    )
     for (n in listOf(1, 2, 14, 15)) assertEquals(CheckOutcome.Passed, read.outcomeOf(ChipCheckKind.DataGroupHashMatches(n)), "DG$n")
 }
 
@@ -101,7 +107,7 @@ class CatalogueGroupKIosTest {
     }
 
     @Test
-    fun K_01_completeRead_applicationSelectedBySystem_122CommandsInTheRecordedTime() =
+    fun k01_completeRead_applicationSelectedBySystem_122CommandsInTheRecordedTime() =
         simTest { flow ->
             val r = read(flow)
 
@@ -123,7 +129,7 @@ class CatalogueGroupKIosTest {
         }
 
     @Test
-    fun K_01_completeRead_applicationCurrentButNotSaid_123Commands() =
+    fun k01_completeRead_applicationCurrentButNotSaid_123Commands() =
         simTest(initialSelectedAid = null) { flow ->
             val r = read(flow)
 
@@ -132,19 +138,27 @@ class CatalogueGroupKIosTest {
         }
 
     @Test
-    fun K_02_cardAccessProbe_fourPlainCommandsWhenTheSystemSaysAndFiveWhenNot() =
+    fun k02_cardAccessProbe_fourPlainCommandsWhenTheSystemSaysAndFiveWhenNot() =
         simTest { flow ->
             read(flow)
             // SELECT MF, SELECT 011C (9000 although absent), READ BINARY (6986), SELECT application.
-            val probe = script.exchanges.takeWhile { it.command.ins != 0x84 }.map { it.command.ins to (it.reply as io.lightine.tessera.emrtd.fakechip.ChipReply.Answer).sw }
+            val probe =
+                script.exchanges.takeWhile { it.command.ins != 0x84 }.map {
+                    it.command.ins to
+                        (it.reply as io.lightine.tessera.emrtd.fakechip.ChipReply.Answer).sw
+                }
             assertEquals(listOf(0xA4 to 0x9000, 0xA4 to 0x9000, 0xB0 to 0x6986, 0xA4 to 0x9000), probe)
         }
 
     @Test
-    fun K_02_cardAccessProbe_oldOrderStartsWithTheSelectThatAnswers6982() =
+    fun k02_cardAccessProbe_oldOrderStartsWithTheSelectThatAnswers6982() =
         simTest(initialSelectedAid = null) { flow ->
             read(flow)
-            val probe = script.exchanges.takeWhile { it.command.ins != 0x84 }.map { (it.reply as io.lightine.tessera.emrtd.fakechip.ChipReply.Answer).sw }
+            val probe =
+                script.exchanges
+                    .takeWhile {
+                        it.command.ins != 0x84
+                    }.map { (it.reply as io.lightine.tessera.emrtd.fakechip.ChipReply.Answer).sw }
             assertEquals(listOf(0x6982, 0x9000, 0x9000, 0x6986, 0x9000), probe)
         }
 
@@ -168,13 +182,17 @@ class CatalogueGroupKIosTest {
         assertEquals(2, (lost.value.state as ChipReadState.LinkLost).restartsLeft)
         val lossSent = script.exchanges.first { it.reply is io.lightine.tessera.emrtd.fakechip.ChipReply.LinkLost }.sentAtMillis
         assertEquals(lossSent + Shapes.LOSS_AFTER_MILLIS, lost.atMillis, "the loss is seen when the platform reports it")
-        val after = r.updates.dropWhile { it.value.state !is ChipReadState.LinkLost }.drop(1).map { it.value.state::class.simpleName }
+        val after =
+            r.updates
+                .dropWhile { it.value.state !is ChipReadState.LinkLost }
+                .drop(1)
+                .map { it.value.state::class.simpleName }
         assertEquals(listOf("DocumentFound", "Connecting"), after.take(2), "document found again, then a new link")
         assertTrue(alerts.isNotEmpty())
     }
 
     @Test
-    fun K_03_externalAuthenticateUnansweredInFirstSecond_resumesAndCompletes() =
+    fun k03_externalAuthenticateUnansweredInFirstSecond_resumesAndCompletes() =
         simTest { flow ->
             val r = firstSecondLoss(flow, Shapes.externalAuthenticate)
             assertRecoveredInTheSameSession(r)
@@ -183,7 +201,7 @@ class CatalogueGroupKIosTest {
         }
 
     @Test
-    fun K_03_externalAuthenticateUnansweredInFirstSecond_endPolicyFailsCleanly() =
+    fun k03_externalAuthenticateUnansweredInFirstSecond_endPolicyFailsCleanly() =
         simTest { flow ->
             val r = firstSecondLoss(flow, Shapes.externalAuthenticate, CoreNfcReadSettings(linkLoss = LinkLossPolicy.End))
             val ending = assertIs<ChipReadEnding.Failed>(r.ending)
@@ -193,26 +211,26 @@ class CatalogueGroupKIosTest {
         }
 
     @Test
-    fun K_04_plainSelectUnansweredInFirstSecond_resumesAndCompletes() =
+    fun k04_plainSelectUnansweredInFirstSecond_resumesAndCompletes() =
         simTest { flow ->
             assertRecoveredInTheSameSession(firstSecondLoss(flow, Shapes.plainSelectOfTheApplication))
         }
 
     @Test
-    fun K_04_plainSelectUnansweredInFirstSecond_endPolicyFailsCleanly() =
+    fun k04_plainSelectUnansweredInFirstSecond_endPolicyFailsCleanly() =
         simTest { flow ->
             val r = firstSecondLoss(flow, Shapes.plainSelectOfTheApplication, CoreNfcReadSettings(linkLoss = LinkLossPolicy.End))
             assertEquals(NfcTagLost, assertIs<ChipReadEnding.Failed>(r.ending).error)
         }
 
     @Test
-    fun K_05_firstProtectedSelectUnansweredInFirstSecond_resumesAndCompletes() =
+    fun k05_firstProtectedSelectUnansweredInFirstSecond_resumesAndCompletes() =
         simTest { flow ->
             assertRecoveredInTheSameSession(firstSecondLoss(flow, Shapes.firstProtectedSelect))
         }
 
     @Test
-    fun K_05_firstProtectedSelectUnansweredInFirstSecond_endPolicyIsPartialAfterAccess() =
+    fun k05_firstProtectedSelectUnansweredInFirstSecond_endPolicyIsPartialAfterAccess() =
         simTest { flow ->
             val r = firstSecondLoss(flow, Shapes.firstProtectedSelect, CoreNfcReadSettings(linkLoss = LinkLossPolicy.End))
             val ending = assertIs<ChipReadEnding.Partial>(r.ending)
@@ -223,7 +241,7 @@ class CatalogueGroupKIosTest {
     // --- K-06 / D-15 / I-09: MSE:Set KAT unanswered for 18.3 s -----------------------------------
 
     @Test
-    fun K_06_mseSetKatAnsweredOnlyAfter18s_ourFiveSecondLimitFiresAndTheReadRecovers() =
+    fun k06_mseSetKatAnsweredOnlyAfter18s_ourFiveSecondLimitFiresAndTheReadRecovers() =
         simTest { flow ->
             script.fault(ChipFaultAction.Delay(18_300), match = Shapes.mseSetKat)
             val r = read(flow)
@@ -232,7 +250,7 @@ class CatalogueGroupKIosTest {
         }
 
     @Test
-    fun K_06_mseSetKatNeverAnswered_ourFiveSecondLimitFiresAndTheReadRecovers() =
+    fun k06_mseSetKatNeverAnswered_ourFiveSecondLimitFiresAndTheReadRecovers() =
         simTest { flow ->
             script.fault(ChipFaultAction.Silence, match = Shapes.mseSetKat)
             val r = read(flow)
@@ -254,7 +272,7 @@ class CatalogueGroupKIosTest {
     // --- K-07 / F-35: no tag reported, the system ends the session (202) ------------------------
 
     @Test
-    fun K_07_noTagReportedThenSystemEnds202_endedBySystemAndTheNextStartWaits() =
+    fun k07_noTagReportedThenSystemEnds202_endedBySystemAndTheNextStartWaits() =
         simTest { flow ->
             documentInField = false
             val (_, first) = start(deviceOptions(flow))
@@ -284,7 +302,7 @@ class CatalogueGroupKIosTest {
         }
 
     @Test
-    fun K_08_newSessionRefusedBusy203_notStartedAndTheNextStartWaits() =
+    fun k08_newSessionRefusedBusy203_notStartedAndTheNextStartWaits() =
         simTest { flow ->
             refuseBeginWith = IosSim.codeError(CoreNfcErrorCode.SYSTEM_IS_BUSY, CoreNfcErrorSource.SESSION_END)
             val (_, first) = start(deviceOptions(flow))
@@ -300,7 +318,7 @@ class CatalogueGroupKIosTest {
         }
 
     @Test
-    fun K_09_everyNewLinkLosesItsFirstCommand_budgetUsedUpEndsFailedWithTheLoss() =
+    fun k09_everyNewLinkLosesItsFirstCommand_budgetUsedUpEndsFailedWithTheLoss() =
         simTest { flow ->
             script.fault(ChipFaultAction.LoseLink(Shapes.LOSS_AFTER_MILLIS), times = 99) { it.indexInLink == 0 }
             val r = read(flow)
@@ -313,7 +331,7 @@ class CatalogueGroupKIosTest {
         }
 
     @Test
-    fun K_10_recordedTimings_eachCommandInItsRangeAndTheReadInFourToSixSeconds() =
+    fun k10_recordedTimings_eachCommandInItsRangeAndTheReadInFourToSixSeconds() =
         simTest { flow ->
             read(flow)
             val reads = script.exchanges.filter { it.command.ins == 0xB0 && it.command.secured }.map { it.reply.delayMillis }
@@ -329,7 +347,7 @@ class CatalogueGroupKIosTest {
      * time; the fractions are in the report of card TES-346.
      */
     @Test
-    fun K_11_progressFidelity_neverBackAndNeverFarAheadOfTheTime() =
+    fun k11_progressFidelity_neverBackAndNeverFarAheadOfTheTime() =
         simTest { flow ->
             val r = read(flow)
             val ex = script.exchangesOf(1)
@@ -343,7 +361,7 @@ class CatalogueGroupKIosTest {
         }
 
     @Test
-    fun K_12_dg1Of93And95Bytes_bothParse() =
+    fun k12_dg1Of93And95Bytes_bothParse() =
         simTest(td1 = true) { flow ->
             assertEquals(95, DeviceChipProfile.sizes(flow).getValue("DG1"))
             val r = read(flow)
@@ -352,7 +370,7 @@ class CatalogueGroupKIosTest {
         }
 
     @Test
-    fun K_12_dg1Of93Bytes_parses() =
+    fun k12_dg1Of93Bytes_parses() =
         simTest { flow ->
             assertEquals(93, DeviceChipProfile.sizes(flow).getValue("DG1"))
             val read = assertIs<ChipReadEnding.Complete>(read(flow).ending).read
@@ -360,7 +378,7 @@ class CatalogueGroupKIosTest {
         }
 
     @Test
-    fun D_15_mseSetKatUnansweredUntilThePlatformLimit_isALinkLossAtFiveSeconds() =
+    fun d15_mseSetKatUnansweredUntilThePlatformLimit_isALinkLossAtFiveSeconds() =
         simTest { flow ->
             script.fault(ChipFaultAction.Delay(18_300), match = Shapes.mseSetKat)
             val r = read(flow)

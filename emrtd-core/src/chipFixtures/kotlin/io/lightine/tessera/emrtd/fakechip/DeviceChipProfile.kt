@@ -133,7 +133,9 @@ internal object DeviceChipProfile {
 
     /** The sizes of the files the reader reads from [flow], by name. */
     fun sizes(flow: FlowChip): Map<String, Int> {
-        val app = flow.chip.files.applications.getValue(LdsIds.LDS1_AID.toList())
+        val app =
+            flow.chip.files.applications
+                .getValue(LdsIds.LDS1_AID.toList())
         return mapOf(
             "EF.COM" to app.getValue(LdsIds.EF_COM).size,
             "EF.SOD" to app.getValue(LdsIds.EF_SOD).size,

@@ -96,7 +96,7 @@ class CatalogueAndroidTest {
     // --- Group K ----------------------------------------------------------------------------------
 
     @Test
-    fun K_01_completeRead_masterFileCurrent_121CommandsInTheRecordedTime() =
+    fun k01_completeRead_masterFileCurrent_121CommandsInTheRecordedTime() =
         simTest { flow ->
             val r = read(deviceOptions(flow))
             assertDeviceChecksPass(r.ending)
@@ -104,15 +104,22 @@ class CatalogueAndroidTest {
             // The recorded 122-123 are iPhone counts; Android starts in the master file and needs
             // neither the SELECT that answers 6982 nor SELECT MF: 121 (see the iOS group K tests).
             assertEquals(121, script.exchanges.size)
-            assertEquals(listOf("Starting", "WaitingForDocument", "DocumentFound", "Connecting", "OpeningAccess", "ReadingFile"), r.stateNames.take(6))
+            assertEquals(
+                listOf("Starting", "WaitingForDocument", "DocumentFound", "Connecting", "OpeningAccess", "ReadingFile"),
+                r.stateNames.take(6),
+            )
             assertTrue("AuthenticatingChip" in r.stateNames)
             assertEquals("CheckingFiles", r.stateNames.last())
             assertTrue(commandSpan(1) in 4_000..5_800, "span ${commandSpan(1)}")
-            assertEquals(listOf(NfcReadSettings.DEFAULT_COMMAND_TIMEOUT_MILLIS.toInt()), channels.single().timeouts, "the 5 s limit set once")
+            assertEquals(
+                listOf(NfcReadSettings.DEFAULT_COMMAND_TIMEOUT_MILLIS.toInt()),
+                channels.single().timeouts,
+                "the 5 s limit set once",
+            )
         }
 
     @Test
-    fun K_02_cardAccessProbe_threePlainCommandsFromTheMasterFile() =
+    fun k02_cardAccessProbe_threePlainCommandsFromTheMasterFile() =
         simTest { flow ->
             read(deviceOptions(flow))
             val probe = script.exchanges.takeWhile { it.command.ins != 0x84 }.map { (it.reply as ChipReply.Answer).sw }
@@ -128,7 +135,7 @@ class CatalogueAndroidTest {
     }
 
     @Test
-    fun K_03_externalAuthenticateUnansweredInFirstSecond_resumesAndCompletes() =
+    fun k03_externalAuthenticateUnansweredInFirstSecond_resumesAndCompletes() =
         simTest { flow ->
             script.fault(ChipFaultAction.LoseLink(Shapes.LOSS_AFTER_MILLIS), match = Shapes.externalAuthenticate)
             recovered(read(deviceOptions(flow)))
@@ -136,7 +143,7 @@ class CatalogueAndroidTest {
         }
 
     @Test
-    fun K_03_externalAuthenticateUnansweredInFirstSecond_endPolicyFailsCleanly() =
+    fun k03_externalAuthenticateUnansweredInFirstSecond_endPolicyFailsCleanly() =
         simTest { flow ->
             script.fault(ChipFaultAction.LoseLink(Shapes.LOSS_AFTER_MILLIS), match = Shapes.externalAuthenticate)
             val r = read(deviceOptions(flow), NfcReadSettings(linkLoss = LinkLossPolicy.End))
@@ -145,14 +152,14 @@ class CatalogueAndroidTest {
         }
 
     @Test
-    fun K_04_plainSelectUnansweredInFirstSecond_resumesAndCompletes() =
+    fun k04_plainSelectUnansweredInFirstSecond_resumesAndCompletes() =
         simTest { flow ->
             script.fault(ChipFaultAction.LoseLink(Shapes.LOSS_AFTER_MILLIS), match = Shapes.plainSelectOfTheApplication)
             recovered(read(deviceOptions(flow)))
         }
 
     @Test
-    fun K_04_plainSelectUnansweredInFirstSecond_endPolicyFailsCleanly() =
+    fun k04_plainSelectUnansweredInFirstSecond_endPolicyFailsCleanly() =
         simTest { flow ->
             script.fault(ChipFaultAction.LoseLink(Shapes.LOSS_AFTER_MILLIS), match = Shapes.plainSelectOfTheApplication)
             val r = read(deviceOptions(flow), NfcReadSettings(linkLoss = LinkLossPolicy.End))
@@ -160,14 +167,14 @@ class CatalogueAndroidTest {
         }
 
     @Test
-    fun K_05_firstProtectedSelectUnansweredInFirstSecond_resumesAndCompletes() =
+    fun k05_firstProtectedSelectUnansweredInFirstSecond_resumesAndCompletes() =
         simTest { flow ->
             script.fault(ChipFaultAction.LoseLink(Shapes.LOSS_AFTER_MILLIS), match = Shapes.firstProtectedSelect)
             recovered(read(deviceOptions(flow)))
         }
 
     @Test
-    fun K_05_firstProtectedSelectUnansweredInFirstSecond_endPolicyIsPartialAfterAccess() =
+    fun k05_firstProtectedSelectUnansweredInFirstSecond_endPolicyIsPartialAfterAccess() =
         simTest { flow ->
             script.fault(ChipFaultAction.LoseLink(Shapes.LOSS_AFTER_MILLIS), match = Shapes.firstProtectedSelect)
             val r = read(deviceOptions(flow), NfcReadSettings(linkLoss = LinkLossPolicy.End))
@@ -175,7 +182,7 @@ class CatalogueAndroidTest {
         }
 
     @Test
-    fun K_06_mseSetKatAnsweredOnlyAfter18s_thePlatformLimitOfFiveSecondsFiresAndTheReadRecovers() =
+    fun k06_mseSetKatAnsweredOnlyAfter18s_thePlatformLimitOfFiveSecondsFiresAndTheReadRecovers() =
         simTest { flow ->
             script.fault(ChipFaultAction.Delay(18_300), match = Shapes.mseSetKat)
             val r = read(deviceOptions(flow))
@@ -187,14 +194,14 @@ class CatalogueAndroidTest {
         }
 
     @Test
-    fun K_06_mseSetKatNeverAnswered_thePlatformLimitFiresAndTheReadRecovers() =
+    fun k06_mseSetKatNeverAnswered_thePlatformLimitFiresAndTheReadRecovers() =
         simTest { flow ->
             script.fault(ChipFaultAction.Silence, match = Shapes.mseSetKat)
             recovered(read(deviceOptions(flow)))
         }
 
     @Test
-    fun K_09_everyNewLinkLosesItsFirstCommand_budgetUsedUpEndsFailedWithTheLoss() =
+    fun k09_everyNewLinkLosesItsFirstCommand_budgetUsedUpEndsFailedWithTheLoss() =
         simTest { flow ->
             script.fault(ChipFaultAction.LoseLink(Shapes.LOSS_AFTER_MILLIS), times = 99) { it.indexInLink == 0 }
             val r = read(deviceOptions(flow))
@@ -206,14 +213,14 @@ class CatalogueAndroidTest {
         }
 
     @Test
-    fun K_10_recordedTimings_theReadInFourToSixSeconds() =
+    fun k10_recordedTimings_theReadInFourToSixSeconds() =
         simTest { flow ->
             read(deviceOptions(flow))
             assertTrue(commandSpan(1) in 4_000..5_800)
         }
 
     @Test
-    fun K_12_dg1Of95Bytes_parses() =
+    fun k12_dg1Of95Bytes_parses() =
         simTest(build = { keys -> DeviceChipProfile.build(chipCrypto(), keys, td1 = true) }) { flow ->
             val read = assertIs<ChipReadEnding.Complete>(read(deviceOptions(flow)).ending).read
             assertTrue(read.dg1 != null)
@@ -222,7 +229,7 @@ class CatalogueAndroidTest {
     // --- Group I ----------------------------------------------------------------------------------
 
     @Test
-    fun I_01_chipThreeTimesSlower_noLossAndTheSameResult() =
+    fun i01_chipThreeTimesSlower_noLossAndTheSameResult() =
         simTest(latencyFactor = 3) { flow ->
             val r = read(deviceOptions(flow))
             assertDeviceChecksPass(r.ending)
@@ -231,7 +238,7 @@ class CatalogueAndroidTest {
         }
 
     @Test
-    fun I_02_oneCommandTakes5100ms_thePlatformTimesOutAndTheReadRecovers() =
+    fun i02_oneCommandTakes5100ms_thePlatformTimesOutAndTheReadRecovers() =
         simTest { flow ->
             script.fault(ChipFaultAction.Delay(5_100), match = Shapes.firstProtectedSelect)
             recovered(read(deviceOptions(flow)))
@@ -240,19 +247,23 @@ class CatalogueAndroidTest {
     // --- Group H through the Android entry point ---------------------------------------------------
 
     @Test
-    fun H_06_lossMidDg2_theSameChipBack_keepsEarlierFilesAndContinuesDg2() =
+    fun h06_lossMidDg2_theSameChipBack_keepsEarlierFilesAndContinuesDg2() =
         simTest { flow ->
             script.fault(ChipFaultAction.LoseLink(10), match = Shapes.midDg2)
             val ending = assertIs<ChipReadEnding.Complete>(read(deviceOptions(flow)).ending)
             assertDeviceChecksPass(ending)
             assertEquals(ChipResumeOutcome.SAME_SECURITY_OBJECT, ending.read.resume)
-            assertTrue(ending.read.files.single { it.dataGroup == 2 }.continuedAt != null)
+            assertTrue(
+                ending.read.files
+                    .single { it.dataGroup == 2 }
+                    .continuedAt != null,
+            )
         }
 
     // --- Refusals: never a new attempt (DES 5.1 rule 2), review item 17 ---------------------------
 
     @Test
-    fun G_29_wrongKey_keyNotAcceptedNoRestartAndTheLinkClosed() =
+    fun g29_wrongKey_keyNotAcceptedNoRestartAndTheLinkClosed() =
         simTest { flow ->
             val r = read(ChipReadOptions(FakeReadFlowChip.wrongMrzKey(), setOf(1, 2), listOf(flow.anchor), CHECK_TIME))
             val ending = assertIs<ChipReadEnding.KeyNotAccepted>(r.ending)
@@ -263,7 +274,7 @@ class CatalogueAndroidTest {
         }
 
     @Test
-    fun H_18_secureMessagingErrorMidRead_partialAndNoNewAttempt() =
+    fun h18_secureMessagingErrorMidRead_partialAndNoNewAttempt() =
         simTest { flow ->
             script.fault(ChipFaultAction.Status(0x6988), match = Shapes.midDg2)
             val r = read(deviceOptions(flow))
@@ -273,7 +284,7 @@ class CatalogueAndroidTest {
         }
 
     @Test
-    fun H_18_badMacMidRead_partialAndNoNewAttempt() =
+    fun h18_badMacMidRead_partialAndNoNewAttempt() =
         simTest { flow ->
             script.fault(ChipFaultAction.Arm { flow.sm!!.corruptNextResponseMac = true }, match = Shapes.midDg2)
             val r = read(deviceOptions(flow))
@@ -282,8 +293,16 @@ class CatalogueAndroidTest {
         }
 
     @Test
-    fun H_18_malformedFileAfterALoss_noFurtherAttempt() =
-        simTest(build = { keys -> FakeReadFlowChip.build(chipCrypto(), keys, FlowAccess.BAC, extraApplicationFiles = mapOf(0x0101 to byteArrayOf(0x61, 0x7F, 0x01))) }) { flow ->
+    fun h18_malformedFileAfterALoss_noFurtherAttempt() =
+        simTest(build = { keys ->
+            FakeReadFlowChip.build(
+                chipCrypto(),
+                keys,
+                FlowAccess.BAC,
+                extraApplicationFiles =
+                    mapOf(0x0101 to byteArrayOf(0x61, 0x7F, 0x01)),
+            )
+        }) { flow ->
             // A loss first (a new attempt follows), then a malformed DG1 in the new attempt: the read
             // goes on to its end and the malformed file is a file error, never a reason to restart.
             script.fault(ChipFaultAction.LoseLink(10)) { it.secured && it.ins == 0xA4 }
@@ -297,7 +316,7 @@ class CatalogueAndroidTest {
     // --- Waits: review item 14 ---------------------------------------------------------------------
 
     @Test
-    fun G_19_waitForReturnZero_aLossEndsTheReadAtOnce() =
+    fun g19_waitForReturnZero_aLossEndsTheReadAtOnce() =
         simTest { flow ->
             script.fault(ChipFaultAction.LoseLink(10), match = Shapes.midDg2)
             val r = read(deviceOptions(flow), NfcReadSettings(waitForReturnMillis = 0))
@@ -306,7 +325,7 @@ class CatalogueAndroidTest {
         }
 
     @Test
-    fun G_23_waitForDocumentLongMaxValue_meansNoLimitAndDoesNotOverflow() =
+    fun g23_waitForDocumentLongMaxValue_meansNoLimitAndDoesNotOverflow() =
         simTest { flow ->
             val (read, recorder) = start(deviceOptions(flow), NfcReadSettings(waitForDocumentMillis = Long.MAX_VALUE))
             step(30_000)
@@ -317,7 +336,7 @@ class CatalogueAndroidTest {
         }
 
     @Test
-    fun G_19_waitForReturnLongMaxValue_doesNotOverflow() =
+    fun g19_waitForReturnLongMaxValue_doesNotOverflow() =
         simTest { flow ->
             script.fault(ChipFaultAction.LoseLink(10), match = Shapes.midDg2)
             val r = read(deviceOptions(flow), NfcReadSettings(waitForReturnMillis = Long.MAX_VALUE))
@@ -334,7 +353,7 @@ class CatalogueAndroidTest {
      * CURRENT behaviour: a pause of 10 s mid-read, then the screen back, ends Complete in attempt 2.
      */
     @Test
-    fun G_07_openDecision_activityPausedTenSecondsMidRead_currentlyResumesAndCompletes() =
+    fun g07_openDecision_activityPausedTenSecondsMidRead_currentlyResumesAndCompletes() =
         simTest { flow ->
             script.fault(ChipFaultAction.LoseLink(0)) { c -> Shapes.midDg2(c).also { if (it) paused = true } }
             val (read, recorder) = start(deviceOptions(flow))
@@ -350,7 +369,7 @@ class CatalogueAndroidTest {
         }
 
     @Test
-    fun G_20_openDecision_screenLockedLongerThanTheReturnWait_currentlyPartialWithTheLoss() =
+    fun g20_openDecision_screenLockedLongerThanTheReturnWait_currentlyPartialWithTheLoss() =
         simTest { flow ->
             script.fault(ChipFaultAction.LoseLink(0)) { c -> Shapes.midDg2(c).also { if (it) paused = true } }
             val (read, recorder) = start(deviceOptions(flow))
@@ -367,7 +386,7 @@ class CatalogueAndroidTest {
      * the code cannot tell it from a lost link, so it waits waitForReturnMillis and ends with the loss.
      */
     @Test
-    fun G_04_openDecision_readerOptionOffMidRead_currentlyEndsWithTheLossAfterTheWait() =
+    fun g04_openDecision_readerOptionOffMidRead_currentlyEndsWithTheLossAfterTheWait() =
         simTest { flow ->
             script.fault(ChipFaultAction.Arm { paused = true }, match = Shapes.firstProtectedSelect)
             val r = read(deviceOptions(flow))

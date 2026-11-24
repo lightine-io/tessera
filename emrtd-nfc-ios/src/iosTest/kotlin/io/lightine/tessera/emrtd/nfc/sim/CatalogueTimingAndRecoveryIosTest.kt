@@ -56,7 +56,7 @@ class CatalogueTimingAndRecoveryIosTest {
     }
 
     @Test
-    fun I_01_chipThreeTimesSlowerThanRecorded_noLossAndTheSameResult() =
+    fun i01_chipThreeTimesSlowerThanRecorded_noLossAndTheSameResult() =
         simTest(latencyFactor = 3) { flow ->
             val r = read(deviceOptions(flow))
             assertDeviceChecksPass(r.ending)
@@ -67,7 +67,7 @@ class CatalogueTimingAndRecoveryIosTest {
         }
 
     @Test
-    fun I_01_oneCommandTakes4900ms_inTheLimit_noLoss() =
+    fun i01_oneCommandTakes4900ms_inTheLimit_noLoss() =
         simTest { flow ->
             script.fault(ChipFaultAction.Delay(4_900), match = Shapes.externalAuthenticate)
             val r = read(deviceOptions(flow))
@@ -76,7 +76,7 @@ class CatalogueTimingAndRecoveryIosTest {
         }
 
     @Test
-    fun I_02_oneCommandTakes5100ms_isALossAndTheLateAnswerIsDropped() =
+    fun i02_oneCommandTakes5100ms_isALossAndTheLateAnswerIsDropped() =
         simTest { flow ->
             script.fault(ChipFaultAction.Delay(5_100), match = Shapes.firstProtectedSelect)
             val r = read(deviceOptions(flow))
@@ -91,7 +91,7 @@ class CatalogueTimingAndRecoveryIosTest {
      * on from where it stopped in a new link, inside the 60 s session.
      */
     @Test
-    fun I_08_chipFiveTimesSlower_crossesTheConnectedTagLimitAndResumes() =
+    fun i08_chipFiveTimesSlower_crossesTheConnectedTagLimitAndResumes() =
         simTest(latencyFactor = 5) { flow ->
             connectedLimitMillis = 20_000
             val r = read(deviceOptions(flow))
@@ -110,7 +110,7 @@ class CatalogueTimingAndRecoveryIosTest {
      * longer limit for PACE steps only, a setting, or accept.
      */
     @Test
-    fun I_03_openDecision_paceStepOfSevenSeconds_everyAttemptTimesOut() =
+    fun i03_openDecision_paceStepOfSevenSeconds_everyAttemptTimesOut() =
         simTest(build = { keys -> FakeReadFlowChip.build(chipCrypto(), keys, FlowAccess.PACE_ONLY, startInApplication = true) }) { flow ->
             script.latencyMillis = { 0L }
             script.fault(ChipFaultAction.Delay(7_000), times = 99) { it.ins == 0x86 }
@@ -121,10 +121,17 @@ class CatalogueTimingAndRecoveryIosTest {
         }
 
     @Test
-    fun H_12_backAfterALossWithAnotherDocumentAndKey_keyNotAcceptedAndNothingFromEarlier() =
+    fun h12_backAfterALossWithAnotherDocumentAndKey_keyNotAcceptedAndNothingFromEarlier() =
         simTest { flow ->
             // Another document, personalized with other MRZ data: our key does not open it.
-            val other = DeviceChipProfile.build(chipCrypto(), TestKeys.get(), startInApplication = true, keyMrzInformation = "X000000000900101830010100").chip
+            val other =
+                DeviceChipProfile
+                    .build(
+                        chipCrypto(),
+                        TestKeys.get(),
+                        startInApplication = true,
+                        keyMrzInformation = "X000000000900101830010100",
+                    ).chip
             script.fault(ChipFaultAction.LoseLink(10)) { c ->
                 (c.secured && c.ins == 0xB0 && c.chip.currentEf == 0x0102 && c.index > 60).also { if (it) script.nextChip = other }
             }
@@ -137,7 +144,7 @@ class CatalogueTimingAndRecoveryIosTest {
         }
 
     @Test
-    fun H_13_backAfterALossWithTheSameKeyButAnotherEfSod_readAfresh() =
+    fun h13_backAfterALossWithTheSameKeyButAnotherEfSod_readAfresh() =
         simTest { flow ->
             val other = DeviceChipProfile.build(chipCrypto(), TestKeys.get(), startInApplication = true, dg2ImageBytes = 19_000).chip
             script.fault(ChipFaultAction.LoseLink(10)) { c ->
@@ -151,7 +158,7 @@ class CatalogueTimingAndRecoveryIosTest {
         }
 
     @Test
-    fun H_06_backAfterALossAsTheSameChip_keepsEarlierFilesAndContinuesDg2() =
+    fun h06_backAfterALossAsTheSameChip_keepsEarlierFilesAndContinuesDg2() =
         simTest { flow ->
             script.fault(ChipFaultAction.LoseLink(10)) { c -> c.secured && c.ins == 0xB0 && c.chip.currentEf == 0x0102 && c.index > 60 }
             val r = read(deviceOptions(flow))
@@ -161,11 +168,16 @@ class CatalogueTimingAndRecoveryIosTest {
             val dg2 = ending.read.files.single { it.dataGroup == 2 }
             assertEquals(2, dg2.attempt)
             assertTrue(dg2.continuedAt != null && dg2.continuedAt!! > 0)
-            assertTrue(ending.read.files.filter { it.dataGroup == 1 }.all { it.attempt == 1 }, "DG1 kept from the first attempt")
+            assertTrue(
+                ending.read.files
+                    .filter { it.dataGroup == 1 }
+                    .all { it.attempt == 1 },
+                "DG1 kept from the first attempt",
+            )
         }
 
     @Test
-    fun H_14_flippedByteInTheFirstPartOfAContinuedFile_readAgainInFullAndThenPasses() =
+    fun h14_flippedByteInTheFirstPartOfAContinuedFile_readAgainInFullAndThenPasses() =
         simTest(build = { keys ->
             DeviceChipProfile.build(chipCrypto(), keys, startInApplication = true, extraHandlers = listOf(FakeFlippedByte(0x0102)))
         }) { flow ->
@@ -178,7 +190,7 @@ class CatalogueTimingAndRecoveryIosTest {
         }
 
     @Test
-    fun J_10_platformSaysNoPaceButCardAccessListsIt_theProbeStillRunsAndPaceIsUsed() =
+    fun j10_platformSaysNoPaceButCardAccessListsIt_theProbeStillRunsAndPaceIsUsed() =
         simTest(build = { keys -> FakeReadFlowChip.build(chipCrypto(), keys, FlowAccess.PACE_ONLY) }) { flow ->
             // A channel that says PACE is not supported.
             val sim = this

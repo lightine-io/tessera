@@ -186,17 +186,41 @@ internal class ScriptedChip(
         val latency = latencyMillis(command)
         val reply =
             when (val action = fault?.action) {
-                is ChipFaultAction.Status -> ChipReply.Answer(byteArrayOf((action.sw shr 8).toByte(), action.sw.toByte()), latency)
-                is ChipFaultAction.LoseLink -> ChipReply.LinkLost(action.afterMillis)
-                ChipFaultAction.Silence -> ChipReply.Silent
-                is ChipFaultAction.Truncate -> chipReply(bytes, latency) { it.copyOf(minOf(action.keep, it.size)) }
-                is ChipFaultAction.Extend -> chipReply(bytes, latency) { it.copyOf(it.size - 2) + action.extra + it.copyOfRange(it.size - 2, it.size) }
-                is ChipFaultAction.Delay -> chipReply(bytes, action.millis) { it }
+                is ChipFaultAction.Status -> {
+                    ChipReply.Answer(byteArrayOf((action.sw shr 8).toByte(), action.sw.toByte()), latency)
+                }
+
+                is ChipFaultAction.LoseLink -> {
+                    ChipReply.LinkLost(action.afterMillis)
+                }
+
+                ChipFaultAction.Silence -> {
+                    ChipReply.Silent
+                }
+
+                is ChipFaultAction.Truncate -> {
+                    chipReply(bytes, latency) { it.copyOf(minOf(action.keep, it.size)) }
+                }
+
+                is ChipFaultAction.Extend -> {
+                    chipReply(bytes, latency) {
+                        it.copyOf(it.size - 2) + action.extra +
+                            it.copyOfRange(it.size - 2, it.size)
+                    }
+                }
+
+                is ChipFaultAction.Delay -> {
+                    chipReply(bytes, action.millis) { it }
+                }
+
                 is ChipFaultAction.Arm -> {
                     action.before()
                     chipReply(bytes, latency) { it }
                 }
-                null -> chipReply(bytes, latency) { it }
+
+                null -> {
+                    chipReply(bytes, latency) { it }
+                }
             }
         exchanges += ChipExchange(command, reply, nowMillis)
         return reply
