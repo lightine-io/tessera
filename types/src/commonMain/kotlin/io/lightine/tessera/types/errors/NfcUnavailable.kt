@@ -17,6 +17,8 @@ public data class NfcUnavailable(
     /**
      * Why NFC cannot be used.
      *
+     * May gain members in a later release: a `when` over it needs an `else` branch.
+     *
      * @since 1.0.0
      */
     public enum class Reason {
@@ -67,6 +69,14 @@ public data class NfcUnavailable(
          * @since 1.0.0
          */
         REQUEST_REFUSED,
+
+        /**
+         * The app already has a chip read running, so a second one was not started. Only one read
+         * at a time can use the NFC reader: wait for the running read's ending, then start again.
+         *
+         * @since 1.0.0
+         */
+        READ_IN_PROGRESS,
     }
 
     /** English text for logs: the reason. */
@@ -81,6 +91,7 @@ public data class NfcUnavailable(
                 Reason.BUSY -> "The NFC reader is busy with another task"
                 Reason.ENDED_BY_SYSTEM -> "The system ended the NFC session"
                 Reason.REQUEST_REFUSED -> "The NFC reader refused the request"
+                Reason.READ_IN_PROGRESS -> "Another chip read is already running in this app"
             }
 
     /** `NfcUnavailable: ` followed by [description]. */

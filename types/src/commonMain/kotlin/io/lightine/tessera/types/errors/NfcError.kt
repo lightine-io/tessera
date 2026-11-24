@@ -7,6 +7,8 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  *
  * A platform transport reports these when it cannot send a command to the chip or get its answer.
  *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0

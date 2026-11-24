@@ -60,6 +60,18 @@ public final class io/lightine/tessera/types/errors/ChipFileNotFound : io/lighti
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/lightine/tessera/types/errors/ChipKeyCheckDigitMismatch : io/lightine/tessera/types/errors/ChipError {
+	public fun <init> (Ljava/util/Set;)V
+	public final fun component1 ()Ljava/util/Set;
+	public final fun copy (Ljava/util/Set;)Lio/lightine/tessera/types/errors/ChipKeyCheckDigitMismatch;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/ChipKeyCheckDigitMismatch;Ljava/util/Set;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/ChipKeyCheckDigitMismatch;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getDescription ()Ljava/lang/String;
+	public final fun getFields ()Ljava/util/Set;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class io/lightine/tessera/types/errors/ChipMalformedFile : io/lightine/tessera/types/errors/ChipError {
 	public fun <init> (Ljava/lang/Integer;Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;Ljava/lang/Integer;)V
 	public synthetic fun <init> (Ljava/lang/Integer;Lio/lightine/tessera/types/errors/ChipMalformedFile$Reason;Ljava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -554,6 +566,7 @@ public final class io/lightine/tessera/types/errors/NfcUnavailable$Reason : java
 	public static final field ENDED_BY_SYSTEM Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static final field NOT_PERMITTED Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static final field NOT_SUPPORTED Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+	public static final field READ_IN_PROGRESS Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static final field REQUEST_REFUSED Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;

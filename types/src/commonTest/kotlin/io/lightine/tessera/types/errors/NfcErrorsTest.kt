@@ -4,6 +4,7 @@ package io.lightine.tessera.types.errors
 
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
+import io.lightine.tessera.types.vocabulary.MrzField
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -70,7 +71,11 @@ class ChipErrorTextTest {
             listOf(ChipSecureMessagingLost(ChipSecureMessagingLost.Reason.CHIP_ENDED_SESSION, 0x6988)) +
             ChipUnsupportedAlgorithm.Reason.entries.map { ChipUnsupportedAlgorithm(ChipAccessProtocol.PACE, it) } +
             listOf(ChipFileNotFound(0x0102, true), ChipFileNotFound(0x010B, false), ChipBlank) +
-            ChipUnexpectedAnswer.Reason.entries.map { ChipUnexpectedAnswer(it, 0x6F00) }
+            ChipUnexpectedAnswer.Reason.entries.map { ChipUnexpectedAnswer(it, 0x6F00) } +
+            listOf(
+                ChipKeyCheckDigitMismatch(setOf(MrzField.DATE_OF_BIRTH)),
+                ChipKeyCheckDigitMismatch(setOf(MrzField.DATE_OF_EXPIRY, MrzField.DOCUMENT_NUMBER)),
+            )
 
     @Test
     fun to_string_is_the_class_name_then_the_description() {
@@ -88,7 +93,7 @@ class ChipErrorTextTest {
     @Test
     fun sample_list_covers_every_concrete_type() {
         assertEquals(errors.size, errors.count { exhaustive(it) })
-        assertEquals(10, errors.map { it::class }.toSet().size)
+        assertEquals(11, errors.map { it::class }.toSet().size)
     }
 
     private fun exhaustive(e: ChipError): Boolean =
@@ -103,6 +108,7 @@ class ChipErrorTextTest {
             is ChipFileNotFound,
             is ChipUnexpectedAnswer,
             is ChipBlank,
+            is ChipKeyCheckDigitMismatch,
             -> true
         }
 }
@@ -166,5 +172,22 @@ class ChipProtocolErrorsTest {
         val texts = ChipUnexpectedAnswer.Reason.entries.map { ChipUnexpectedAnswer(it).description }
         assertEquals(texts.size, texts.toSet().size)
         assertTrue("blank" in ChipBlank.description)
+    }
+}
+
+class ChipKeyCheckDigitMismatchTest {
+    @Test
+    fun names_the_fields_in_mrz_order_and_never_a_value() {
+        val error = ChipKeyCheckDigitMismatch(setOf(MrzField.DATE_OF_EXPIRY, MrzField.DOCUMENT_NUMBER))
+        assertEquals(setOf(MrzField.DOCUMENT_NUMBER, MrzField.DATE_OF_EXPIRY), error.fields)
+        assertTrue("document number, date of expiry" in error.description, error.description)
+        assertFalse(error.description.any { it.isDigit() }, error.description)
+        assertIs<ChipError>(error)
+    }
+
+    @Test
+    fun a_read_in_progress_has_its_own_reason() {
+        val error = NfcUnavailable(NfcUnavailable.Reason.READ_IN_PROGRESS)
+        assertTrue("already running" in error.description, error.description)
     }
 }

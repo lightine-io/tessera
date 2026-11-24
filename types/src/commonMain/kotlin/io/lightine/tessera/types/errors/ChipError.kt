@@ -10,6 +10,8 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  * ([ChipAccessDenied], [ChipSecureMessagingLost], [ChipUnsupportedAlgorithm], [ChipUnexpectedAnswer])
  * and of the chip's content ([ChipMalformedFile], [ChipFileNotFound], [ChipBlank]).
  *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0

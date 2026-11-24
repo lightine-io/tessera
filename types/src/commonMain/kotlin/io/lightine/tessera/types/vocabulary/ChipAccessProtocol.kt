@@ -5,6 +5,8 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
 /**
  * How a reader gained access to a document's chip (ICAO Doc 9303 Part 11, section 4).
  *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0

@@ -22,6 +22,8 @@ public data class ChipSecureMessagingLost(
     /**
      * Why the session ended.
      *
+     * May gain members in a later release: a `when` over it needs an `else` branch.
+     *
      * @since 1.0.0
      */
     public enum class Reason {
