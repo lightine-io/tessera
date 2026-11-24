@@ -12,7 +12,7 @@ import kotlin.time.Instant
  * Host tests for [MrzDecodeConsensus] — the frame-agreement gate that removes transient OCR misreads by
  * requiring the same parsed document on [threshold][MrzDecodeConsensus.threshold] frames before a reading is
  * confirmed. Synthetic MRZ only (the project's specimen); the "misread" fixture flips one filler
- * `<` in the name to `K`, reproducing the checksum-invisible `ASGAR<` → `ASGARK` misread the gate exists for.
+ * `<` in the name to `K`, reproducing the checksum-invisible `MORGAN<` → `MORGANK` misread the gate exists for.
  */
 class MrzDecodeConsensusTest {
     private val referenceTime = Instant.parse("2026-05-04T12:00:00Z")
@@ -58,7 +58,7 @@ class MrzDecodeConsensusTest {
         val consensus = MrzDecodeConsensus(threshold = 3)
 
         // Correct, a one-off misread, then two more correct: the correct reading reaches 3 while the misread
-        // stays a minority of one — the confirmed reading is the correct document, not ASGARK-style noise.
+        // stays a minority of one — the confirmed reading is the correct document, not MORGANK-style noise.
         consensus.offer(goodDecode)
         consensus.offer(misreadDecode)
         consensus.offer(goodDecode)
