@@ -172,4 +172,30 @@ class CoreNfcErrorMappingTest {
         val error = NSError.errorWithDomain(NFCErrorDomain, CoreNfcErrorCode.RADIO_DISABLED, null)
         assertEquals(NfcUnavailable(Reason.DISABLED), nfcErrorFor(error, operation))
     }
+
+    @Test
+    fun only_a_lost_link_or_no_answer_lets_a_failed_connect_restart_polling() {
+        val retryable =
+            listOf(
+                NFCReaderTransceiveErrorTagConnectionLost,
+                NFCReaderTransceiveErrorTagNotConnected,
+                NFCReaderTransceiveErrorTagResponseError,
+                NFCReaderTransceiveErrorRetryExceeded,
+            )
+        retryable.forEach { assertEquals(true, connectRetryable(NFCErrorDomain, it), "code $it") }
+        val ending =
+            listOf(
+                NFCReaderSessionInvalidationErrorSessionTimeout,
+                NFCReaderSessionInvalidationErrorSessionTerminatedUnexpectedly,
+                NFCReaderSessionInvalidationErrorUserCanceled,
+                NFCReaderSessionInvalidationErrorSystemIsBusy,
+                NFCReaderTransceiveErrorSessionInvalidated,
+                NFCReaderErrorSecurityViolation,
+                NFCReaderErrorInvalidParameter,
+                NFCReaderTransceiveErrorPacketTooLong,
+            )
+        ending.forEach { assertEquals(false, connectRetryable(NFCErrorDomain, it), "code $it") }
+        assertEquals(false, connectRetryable(NSCocoaErrorDomain, NFCReaderTransceiveErrorTagConnectionLost))
+        assertEquals(false, connectRetryable(null, NFCReaderTransceiveErrorTagConnectionLost))
+    }
 }

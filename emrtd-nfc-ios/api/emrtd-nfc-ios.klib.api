@@ -7,7 +7,7 @@
 
 // Library unique name: <io.lightine.tessera:emrtd-nfc-ios>
 final class io.lightine.tessera.emrtd.nfc/CoreNfcSession { // io.lightine.tessera.emrtd.nfc/CoreNfcSession|null[0]
-    constructor <init>(kotlin/String) // io.lightine.tessera.emrtd.nfc/CoreNfcSession.<init>|<init>(kotlin.String){}[0]
+    constructor <init>(kotlin/String, kotlin/String) // io.lightine.tessera.emrtd.nfc/CoreNfcSession.<init>|<init>(kotlin.String;kotlin.String){}[0]
 
     final var alertMessage // io.lightine.tessera.emrtd.nfc/CoreNfcSession.alertMessage|{}alertMessage[0]
         final fun <get-alertMessage>(): kotlin/String // io.lightine.tessera.emrtd.nfc/CoreNfcSession.alertMessage.<get-alertMessage>|<get-alertMessage>(){}[0]
@@ -16,6 +16,7 @@ final class io.lightine.tessera.emrtd.nfc/CoreNfcSession { // io.lightine.tesser
     final fun end() // io.lightine.tessera.emrtd.nfc/CoreNfcSession.end|end(){}[0]
     final fun end(kotlin/String) // io.lightine.tessera.emrtd.nfc/CoreNfcSession.end|end(kotlin.String){}[0]
     final suspend fun connect(): io.lightine.tessera.emrtd.nfc/CoreNfcTransport // io.lightine.tessera.emrtd.nfc/CoreNfcSession.connect|connect(){}[0]
+    final suspend fun read(io.lightine.tessera.emrtd/ChipReader, io.lightine.tessera.emrtd/ChipReadOptions): io.lightine.tessera.emrtd/ChipReadResult // io.lightine.tessera.emrtd.nfc/CoreNfcSession.read|read(io.lightine.tessera.emrtd.ChipReader;io.lightine.tessera.emrtd.ChipReadOptions){}[0]
 
     final object Companion { // io.lightine.tessera.emrtd.nfc/CoreNfcSession.Companion|null[0]
         final const val EMRTD_APPLICATION_ID // io.lightine.tessera.emrtd.nfc/CoreNfcSession.Companion.EMRTD_APPLICATION_ID|{}EMRTD_APPLICATION_ID[0]

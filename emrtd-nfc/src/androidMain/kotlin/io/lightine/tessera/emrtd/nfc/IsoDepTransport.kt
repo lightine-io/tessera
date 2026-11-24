@@ -85,7 +85,42 @@ import kotlin.coroutines.cancellation.CancellationException
  * Commands go one at a time; calls to [transceive] are serialized. Cancelling the coroutine does
  * not interrupt a call already blocked in the platform, and neither does [close]: in the platform
  * the exchange and the close wait for each other, so the blocked call ends when the chip answers
- * or the time limit passes. Cancelling a read can take up to the time limit.
+ * or the time limit passes. Cancelling a read can take up to the time limit. No second command is
+ * sent while the first is blocked.
+ *
+ * ## Interruptions
+ *
+ * - The document moves away: the blocked call fails with [NfcTagLost] and the transport is done.
+ * - Your app cancels the coroutine while a command is out: the call still ends in the platform,
+ *   its answer is dropped and the transport closes itself, because the chip's secure messaging
+ *   state has moved on. The cancellation is thrown; every later [transceive] throws
+ *   [NfcUnavailable] `CLOSED`.
+ * - Your app calls [close] from another thread while a command is out: the blocked call ends as
+ *   above and throws [NfcUnavailable] `CLOSED`; its answer is dropped.
+ * - The activity pauses or reader mode is turned off mid-read: the SDK cannot see the activity.
+ *   The platform then refuses the next command, and the transport fails fast with that error and
+ *   stays done. In `onPause`, cancel the read and call `disableReaderMode`; the read's `finally`
+ *   closes the transport. Start a new read only with the `Tag` of a new discovery after
+ *   `onResume` turns reader mode on again.
+ * - A second card enters the field: reader mode reports it as a new `Tag`. Ignore it while a read
+ *   runs; one transport, one `Tag`, one read at a time.
+ *
+ * A typical read, which closes the transport on every path:
+ *
+ * ```kotlin
+ * override fun onTagDiscovered(tag: Tag) {
+ *     readJob = scope.launch {
+ *         val result = IsoDepTransport.open(tag).use { transport -> ChipReader().read(transport, options) }
+ *         // show result
+ *     }
+ * }
+ *
+ * override fun onPause() {
+ *     super.onPause()
+ *     readJob?.cancel()
+ *     NfcAdapter.getDefaultAdapter(this)?.disableReaderMode(this)
+ * }
+ * ```
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -148,19 +183,36 @@ public class IsoDepTransport internal constructor(
 
     override suspend fun transceive(command: ByteArray): ByteArray =
         lock.withLock {
-            withContext(ioDispatcher) {
-                if (closed) throw ApduTransportException(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
-                failure?.let { throw ApduTransportException(it.error, it.cause) }
-                if (!connectTried) connectOnce()
-                call("transceive") { channel.transceive(command) }
+            // Set on the I/O thread just before the first platform call of this exchange. The
+            // blocking call cannot be interrupted, so withContext waits for it to return even when
+            // the caller is cancelled; the lock is held until then, and no second command overlaps.
+            val platformCalled = AtomicBoolean(false)
+            try {
+                withContext(ioDispatcher) {
+                    if (closed) throw ApduTransportException(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
+                    failure?.let { throw ApduTransportException(it.error, it.cause) }
+                    platformCalled.set(true)
+                    if (!connectTried) connectOnce()
+                    val answer = call("transceive") { channel.transceive(command) }
+                    // Closed while the exchange was blocked: the answer is dropped, as close() says.
+                    if (closed) throw ApduTransportException(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
+                    answer
+                }
+            } catch (e: CancellationException) {
+                // Cancelled while a command was out: the chip has answered it (or the time limit
+                // passed), and the answer is dropped, so the chip's secure messaging counter has
+                // moved past the reader's. Nothing more may be sent: the transport closes itself.
+                if (platformCalled.get()) close()
+                throw e
             }
         }
 
     /**
      * Closes the tag connection. After this, [transceive] throws [NfcUnavailable] with reason
-     * `CLOSED`. Safe to call more than once and from the main thread: it returns at once and hands
-     * the platform's close, which talks to the tag and can wait for a blocked exchange up to the
-     * time limit, to the I/O dispatcher.
+     * `CLOSED`, a command blocked in the platform throws it too when it returns, and nothing more
+     * is sent. Safe to call more than once and from any thread, the main thread included: it
+     * returns at once and hands the platform's close, which talks to the tag and can wait for a
+     * blocked exchange up to the time limit, to the I/O dispatcher.
      */
     override fun close() {
         closed = true

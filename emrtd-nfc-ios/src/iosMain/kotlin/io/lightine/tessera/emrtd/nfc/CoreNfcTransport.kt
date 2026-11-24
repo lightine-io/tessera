@@ -11,6 +11,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import platform.CoreNFC.NFCISO7816TagProtocol
+import platform.Foundation.NSLock
 import kotlin.concurrent.Volatile
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -37,8 +38,11 @@ import kotlin.coroutines.cancellation.CancellationException
  *   when the system ended the session on its own, or another reason the system gave for ending
  *   it.
  *
- * Commands go one at a time; calls to [transceive] are serialized. Cancelling the coroutine does
- * not stop a command Core NFC already sent: its answer is dropped.
+ * Commands go one at a time; calls to [transceive] are serialized. Core NFC cannot take back a
+ * command it was given, so cancelling the coroutine while a command is out stops the transport:
+ * the answer is dropped and every later [transceive] throws [NfcUnavailable] `CLOSED` without
+ * sending anything. The chip's secure messaging state has moved on by then, so a read cannot go
+ * on after it anyway: end the session and start a new read.
  *
  * Experimental: see [ExperimentalTesseraChipApi]. In Swift, this class is `CoreNfcTransport` in the
  * `Tessera` framework and is experimental too.
@@ -59,18 +63,22 @@ public class CoreNfcTransport internal constructor(
      */
     public constructor(tag: NFCISO7816TagProtocol) : this(PlatformIso7816Channel(tag))
 
+    // Serializes calls to [transceive]: one command out at a time.
     private val lock = Mutex()
+
+    // Guards [stopReason], [inFlight] and the decision to send, so a stop either comes before a
+    // command is handed to Core NFC (and nothing is sent) or finds it in flight (and ends it).
+    private val state = NSLock()
 
     // The reader session the tag came from, held until the transport stops: Core NFC holds its
     // delegate weakly (NFCTagReaderSession.h), so an app that keeps only the transport must not
     // lose the session's callbacks in the middle of a read.
-    @Volatile
     private var keepAlive: Any? = keepAlive
 
+    // Read without [state] by the command's completion, which may run on Core NFC's queue.
     @Volatile
     private var stopReason: NfcError? = null
 
-    @Volatile
     private var inFlight: CompletableDeferred<ByteArray>? = null
 
     /** Always 261: one short APDU (4 header bytes, 1 length byte, 255 data bytes, 1 expected-length byte). */
@@ -91,12 +99,13 @@ public class CoreNfcTransport internal constructor(
     @Throws(ApduTransportException::class, CancellationException::class)
     override suspend fun transceive(command: ByteArray): ByteArray =
         lock.withLock {
-            stopReason?.let { throw ApduTransportException(it) }
             // Completed once: by Core NFC's callback, or by stop() when the session ends first.
             val result = CompletableDeferred<ByteArray>()
-            inFlight = result
-            try {
+            locked {
                 stopReason?.let { throw ApduTransportException(it) }
+                inFlight = result
+                // Handed over under the lock, so no stop can slip between the check and the send.
+                // Core NFC calls back later on its own queue; the callback takes no lock.
                 channel.send(command) { answer, error ->
                     // A stop that came while the command was in flight names the real cause: the
                     // platform reports only that the session ended.
@@ -107,25 +116,50 @@ public class CoreNfcTransport internal constructor(
                         else -> result.complete(answer)
                     }
                 }
+            }
+            try {
                 result.await()
+            } catch (e: CancellationException) {
+                // The command is still out and Core NFC cannot take it back: its answer would be
+                // lost, and the chip's secure messaging counter has moved past it. Nothing more
+                // may be sent, so the transport stops; the next command fails at once.
+                stop(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
+                throw e
             } finally {
-                inFlight = null
+                locked { if (inFlight === result) inFlight = null }
             }
         }
 
     /**
-     * Stops the transport: after this, [transceive] throws [NfcUnavailable] with reason `CLOSED`.
-     * It does not end the reader session. Safe to call more than once.
+     * Stops the transport: after this, [transceive] throws [NfcUnavailable] with reason `CLOSED`,
+     * and a command still out ends with that error at once. It does not end the reader session:
+     * end it with [CoreNfcSession.end] (or your own session's invalidate call). Safe to call more
+     * than once and from any thread.
      */
     public fun close() {
         stop(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
     }
 
-    /** Stops the transport with [reason], unless it is already stopped. */
+    /** Stops the transport with [reason], unless it is already stopped; the first reason stays. */
     internal fun stop(reason: NfcError) {
-        if (stopReason == null) stopReason = reason
-        keepAlive = null
-        inFlight?.completeExceptionally(ApduTransportException(stopReason ?: reason))
+        val (first, pending) =
+            locked {
+                if (stopReason == null) stopReason = reason
+                keepAlive = null
+                val held = inFlight
+                inFlight = null
+                stopReason!! to held
+            }
+        pending?.completeExceptionally(ApduTransportException(first))
+    }
+
+    private inline fun <T> locked(block: () -> T): T {
+        state.lock()
+        try {
+            return block()
+        } finally {
+            state.unlock()
+        }
     }
 
     private companion object {

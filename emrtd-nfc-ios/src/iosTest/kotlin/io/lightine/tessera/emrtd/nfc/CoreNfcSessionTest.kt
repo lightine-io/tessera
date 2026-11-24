@@ -25,13 +25,17 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CoreNfcSessionTest {
+    private companion object {
+        const val FAILURE = "Reading failed"
+    }
+
     private var port: FakeSessionPort? = null
     private var onBegin: (FakeSessionPort) -> Unit = {}
 
     private fun session(
         alert: String = "Hold your iPhone near the document",
         readingAvailable: Boolean = true,
-    ) = CoreNfcSession(alert, { readingAvailable }) { events ->
+    ) = CoreNfcSession(alert, FAILURE, { readingAvailable }) { events ->
         FakeSessionPort(events).also {
             it.onBegin = onBegin
             port = it
@@ -84,7 +88,7 @@ class CoreNfcSessionTest {
             val chip = FakeTag(FakeChannel())
             onBegin = {
                 it.events.onTagsDetected(listOf(FakeTag(FakeChannel(), connectError = NfcTagLost)))
-                it.events.onTagsDetected(listOf(FakeTag(FakeChannel(), connectError = NfcTimeout(null))))
+                it.events.onTagsDetected(listOf(FakeTag(FakeChannel(), connectError = NfcTimeout(null), retryable = true)))
                 assertEquals(2, it.restarts)
                 assertFalse(it.invalidated)
                 it.events.onTagsDetected(listOf(chip))
@@ -102,12 +106,11 @@ class CoreNfcSessionTest {
 
             assertEquals(refused, errorOf { session.connect() })
 
-            assertTrue(port!!.invalidated)
+            // Ended once, with the app's failure text: never the plain ending that means success.
+            assertEquals(listOf<String?>(FAILURE), port!!.endings)
             assertEquals(0, port!!.restarts)
-            // The system then reports the ending; the error already thrown stays the one given.
-            port!!.events.onInvalidated(NfcUnavailable(Reason.CANCELLED_BY_USER))
-            session.end(errorMessage = "Reading failed")
-            assertNull(port!!.invalidatedWith)
+            session.end(errorMessage = "Too late")
+            assertEquals(listOf<String?>(FAILURE), port!!.endings)
         }
 
     @Test
@@ -129,7 +132,7 @@ class CoreNfcSessionTest {
     private suspend fun connectedWithWeakPort(): Triple<CoreNfcSession, CoreNfcTransport, WeakReference<FakeSessionPort>> {
         var weak: WeakReference<FakeSessionPort>? = null
         val session =
-            CoreNfcSession("Hold your iPhone near the document", { true }) { events ->
+            CoreNfcSession("Hold your iPhone near the document", FAILURE, { true }) { events ->
                 FakeSessionPort(events).also {
                     it.onBegin = { port -> port.events.onTagsDetected(listOf(FakeTag(FakeChannel()))) }
                     weak = WeakReference(it)
@@ -167,9 +170,36 @@ class CoreNfcSessionTest {
             assertTrue(isAlive(weak))
 
             transport.close()
+            // The system session has not ended: the SDK still keeps it, so its end is not lost.
+            GC.collect()
+            assertTrue(isAlive(weak))
+
+            reportSystemEnd(weak)
             GC.collect()
             assertFalse(isAlive(weak))
         }
+
+    @OptIn(NativeRuntimeApi::class)
+    @Test
+    fun the_app_dropping_every_reference_mid_read_keeps_the_session_until_the_system_ends_it() =
+        runTest {
+            val weak = droppedRead()
+            // Nothing of the app's is left; the system session is still running.
+            GC.collect()
+            assertTrue(isAlive(weak), "the delegate must outlive the app's references while the system session runs")
+
+            reportSystemEnd(weak)
+            GC.collect()
+            assertFalse(isAlive(weak))
+        }
+
+    // A read the app started and then dropped entirely: only the weak reference is returned.
+    private suspend fun droppedRead(): WeakReference<FakeSessionPort> = transportOnlyWithWeakPort().second
+
+    // The system's time limit ends the session the app forgot. A separate function, as isAlive.
+    private fun reportSystemEnd(weak: WeakReference<FakeSessionPort>) {
+        weak.value!!.events.onInvalidated(NfcTimeout(null))
+    }
 
     @Test
     fun the_person_cancelling_is_cancelled_by_user() =
@@ -311,7 +341,7 @@ class CoreNfcSessionTest {
             connected.cancel()
             runCurrent()
 
-            assertTrue(port!!.invalidated)
+            assertEquals(listOf<String?>(FAILURE), port!!.endings)
         }
 
     @Test

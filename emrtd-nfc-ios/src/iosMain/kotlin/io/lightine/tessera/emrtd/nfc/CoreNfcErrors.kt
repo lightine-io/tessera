@@ -140,3 +140,24 @@ internal fun nfcErrorFor(
     error: NSError,
     source: CoreNfcErrorSource,
 ): NfcError = nfcErrorFor(error.domain, error.code, source)
+
+/**
+ * Whether a failed `connect(to:)` with this Core NFC error may be tried again after
+ * `restartPolling`: the link to the tag was lost (`tagConnectionLost`, `tagNotConnected`,
+ * `tagResponseError`) or the chip did not answer after the reader's retries (`retryExceeded`).
+ * Never the session's time limit (`sessionTimeout`), which the mapping also reports as
+ * [io.lightine.tessera.types.errors.NfcTimeout]: that session is ending, and restarting its
+ * polling would have no effect (`NFCTagReaderSession.h`, `restartPolling`).
+ */
+internal fun connectRetryable(
+    domain: String?,
+    code: Long,
+): Boolean =
+    domain == NFCErrorDomain &&
+        code in
+        setOf(
+            CoreNfcErrorCode.TAG_CONNECTION_LOST,
+            CoreNfcErrorCode.TAG_NOT_CONNECTED,
+            CoreNfcErrorCode.TAG_RESPONSE_ERROR,
+            CoreNfcErrorCode.RETRY_EXCEEDED,
+        )

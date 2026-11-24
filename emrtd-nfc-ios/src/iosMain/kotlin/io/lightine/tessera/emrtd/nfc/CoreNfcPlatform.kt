@@ -47,8 +47,18 @@ internal interface DetectedTag {
     val iso7816: Iso7816Channel?
 
     /** Connects the session to this tag; [onDone] gets `null` on success. */
-    fun connect(onDone: (error: NfcError?) -> Unit)
+    fun connect(onDone: (failure: ConnectFailure?) -> Unit)
 }
+
+/**
+ * Why `connect(to:)` failed: the typed [error], and whether polling may restart for another try.
+ * Only a lost link or a chip that did not answer may ([connectRetryable]); a session that is
+ * ending (its time limit, an ended session) or a refused request may not.
+ */
+internal class ConnectFailure(
+    val error: NfcError,
+    val retryable: Boolean,
+)
 
 /** What the reader session reports. Called on the session's own serial queue, never the main queue. */
 internal interface ReaderSessionEvents {
@@ -151,9 +161,13 @@ private class PlatformDetectedTag(
     override val iso7816: Iso7816Channel? =
         (tag as? NFCISO7816TagProtocol)?.let { PlatformIso7816Channel(it) }
 
-    override fun connect(onDone: (error: NfcError?) -> Unit) {
+    override fun connect(onDone: (failure: ConnectFailure?) -> Unit) {
         session.connectToTag(tag) { error: NSError? ->
-            onDone(error?.let { nfcErrorFor(it, CoreNfcErrorSource.TAG_OPERATION) })
+            onDone(
+                error?.let {
+                    ConnectFailure(nfcErrorFor(it, CoreNfcErrorSource.TAG_OPERATION), connectRetryable(it.domain, it.code))
+                },
+            )
         }
     }
 }
