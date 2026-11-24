@@ -1,6 +1,5 @@
 package io.lightine.tessera.emrtd.sim
 
-import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
 import io.lightine.tessera.emrtd.ChipCheckKind
 import io.lightine.tessera.emrtd.ChipCheckReason
 import io.lightine.tessera.emrtd.ChipReadEnding
@@ -24,6 +23,7 @@ import io.lightine.tessera.emrtd.sim.SimDrive.options
 import io.lightine.tessera.emrtd.sim.SimDrive.withChips
 import io.lightine.tessera.types.errors.ChipBlank
 import io.lightine.tessera.types.vocabulary.CheckOutcome
+import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -39,7 +39,8 @@ class CatalogueGroupJTest {
     private val travelRecordsAid = listOf(0xA0, 0x00, 0x00, 0x02, 0x47, 0x20, 0x01).map { it.toByte() }
 
     /** EF.DIR (Part 10, 3.11.1): one application template per application. */
-    private fun efDir(vararg aids: List<Byte>): ByteArray = DerWriter.concat(*aids.map { DerWriter.tlv(0x61, DerWriter.tlv(0x4F, it.toByteArray())) }.toTypedArray())
+    private fun efDir(vararg aids: List<Byte>): ByteArray =
+        DerWriter.concat(*aids.map { DerWriter.tlv(0x61, DerWriter.tlv(0x4F, it.toByteArray())) }.toTypedArray())
 
     /** EFDIRInfo (Part 11, 9.2.11): EF.DIR's copy for EF.CardSecurity. */
     private fun efDirInfo(efDir: ByteArray): ByteArray = DerWriter.sequence(DerWriter.oid("2.23.136.1.1.13"), DerWriter.octetString(efDir))
@@ -53,7 +54,8 @@ class CatalogueGroupJTest {
             command: CommandApdu,
         ): ResponseApdu? {
             if (command.ins != ChipCommands.INS_SELECT || command.p1 != 0x00) return null
-            val selectsMf = command.data.isEmpty() || (command.data.size == 2 && command.data[0] == 0x3F.toByte() && command.data[1] == 0x00.toByte())
+            val selectsMf =
+                command.data.isEmpty() || (command.data.size == 2 && command.data[0] == 0x3F.toByte() && command.data[1] == 0x00.toByte())
             return if (selectsMf) ResponseApdu(ByteArray(0), sw) else null
         }
     }
@@ -71,7 +73,11 @@ class CatalogueGroupJTest {
             command: CommandApdu,
         ): ResponseApdu? {
             if (command.ins != ChipCommands.INS_SELECT) return null
-            if (command.p1 == 0x00 && (command.data.isEmpty() || command.data.size == 2 && command.data[0] == 0x3F.toByte())) mfSelected = true
+            if (command.p1 == 0x00 &&
+                (command.data.isEmpty() || (command.data.size == 2 && command.data[0] == 0x3F.toByte()))
+            ) {
+                mfSelected = true
+            }
             if (command.p1 == ChipCommands.SELECT_BY_AID && mfSelected) return ResponseApdu(ByteArray(0), 0x6A82)
             return null
         }
@@ -93,7 +99,7 @@ class CatalogueGroupJTest {
     // --- J-07: a chip with several applications ----------------------------------------------------
 
     @Test
-    fun J_07_aChipWithSeveralApplications_selectsOnlyTheIcaoAidAndComparesEfDirWithItsSignedCopy() =
+    fun j07_aChipWithSeveralApplications_selectsOnlyTheIcaoAidAndComparesEfDirWithItsSignedCopy() =
         runTest {
             withChips { c, keys ->
                 val dir = efDir(LdsIds.LDS1_AID.toList(), travelRecordsAid)
@@ -109,7 +115,10 @@ class CatalogueGroupJTest {
                         extraHandlers = listOf(log),
                     )
                 val read = driveFlow(flow).complete
-                assertTrue(log.aids.isNotEmpty() && log.aids.all { it == LdsIds.LDS1_AID.toList() }, "only the ICAO application: ${log.aids}")
+                assertTrue(
+                    log.aids.isNotEmpty() && log.aids.all { it == LdsIds.LDS1_AID.toList() },
+                    "only the ICAO application: ${log.aids}",
+                )
                 // Part 11, 9.2.11 (EFDIRInfo) and the check's own definition (ChipCheckKind.EfDirMatchesSignedCopy,
                 // Part 11, 4.2): with a signed copy of EF.DIR in EF.CardSecurity, EF.DIR is read and compared.
                 assertEquals(CheckOutcome.Passed, read.outcomeOf(ChipCheckKind.EfDirMatchesSignedCopy))
@@ -117,7 +126,7 @@ class CatalogueGroupJTest {
         }
 
     @Test
-    fun J_07_anEfDirThatDiffersFromItsSignedCopy_isAFailedFactNotAVerdict() =
+    fun j07_anEfDirThatDiffersFromItsSignedCopy_isAFailedFactNotAVerdict() =
         runTest {
             withChips { c, keys ->
                 val signed = efDir(LdsIds.LDS1_AID.toList(), travelRecordsAid)
@@ -140,20 +149,28 @@ class CatalogueGroupJTest {
         }
 
     @Test
-    fun J_07_aChipWithoutASignedEfDirCopy_sendsNoEfDirCommand() =
+    fun j07_aChipWithoutASignedEfDirCopy_sendsNoEfDirCommand() =
         runTest {
             withChips { c, keys ->
                 val flow =
-                    FakeReadFlowChip.build(c, keys, FlowAccess.PACE_ONLY, extraMasterFiles = mapOf(EF_DIR to efDir(LdsIds.LDS1_AID.toList())))
+                    FakeReadFlowChip.build(
+                        c,
+                        keys,
+                        FlowAccess.PACE_ONLY,
+                        extraMasterFiles = mapOf(EF_DIR to efDir(LdsIds.LDS1_AID.toList())),
+                    )
                 val read = driveFlow(flow).complete
                 assertEquals(CheckOutcome.NotApplicable(ChipCheckReason.NO_EF_DIR), read.outcomeOf(ChipCheckKind.EfDirMatchesSignedCopy))
-                val selects = flow.chip.received.mapNotNull { CommandApdu.decode(it) }.filter { it.ins == ChipCommands.INS_SELECT }
+                val selects =
+                    flow.chip.received
+                        .mapNotNull { CommandApdu.decode(it) }
+                        .filter { it.ins == ChipCommands.INS_SELECT }
                 assertFalse(selects.any { it.data.contentEquals(byteArrayOf(0x2F, 0x00)) })
             }
         }
 
     @Test
-    fun J_07_selectMfAnswered6985_theReadGoesOnWhereItCanWithBac() =
+    fun j07_selectMfAnswered6985_theReadGoesOnWhereItCanWithBac() =
         runTest {
             withChips { c, keys ->
                 val flow =
@@ -172,7 +189,7 @@ class CatalogueGroupJTest {
         }
 
     @Test
-    fun J_07_theIcaoApplicationAbsentButAnotherPresent_failsAsBlank() =
+    fun j07_theIcaoApplicationAbsentButAnotherPresent_failsAsBlank() =
         runTest {
             withChips { c, keys ->
                 val log = AidLog()
@@ -195,13 +212,19 @@ class CatalogueGroupJTest {
     // --- J-08: the application lost through SELECT MF -------------------------------------------------
 
     @Test
-    fun J_08_selectApplicationAnswers6A82AfterSelectMf_isReportedBlankAndNotReadAgain() =
+    fun j08_selectApplicationAnswers6A82AfterSelectMf_isReportedBlankAndNotReadAgain() =
         runTest {
             withChips { c, keys ->
                 // [JDG] catalogue J-08: a chip that loses its application through SELECT MF is a
                 // corner case; the reader reports 6A82 as a blank chip (Failed, never Partial).
                 val flow =
-                    FakeReadFlowChip.build(c, keys, FlowAccess.BAC, startInApplication = true, leadingHandlers = listOf(ApplicationGoneAfterSelectMf()))
+                    FakeReadFlowChip.build(
+                        c,
+                        keys,
+                        FlowAccess.BAC,
+                        startInApplication = true,
+                        leadingHandlers = listOf(ApplicationGoneAfterSelectMf()),
+                    )
                 flow.chip.startSelection = ChipStartSelection.EMRTD_APPLICATION
                 val driven = driveFlow(flow, LinkLossPolicy.Resume(2))
                 assertEquals(ChipBlank, assertIs<ChipReadEnding.Failed>(driven.ending).error)
@@ -214,11 +237,18 @@ class CatalogueGroupJTest {
     private val atrInfoExtended = byteArrayOf(0x47, 0x03, 0x04, 0x01, 0xE0.toByte())
 
     @Test
-    fun J_09_extendedLengthAllowedAndSupported_readsEfAtrInfoFirstAndUsesWhatItSays() =
+    fun j09_extendedLengthAllowedAndSupported_readsEfAtrInfoFirstAndUsesWhatItSays() =
         runTest {
             withChips { c, keys ->
                 val flow =
-                    FakeReadFlowChip.build(c, keys, FlowAccess.BAC, supportsExtendedLength = true, extraMasterFiles = mapOf(0x2F01 to atrInfoExtended))
+                    FakeReadFlowChip.build(
+                        c,
+                        keys,
+                        FlowAccess.BAC,
+                        supportsExtendedLength = true,
+                        extraMasterFiles =
+                            mapOf(0x2F01 to atrInfoExtended),
+                    )
                 val read = driveFlow(flow).complete
                 val first = CommandApdu.decode(flow.chip.received.first())!!
                 assertEquals(ChipCommands.INS_SELECT, first.ins)
@@ -228,18 +258,35 @@ class CatalogueGroupJTest {
         }
 
     @Test
-    fun J_09_noEfAtrInfo_orTheAppForbidsIt_readsShort() =
+    fun j09_noEfAtrInfo_orTheAppForbidsIt_readsShort() =
         runTest {
             withChips { c, keys ->
                 val absent = FakeReadFlowChip.build(c, keys, FlowAccess.BAC, supportsExtendedLength = true)
                 assertFalse(driveFlow(absent).complete.access.extendedLengthAllowed)
 
                 val forbidden =
-                    FakeReadFlowChip.build(c, keys, FlowAccess.BAC, supportsExtendedLength = true, extraMasterFiles = mapOf(0x2F01 to atrInfoExtended))
-                val options = ChipReadOptions(FakeReadFlowChip.mrzKey(), setOf(1, 2), listOf(forbidden.anchor), SimDrive.CHECK_TIME, allowExtendedLength = false)
+                    FakeReadFlowChip.build(
+                        c,
+                        keys,
+                        FlowAccess.BAC,
+                        supportsExtendedLength = true,
+                        extraMasterFiles =
+                            mapOf(0x2F01 to atrInfoExtended),
+                    )
+                val options =
+                    ChipReadOptions(
+                        FakeReadFlowChip.mrzKey(),
+                        setOf(1, 2),
+                        listOf(forbidden.anchor),
+                        SimDrive.CHECK_TIME,
+                        allowExtendedLength = false,
+                    )
                 val read = driveFlow(forbidden, options = options).complete
                 assertFalse(read.access.extendedLengthAllowed)
-                val selects = forbidden.chip.received.mapNotNull { CommandApdu.decode(it) }.filter { it.ins == ChipCommands.INS_SELECT }
+                val selects =
+                    forbidden.chip.received
+                        .mapNotNull { CommandApdu.decode(it) }
+                        .filter { it.ins == ChipCommands.INS_SELECT }
                 assertFalse(selects.any { it.data.contentEquals(byteArrayOf(0x2F, 0x01)) }, "EF.ATR/INFO is not even read")
             }
         }
@@ -247,7 +294,7 @@ class CatalogueGroupJTest {
     // --- J-10 (core part): the probe runs whatever the transport says ----------------------------------
 
     @Test
-    fun J_10_corePart_thePaceProbeRunsOnAnyTransportAndPaceIsUsed() =
+    fun j10_corePart_thePaceProbeRunsOnAnyTransportAndPaceIsUsed() =
         runTest {
             withChips { c, keys ->
                 // The core's transport says nothing about PACE (ApduTransport has no such property);
@@ -257,7 +304,10 @@ class CatalogueGroupJTest {
                 val script = ScriptedChip(flow.chip)
                 val driven = drive(options(flow), LinkLossPolicy.Resume(2)) { ScriptedTransport(script) }
                 assertEquals(ChipAccessProtocol.PACE, driven.complete.access.protocol)
-                val firstSelect = script.exchanges.first().command.apdu!!
+                val firstSelect =
+                    script.exchanges
+                        .first()
+                        .command.apdu!!
                 assertTrue(firstSelect.data.contentEquals(byteArrayOf(0x01, 0x1C)), "the first command selects EF.CardAccess")
             }
         }

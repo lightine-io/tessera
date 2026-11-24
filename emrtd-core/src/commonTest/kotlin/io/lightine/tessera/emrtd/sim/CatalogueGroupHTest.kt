@@ -80,7 +80,8 @@ class CatalogueGroupHTest {
                 if (file.inMasterFile) {
                     flow.chip.files.masterFiles
                 } else {
-                    flow.chip.files.applications.getValue(LdsIds.LDS1_AID.toList())
+                    flow.chip.files.applications
+                        .getValue(LdsIds.LDS1_AID.toList())
                 }
             assertContentEquals(source.getValue(file.fileId), file.bytes(), "$what: file ${file.fileId.toString(16)}")
         }
@@ -108,21 +109,24 @@ class CatalogueGroupHTest {
     }
 
     @Test
-    fun H_01_lossAtEveryCommandOfABacRead_completesWithTheSameFilesAndChecksInTwoAttempts() =
+    fun h01_lossAtEveryCommandOfABacRead_completesWithTheSameFilesAndChecksInTwoAttempts() =
         runTest { withChips { c, keys -> sweep { bacChip(c, keys, it) } } }
 
     @Test
-    fun H_01_lossAtEveryCommandOfAPaceRead_completesWithTheSameFilesAndChecksInTwoAttempts() =
+    fun h01_lossAtEveryCommandOfAPaceRead_completesWithTheSameFilesAndChecksInTwoAttempts() =
         runTest { withChips { c, keys -> sweep { paceChip(c, keys, it) } } }
 
     // --- H-05: master-file files are read again in full ----------------------------------------------
 
     @Test
-    fun H_05_lossInTheMiddleOfEfCardSecurity_readsItAgainInFullInTheNextAttempt() =
+    fun h05_lossInTheMiddleOfEfCardSecurity_readsItAgainInFullInTheNextAttempt() =
         runTest {
             withChips { c, keys ->
                 val loss =
-                    FakeLinkLoss { chip, cmd -> SimDrive.readsMasterFile(chip, cmd, 0x011D) && SimDrive.isPlainRead(cmd) && SimDrive.offset(cmd) > 0 }
+                    FakeLinkLoss { chip, cmd ->
+                        SimDrive.readsMasterFile(chip, cmd, 0x011D) && SimDrive.isPlainRead(cmd) &&
+                            SimDrive.offset(cmd) > 0
+                    }
                 val flow = paceChip(c, keys, listOf(loss))
                 val driven = driveFlow(flow)
                 val read = driven.complete
@@ -131,13 +135,17 @@ class CatalogueGroupHTest {
                 val cardSecurity = assertNotNull(read.masterFile(0x011D))
                 assertEquals(2, cardSecurity.attempt)
                 assertNull(cardSecurity.continuedAt, "a master-file file is never continued")
-                assertContentEquals(flow.chip.files.masterFiles.getValue(0x011D), cardSecurity.bytes())
+                assertContentEquals(
+                    flow.chip.files.masterFiles
+                        .getValue(0x011D),
+                    cardSecurity.bytes(),
+                )
                 assertEquals(CheckOutcome.Passed, read.outcomeOf(ChipCheckKind.ChipAuthentication(ChipFileContext.MASTER_FILE)))
             }
         }
 
     @Test
-    fun H_05_lossAtTheReadOfEfCardAccess_readsItAgainInTheNextAttempt() =
+    fun h05_lossAtTheReadOfEfCardAccess_readsItAgainInTheNextAttempt() =
         runTest {
             withChips { c, keys ->
                 val loss = FakeLinkLoss { chip, cmd -> SimDrive.readsMasterFile(chip, cmd, LdsIds.EF_CARD_ACCESS) }
@@ -155,7 +163,7 @@ class CatalogueGroupHTest {
     // --- H-07: continuing above 32 767 bytes ------------------------------------------------------------
 
     @Test
-    fun H_07_lossInADg2AboveTheB0Boundary_continuesWithB1AboveTheBoundaryAndTheHashVouches() =
+    fun h07_lossInADg2AboveTheB0Boundary_continuesWithB1AboveTheBoundaryAndTheHashVouches() =
         runTest {
             withChips { c, keys ->
                 var b1Reads = 0
@@ -219,7 +227,7 @@ class CatalogueGroupHTest {
     // --- H-09: loss during active authentication -----------------------------------------------------
 
     @Test
-    fun H_09_lossDuringActiveAuthentication_runsItAgainInTheNewSessionAndItPasses() =
+    fun h09_lossDuringActiveAuthentication_runsItAgainInTheNewSessionAndItPasses() =
         runTest {
             withChips { c, keys ->
                 val loss = FakeLinkLoss { _, cmd -> cmd.ins == 0x88 }
@@ -237,7 +245,7 @@ class CatalogueGroupHTest {
     // --- H-24: access attempts across restarts -------------------------------------------------------
 
     @Test
-    fun H_24_accessAttemptsAcrossThreeRestarts_atMostFourExternalAuthenticatesAllWithAKeyNoChipRefused() =
+    fun h24_accessAttemptsAcrossThreeRestarts_atMostFourExternalAuthenticatesAllWithAKeyNoChipRefused() =
         runTest {
             withChips { c, keys ->
                 // A loss at every EXTERNAL AUTHENTICATE of the first three attempts, then it goes through.
@@ -261,7 +269,7 @@ class CatalogueGroupHTest {
         }
 
     @Test
-    fun H_24_accessAttemptsAcrossThreeRestarts_atMostFourPaceMutualAuthenticationsWithAnUnrefusedKey() =
+    fun h24_accessAttemptsAcrossThreeRestarts_atMostFourPaceMutualAuthenticationsWithAnUnrefusedKey() =
         runTest {
             withChips { c, keys ->
                 // PACE step 4 (mutual authentication) is the last GENERAL AUTHENTICATE: not chained (CLA 00).
@@ -278,7 +286,7 @@ class CatalogueGroupHTest {
     // --- H-23: cancel or system end while waiting after a loss ---------------------------------------
 
     @Test
-    fun H_23_cancelOrSystemEndWhileWaitingForTheDocument_oneEndingAndNoNewAttempt() =
+    fun h23_cancelOrSystemEndWhileWaitingForTheDocument_oneEndingAndNoNewAttempt() =
         runTest {
             withChips { c, keys ->
                 for (how in listOf("cancel", "system")) {
@@ -295,7 +303,13 @@ class CatalogueGroupHTest {
                     if (how == "cancel") {
                         assertTrue(coordinator.cancel(ChipReadEnding.Cancelled.By.APP))
                     } else {
-                        assertTrue(coordinator.endedBySystem(io.lightine.tessera.types.errors.NfcUnavailable(io.lightine.tessera.types.errors.NfcUnavailable.Reason.ENDED_BY_SYSTEM)))
+                        assertTrue(
+                            coordinator.endedBySystem(
+                                io.lightine.tessera.types.errors.NfcUnavailable(
+                                    io.lightine.tessera.types.errors.NfcUnavailable.Reason.ENDED_BY_SYSTEM,
+                                ),
+                            ),
+                        )
                     }
                     // Whatever the platform does next changes nothing and sends nothing.
                     assertFalse(coordinator.documentNotReturned())
@@ -314,7 +328,7 @@ class CatalogueGroupHTest {
     // --- H-25: a loss after the last command ------------------------------------------------------------
 
     @Test
-    fun H_25_aLinkThatDropsAfterTheLastCommand_doesNotAffectTheChecksAndTheReadIsComplete() =
+    fun h25_aLinkThatDropsAfterTheLastCommand_doesNotAffectTheChecksAndTheReadIsComplete() =
         runTest {
             withChips { c, keys ->
                 val reference = bacChip(c, keys)
@@ -335,7 +349,7 @@ class CatalogueGroupHTest {
     // --- H-26: a data group listed by EF.COM only ------------------------------------------------------
 
     @Test
-    fun H_26_resumeWithAGroupListedByEfComOnly_keepsFilesByNumberNeverJoinsAnUnvouchedFileAndADroppedGroupStaysDropped() =
+    fun h26_resumeWithAGroupListedByEfComOnly_keepsFilesByNumberNeverJoinsAnUnvouchedFileAndADroppedGroupStaysDropped() =
         runTest {
             withChips { c, keys ->
                 val dg11Bytes = FakeGroups.group(0x6B, 11, length = 600)
@@ -373,7 +387,7 @@ class CatalogueGroupHTest {
     // --- H-27: many losses per read ------------------------------------------------------------------
 
     @Test
-    fun H_27_twoLossesInDg2_completeWithResumeTwo_andAThirdEndsPartialWithWhatWasRead() =
+    fun h27_twoLossesInDg2_completeWithResumeTwo_andAThirdEndsPartialWithWhatWasRead() =
         runTest {
             withChips { c, keys ->
                 val twice = FakeLinkLoss(times = 2) { chip, cmd -> SimDrive.readsAppFile(chip, cmd, dg2) && SimDrive.offset(cmd) > 0 }
@@ -389,6 +403,112 @@ class CatalogueGroupHTest {
                 assertEquals(3, partial.attempts)
                 assertNotNull(partial.read.dataGroup(1), "what was read stays in the ending")
                 assertContentEquals(flow.dataGroups.getValue(1), partial.read.dataGroup(1)!!.bytes())
+            }
+        }
+
+    // --- H-18: after a loss, an answer is never followed by another attempt ------------------------------
+
+    @Test
+    fun h18_afterALoss_anSmErrorOrAMalformedFileInTheNewAttemptEndsTheReadWithNoThirdLink() =
+        runTest {
+            withChips { c, keys ->
+                // A secure-messaging error in attempt 2 (a bad MAC on the first DG1 answer there).
+                var flowRef: FlowChip? = null
+                var links = 0
+                val corruptInSecondLink =
+                    object : FakeCommandHandler {
+                        override fun powerOff() {
+                            links++
+                        }
+
+                        override fun handle(
+                            chip: FakeChip,
+                            command: CommandApdu,
+                        ): ResponseApdu? {
+                            // FakeAttemptLink powers the chip up for link 1 too: link 2 is the third power-up.
+                            if (links == 2 &&
+                                SimDrive.readsAppFile(chip, command, LdsIds.EF_COM)
+                            ) {
+                                flowRef!!.sm!!.corruptNextResponseMac = true
+                            }
+                            return null
+                        }
+                    }
+                val loss = FakeLinkLoss { chip, cmd -> SimDrive.readsAppFile(chip, cmd, dg2) && SimDrive.offset(cmd) > 0 }
+                val flow = bacChip(c, keys, listOf(loss, corruptInSecondLink))
+                flowRef = flow
+                val sm = driveFlow(flow, LinkLossPolicy.Resume(3))
+                val partial = assertIs<ChipReadEnding.Partial>(sm.ending)
+                assertIs<io.lightine.tessera.types.errors.ChipSecureMessagingLost>(partial.stoppedBy)
+                assertEquals(2, sm.links, "no link after the secure-messaging error")
+                assertEquals(2, partial.attempts)
+
+                // A malformed file in attempt 2: a file error, the read goes on and ends, no new attempt.
+                val malformed = byteArrayOf(0x6B, 0x82.toByte(), 0x7F)
+                val flow2 =
+                    FakeReadFlowChip.build(
+                        c,
+                        keys,
+                        FlowAccess.BAC,
+                        extraApplicationFiles = mapOf(dg11 to malformed),
+                        extraHandlers =
+                            listOf(
+                                FakeLinkLoss { chip, cmd -> SimDrive.readsAppFile(chip, cmd, dg2) && SimDrive.offset(cmd) > 0 },
+                            ),
+                    )
+                val driven = driveFlow(flow2, LinkLossPolicy.Resume(3), options(flow2, groups = setOf(1, 2, 11)))
+                val read = driven.complete
+                assertEquals(2, driven.links)
+                assertTrue(read.fileErrors.any { it.fileId == dg11 }, "${read.fileErrors}")
+            }
+        }
+
+    // --- H-28: a loss while the observer throws ----------------------------------------------------------
+
+    @Test
+    fun h28_aLossWhileTheObserverThrowsOnEveryCall_changesNothing() =
+        runTest {
+            withChips { c, keys ->
+                val flow =
+                    bacChip(
+                        c,
+                        keys,
+                        listOf(
+                            FakeLinkLoss { chip, cmd ->
+                                SimDrive.readsAppFile(chip, cmd, dg2) &&
+                                    SimDrive.offset(cmd) > 0
+                            },
+                        ),
+                    )
+                val calls = mutableListOf<Any>()
+                val throwing =
+                    object : io.lightine.tessera.emrtd.ChipReadObserver {
+                        override fun onUpdate(update: io.lightine.tessera.emrtd.ChipReadUpdate) {
+                            calls += update
+                            error("observer failure")
+                        }
+
+                        override fun onEnding(ending: ChipReadEnding) {
+                            calls += ending
+                            error("observer failure")
+                        }
+                    }
+                val coordinator = ChipReadCoordinator(options(flow), LinkLossPolicy.Resume(2), throwing, ChipReader(NoOpTelemetrySink))
+                assertTrue(coordinator.start())
+                coordinator.waiting(0)
+                var link = 0
+                while (true) {
+                    link++
+                    coordinator.documentFound()
+                    coordinator.connecting()
+                    if (coordinator.read(FakeAttemptLink(flow.chip)) == ChipReadAttemptOutcome.ENDED) break
+                    assertTrue(link < 4)
+                }
+                assertEquals(2, link)
+                val ending = assertIs<ChipReadEnding.Complete>(calls.last())
+                assertEquals(2, ending.attempts)
+                assertEquals(1, calls.count { it is ChipReadEnding })
+                assertEquals(1, calls.count { (it as? io.lightine.tessera.emrtd.ChipReadUpdate)?.state is ChipReadState.LinkLost })
             }
         }
 }

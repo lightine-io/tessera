@@ -238,7 +238,8 @@ internal object FakeReadFlowChip {
         if (withSecurityObject) {
             val certificates = (sodCertificates ?: listOf(pki.ds)) + extraSodCertificates
             val hashed = sodGroups?.associateWith { n -> groups[n] ?: FakeGroups.group(tagOf(n), n) } ?: groups
-            app[LdsIds.EF_SOD] = sodBuilder?.invoke(hashed, certificates) ?: pki.sod(hashed, hashOverrides = sodHashOverrides, certificates = certificates)
+            app[LdsIds.EF_SOD] =
+                sodBuilder?.invoke(hashed, certificates) ?: pki.sod(hashed, hashOverrides = sodHashOverrides, certificates = certificates)
         }
         groups.forEach { (n, bytes) -> app[0x0100 + n] = bytes }
         app.putAll(extraApplicationFiles)
@@ -258,7 +259,12 @@ internal object FakeReadFlowChip {
             securityInfos += TlvParser().parseSingle(ca).children().map { it.encoded() }
         }
         securityInfos += cardSecurityExtraInfos
-        if (usesPace && (cam != null || caInMasterFile || cardSecurityExtraInfos.isNotEmpty())) mf[0x011D] = pki.cardSecurity(DerWriter.set(*securityInfos.toTypedArray()))
+        if (usesPace &&
+            (cam != null || caInMasterFile || cardSecurityExtraInfos.isNotEmpty())
+        ) {
+            mf[0x011D] =
+                pki.cardSecurity(DerWriter.set(*securityInfos.toTypedArray()))
+        }
 
         val files =
             FakeFileSystem(

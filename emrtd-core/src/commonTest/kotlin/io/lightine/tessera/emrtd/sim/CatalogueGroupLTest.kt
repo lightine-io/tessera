@@ -29,16 +29,22 @@ class CatalogueGroupLTest {
     private fun midDg2() = FakeLinkLoss { chip, cmd -> SimDrive.readsAppFile(chip, cmd, dg2) && SimDrive.offset(cmd) > 0 }
 
     /** The fraction of the last update, which every ending other than Complete keeps (L-03). */
-    private fun lastFraction(recorder: SimRecorder): Double = recorder.updates.last().value.progress.fraction
+    private fun lastFraction(recorder: SimRecorder): Double =
+        recorder.updates
+            .last()
+            .value.progress.fraction
 
     @Test
-    fun L_03_everyEndingButCompleteKeepsTheLastValueBelowOne() =
+    fun l03_everyEndingButCompleteKeepsTheLastValueBelowOne() =
         runTest {
             withChips { c, keys ->
                 val endings = mutableListOf<Pair<ChipReadEnding, SimRecorder>>()
                 // Partial: the budget used up after access.
                 val always = FakeLinkLoss(times = 10) { chip, cmd -> SimDrive.readsAppFile(chip, cmd, dg2) && SimDrive.offset(cmd) > 0 }
-                driveFlow(FakeReadFlowChip.build(c, keys, FlowAccess.BAC, extraHandlers = listOf(always))).let { endings += it.ending to it.recorder }
+                driveFlow(FakeReadFlowChip.build(c, keys, FlowAccess.BAC, extraHandlers = listOf(always))).let {
+                    endings +=
+                        it.ending to it.recorder
+                }
                 // KeyNotAccepted: the chip refuses the key.
                 val wrongKey = FakeReadFlowChip.build(c, keys, FlowAccess.BAC)
                 drive(options(wrongKey, key = FakeReadFlowChip.wrongMrzKey()), LinkLossPolicy.Resume(2)) { FakeAttemptLink(wrongKey.chip) }
@@ -50,7 +56,13 @@ class CatalogueGroupLTest {
                     val flow = FakeReadFlowChip.build(c, keys, FlowAccess.BAC, extraHandlers = listOf(midDg2()))
                     val driven =
                         drive(options(flow), LinkLossPolicy.Resume(2), afterLoss = { co ->
-                            if (systemEnd) co.endedBySystem(NfcUnavailable(NfcUnavailable.Reason.ENDED_BY_SYSTEM)) else co.cancel(ChipReadEnding.Cancelled.By.APP)
+                            if (systemEnd) {
+                                co.endedBySystem(
+                                    NfcUnavailable(NfcUnavailable.Reason.ENDED_BY_SYSTEM),
+                                )
+                            } else {
+                                co.cancel(ChipReadEnding.Cancelled.By.APP)
+                            }
                             false
                         }) { FakeAttemptLink(flow.chip) }
                     endings += driven.ending to driven.recorder
@@ -65,7 +77,7 @@ class CatalogueGroupLTest {
         }
 
     @Test
-    fun L_04_bytesTotalIsKnownAfterTheFirstChunkAndFilesPlannedAfterTheLists() =
+    fun l04_bytesTotalIsKnownAfterTheFirstChunkAndFilesPlannedAfterTheLists() =
         runTest {
             withChips { c, keys ->
                 val flow = FakeReadFlowChip.build(c, keys, FlowAccess.BAC, dg2Bytes = 3_000)
@@ -76,7 +88,10 @@ class CatalogueGroupLTest {
                 for ((file, group) in reading.groupBy { (it.state as ChipReadState.ReadingFile).file.fileId }) {
                     val states = group.map { it.state as ChipReadState.ReadingFile }
                     assertNull(states.first().bytesTotal, "file ${file.toString(16)}: the length is not known before the first chunk")
-                    val size = flow.chip.files.applications.values.first()[file]?.size
+                    val size =
+                        flow.chip.files.applications.values
+                            .first()[file]
+                            ?.size
                     if (size != null && states.size > 1) {
                         assertTrue(states.drop(1).all { it.bytesTotal == size }, "file ${file.toString(16)}: $states")
                     }
@@ -91,14 +106,16 @@ class CatalogueGroupLTest {
         }
 
     @Test
-    fun L_08_updatesEndingsAndTheReadCarryNoDocumentValues() =
+    fun l08_updatesEndingsAndTheReadCarryNoDocumentValues() =
         runTest {
             withChips { c, keys ->
                 val sentinel = "QXZSENTINELQXZ"
-                val dg11 = io.lightine.tessera.emrtd.internal.tlv.TlvWriter.constructed(
-                    0x6B,
-                    io.lightine.tessera.emrtd.internal.tlv.TlvWriter.encode(0x5F0E, sentinel.encodeToByteArray()),
-                )
+                val dg11 =
+                    io.lightine.tessera.emrtd.internal.tlv.TlvWriter.constructed(
+                        0x6B,
+                        io.lightine.tessera.emrtd.internal.tlv.TlvWriter
+                            .encode(0x5F0E, sentinel.encodeToByteArray()),
+                    )
                 val flow = FakeReadFlowChip.build(c, keys, FlowAccess.BAC, extraDataGroups = mapOf(11 to dg11))
                 val driven = driveFlow(flow, options = options(flow, groups = setOf(1, 2, 11)))
                 val read = driven.complete
@@ -108,13 +125,14 @@ class CatalogueGroupLTest {
                     driven.recorder.updates.map { it.value.toString() } +
                         driven.recorder.updates.map { it.value.state.toString() } +
                         driven.ending.toString() + read.toString() + read.files.map { it.toString() } +
-                        read.checks.map { it.toString() } + listOfNotNull(read.dg1?.toString(), read.efCom?.toString(), read.dg11?.toString())
+                        read.checks.map { it.toString() } +
+                        listOfNotNull(read.dg1?.toString(), read.efCom?.toString(), read.dg11?.toString())
                 for (text in texts) for (value in values) assertFalse(value in text, "\"$value\" in: $text")
             }
         }
 
     @Test
-    fun L_11_filesKeptOnResumeCountAsDoneAtOnceAndTheBarNeverGoesBack() =
+    fun l11_filesKeptOnResumeCountAsDoneAtOnceAndTheBarNeverGoesBack() =
         runTest {
             withChips { c, keys ->
                 val reference = driveFlow(FakeReadFlowChip.build(c, keys, FlowAccess.BAC, caInApplication = true))
@@ -135,7 +153,7 @@ class CatalogueGroupLTest {
         }
 
     @Test
-    fun L_12_requestedGroupsTheChipDoesNotListShrinkThePlanAndTheBarStillReachesTheEnd() =
+    fun l12_requestedGroupsTheChipDoesNotListShrinkThePlanAndTheBarStillReachesTheEnd() =
         runTest {
             withChips { c, keys ->
                 val flow = FakeReadFlowChip.build(c, keys, FlowAccess.BAC)
@@ -149,7 +167,11 @@ class CatalogueGroupLTest {
                 // The same chip read for the listed groups only: the dropped groups' estimates must
                 // not hold the bar back, so at the same point it stands where that read stands.
                 val plain = FakeReadFlowChip.build(c, keys, FlowAccess.BAC)
-                val asked = driveFlow(plain).recorder.updates.map { it.value }.last { it.state !is ChipReadState.CheckingFiles }
+                val asked =
+                    driveFlow(plain)
+                        .recorder.updates
+                        .map { it.value }
+                        .last { it.state !is ChipReadState.CheckingFiles }
                 assertTrue(
                     beforeChecks.progress.fraction >= asked.progress.fraction - 0.02,
                     "with dropped groups ${beforeChecks.progress}, without ${asked.progress}",

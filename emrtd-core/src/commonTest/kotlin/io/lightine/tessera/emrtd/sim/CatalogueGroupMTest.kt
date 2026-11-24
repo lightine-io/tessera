@@ -40,7 +40,7 @@ class CatalogueGroupMTest {
     // --- M-02: EF.COM versions -----------------------------------------------------------------------
 
     @Test
-    fun M_02_efComWithAWrongLdsVersionOrNoUnicodeVersion_isReportedAsStoredAndTheGroupsStillRead() =
+    fun m02_efComWithAWrongLdsVersionOrNoUnicodeVersion_isReportedAsStoredAndTheGroupsStillRead() =
         runTest {
             withChips { c, keys ->
                 // [DIFF] P4 LDS_A_04: "V3.0" is reported as stored.
@@ -60,7 +60,11 @@ class CatalogueGroupMTest {
                 assertHashPassed(read, 1, 2)
                 // [DIFF] P4 LDS_A_07: no Unicode version. Reported as absent or as a typed file error, never an exception.
                 val noUnicode =
-                    TlvWriter.constructed(0x60, TlvWriter.encode(0x5F01, "0108".encodeToByteArray()), TlvWriter.encode(0x5C, byteArrayOf(0x61, 0x75)))
+                    TlvWriter.constructed(
+                        0x60,
+                        TlvWriter.encode(0x5F01, "0108".encodeToByteArray()),
+                        TlvWriter.encode(0x5C, byteArrayOf(0x61, 0x75)),
+                    )
                 val read2 = readOf(FakeReadFlowChip.build(c, keys, FlowAccess.BAC, efComOverride = noUnicode))
                 assertTrue(read2.efCom?.unicodeVersion == null)
                 assertTrue(read2.efCom != null || read2.fileErrors.any { it.fileId == 0x011E }, "${read2.fileErrors}")
@@ -71,7 +75,7 @@ class CatalogueGroupMTest {
     // --- M-07, M-09, M-10: DG1 content ---------------------------------------------------------------
 
     @Test
-    fun M_07_aWrongCheckDigitInDg1_keepsTheLinesVerbatimAndReportsTheFinding() =
+    fun m07_aWrongCheckDigitInDg1_keepsTheLinesVerbatimAndReportsTheFinding() =
         runTest {
             withChips { c, keys ->
                 val lines = FakeReadFlowChip.lines
@@ -93,7 +97,7 @@ class CatalogueGroupMTest {
         }
 
     @Test
-    fun M_09_aBirthDateWithFillers_isReportedAsStoredAndTheReadIsComplete() =
+    fun m09_aBirthDateWithFillers_isReportedAsStoredAndTheReadIsComplete() =
         runTest {
             withChips { c, keys ->
                 // P4 LDS_B_25 to B_28 [DIFF]: an incomplete date is a fact, not a refusal.
@@ -108,7 +112,7 @@ class CatalogueGroupMTest {
         }
 
     @Test
-    fun M_10_aTd1ChipBesideATd3PrintedMrz_isAFieldsDifferFactWithNoVerdict() =
+    fun m10_aTd1ChipBesideATd3PrintedMrz_isAFieldsDifferFactWithNoVerdict() =
         runTest {
             withChips { c, keys ->
                 // [DIFF] P4 LDS_B_29, B_30.
@@ -124,7 +128,7 @@ class CatalogueGroupMTest {
     // --- M-08: DG1 without the MRZ object ------------------------------------------------------------
 
     @Test
-    fun M_08_dg1WithoutItsMrzDataObject_isATypedMissingElementAndTheHashStillPasses() =
+    fun m08_dg1WithoutItsMrzDataObject_isATypedMissingElementAndTheHashStillPasses() =
         runTest {
             withChips { c, keys ->
                 // [DIFF] P4 LDS_B_24.
@@ -140,7 +144,7 @@ class CatalogueGroupMTest {
     // --- M-13: DG2 structure ---------------------------------------------------------------------------
 
     @Test
-    fun M_13_aDg2WithoutItsImageObject_isATypedStructuralFailureAndTheRawBytesStay() =
+    fun m13_aDg2WithoutItsImageObject_isATypedStructuralFailureAndTheRawBytesStay() =
         runTest {
             withChips { c, keys ->
                 val noImage =
@@ -163,7 +167,7 @@ class CatalogueGroupMTest {
     // --- M-17: EF.CardSecurity versus EF.CardAccess ----------------------------------------------------
 
     @Test
-    fun M_17_cardSecurityWithMoreEntriesPasses_fewerOrDifferentAreFailedFacts() =
+    fun m17_cardSecurityWithMoreEntriesPasses_fewerOrDifferentAreFailedFacts() =
         runTest {
             withChips { c, keys ->
                 val gm = FakePaceSuite(FakeReadFlowChip.ECDH_GM_AES128, 13)
