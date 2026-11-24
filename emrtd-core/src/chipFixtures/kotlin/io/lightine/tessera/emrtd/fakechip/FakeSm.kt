@@ -60,10 +60,32 @@ internal class FakeSm(
     /** Answer the next protected command with this bare status word (still counted in the SSC). */
     var answerNextBare: Int? = null
 
+    /** A fault in how the chip builds its next protected answer (TR RF Part 4, ISO7816_D_02 to D_06; Part 11, 9.8.6.3). */
+    enum class ResponseFault {
+        /** No DO8E: the answer carries no checksum. */
+        DROP_CHECKSUM,
+
+        /** No DO87 although the answer has data (checksum valid over the rest). */
+        DROP_CRYPTOGRAM,
+
+        /** No DO99 (checksum valid over the rest). */
+        DROP_STATUS,
+
+        /** The data encrypted without the ISO/IEC 9797-1 method 2 padding (checksum valid). */
+        BAD_PADDING,
+
+        /** The checksum computed with the send sequence counter one higher than it should be. */
+        COUNTER_OFF_BY_ONE,
+    }
+
+    /** Applied once, to the next protected answer. */
+    var nextResponseFault: ResponseFault? = null
+
     override fun powerOff() {
         session = null
         answerNextBare = null
         corruptNextResponseMac = false
+        nextResponseFault = null
     }
 
     /** Opens a session: BAC and PACE call this once they agree on keys and a start counter. */
@@ -163,17 +185,27 @@ internal class FakeSm(
         ins: Int,
         answer: ResponseApdu,
     ): ResponseApdu {
+        val fault = nextResponseFault
+        nextResponseFault = null
         var body = ByteArray(0)
-        if (answer.data.isNotEmpty()) {
-            val enc = encrypt(s, CryptoBytes.pad(answer.data, s.cipher.blockSize))
+        if (answer.data.isNotEmpty() && fault != ResponseFault.DROP_CRYPTOGRAM) {
+            val padded =
+                if (fault == ResponseFault.BAD_PADDING) {
+                    answer.data + ByteArray(s.cipher.blockSize - answer.data.size % s.cipher.blockSize)
+                } else {
+                    CryptoBytes.pad(answer.data, s.cipher.blockSize)
+                }
+            val enc = encrypt(s, padded)
             body += if (ins and 1 == 1) TlvWriter.encode(0x85, enc) else TlvWriter.encode(0x87, byteArrayOf(1) + enc)
         }
-        body += TlvWriter.encode(0x99, byteArrayOf((answer.sw shr 8).toByte(), answer.sw.toByte()))
+        if (fault != ResponseFault.DROP_STATUS) body += TlvWriter.encode(0x99, byteArrayOf((answer.sw shr 8).toByte(), answer.sw.toByte()))
+        if (fault == ResponseFault.COUNTER_OFF_BY_ONE) increment(s.ssc)
         val cc = mac(s, body)
         if (corruptNextResponseMac) {
             corruptNextResponseMac = false
             cc[0] = (cc[0].toInt() xor 1).toByte()
         }
+        if (fault == ResponseFault.DROP_CHECKSUM) return ResponseApdu(body, answer.sw)
         return ResponseApdu(body + TlvWriter.encode(0x8E, cc), answer.sw)
     }
 
