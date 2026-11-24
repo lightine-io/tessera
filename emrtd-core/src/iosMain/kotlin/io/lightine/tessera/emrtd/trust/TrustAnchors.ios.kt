@@ -7,6 +7,8 @@ import kotlinx.cinterop.usePinned
 import platform.Foundation.NSData
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSFileSize
+import platform.Foundation.NSFileType
+import platform.Foundation.NSFileTypeRegular
 import platform.Foundation.NSNumber
 import platform.posix.memcpy
 
@@ -25,6 +27,7 @@ public actual object TrustAnchors {
     public fun load(path: String): TrustAnchorLoad = load(path, MAX_BYTES)
 
     /** The same read as [load] with a different cap, so tests can exercise [TrustAnchorLoadProblem.TOO_LARGE]. */
+    @OptIn(ExperimentalForeignApi::class)
     internal fun load(
         path: String,
         maxBytes: Long,
@@ -32,19 +35,17 @@ public actual object TrustAnchors {
         if (isWebAddress(path)) return trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_A_LOCAL_FILE)
         val manager = NSFileManager.defaultManager
         if (!manager.fileExistsAtPath(path)) return trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_FOUND)
-        val size = fileSizeBytes(manager, path) ?: return trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_READABLE)
+        val attributes = manager.attributesOfItemAtPath(path, null) ?: return trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_READABLE)
+        // A folder, a device or a pipe: its size says nothing, and reading it may not end.
+        if (attributes[NSFileType] != NSFileTypeRegular) return trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_READABLE)
+        val size = (attributes[NSFileSize] as? NSNumber)?.longValue ?: return trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_READABLE)
         if (size > maxBytes) return trustAnchorLoadFailed(TrustAnchorLoadProblem.TOO_LARGE)
         val data = manager.contentsAtPath(path) ?: return trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_READABLE)
+        // The file may have grown since its size was read.
+        if (data.length.toLong() > maxBytes) return trustAnchorLoadFailed(TrustAnchorLoadProblem.TOO_LARGE)
         return readTrustAnchors(data.toKotlinByteArray())
     }
 }
-
-/** The file's size in bytes, or `null` when its attributes could not be read. */
-@OptIn(ExperimentalForeignApi::class)
-private fun fileSizeBytes(
-    manager: NSFileManager,
-    path: String,
-): Long? = (manager.attributesOfItemAtPath(path, null)?.get(NSFileSize) as? NSNumber)?.longValue()
 
 @OptIn(ExperimentalForeignApi::class)
 private fun NSData.toKotlinByteArray(): ByteArray {

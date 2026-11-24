@@ -169,6 +169,18 @@ class TrustAnchorsTest {
     }
 
     @Test
+    fun contentWithMoreItemsThanAnyMasterListIsTooLarge() {
+        // Tiny DER items (ASN.1 NULL) and empty PEM blocks: one past the cap each.
+        val nulls = ByteArray((MAX_ITEMS + 1) * 2) { if (it % 2 == 0) 0x05 else 0x00 }
+        assertEquals(TrustAnchorLoadProblem.TOO_LARGE, TrustAnchors.load(nulls).problem)
+        val blocks = "-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----\n".repeat(MAX_ITEMS + 1)
+        assertEquals(TrustAnchorLoadProblem.TOO_LARGE, TrustAnchors.load(blocks.encodeToByteArray()).problem)
+        // At the cap, the items are still read one by one.
+        val atCap = TrustAnchors.load(ByteArray(MAX_ITEMS * 2) { if (it % 2 == 0) 0x05 else 0x00 })
+        assertEquals(TrustAnchorLoadProblem.NOT_RECOGNIZED, atCap.problem)
+    }
+
+    @Test
     fun toStringPrintsTheKindAndCountsOnly() {
         val a = FakePki.cscaCertificate()
         val b = FakePki.documentSignerCertificate()

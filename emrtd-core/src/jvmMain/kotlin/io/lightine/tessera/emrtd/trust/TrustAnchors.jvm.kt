@@ -38,11 +38,21 @@ public actual object TrustAnchors {
         maxBytes: Long,
     ): TrustAnchorLoad {
         if (isWebAddress(file.path)) return trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_A_LOCAL_FILE)
-        if (!file.exists()) return trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_FOUND)
-        if (file.length() > maxBytes) return trustAnchorLoadFailed(TrustAnchorLoadProblem.TOO_LARGE)
         return try {
-            readTrustAnchors(file.readBytes())
+            when {
+                !file.exists() -> trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_FOUND)
+
+                // A folder, a device or a pipe: its length says nothing, and reading it may not end.
+                !file.isFile -> trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_READABLE)
+
+                file.length() > maxBytes -> trustAnchorLoadFailed(TrustAnchorLoadProblem.TOO_LARGE)
+
+                // Read through the cap too: the file may have grown since its length was read.
+                else -> file.inputStream().use { load(it, maxBytes) }
+            }
         } catch (e: IOException) {
+            trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_READABLE)
+        } catch (e: SecurityException) {
             trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_READABLE)
         }
     }
@@ -60,6 +70,8 @@ public actual object TrustAnchors {
                 readTrustAnchors(bytes)
             }
         } catch (e: IOException) {
+            trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_READABLE)
+        } catch (e: SecurityException) {
             trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_READABLE)
         }
 }

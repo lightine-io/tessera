@@ -57,6 +57,13 @@ public expect object TrustAnchors {
 /** The largest file the file helpers read into memory: 16 MiB. A real master list is about 1 MB. */
 internal const val MAX_BYTES: Long = 16L * 1024L * 1024L
 
+/**
+ * The most PEM blocks or DER items one content may hold: 10 000. A real master list holds a few
+ * hundred certificates; without a cap, 16 MiB of tiny items would take far more memory than the
+ * content itself.
+ */
+internal const val MAX_ITEMS: Int = 10_000
+
 /** Reads root certificates from content bytes: master list, one DER certificate, PEM, DER runs. */
 internal fun readTrustAnchors(bytes: ByteArray): TrustAnchorLoad {
     when (val list = MasterListReader.read(bytes)) {
@@ -80,6 +87,7 @@ internal fun readTrustAnchors(bytes: ByteArray): TrustAnchorLoad {
         is TrustAnchorParse.Unreadable -> {}
     }
     val blocks = pemCertificateBlocks(bytes)
+    if (blocks != null && blocks.size > MAX_ITEMS) return trustAnchorLoadFailed(TrustAnchorLoadProblem.TOO_LARGE)
     if (blocks != null) {
         val anchors = ArrayList<TrustAnchor>()
         val unreadable = ArrayList<UnreadableTrustAnchor>()
@@ -107,6 +115,7 @@ internal fun readTrustAnchors(bytes: ByteArray): TrustAnchorLoad {
         } catch (e: Asn1Exception) {
             null
         }
+    if (elements != null && elements.size > MAX_ITEMS) return trustAnchorLoadFailed(TrustAnchorLoadProblem.TOO_LARGE)
     if (elements != null) {
         val anchors = ArrayList<TrustAnchor>()
         val unreadable = ArrayList<UnreadableTrustAnchor>()
@@ -134,7 +143,8 @@ internal fun isWebAddress(path: String): Boolean =
 
 private fun DerReader.readElements(): List<ByteArray> {
     val elements = ArrayList<ByteArray>()
-    while (hasMore) elements.add(read().encoded())
+    // One past the cap is enough to tell the content holds too many.
+    while (hasMore && elements.size <= MAX_ITEMS) elements.add(read().encoded())
     return elements
 }
 
@@ -158,6 +168,8 @@ private fun pemCertificateBlocks(bytes: ByteArray): List<ByteArray?>? {
             break
         }
         blocks.add(base64Body(bytes, start + begin.size, stop))
+        // One past the cap is enough to tell the content holds too many.
+        if (blocks.size > MAX_ITEMS) break
         from = stop + end.size
     }
     return if (blocks.isEmpty()) null else blocks
@@ -279,7 +291,10 @@ public enum class TrustAnchorLoadProblem {
     /** The file exists but its bytes could not be read: it may be a folder, or the app lacks permission. */
     NOT_READABLE,
 
-    /** The content is larger than the 16 MiB cap, so it was not read into memory. */
+    /**
+     * The content is larger than the 16 MiB cap, so it was not read into memory, or it holds more
+     * than 10 000 PEM blocks or DER items, far more than any master list.
+     */
     TOO_LARGE,
 
     /** The bytes are none of the kinds this reader knows: not a master list, not a certificate, not PEM. */
