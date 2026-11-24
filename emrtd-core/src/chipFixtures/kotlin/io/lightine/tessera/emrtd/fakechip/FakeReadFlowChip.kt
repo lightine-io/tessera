@@ -11,6 +11,7 @@ import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
 import io.lightine.tessera.emrtd.internal.crypto.EcDomainParameters
 import io.lightine.tessera.emrtd.internal.crypto.HashAlgorithm
 import io.lightine.tessera.emrtd.internal.crypto.StandardDomainParameterValues
+import io.lightine.tessera.emrtd.internal.pa.FakeGroups
 import io.lightine.tessera.emrtd.internal.pa.Pki
 import io.lightine.tessera.emrtd.internal.pa.TestKeys
 import io.lightine.tessera.emrtd.internal.tlv.TlvParser
@@ -194,6 +195,22 @@ internal object FakeReadFlowChip {
         dg15Override: ByteArray? = null,
         /** Certificates EF.SOD carries in addition to the signer's, to give it another size. */
         extraSodCertificates: List<ByteArray> = emptyList(),
+        /** Extra data groups on the chip, by number (written as application files and listed as [efComGroups] and [sodGroups] say). */
+        extraDataGroups: Map<Int, ByteArray> = emptyMap(),
+        /** The data groups EF.COM lists, in place of every group on the chip (B51 LDS_H_90 to H_92). */
+        efComGroups: List<Int>? = null,
+        /** The data groups whose hashes EF.SOD holds, in place of every group on the chip; a number with no file on the chip gets a hash of filler bytes. */
+        sodGroups: List<Int>? = null,
+        /** Hashes EF.SOD holds in place of the real ones, by data group number. */
+        sodHashOverrides: Map<Int, ByteArray> = emptyMap(),
+        /** Extra master-file EFs (for example EF.ATR/INFO or EF.DIR), by file identifier. */
+        extraMasterFiles: Map<Int, ByteArray> = emptyMap(),
+        /** Extra SecurityInfos for EF.CardSecurity (for example an EFDIRInfo); EF.CardSecurity is written on a PACE chip when any is given. */
+        cardSecurityExtraInfos: List<ByteArray> = emptyList(),
+        /** Other applications on the chip, by AID, beside (or, with [blank], instead of) the eMRTD application. */
+        otherApplications: Map<List<Byte>, Map<Int, ByteArray>> = emptyMap(),
+        /** Whether the link takes extended-length APDUs (an extended-length reader). */
+        supportsExtendedLength: Boolean = false,
     ): FlowChip {
         val groups = linkedMapOf(1 to FakeChipData.dg1(dg1Lines), 2 to dg2(dg2Bytes))
         val caKey = if (caInApplication || caInMasterFile) FakeCaKey.generate(c, 13) else null
@@ -210,17 +227,19 @@ internal object FakeReadFlowChip {
         val aa = if (activeAuthentication) FakeAa(FakeAaKey.rsa(c), c, HashAlgorithm.SHA256) else null
         if (aa != null) groups[15] = aa.dg15
         if (dg15Override != null) groups[15] = dg15Override
-        val efCom = FakeChipData.efCom(groups.keys.map { tagOf(it) })
+        groups.putAll(extraDataGroups)
+        val efCom = FakeChipData.efCom((efComGroups ?: groups.keys.toList()).map { tagOf(it) })
         val app = HashMap<Int, ByteArray>()
         app[LdsIds.EF_COM] = efCom
         if (withSecurityObject) {
             val certificates = (sodCertificates ?: listOf(pki.ds)) + extraSodCertificates
-            app[LdsIds.EF_SOD] = pki.sod(groups, certificates = certificates)
+            val hashed = sodGroups?.associateWith { n -> groups[n] ?: FakeGroups.group(tagOf(n), n) } ?: groups
+            app[LdsIds.EF_SOD] = pki.sod(hashed, hashOverrides = sodHashOverrides, certificates = certificates)
         }
         groups.forEach { (n, bytes) -> app[0x0100 + n] = bytes }
         app.putAll(extraApplicationFiles)
 
-        val mf = HashMap<Int, ByteArray>()
+        val mf = HashMap<Int, ByteArray>(extraMasterFiles)
         val usesPace = access == FlowAccess.PACE_AND_BAC || access == FlowAccess.PACE_ONLY
         val paceInfos = cardAccessSuites.map { paceInfo(it.oid, it.parameterId) }
         if (usesPace) mf[LdsIds.EF_CARD_ACCESS] = DerWriter.set(*paceInfos.toTypedArray())
@@ -234,12 +253,13 @@ internal object FakeReadFlowChip {
             val ca = FakeCa.securityInfos(caOffers, listOf(caKey!!))
             securityInfos += TlvParser().parseSingle(ca).children().map { it.encoded() }
         }
-        if (usesPace && (cam != null || caInMasterFile)) mf[0x011D] = pki.cardSecurity(DerWriter.set(*securityInfos.toTypedArray()))
+        securityInfos += cardSecurityExtraInfos
+        if (usesPace && (cam != null || caInMasterFile || cardSecurityExtraInfos.isNotEmpty())) mf[0x011D] = pki.cardSecurity(DerWriter.set(*securityInfos.toTypedArray()))
 
         val files =
             FakeFileSystem(
                 masterFiles = mf,
-                applications = if (blank) emptyMap() else mapOf(LdsIds.LDS1_AID.toList() to app),
+                applications = (if (blank) emptyMap() else mapOf(LdsIds.LDS1_AID.toList() to app)) + otherApplications,
             )
         val sm = if (access == FlowAccess.PLAIN) null else FakeSm(c, openFiles = setOf(LdsIds.EF_CARD_ACCESS, 0x2F01))
         val pace =
@@ -263,6 +283,8 @@ internal object FakeReadFlowChip {
         val chip =
             FakeChip(
                 files,
+                maxCommandLength = if (supportsExtendedLength) FakeChip.EXTENDED_MAX_COMMAND else FakeChip.SHORT_MAX_COMMAND,
+                supportsExtendedLength = supportsExtendedLength,
                 handlers = handlers,
                 startIn = if (startInApplication) LdsIds.LDS1_AID.toList() else null,
                 acceptsSelectMf = acceptsSelectMf,
