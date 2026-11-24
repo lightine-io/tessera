@@ -317,6 +317,8 @@ public class SignerCertificateView internal constructor(
 /**
  * The outcome of reading EF.SOD.
  *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
@@ -337,6 +339,8 @@ public sealed class SecurityObjectParse {
 
 /**
  * Why EF.SOD could not be read.
+ *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *

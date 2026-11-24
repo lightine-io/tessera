@@ -116,6 +116,10 @@ internal class FakeCa(
 ) : FakeCommandHandler {
     private var pending: Pair<FakeCaOffer, FakeCaKey>? = null
 
+    override fun powerOff() {
+        pending = null
+    }
+
     /** How many times the session was restarted with chip-authentication keys. */
     var restarts: Int = 0
         private set

@@ -32,6 +32,8 @@ import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
  * In Swift these are the classes `ChipReadResultComplete`, `ChipReadResultPartial` and
  * `ChipReadResultFailed`; none is generic.
  *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
@@ -96,6 +98,9 @@ public sealed class ChipReadResult {
  * @property securityObject EF.SOD, when read and parsed.
  * @property checks The facts: one [ChipCheck] per check, in a fixed order (passive authentication,
  *   then chip authentication, the PACE chip authentication mapping and active authentication).
+ *   The checks that need the chip (chip authentication, the mapping, active authentication) come
+ *   from the read's last attempt; passive authentication runs on the phone over every file.
+ * @property resume What happened to the files of earlier attempts after a lost link.
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
@@ -114,6 +119,7 @@ public class ChipRead internal constructor(
     public val dg16: Dg16View?,
     public val securityObject: SecurityObjectView?,
     public val checks: List<ChipCheck>,
+    public val resume: ChipResumeOutcome = ChipResumeOutcome.NOT_RESUMED,
 ) {
     /** The eMRTD application's file [fileId] (for example `0x011D` EF.SOD), or `null` when it was not read. */
     public fun applicationFile(fileId: Int): ChipFile? = files.firstOrNull { it.fileId == fileId && !it.inMasterFile }
@@ -129,7 +135,7 @@ public class ChipRead internal constructor(
 
     /** Counts only: files, file errors and checks. */
     override fun toString(): String =
-        "ChipRead(access=${access.protocol}, files=${files.size}, fileErrors=${fileErrors.size}, checks=${checks.size})"
+        "ChipRead(access=${access.protocol}, files=${files.size}, fileErrors=${fileErrors.size}, checks=${checks.size}, resume=$resume)"
 }
 
 /**
@@ -141,6 +147,11 @@ public class ChipRead internal constructor(
  *   the master file or EF.SOD in the application, `0x011E` EF.COM, `0x0101` to `0x0110` DG1 to DG16.
  * @property inMasterFile `true` for a file of the master file (EF.CardAccess, EF.CardSecurity,
  *   EF.ATR/INFO), `false` for a file of the eMRTD application.
+ * @property attempt Which attempt of the read received the file's last byte, from 1. Earlier than
+ *   the read's last attempt only for a data group kept by [LinkLossPolicy.Resume].
+ * @property continuedAt For a data group that a lost link cut off and [LinkLossPolicy.Resume]
+ *   continued in [attempt], the byte offset where it continued (the bytes before it came from the
+ *   attempt before); `null` for a file read whole in one attempt.
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
@@ -148,6 +159,8 @@ public class ChipFile internal constructor(
     public val fileId: Int,
     public val inMasterFile: Boolean,
     private val content: ByteArray,
+    public val attempt: Int = 1,
+    public val continuedAt: Int? = null,
 ) {
     /** The data group number (1 to 16) for a data group of the application, else `null`. */
     public val dataGroup: Int?
@@ -163,7 +176,10 @@ public class ChipFile internal constructor(
     internal fun raw(): ByteArray = content
 
     /** The file identifier and size, never content. */
-    override fun toString(): String = "ChipFile(${fileId.toString(16).uppercase().padStart(4, '0')}, $size bytes)"
+    override fun toString(): String {
+        val where = continuedAt?.let { ", continued at $it" } ?: ""
+        return "ChipFile(${fileId.toString(16).uppercase().padStart(4, '0')}, $size bytes, attempt $attempt$where)"
+    }
 }
 
 /**
@@ -201,6 +217,8 @@ public class AccessReport internal constructor(
 /**
  * The kind of key that opened the chip.
  *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
@@ -216,6 +234,8 @@ public enum class ChipPassword {
 
 /**
  * The three PACE mappings (Part 11, section 4.4.3.3).
+ *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -285,4 +305,38 @@ public class ChipFileError internal constructor(
     /** The file identifier, its place and the error. */
     override fun toString(): String =
         "ChipFileError(${fileId.toString(16).uppercase().padStart(4, '0')}, ${if (inMasterFile) "master file" else "application"}, $error)"
+}
+
+/**
+ * What a read did with the files of earlier attempts after a lost link ([LinkLossPolicy.Resume]).
+ *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
+ * Experimental: see [ExperimentalTesseraChipApi].
+ *
+ * @since 1.0.0
+ */
+@ExperimentalTesseraChipApi
+public enum class ChipResumeOutcome {
+    /** No earlier attempt to continue from: the first attempt, or a policy other than [LinkLossPolicy.Resume]. */
+    NOT_RESUMED,
+
+    /**
+     * EF.SOD read again in this attempt is byte for byte the one from the attempt before, so the
+     * data groups already read were kept (each [ChipFile.attempt] says which attempt read it).
+     */
+    SAME_SECURITY_OBJECT,
+
+    /**
+     * EF.SOD read again differs from the one from the attempt before: the chip is not the same
+     * document, or its signed data changed. Nothing from earlier attempts was kept; the read
+     * started over.
+     */
+    SECURITY_OBJECT_DIFFERS,
+
+    /**
+     * EF.SOD was not read whole in this attempt or in the attempt before, so nothing could show it
+     * is the same document. Nothing from earlier attempts was kept; the read started over.
+     */
+    NOTHING_TO_COMPARE,
 }

@@ -35,6 +35,8 @@ kotlin {
     sourceSets {
         all {
             languageSettings.optIn("io.lightine.tessera.types.ExperimentalTesseraChipApi")
+            // The read coordinator in emrtd-core, public only for Tessera's own NFC modules.
+            languageSettings.optIn("io.lightine.tessera.emrtd.InternalTesseraChipApi")
         }
         androidMain {
             dependencies {

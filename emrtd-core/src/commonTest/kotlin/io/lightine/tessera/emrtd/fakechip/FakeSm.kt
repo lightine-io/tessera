@@ -60,6 +60,12 @@ internal class FakeSm(
     /** Answer the next protected command with this bare status word (still counted in the SSC). */
     var answerNextBare: Int? = null
 
+    override fun powerOff() {
+        session = null
+        answerNextBare = null
+        corruptNextResponseMac = false
+    }
+
     /** Opens a session: BAC and PACE call this once they agree on keys and a start counter. */
     fun start(
         cipher: SmCipher,

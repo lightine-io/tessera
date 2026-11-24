@@ -40,6 +40,23 @@ public interface ApduTransport {
     public val supportsExtendedLength: Boolean
 
     /**
+     * Which file the chip has selected when the read starts, when the platform knows it.
+     *
+     * The default, [ChipStartSelection.UNKNOWN], keeps the reader's general start: it tries the
+     * master-file files first and selects the master file only when the chip refuses them. A
+     * transport whose platform has already selected the eMRTD application before handing over the
+     * chip (Core NFC on iPhone does, from the app's list of application identifiers) reports
+     * [ChipStartSelection.EMRTD_APPLICATION]: the reader then selects the master file first and
+     * skips a command that is bound to fail, so fewer plain commands go out before access.
+     *
+     * Report only what the platform states; when in doubt, keep the default.
+     *
+     * @since 1.0.0
+     */
+    public val startSelection: ChipStartSelection
+        get() = ChipStartSelection.UNKNOWN
+
+    /**
      * Sends one command APDU and returns the chip's whole answer, status word included.
      *
      * The answer is returned as received, never changed. A transport that cannot reach the chip
@@ -52,6 +69,25 @@ public interface ApduTransport {
      */
     @Throws(ApduTransportException::class, CancellationException::class)
     public suspend fun transceive(command: ByteArray): ByteArray
+}
+
+/**
+ * Which file a chip has selected when a read starts, as an [ApduTransport] reports it in
+ * [ApduTransport.startSelection].
+ *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
+ * Experimental: see [ExperimentalTesseraChipApi].
+ *
+ * @since 1.0.0
+ */
+@ExperimentalTesseraChipApi
+public enum class ChipStartSelection {
+    /** The transport does not know. The reader works from either start. */
+    UNKNOWN,
+
+    /** The platform has already selected the eMRTD application, so the master file is not current. */
+    EMRTD_APPLICATION,
 }
 
 /**

@@ -74,6 +74,8 @@ public class TrustAnchor internal constructor(
 /**
  * The outcome of reading a root certificate.
  *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
@@ -95,6 +97,8 @@ public sealed class TrustAnchorParse {
 
 /**
  * Why a root certificate could not be read.
+ *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *

@@ -58,6 +58,8 @@ public class DocumentSignerCertificate internal constructor(
 /**
  * The outcome of reading a document signer certificate.
  *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0

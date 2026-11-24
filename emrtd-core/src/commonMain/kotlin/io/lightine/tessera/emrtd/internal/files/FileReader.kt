@@ -38,6 +38,71 @@ internal class FileReader(
     private val sender: ApduSender,
     private val maxFileLength: Int = DEFAULT_MAX_FILE_LENGTH,
 ) {
+    /** Told of each part of a file as it arrives: the file, the bytes so far and the declared total. */
+    fun interface ChunkListener {
+        fun chunk(
+            fid: Int?,
+            bytesRead: Int,
+            bytesTotal: Int?,
+        )
+    }
+
+    var listener: ChunkListener? = null
+
+    // The bytes of the file being read; left in place when a read ends early, for a later resume.
+    private var inProgress: ByteSink? = null
+    private var inProgressFid: Int? = null
+
+    /**
+     * The bytes of the last file read so far, when that read ended before the file was complete
+     * (a lost link, for example), with the file it belongs to; `null` after a complete read.
+     */
+    fun unfinished(): Pair<Int, ByteArray>? {
+        val sink = inProgress ?: return null
+        val fid = inProgressFid ?: return null
+        return if (sink.size > 0) fid to sink.toByteArray() else null
+    }
+
+    /**
+     * Selects [fid] and reads the rest of it after [prefix], the bytes an earlier read of the same
+     * file received from offset 0. The prefix holds the file's outer TLV header, so the length is
+     * known; the result is the prefix followed by the rest.
+     */
+    suspend fun resumeFile(
+        fid: Int,
+        prefix: ByteArray,
+        extendedLengthAllowed: Boolean = false,
+    ): ByteArray =
+        withTypedFailures {
+            bytesReadSoFar = 0
+            select(ChipCommands.selectFile(fid), fid, extendedLengthAllowed)
+            val totalLength =
+                try {
+                    TlvParser().declaredTotalLength(prefix)
+                } catch (e: TlvException) {
+                    throw MalformedFile(e.failure)
+                }
+            if (totalLength > maxFileLength) throw MalformedFile(TlvFailure.LENGTH_TOO_LONG)
+            if (prefix.size >= totalLength) return@withTypedFailures prefix.copyOfRange(0, totalLength)
+            val content = start(fid)
+            content.write(prefix)
+            bytesReadSoFar = content.size
+            readRest(content, totalLength, extendedLengthAllowed, fid)
+        }
+
+    private fun start(fid: Int?): ByteSink {
+        val sink = ByteSink()
+        inProgress = sink
+        inProgressFid = fid
+        return sink
+    }
+
+    private fun done(bytes: ByteArray): ByteArray {
+        inProgress = null
+        inProgressFid = null
+        return bytes
+    }
+
     suspend fun selectApplication(extendedLengthAllowed: Boolean = false) =
         withTypedFailures {
             select(ChipCommands.selectApplication(LdsIds.LDS1_AID), null, extendedLengthAllowed)
@@ -77,6 +142,7 @@ internal class FileReader(
     ): ByteArray =
         withTypedFailures {
             bytesReadSoFar = 0
+            inProgress = null
             select(ChipCommands.selectFile(fid), fid, extendedLengthAllowed)
             readSelectedFile(fid, extendedLengthAllowed)
         }
@@ -88,6 +154,7 @@ internal class FileReader(
     ): ByteArray =
         withTypedFailures {
             bytesReadSoFar = 0
+            inProgress = null
             readSelectedFile(fid, extendedLengthAllowed)
         }
 
@@ -111,6 +178,7 @@ internal class FileReader(
         extendedLengthAllowed: Boolean,
     ): ByteArray {
         val firstSize = chunkSize(0, 0, extendedLengthAllowed)
+        inProgressFid = fid
         val first = sendRead(0, firstSize, extendedLengthAllowed)
         return readAfterFirst(first, firstSize, extendedLengthAllowed, fid = fid)
     }
@@ -134,11 +202,26 @@ internal class FileReader(
         if (totalLength > maxFileLength) throw MalformedFile(TlvFailure.LENGTH_TOO_LONG)
         // Bytes past the declared end of the outer TLV are not part of the file (trailing fill on
         // the chip): keep exactly the declared length and stop reading.
-        if (firstBytes.size >= totalLength) return firstBytes.copyOfRange(0, totalLength)
-        if (first.sw == StatusWord.END_OF_FILE_BEFORE_NE) return firstBytes
-
-        val content = ByteSink()
+        if (firstBytes.size >= totalLength) {
+            notify(fid, totalLength, totalLength)
+            return done(firstBytes.copyOfRange(0, totalLength))
+        }
+        if (first.sw == StatusWord.END_OF_FILE_BEFORE_NE) {
+            notify(fid, firstBytes.size, totalLength)
+            return done(firstBytes)
+        }
+        val content = start(fid)
         content.write(firstBytes)
+        notify(fid, content.size, totalLength)
+        return readRest(content, totalLength, extendedLengthAllowed, fid)
+    }
+
+    private suspend fun readRest(
+        content: ByteSink,
+        totalLength: Int,
+        extendedLengthAllowed: Boolean,
+        fid: Int?,
+    ): ByteArray {
         while (content.size < totalLength) {
             val offset = content.size
             val requested = chunkSize(offset, totalLength - offset, extendedLengthAllowed)
@@ -150,14 +233,24 @@ internal class FileReader(
                 // This answer reaches past the declared end: keep what the TLV needs and stop.
                 content.write(data, 0, totalLength - content.size)
                 bytesReadSoFar = content.size
+                notify(fid, content.size, totalLength)
                 break
             }
             content.write(data)
             bytesReadSoFar = content.size
+            notify(fid, content.size, totalLength)
             if (response.sw == StatusWord.END_OF_FILE_BEFORE_NE) break
             if (data.isEmpty()) throw FileProtocolFailure()
         }
-        return content.toByteArray()
+        return done(content.toByteArray())
+    }
+
+    private fun notify(
+        fid: Int?,
+        bytesRead: Int,
+        bytesTotal: Int?,
+    ) {
+        listener?.chunk(fid, bytesRead, bytesTotal)
     }
 
     /**

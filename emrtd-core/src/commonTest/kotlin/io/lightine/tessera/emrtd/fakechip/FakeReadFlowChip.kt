@@ -123,9 +123,9 @@ internal object FakeReadFlowChip {
     fun mrzKey(): ChipAccessKey.Mrz =
         ChipAccessKey.Mrz(line2.substring(0, 9), line2[9], line2.substring(13, 19), line2[19], line2.substring(21, 27), line2[27])
 
-    /** A key with a wrong date of birth: the chip does not match it. */
+    /** A key with a wrong date of birth (its check digit consistent): the chip does not match it. */
     fun wrongMrzKey(): ChipAccessKey.Mrz =
-        ChipAccessKey.Mrz(line2.substring(0, 9), line2[9], "000101", '1', line2.substring(21, 27), line2[27])
+        ChipAccessKey.Mrz(line2.substring(0, 9), line2[9], "000101", '8', line2.substring(21, 27), line2[27])
 
     /** A synthetic DG2: one biometric template holding [imageBytes] filler bytes (no image). */
     fun dg2(imageBytes: Int = 900): ByteArray =
@@ -178,8 +178,14 @@ internal object FakeReadFlowChip {
         acceptsSelectMf: Boolean = true,
         /** Whether the chip takes SELECT MF with the identifier 3F00 as data. */
         acceptsSelectMfById: Boolean = true,
+        /** The MRZ information the chip's BAC and PACE keys come from: another value makes another document's chip. */
+        keyMrzInformation: String = mrzInformation,
+        /** The filler bytes of DG2's image: another size makes another EF.SOD. */
+        dg2Bytes: Int = 900,
+        /** Whether the application holds EF.SOD. */
+        withSecurityObject: Boolean = true,
     ): FlowChip {
-        val groups = linkedMapOf(1 to FakeChipData.dg1(lines), 2 to dg2())
+        val groups = linkedMapOf(1 to FakeChipData.dg1(lines), 2 to dg2(dg2Bytes))
         val caKey = if (caInApplication || caInMasterFile) FakeCaKey.generate(c, 13) else null
         val caOffers = listOf(FakeCaOffer(dh = false, cipherCode = 2))
         if (caInApplication || signedPaceSuites != null) {
@@ -196,7 +202,9 @@ internal object FakeReadFlowChip {
         val efCom = FakeChipData.efCom(groups.keys.map { tagOf(it) })
         val app = HashMap<Int, ByteArray>()
         app[LdsIds.EF_COM] = efCom
-        app[LdsIds.EF_SOD] = if (sodCertificates == null) pki.sod(groups) else pki.sod(groups, certificates = sodCertificates)
+        if (withSecurityObject) {
+            app[LdsIds.EF_SOD] = if (sodCertificates == null) pki.sod(groups) else pki.sod(groups, certificates = sodCertificates)
+        }
         groups.forEach { (n, bytes) -> app[0x0100 + n] = bytes }
         app.putAll(extraApplicationFiles)
 
@@ -229,13 +237,13 @@ internal object FakeReadFlowChip {
                     sm!!,
                     paceSuites.toSet(),
                     listOfNotNull(FakePaceGm(), FakePaceIm(), cam),
-                    mrzInformation = mrzInformation,
+                    mrzInformation = keyMrzInformation,
                     can = can,
                 )
             } else {
                 null
             }
-        val bac = if (access == FlowAccess.BAC || access == FlowAccess.PACE_AND_BAC) FakeBac(mrzInformation, sm!!, c) else null
+        val bac = if (access == FlowAccess.BAC || access == FlowAccess.PACE_AND_BAC) FakeBac(keyMrzInformation, sm!!, c) else null
         val ca = if (caKey != null && sm != null) FakeCa(sm, c, listOf(caKey), caOffers) else null
         // The chip-authentication handler goes before PACE's: both answer GENERAL AUTHENTICATE, and only
         // the CA handler checks that its own MSE came first.

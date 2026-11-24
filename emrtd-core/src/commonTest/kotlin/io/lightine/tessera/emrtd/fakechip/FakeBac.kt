@@ -29,6 +29,10 @@ internal class FakeBac(
     private val kMac: ByteArray
     private var rndIc: ByteArray? = null
 
+    override fun powerOff() {
+        rndIc = null
+    }
+
     /** How many EXTERNAL AUTHENTICATE commands were refused. */
     var refused: Int = 0
         private set

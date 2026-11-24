@@ -30,6 +30,12 @@ import kotlin.time.Instant
  * @property signerCertificate A document signer certificate your app supplies for a chip whose
  *   EF.SOD carries none. It is used only when EF.SOD names no signer of its own, and the signature
  *   check then records [ChipSignerOrigin.SUPPLIED_BY_APP].
+ * @property allowCheckDigitMismatch Whether a read may use an MRZ key whose check digits do not
+ *   match their fields ([ChipAccessKey.Mrz.checkDigitFindings]). With `false`, the default, such a
+ *   read ends before any command is sent, with
+ *   [io.lightine.tessera.types.errors.ChipKeyCheckDigitMismatch]: a value read or typed with a
+ *   mistake would otherwise cost the chip an access attempt. Set it to `true` only for a document
+ *   known to be printed with a wrong check digit. A card access number has no check digit.
  * @throws IllegalArgumentException when a data group number is outside 1 to 16.
  * @since 1.0.0
  */
@@ -44,6 +50,7 @@ public class ChipReadOptions
         public val checkTime: Instant? = null,
         public val allowExtendedLength: Boolean = true,
         public val signerCertificate: DocumentSignerCertificate? = null,
+        public val allowCheckDigitMismatch: Boolean = false,
     ) {
         init {
             require(dataGroups.all { it in 1..16 }) { "dataGroups holds a number outside 1 to 16" }
@@ -51,7 +58,8 @@ public class ChipReadOptions
 
         /** The data groups and counts, never the key. */
         override fun toString(): String =
-            "ChipReadOptions(dataGroups=${dataGroups.sorted()}, trustAnchors=${trustAnchors.size}, checkTime=${checkTime != null})"
+            "ChipReadOptions(dataGroups=${dataGroups.sorted()}, trustAnchors=${trustAnchors.size}, checkTime=${checkTime != null}, " +
+                "allowCheckDigitMismatch=$allowCheckDigitMismatch)"
 
         /**
          * Builds [ChipReadOptions] step by step, with the constructor's defaults.
@@ -68,6 +76,7 @@ public class ChipReadOptions
             private var checkTime: Instant? = null
             private var allowExtendedLength: Boolean = true
             private var signerCertificate: DocumentSignerCertificate? = null
+            private var allowCheckDigitMismatch: Boolean = false
 
             /** The data groups to read, by number (1 to 16). */
             public fun dataGroups(numbers: Set<Int>): Builder = apply { dataGroups = numbers.toSet() }
@@ -84,6 +93,9 @@ public class ChipReadOptions
             /** A document signer certificate for a chip whose EF.SOD carries none. */
             public fun signerCertificate(certificate: DocumentSignerCertificate?): Builder = apply { signerCertificate = certificate }
 
+            /** Whether an MRZ key whose check digits do not match their fields may be used. */
+            public fun allowCheckDigitMismatch(allow: Boolean): Builder = apply { allowCheckDigitMismatch = allow }
+
             /**
              * The options.
              *
@@ -91,6 +103,14 @@ public class ChipReadOptions
              */
             @Throws(IllegalArgumentException::class)
             public fun build(): ChipReadOptions =
-                ChipReadOptions(accessKey, dataGroups, trustAnchors, checkTime, allowExtendedLength, signerCertificate)
+                ChipReadOptions(
+                    accessKey,
+                    dataGroups,
+                    trustAnchors,
+                    checkTime,
+                    allowExtendedLength,
+                    signerCertificate,
+                    allowCheckDigitMismatch,
+                )
         }
     }

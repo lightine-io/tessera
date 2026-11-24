@@ -45,6 +45,8 @@ public class ChipCheck internal constructor(
  * How a [ChipCheck] reached its outcome: facts about the inputs, kept beside the check so that the
  * kind stays the same whichever way the check went.
  *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
@@ -74,6 +76,8 @@ public sealed class ChipCheckDetail {
 /**
  * Where a signer certificate came from.
  *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
@@ -90,6 +94,8 @@ public enum class ChipSignerOrigin {
 /**
  * How two certificate names were found equal.
  *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
@@ -105,6 +111,8 @@ public enum class ChipNameComparison {
 
 /**
  * Where a certificate's country was read from.
+ *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -125,6 +133,8 @@ public enum class ChipCountrySource {
 /**
  * Which signed chip file a signer check is about.
  *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
@@ -140,6 +150,8 @@ public enum class ChipSignedFile {
 
 /**
  * Where a signed copy of EF.CardAccess's entries was read from (Part 11, section 9.2.11).
+ *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -157,6 +169,8 @@ public enum class ChipSignedCopy {
 /**
  * Where on the chip chip authentication ran (Part 11, section 6.2).
  *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
@@ -172,6 +186,8 @@ public enum class ChipFileContext {
 
 /**
  * What a [ChipCheck] is about.
+ *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -280,6 +296,8 @@ public sealed class ChipCheckKind {
  *
  * Implements [CheckReason], the shared reason type of [CheckOutcome], so a chip check's outcome
  * carries a typed reason.
+ *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *

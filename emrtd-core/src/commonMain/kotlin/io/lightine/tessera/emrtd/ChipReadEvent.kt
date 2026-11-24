@@ -51,6 +51,8 @@ public class ChipReadEvent internal constructor(
 /**
  * The steps of a chip read, for telemetry.
  *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
@@ -84,6 +86,8 @@ public enum class ChipReadStep {
 
 /**
  * How a step ended, for telemetry.
+ *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *

@@ -23,6 +23,8 @@ kotlin {
     sourceSets {
         all {
             languageSettings.optIn("io.lightine.tessera.types.ExperimentalTesseraChipApi")
+            // The read coordinator in emrtd-core, public only for Tessera's own NFC modules.
+            languageSettings.optIn("io.lightine.tessera.emrtd.InternalTesseraChipApi")
             // The Core NFC bridge works with C pointers (NSData bytes) and C structs (the OS version).
             languageSettings.optIn("kotlinx.cinterop.ExperimentalForeignApi")
         }

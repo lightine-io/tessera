@@ -179,6 +179,8 @@ public class MasterListCheck internal constructor(
 /**
  * What a master-list fact is about.
  *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
@@ -201,6 +203,8 @@ public enum class MasterListCheckKind {
  *
  * Implements [CheckReason], the shared reason type of [CheckOutcome], so a master-list check's
  * outcome carries a typed reason like every other module's checks.
+ *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -254,6 +258,8 @@ public enum class MasterListCheckReason : CheckReason {
 /**
  * The outcome of reading a master list.
  *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
@@ -275,6 +281,8 @@ public sealed class MasterListRead {
 
 /**
  * Why a master list could not be read.
+ *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *

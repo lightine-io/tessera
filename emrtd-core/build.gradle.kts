@@ -38,6 +38,16 @@ afterEvaluate {
 }
 
 kotlin {
+    // ABI tracking (tessera.public-api): declarations marked @InternalTesseraChipApi (public only so
+    // Tessera's NFC modules can share them, such as the read coordinator) are left out of the dumps:
+    // they are not consumer API and may change in any release.
+    @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
+    abiValidation.filters {
+        exclude {
+            annotatedWith.add("io.lightine.tessera.emrtd.InternalTesseraChipApi")
+        }
+    }
+
     // The JVM target carries the host tests for this platform-agnostic core, so they run on the
     // JVM `check` runner with no Android SDK and no device. It is also a published artifact
     // (`tessera-emrtd-core-jvm`, listed in the BOM): a JVM app can read a chip through a USB
@@ -108,6 +118,7 @@ kotlin {
         all {
             // The module's own code uses its experimental API freely; callers still opt in.
             languageSettings.optIn("io.lightine.tessera.types.ExperimentalTesseraChipApi")
+            languageSettings.optIn("io.lightine.tessera.emrtd.InternalTesseraChipApi")
         }
         commonMain {
             dependencies {

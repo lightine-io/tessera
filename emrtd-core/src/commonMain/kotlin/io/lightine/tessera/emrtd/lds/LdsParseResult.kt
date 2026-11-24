@@ -9,6 +9,8 @@ import io.lightine.tessera.types.errors.ChipMalformedFile
  * Parsing never throws for bad chip data: a file that is not built as ICAO Doc 9303 Part 10
  * describes gives [Failure]. Your app still has the bytes it passed in.
  *
+ * May gain members in a later release: a `when` over it needs an `else` branch.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0

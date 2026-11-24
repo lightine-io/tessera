@@ -101,6 +101,10 @@ internal class FakePace(
 ) : FakeCommandHandler {
     private var run: FakePaceRun? = null
 
+    override fun powerOff() {
+        run = null
+    }
+
     /** Answer step 3 with the reader's own ephemeral key (a reflection). */
     var reflectReaderKey: Boolean = false
 

@@ -1,6 +1,8 @@
 package io.lightine.tessera.emrtd
 
+import io.lightine.tessera.mrz.checkdigit.computeCheckDigit
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
+import io.lightine.tessera.types.vocabulary.MrzField
 import kotlin.jvm.JvmStatic
 
 /**
@@ -87,6 +89,18 @@ public sealed class ChipAccessKey {
         ) : ChipAccessKey() {
             override val secret: ByteArray
 
+            /**
+             * The fields whose printed check digit does not match the digit computed from the field
+             * (ICAO Doc 9303 Part 3, section 4.9): any of [MrzField.DOCUMENT_NUMBER],
+             * [MrzField.DATE_OF_BIRTH] and [MrzField.DATE_OF_EXPIRY]; empty when all three match.
+             *
+             * It names fields only, never their values. It is a finding, not a correction: the key
+             * still holds the values as given.
+             *
+             * @since 1.0.0
+             */
+            public val checkDigitFindings: Set<MrzField>
+
             init {
                 require(documentNumber.isNotEmpty()) { "documentNumber is empty" }
                 requireMrzCharacters(documentNumber, "documentNumber")
@@ -105,6 +119,12 @@ public sealed class ChipAccessKey {
                     documentNumber + documentNumberCheckDigit + dateOfBirth + dateOfBirthCheckDigit +
                         dateOfExpiry + dateOfExpiryCheckDigit
                 secret = ByteArray(text.length) { text[it].code.toByte() }
+                checkDigitFindings =
+                    buildSet {
+                        if (computeCheckDigit(documentNumber) != documentNumberCheckDigit) add(MrzField.DOCUMENT_NUMBER)
+                        if (computeCheckDigit(dateOfBirth) != dateOfBirthCheckDigit) add(MrzField.DATE_OF_BIRTH)
+                        if (computeCheckDigit(dateOfExpiry) != dateOfExpiryCheckDigit) add(MrzField.DATE_OF_EXPIRY)
+                    }
             }
 
             /** `ChipAccessKey.Mrz`, without the values. */

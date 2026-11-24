@@ -2,6 +2,7 @@ package io.lightine.tessera.emrtd.fakechip
 
 import io.lightine.tessera.emrtd.ApduTransport
 import io.lightine.tessera.emrtd.ApduTransportException
+import io.lightine.tessera.emrtd.ChipStartSelection
 import io.lightine.tessera.emrtd.internal.apdu.ChipCommands
 import io.lightine.tessera.emrtd.internal.apdu.CommandApdu
 import io.lightine.tessera.emrtd.internal.apdu.ResponseApdu
@@ -18,6 +19,9 @@ internal fun interface FakeCommandHandler {
         chip: FakeChip,
         command: CommandApdu,
     ): ResponseApdu?
+
+    /** The chip lost power (it left the field): forget any session state. */
+    fun powerOff() {}
 }
 
 /** The files of a fake chip: master-file EFs and, per application AID, its EFs by file identifier. */
@@ -65,6 +69,21 @@ internal class FakeChip(
     /** The current EF's file identifier, or `null`. */
     var currentEf: Int? = null
         private set
+
+    private val startDf = startIn
+
+    /** What the chip says about its start; reported by the transport as the platform would. */
+    override var startSelection: ChipStartSelection = ChipStartSelection.UNKNOWN
+
+    /**
+     * The chip left the field and came back (Part 11, 9.8.5: the session keys are gone): every
+     * handler forgets its session and the start DF is current again.
+     */
+    fun powerCycle() {
+        handlers.forEach { it.powerOff() }
+        currentApplication = startDf
+        currentEf = null
+    }
 
     override suspend fun transceive(command: ByteArray): ByteArray {
         check(command.size <= maxCommandLength) { "command of ${command.size} bytes exceeds $maxCommandLength" }
