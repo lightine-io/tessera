@@ -353,7 +353,7 @@ private fun ScannerFlow(
                 //
                 // A parseable frame is offered to the consensus gate rather than routed on sight: it routes
                 // only once consensusReads frames agree on the same document, so a transient misread the MRZ
-                // has no check digit for (a filler `<` read as a letter in the name — ASGAR<→ASGARK) can't win
+                // has no check digit for (a filler `<` read as a letter in the name — MORGAN<→MORGANK) can't win
                 // on one frame. Gathering → keep scanning; Confirmed → route once (the latch stops repeats).
                 //
                 // TES-103: the pure stepLiveDecode also applies the app's intake rule. A reading the frames agree
