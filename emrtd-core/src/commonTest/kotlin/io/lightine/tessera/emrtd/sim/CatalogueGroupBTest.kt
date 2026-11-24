@@ -83,7 +83,10 @@ class CatalogueGroupBTest {
     }
 
     @Test
-    fun b02_answerWithoutDo8E_isMissingChecksumAndNothingFollows() = runTest { assertSmLost(FakeSm.ResponseFault.DROP_CHECKSUM, setOf(Reason.MISSING_CHECKSUM)) }
+    fun b02_answerWithoutDo8E_isMissingChecksumAndNothingFollows() =
+        runTest {
+            assertSmLost(FakeSm.ResponseFault.DROP_CHECKSUM, setOf(Reason.MISSING_CHECKSUM))
+        }
 
     /**
      * B-03 (P4 ISO7816_D_03, [STD] "failed"). The answer's checksum is valid and DO99 says 9000; only
@@ -158,7 +161,8 @@ class CatalogueGroupBTest {
                     val flow = FakeReadFlowChip.build(c, keys, access, leadingHandlers = listOf(trap))
                     trap.flow = flow
                     val observer = RecordingObserver()
-                    val coordinator = ChipReadCoordinator(Sim.options(flow), LinkLossPolicy.Resume(2), observer, ChipReader(NoOpTelemetrySink))
+                    val coordinator =
+                        ChipReadCoordinator(Sim.options(flow), LinkLossPolicy.Resume(2), observer, ChipReader(NoOpTelemetrySink))
                     assertTrue(coordinator.start())
                     coordinator.waiting(0)
                     coordinator.documentFound()

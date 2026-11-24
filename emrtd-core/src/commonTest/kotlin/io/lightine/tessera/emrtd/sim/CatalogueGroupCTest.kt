@@ -87,7 +87,19 @@ class CatalogueGroupCTest {
         runTest {
             Sim.withChips { c, keys ->
                 val flow =
-                    bac(c, keys, inner { chip, cmd, _ -> if (isRead(cmd) && chip.currentEf == dg2 && offset(cmd) > 0) ResponseApdu(ByteArray(0), 0x6B00) else null })
+                    bac(
+                        c,
+                        keys,
+                        inner { chip, cmd, _ ->
+                            if (isRead(cmd) && chip.currentEf == dg2 &&
+                                offset(cmd) > 0
+                            ) {
+                                ResponseApdu(ByteArray(0), 0x6B00)
+                            } else {
+                                null
+                            }
+                        },
+                    )
                 val read = complete(Sim.read(flow))
                 assertEquals(ChipUnexpectedAnswer(ChipUnexpectedAnswer.Reason.UNEXPECTED_STATUS_WORD, 0x6B00), errorOf(read, dg2))
                 assertEquals(CheckOutcome.Passed, hash(read, 1), "DG1 still read and checked")
@@ -138,7 +150,11 @@ class CatalogueGroupCTest {
                 for (sw in listOf(0x6700, 0x6A86, 0x6D00, 0x6E00, 0x6F00, 0x6981, 0x6985, 0x6986)) {
                     val flow = bac(c, keys, inner { _, cmd, _ -> if (selects(cmd, dg2)) ResponseApdu(ByteArray(0), sw) else null })
                     val read = complete(Sim.read(flow))
-                    assertEquals(ChipUnexpectedAnswer(ChipUnexpectedAnswer.Reason.UNEXPECTED_STATUS_WORD, sw), errorOf(read, dg2), sw.toString(16))
+                    assertEquals(
+                        ChipUnexpectedAnswer(ChipUnexpectedAnswer.Reason.UNEXPECTED_STATUS_WORD, sw),
+                        errorOf(read, dg2),
+                        sw.toString(16),
+                    )
                     assertEquals(CheckOutcome.Passed, hash(read, 1))
                 }
             }
@@ -174,10 +190,35 @@ class CatalogueGroupCTest {
         runTest {
             Sim.withChips { c, keys ->
                 val flow =
-                    bac(c, keys, inner { chip, cmd, _ -> if (isRead(cmd) && chip.currentEf == dg1 && offset(cmd) > 0) ResponseApdu(ByteArray(0), 0x6982) else null }, dg2Bytes = 900)
+                    bac(
+                        c,
+                        keys,
+                        inner { chip, cmd, _ ->
+                            if (isRead(cmd) && chip.currentEf == dg1 &&
+                                offset(cmd) > 0
+                            ) {
+                                ResponseApdu(ByteArray(0), 0x6982)
+                            } else {
+                                null
+                            }
+                        },
+                        dg2Bytes = 900,
+                    )
                 // DG1 is one chunk; put the 6982 in DG2 instead, which needs several.
                 val flow2 =
-                    bac(c, keys, inner { chip, cmd, _ -> if (isRead(cmd) && chip.currentEf == dg2 && offset(cmd) > 0) ResponseApdu(ByteArray(0), 0x6982) else null })
+                    bac(
+                        c,
+                        keys,
+                        inner { chip, cmd, _ ->
+                            if (isRead(cmd) && chip.currentEf == dg2 &&
+                                offset(cmd) > 0
+                            ) {
+                                ResponseApdu(ByteArray(0), 0x6982)
+                            } else {
+                                null
+                            }
+                        },
+                    )
                 val read = complete(Sim.read(flow2, dataGroups = setOf(2, 1)))
                 assertEquals(ChipAccessDenied.Reason.FILE_PROTECTED, assertIs<ChipAccessDenied>(errorOf(read, dg2)).reason)
                 assertTrue(read.files.any { it.fileId == dg1 }, "the other file is still read")
@@ -189,7 +230,20 @@ class CatalogueGroupCTest {
     fun c18_aFirstReadAnswering9000WithNoBytes_isAMalformedFileAndTheReadGoesOn() =
         runTest {
             Sim.withChips { c, keys ->
-                val flow = bac(c, keys, inner { chip, cmd, _ -> if (isRead(cmd) && chip.currentEf == dg2 && offset(cmd) == 0) ResponseApdu(ByteArray(0), 0x9000) else null })
+                val flow =
+                    bac(
+                        c,
+                        keys,
+                        inner { chip, cmd, _ ->
+                            if (isRead(cmd) && chip.currentEf == dg2 &&
+                                offset(cmd) == 0
+                            ) {
+                                ResponseApdu(ByteArray(0), 0x9000)
+                            } else {
+                                null
+                            }
+                        },
+                    )
                 val read = complete(Sim.read(flow))
                 assertIs<ChipMalformedFile>(errorOf(read, dg2))
                 assertEquals(CheckOutcome.Passed, hash(read, 1))
@@ -233,7 +287,20 @@ class CatalogueGroupCTest {
     fun c11_aChipThatAnswers6700ToTheReadSize_isAFileErrorWithNoSmallerRetry() =
         runTest {
             Sim.withChips { c, keys ->
-                val flow = bac(c, keys, inner { chip, cmd, _ -> if (isRead(cmd) && chip.currentEf == dg2 && (cmd.ne ?: 0) > 160) ResponseApdu(ByteArray(0), 0x6700) else null })
+                val flow =
+                    bac(
+                        c,
+                        keys,
+                        inner { chip, cmd, _ ->
+                            if (isRead(cmd) && chip.currentEf == dg2 &&
+                                (cmd.ne ?: 0) > 160
+                            ) {
+                                ResponseApdu(ByteArray(0), 0x6700)
+                            } else {
+                                null
+                            }
+                        },
+                    )
                 val read = complete(Sim.read(flow))
                 assertEquals(ChipUnexpectedAnswer(ChipUnexpectedAnswer.Reason.UNEXPECTED_STATUS_WORD, 0x6700), errorOf(read, dg2))
             }
@@ -248,7 +315,16 @@ class CatalogueGroupCTest {
     fun c12_aChipThatRefusesTheExtendedLengthItAnnounced_isAFileErrorWithNoFallback() =
         runTest {
             Sim.withChips { c, keys ->
-                val refuseExtended = inner { _, cmd, _ -> if (cmd.ins == 0xB0 && (cmd.ne ?: 0) > 256) ResponseApdu(ByteArray(0), 0x6700) else null }
+                val refuseExtended =
+                    inner { _, cmd, _ ->
+                        if (cmd.ins == 0xB0 &&
+                            (cmd.ne ?: 0) > 256
+                        ) {
+                            ResponseApdu(ByteArray(0), 0x6700)
+                        } else {
+                            null
+                        }
+                    }
                 val base = bac(c, keys, refuseExtended, dg2Bytes = 4000)
                 // EF.ATR/INFO (P10 3.10): card capabilities with extended Lc and Le (third byte E0).
                 val atrInfo = byteArrayOf(0x47, 0x03, 0x04, 0x01, 0xE0.toByte())
@@ -318,9 +394,16 @@ class CatalogueGroupCTest {
                 val read = complete(Sim.read(flow))
                 assertIs<ChipFileNotFound>(errorOf(read, 0x011E))
                 for (fid in listOf(0x011D, dg1, dg2)) {
-                    assertEquals(ChipAccessDenied.Reason.FILE_PROTECTED, assertIs<ChipAccessDenied>(errorOf(read, fid)).reason, fid.toString(16))
+                    assertEquals(
+                        ChipAccessDenied.Reason.FILE_PROTECTED,
+                        assertIs<ChipAccessDenied>(errorOf(read, fid)).reason,
+                        fid.toString(16),
+                    )
                 }
-                assertTrue(read.checks.none { it.outcome is CheckOutcome.Passed || it.outcome is CheckOutcome.Failed }, "no verdict: ${read.checks}")
+                assertTrue(
+                    read.checks.none { it.outcome is CheckOutcome.Passed || it.outcome is CheckOutcome.Failed },
+                    "no verdict: ${read.checks}",
+                )
             }
         }
 
