@@ -13,6 +13,9 @@ import ImageIO
 import Vision
 
 let dir = CommandLine.arguments[1]
+// Optional second argument: a text recognition revision (1, 2 or 3). Without it each request uses
+// the default revision, as the SDK does (TES-343).
+let revision: Int? = CommandLine.arguments.count > 2 ? Int(CommandLine.arguments[2]) : nil
 let files = try FileManager.default.contentsOfDirectory(atPath: dir).filter { $0.hasSuffix(".png") }.sorted()
 let levels: [(String, VNRequestTextRecognitionLevel)] = [("accurate", .accurate), ("fast", .fast)]
 
@@ -24,6 +27,7 @@ for file in files {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = level
         request.usesLanguageCorrection = false
+        if let revision { request.revision = revision }
         try VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
         for observation in request.results ?? [] {
             guard let text = observation.topCandidates(1).first?.string else { continue }
