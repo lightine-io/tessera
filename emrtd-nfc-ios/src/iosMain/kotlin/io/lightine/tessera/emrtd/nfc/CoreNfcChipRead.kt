@@ -3,6 +3,7 @@ package io.lightine.tessera.emrtd.nfc
 import io.lightine.tessera.emrtd.ChipReadAttemptOutcome
 import io.lightine.tessera.emrtd.ChipReadCoordinator
 import io.lightine.tessera.emrtd.ChipReadEnding
+import io.lightine.tessera.emrtd.ChipReadHandle
 import io.lightine.tessera.emrtd.ChipReadObserver
 import io.lightine.tessera.emrtd.ChipReadOptions
 import io.lightine.tessera.emrtd.ChipReadUpdate
@@ -23,29 +24,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import platform.Foundation.NSLock
 import kotlin.concurrent.Volatile
 import kotlin.time.TimeSource
-
-/**
- * A chip read in progress, as the app sees it: it can be cancelled, and it says whether it ended.
- *
- * The read's updates and its one ending go to the [ChipReadObserver] given when it started.
- *
- * Experimental: see [ExperimentalTesseraChipApi].
- *
- * @since 1.0.0
- */
-@ExperimentalTesseraChipApi
-public interface ChipReadHandle {
-    /** `true` once the read's ending is decided; the observer gets it at once. */
-    public val isEnded: Boolean
-
-    /**
-     * Cancels the read: the observer gets [ChipReadEnding.Cancelled] by
-     * [ChipReadEnding.Cancelled.By.APP] at once, unless the read had already ended, and the SDK
-     * releases the radio in the background. Safe to call more than once and from any thread; only
-     * the first call counts.
-     */
-    public fun cancel()
-}
 
 /**
  * Reads a passport or ID card chip on iPhone, from start to end: the SDK owns the system NFC

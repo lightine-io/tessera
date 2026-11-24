@@ -6,28 +6,21 @@
 // - Show declarations: true
 
 // Library unique name: <io.lightine.tessera:emrtd-nfc-ios>
-abstract interface io.lightine.tessera.emrtd.nfc/ChipReadHandle { // io.lightine.tessera.emrtd.nfc/ChipReadHandle|null[0]
-    abstract val isEnded // io.lightine.tessera.emrtd.nfc/ChipReadHandle.isEnded|{}isEnded[0]
-        abstract fun <get-isEnded>(): kotlin/Boolean // io.lightine.tessera.emrtd.nfc/ChipReadHandle.isEnded.<get-isEnded>|<get-isEnded>(){}[0]
-
-    abstract fun cancel() // io.lightine.tessera.emrtd.nfc/ChipReadHandle.cancel|cancel(){}[0]
-}
-
 abstract interface io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts { // io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts|null[0]
     abstract fun textFor(io.lightine.tessera.emrtd/ChipReadUpdate): kotlin/String // io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts.textFor|textFor(io.lightine.tessera.emrtd.ChipReadUpdate){}[0]
     abstract fun textForEnding(io.lightine.tessera.emrtd/ChipReadEnding): kotlin/String // io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts.textForEnding|textForEnding(io.lightine.tessera.emrtd.ChipReadEnding){}[0]
 }
 
-final class io.lightine.tessera.emrtd.nfc/CoreNfcChipRead : io.lightine.tessera.emrtd.nfc/ChipReadHandle { // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead|null[0]
+final class io.lightine.tessera.emrtd.nfc/CoreNfcChipRead : io.lightine.tessera.emrtd/ChipReadHandle { // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead|null[0]
     final val isEnded // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.isEnded|{}isEnded[0]
         final fun <get-isEnded>(): kotlin/Boolean // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.isEnded.<get-isEnded>|<get-isEnded>(){}[0]
 
     final fun cancel() // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.cancel|cancel(){}[0]
 
     final object Companion { // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.Companion|null[0]
-        final fun start(io.lightine.tessera.emrtd/ChipReadOptions, io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts, io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings, io.lightine.tessera.emrtd/ChipReadObserver): io.lightine.tessera.emrtd.nfc/ChipReadHandle // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.Companion.start|start(io.lightine.tessera.emrtd.ChipReadOptions;io.lightine.tessera.emrtd.nfc.CoreNfcSheetTexts;io.lightine.tessera.emrtd.nfc.CoreNfcReadSettings;io.lightine.tessera.emrtd.ChipReadObserver){}[0]
-        final fun start(io.lightine.tessera.emrtd/ChipReadOptions, io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts, io.lightine.tessera.emrtd/ChipReadObserver): io.lightine.tessera.emrtd.nfc/ChipReadHandle // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.Companion.start|start(io.lightine.tessera.emrtd.ChipReadOptions;io.lightine.tessera.emrtd.nfc.CoreNfcSheetTexts;io.lightine.tessera.emrtd.ChipReadObserver){}[0]
-        final fun start(io.lightine.tessera.emrtd/ChipReadOptions, io.lightine.tessera.emrtd/ChipReadObserver): io.lightine.tessera.emrtd.nfc/ChipReadHandle // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.Companion.start|start(io.lightine.tessera.emrtd.ChipReadOptions;io.lightine.tessera.emrtd.ChipReadObserver){}[0]
+        final fun start(io.lightine.tessera.emrtd/ChipReadOptions, io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts, io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings, io.lightine.tessera.emrtd/ChipReadObserver): io.lightine.tessera.emrtd/ChipReadHandle // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.Companion.start|start(io.lightine.tessera.emrtd.ChipReadOptions;io.lightine.tessera.emrtd.nfc.CoreNfcSheetTexts;io.lightine.tessera.emrtd.nfc.CoreNfcReadSettings;io.lightine.tessera.emrtd.ChipReadObserver){}[0]
+        final fun start(io.lightine.tessera.emrtd/ChipReadOptions, io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts, io.lightine.tessera.emrtd/ChipReadObserver): io.lightine.tessera.emrtd/ChipReadHandle // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.Companion.start|start(io.lightine.tessera.emrtd.ChipReadOptions;io.lightine.tessera.emrtd.nfc.CoreNfcSheetTexts;io.lightine.tessera.emrtd.ChipReadObserver){}[0]
+        final fun start(io.lightine.tessera.emrtd/ChipReadOptions, io.lightine.tessera.emrtd/ChipReadObserver): io.lightine.tessera.emrtd/ChipReadHandle // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.Companion.start|start(io.lightine.tessera.emrtd.ChipReadOptions;io.lightine.tessera.emrtd.ChipReadObserver){}[0]
     }
 }
 

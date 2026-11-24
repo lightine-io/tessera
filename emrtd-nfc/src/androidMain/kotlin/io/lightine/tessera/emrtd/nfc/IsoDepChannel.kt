@@ -38,3 +38,21 @@ internal class PlatformIsoDepChannel(
 
     override fun close() = isoDep.close()
 }
+
+/**
+ * Runs [onReleased] once the platform let go of the tag after a close, whatever the close itself
+ * answers. The read entry point hands the platform's tag over to the next read only after that, so
+ * a close that is still talking to the tag is never raced by a new connection.
+ */
+internal class ReleaseSignallingChannel(
+    private val base: IsoDepChannel,
+    private val onReleased: () -> Unit,
+) : IsoDepChannel by base {
+    override fun close() {
+        try {
+            base.close()
+        } finally {
+            onReleased()
+        }
+    }
+}
