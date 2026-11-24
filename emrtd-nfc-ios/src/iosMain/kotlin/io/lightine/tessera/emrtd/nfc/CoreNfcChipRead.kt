@@ -108,6 +108,10 @@ public class CoreNfcChipRead internal constructor(
     @Volatile
     private var documentSeen = false
 
+    // What the system reported when it ended the session, once it did.
+    @Volatile
+    private var sessionEndError: NfcError? = null
+
     /** `true` once the read's ending is decided. */
     override val isEnded: Boolean get() = coordinator.isEnded
 
@@ -167,7 +171,11 @@ public class CoreNfcChipRead internal constructor(
             failedConnects = 0
             val link = CoreNfcTransport(channel, keepAlive = session, commandTimeoutMillis = settings.commandTimeoutMillis)
             if (!locked { if (coordinator.isEnded) false else true.also { transport = link } }) return
-            val outcome = coordinator.read(link, readAgainAllowed = timeLeft(began) >= MIN_TIME_FOR_A_NEW_START_MILLIS)
+            val outcome =
+                coordinator.read(link, readAgainAllowed = timeLeft(began) >= MIN_TIME_FOR_A_NEW_START_MILLIS) {
+                    // A session end the system reported while the link was lost: that is the ending.
+                    sessionEndError
+                }
             stopTransport(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
             if (outcome == ChipReadAttemptOutcome.ENDED) return
             // The loss was allowed to follow, but too little of the session may be left by now.
@@ -208,7 +216,7 @@ public class CoreNfcChipRead internal constructor(
             val channel = tag?.iso7816
             // More than one tag, or not an ISO 7816 tag: keep looking.
             if (tag == null || channel == null) {
-                session.restartPolling()
+                restartPolling(session)
                 continue
             }
             return tag to channel
@@ -227,11 +235,25 @@ public class CoreNfcChipRead internal constructor(
         session.restartPolling()
     }
 
+    /**
+     * Ends the read after a connect that failed for good. A connect can fail because the session is
+     * ending (the person tapped Cancel, the system ended it): Core NFC may report that to the
+     * connect before it calls the session's end, so those causes get the same ending the session
+     * end would give, whichever of the two comes first.
+     */
     private fun endAfterConnect(error: NfcError) {
-        if (error is NfcTimeout || (error is NfcUnavailable && error.reason == NfcUnavailable.Reason.ENDED_BY_SYSTEM)) {
-            coordinator.endedBySystem(error)
-        } else {
-            coordinator.fail(error)
+        when {
+            error is NfcUnavailable && error.reason == NfcUnavailable.Reason.CANCELLED_BY_USER -> {
+                coordinator.cancel(ChipReadEnding.Cancelled.By.PERSON)
+            }
+
+            error is NfcTimeout || (error is NfcUnavailable && error.reason in SYSTEM_REASONS) -> {
+                coordinator.endedBySystem(error)
+            }
+
+            else -> {
+                coordinator.fail(error)
+            }
         }
     }
 
@@ -248,6 +270,9 @@ public class CoreNfcChipRead internal constructor(
     private val events =
         object : ReaderSessionEvents {
             override fun onTagsDetected(tags: List<DetectedTag>) {
+                // A usable document counts as found from the moment the system reports it, so a
+                // session end right after is the system's ending, never "not started".
+                if (tags.singleOrNull()?.iso7816 != null) documentSeen = true
                 this@CoreNfcChipRead.tags.trySend(tags)
             }
 
@@ -256,6 +281,7 @@ public class CoreNfcChipRead internal constructor(
 
     /** The system ended the session: the ending, unless the SDK ended it. */
     private fun systemEnded(error: NfcError) {
+        sessionEndError = error
         val session = locked { owned } ?: return
         session.systemEnd()
         if (session.endedBySdk) return

@@ -70,9 +70,13 @@ class CoreNfcChipReadTest {
             assertIs<ChipReadEnding.Complete>(rec.ending)
             assertTrue(port.alerts.any { it.startsWith("Reading the document") }, "${port.alerts}")
             val times = port.alertTimes
+            // Every text during the read is at least 100 ms after the one before. The last text is
+            // the ending's, which the read sets at once (CoreNfcChipRead.finish): it is checked
+            // to be the ending's text, not its interval.
             for (i in 1 until times.size - 1) {
                 assertTrue(times[i] - times[i - 1] >= 100, "texts at $times")
             }
+            assertEquals(CoreNfcDefaultSheetTexts.textForEnding(rec.ending), port.alerts.last())
             for (i in 1 until port.alerts.size) assertTrue(port.alerts[i] != port.alerts[i - 1], "${port.alerts}")
             assertNothingLeft(read)
         }
