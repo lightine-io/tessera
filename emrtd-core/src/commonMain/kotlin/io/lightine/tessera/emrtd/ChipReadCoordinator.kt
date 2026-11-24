@@ -9,10 +9,12 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.ChipAccessDenied
 import io.lightine.tessera.types.errors.ChipError
 import io.lightine.tessera.types.errors.ChipKeyCheckDigitMismatch
+import io.lightine.tessera.types.errors.ChipUnexpectedAnswer
 import io.lightine.tessera.types.errors.NfcError
 import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.errors.NfcTimeout
 import io.lightine.tessera.types.errors.NfcUnavailable
+import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.AtomicReference
@@ -93,7 +95,7 @@ public class ChipReadCoordinator(
     private val lastAccessResult = AtomicReference<ChipReadResult.Partial?>(null)
     private val lastReadState = AtomicReference<ChipReadState?>(null)
     private val waitedMillis = AtomicReference(0L)
-    private var carry: ResumeCarry? = null
+    private val carry = AtomicReference<ResumeCarry?>(null)
 
     /** `true` once the ending is decided. */
     public val isEnded: Boolean
@@ -195,12 +197,18 @@ public class ChipReadCoordinator(
         val resume = linkLoss is LinkLossPolicy.Resume
         val (result, next) =
             try {
-                reader.readAttempt(transport, options, reporter, attempt, if (resume && attempt > 1) carry else null)
+                reader.readAttempt(EndedGate(transport), options, reporter, attempt, if (resume && attempt > 1) carry.load() else null)
             } catch (e: CancellationException) {
                 end(ChipReadEnding.Cancelled(ChipReadEnding.Cancelled.By.APP, attempt, lastProgress.load()))
                 throw e
+            } catch (e: Throwable) {
+                // The flow turns every fault into a typed result; this is the backstop for a fault
+                // outside it (an Error, for example): a typed ending that says the chip's answer could
+                // not be used, never "the app cancelled". Not rethrown: the ending is the report.
+                end(stoppedBy(unexpectedFault(), null))
+                return ChipReadAttemptOutcome.ENDED
             }
-        if (resume) carry = next
+        if (resume) carry.store(next)
         if (result is ChipReadResult.Partial) lastAccessResult.store(result)
         if (isEnded) return ChipReadAttemptOutcome.ENDED
         val error =
@@ -218,7 +226,9 @@ public class ChipReadCoordinator(
                     result.error
                 }
             }
-        if (error is NfcError) {
+        // The platform is asked only about a loss of the link: a person's cancel or a closed link
+        // keeps its own meaning whatever the platform says.
+        if (isLinkLoss(error)) {
             val system =
                 try {
                     systemEnd()
@@ -230,11 +240,10 @@ public class ChipReadCoordinator(
                 return ChipReadAttemptOutcome.ENDED
             }
         }
-        val used = restartsUsed.load()
-        if (isLinkLoss(error) && readAgainAllowed && used < linkLoss.maxRestarts) {
-            restartsUsed.store(used + 1)
+        val usedBefore = if (isLinkLoss(error) && readAgainAllowed) takeRestart() else -1
+        if (usedBefore >= 0) {
             lastLoss.store(error)
-            val lost = ChipReadState.LinkLost(linkLoss.maxRestarts - used)
+            val lost = ChipReadState.LinkLost(linkLoss.maxRestarts - usedBefore)
             lastLinkLost.store(lost)
             waitingAfterLoss.store(true)
             publish(lost)
@@ -242,6 +251,40 @@ public class ChipReadCoordinator(
         }
         end(endingFor(result, error))
         return ChipReadAttemptOutcome.ENDED
+    }
+
+    /**
+     * Takes one restart from the budget with one compare-and-set, so no misuse can buy an uncounted
+     * attempt: the restarts used before this one, or -1 when none is left.
+     */
+    private fun takeRestart(): Int {
+        while (true) {
+            val used = restartsUsed.load()
+            if (used >= linkLoss.maxRestarts) return -1
+            if (restartsUsed.compareAndSet(used, used + 1)) return used
+        }
+    }
+
+    /** The error for a fault the read did not expect: about the chip's answer, after access or before it. */
+    private fun unexpectedFault(): ChipError =
+        if (lastAccessResult.load() != null) {
+            ChipUnexpectedAnswer(ChipUnexpectedAnswer.Reason.UNUSABLE_FILE_ANSWER)
+        } else {
+            ChipAccessDenied(ChipAccessProtocol.NONE, ChipAccessDenied.Reason.UNEXPECTED_CHIP_ANSWER)
+        }
+
+    /**
+     * The attempt's transport, closed by the read's ending: once the read has ended, from any cause
+     * and on any thread, no further command reaches the chip, whatever the platform entry point
+     * does with the running attempt.
+     */
+    private inner class EndedGate(
+        private val base: ApduTransport,
+    ) : ApduTransport by base {
+        override suspend fun transceive(command: ByteArray): ByteArray {
+            if (isEnded) throw ApduTransportException(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
+            return base.transceive(command)
+        }
     }
 
     /**

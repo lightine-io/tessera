@@ -101,8 +101,11 @@ class ChipReadCoordinatorTest {
             assertEquals(ChipReadEnding.Cancelled.By.APP, ending.by)
             assertEquals(1, ending.attempts)
             assertEquals(ChipReadState.Stopping, observer.updates.last().state)
-            transport.answer.completeExceptionally(ApduTransportException(NfcUnavailable(NfcUnavailable.Reason.CLOSED)))
+            // The command answers normally: the ended read still sends nothing more (the core
+            // enforces it itself, whatever the platform does with the running attempt).
+            transport.answer.complete(byteArrayOf(0x90.toByte(), 0x00))
             assertEquals(ChipReadAttemptOutcome.ENDED, read.await())
+            assertEquals(1, transport.commands, "no command after the ending")
             assertOneEndingLast(observer)
             assertTrue(c.isEnded)
         }

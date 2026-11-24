@@ -227,9 +227,10 @@ internal class ReadFlow(
     internal val mappingEvidence: ChipAuthMappingEvidence? get() = camEvidence
 
     /**
-     * Runs the read. Total: every exception other than cancellation becomes a typed Failed or
-     * Partial result ([errorOf]); cancellation passes through as it is. Keys are wiped however the
-     * read ends.
+     * Runs the read. Total: every throwable other than cancellation, an [Error] such as running out
+     * of memory on a large file or of stack on a hostile structure included, becomes a typed Failed
+     * or Partial result ([errorOf]) and is not rethrown; cancellation passes through as it is. Keys
+     * are wiped however the read ends.
      */
     suspend fun run(): ChipReadResult {
         val start = TimeSource.Monotonic.markNow()
@@ -241,7 +242,7 @@ internal class ReadFlow(
                         null
                     } catch (e: CancellationException) {
                         throw e
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         errorOf(e)
                     }
                 finish(error)
@@ -263,7 +264,7 @@ internal class ReadFlow(
             } else {
                 stopped(error)
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             // Putting the result together failed: the error stands without the read's content.
             ChipReadResult.Failed(error ?: errorOf(e), if (accessDone) accessReport() else null)
         }
@@ -287,7 +288,7 @@ internal class ReadFlow(
      *   access [ChipAccessDenied.Reason.UNEXPECTED_CHIP_ANSWER], after it
      *   [ChipUnexpectedAnswer.Reason.UNUSABLE_FILE_ANSWER].
      */
-    private fun errorOf(e: Exception): ChipError =
+    private fun errorOf(e: Throwable): ChipError =
         when (e) {
             is Stop -> {
                 e.error
