@@ -7,6 +7,7 @@ import io.lightine.tessera.types.errors.NfcUnavailable
 /** A scripted ISO 7816 tag: no device, no radio. Answers at once unless [holdAnswers] is set. */
 internal class FakeChannel(
     override val supportsPace: Boolean? = null,
+    override val initialSelectedAid: String? = null,
 ) : Iso7816Channel {
     val sent = mutableListOf<ByteArray>()
     var answer: ByteArray = byteArrayOf(0x90.toByte(), 0x00)
@@ -59,6 +60,10 @@ internal class FakeSessionPort(
     val events: ReaderSessionEvents,
 ) : ReaderSessionPort {
     val alerts = mutableListOf<String>()
+
+    /** When each alert was set, by [clock]. */
+    val alertTimes = mutableListOf<Long>()
+    var clock: () -> Long = { 0L }
     var began = false
     var restarts = 0
 
@@ -73,8 +78,18 @@ internal class FakeSessionPort(
     /** Called by begin(), like Core NFC calling the delegate once polling finds tags. */
     var onBegin: (FakeSessionPort) -> Unit = {}
 
+    /** How many times the system ended the session on its own, through [systemEnd]. */
+    var systemEnds = 0
+
+    /** The system ends the session on its own with [error]. */
+    fun systemEnd(error: NfcError) {
+        systemEnds++
+        events.onInvalidated(error)
+    }
+
     override fun setAlertMessage(text: String) {
         alerts += text
+        alertTimes += clock()
     }
 
     override fun begin() {

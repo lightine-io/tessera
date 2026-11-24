@@ -34,6 +34,12 @@ internal interface Iso7816Channel {
     /** Whether the chip says it supports PACE, or `null` when the system cannot say (before iOS 26.4). */
     val supportsPace: Boolean?
 
+    /**
+     * The application the system selected when it found the tag (`initialSelectedAID`, a hex
+     * string), or `null` when it does not say.
+     */
+    val initialSelectedAid: String?
+
     /** Sends [command]. [onDone] gets the answer with its two status-word bytes, or an error. */
     fun send(
         command: ByteArray,
@@ -111,6 +117,9 @@ internal class PlatformIso7816Channel(
     // Read once: the property exists only from iOS 26.4, and asking an older system for it would
     // send a message the tag object does not know.
     override val supportsPace: Boolean? = if (isAtLeastIos264()) tag.supportsPACE else null
+
+    // Available from iOS 13 (NFCISO7816Tag.h), so on every system the module supports.
+    override val initialSelectedAid: String? = tag.initialSelectedAID
 
     override fun send(
         command: ByteArray,

@@ -1,9 +1,6 @@
 package io.lightine.tessera.emrtd.nfc
 
 import io.lightine.tessera.emrtd.ApduTransportException
-import io.lightine.tessera.emrtd.ChipReadOptions
-import io.lightine.tessera.emrtd.ChipReadResult
-import io.lightine.tessera.emrtd.ChipReader
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.NfcError
 import io.lightine.tessera.types.errors.NfcUnavailable
@@ -12,24 +9,19 @@ import platform.Foundation.NSLock
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Runs the iPhone's NFC reader session for one chip read: shows the system NFC sheet, waits for a
- * passport chip, connects to it and gives you a [CoreNfcTransport] for the shared chip code.
+ * The low-level path for a chip read on iPhone, where you own the session: shows the system NFC
+ * sheet, waits for a passport chip, connects to it and gives you a [CoreNfcTransport] for the
+ * shared chip code. Most apps should use [CoreNfcChipRead] instead, which owns the whole read: the
+ * session, the sheet's texts, a lost link, time limits and the one ending.
  *
- * One session reads one chip. The simplest and safest way is [read], which connects, reads and
- * ends the session the right way on every path:
+ * One session reads one chip. Call [connect], read through the transport, and end the session in
+ * `finally`, with success only for a complete read:
  *
  * ```kotlin
  * val session = CoreNfcSession(
  *     alertMessage = "Hold your iPhone near the document.",
  *     failureMessage = "Reading failed. Try again.",
  * )
- * val result = session.read(ChipReader(), options)
- * ```
- *
- * When you need the transport yourself, call [connect], read through the transport, and end the
- * session in `finally`, with success only for a complete read:
- *
- * ```kotlin
  * var complete = false
  * try {
  *     val transport = session.connect()
@@ -133,12 +125,12 @@ public class CoreNfcSession internal constructor(
     private val openSession: (ReaderSessionEvents) -> ReaderSessionPort,
 ) {
     /**
-     * Creates a session; nothing shows until [connect] or [read].
+     * Creates a session; nothing shows until [connect].
      *
      * @param alertMessage The text the system NFC sheet shows while it looks for the chip.
      * @param failureMessage The text the sheet shows when the SDK itself ends the session with a
-     *   failure: a chip that could not be connected, a [connect] whose coroutine was cancelled, or a
-     *   [read] that did not complete. In your app's language.
+     *   failure: a chip that could not be connected, or a [connect] whose coroutine was cancelled.
+     *   In your app's language.
      */
     public constructor(alertMessage: String, failureMessage: String) :
         this(alertMessage, failureMessage, ::platformReadingAvailable, ::PlatformReaderSession)
@@ -147,19 +139,15 @@ public class CoreNfcSession internal constructor(
     private var started = false
     private var ended = false
     private var endedByApp = false
-    private var port: ReaderSessionPort? = null
+    private var port: OwnedReaderSession? = null
+
+    // The system session from begin until the system reports its end; unlike [port] it is not let
+    // go when the app ends the session, so the system's end report still reaches it.
+    private var owned: OwnedReaderSession? = null
     private var pending: CompletableDeferred<CoreNfcTransport>? = null
     private var connecting = false
     private var transport: CoreNfcTransport? = null
     private var currentAlert: String = alertMessage
-
-    // How the system session is ended, so it is ended exactly once: by the system (its own
-    // invalidation came) or by one invalidate call of the SDK. An ending asked for while begin()
-    // runs waits for begin() to return: Core NFC has no session to end before it starts.
-    private var beginning = false
-    private var deferredEnding: Ending? = null
-    private var invalidateSent = false
-    private var systemEnded = false
 
     // Failed connects in a row that restarted polling; bounded by [MAX_CONNECT_ATTEMPTS].
     private var failedConnects = 0
@@ -176,7 +164,7 @@ public class CoreNfcSession internal constructor(
                     currentAlert = value
                     if (ended) null else port
                 }
-            target?.setAlertMessage(value)
+            target?.setAlert(value)
         }
 
     /**
@@ -208,79 +196,24 @@ public class CoreNfcSession internal constructor(
             }
             throw ApduTransportException(NfcUnavailable(NfcUnavailable.Reason.NOT_SUPPORTED))
         }
-        val session = openSession(events)
+        // The system session begins at most once and ends exactly once (OwnedReaderSession). It
+        // keeps this object alive until the system says the session ended, so its delegate (held
+        // weakly by Core NFC) lives as long as the system session does, whatever the app drops.
+        val session = OwnedReaderSession(openSession(events), keeper = this)
         val text =
             locked {
                 if (ended) return@locked null
                 port = session
-                beginning = true
+                owned = session
                 currentAlert
             } ?: throw ApduTransportException(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
-        // Held until the system says the session ended, so its delegate (held weakly by Core NFC)
-        // and this object live as long as the system session does, whatever the app drops.
-        LiveSessions.add(this)
-        session.setAlertMessage(text)
+        session.setAlert(text)
         session.begin()
-        val late =
-            locked {
-                beginning = false
-                val ending = deferredEnding
-                deferredEnding = null
-                if (ending == null || systemEnded || invalidateSent) {
-                    null
-                } else {
-                    invalidateSent = true
-                    ending
-                }
-            }
-        late?.applyTo(session)
         try {
             return result.await()
         } catch (e: CancellationException) {
             end(failureMessage)
             throw e
-        }
-    }
-
-    /**
-     * Reads the chip in one call and ends the session the right way on every path: connects,
-     * runs [reader] over the transport with [options], then ends the session with success (the
-     * sheet's check mark) only when the read is [ChipReadResult.Complete], and with the failure
-     * message for [ChipReadResult.Partial], [ChipReadResult.Failed], an error or a cancellation.
-     *
-     * This is the safe way to read; use [connect] and [end] only when you need the transport
-     * yourself. Call it once per session, like [connect].
-     *
-     * @param reader The chip reader.
-     * @param options The key, the data groups, the roots and the check time.
-     * @return The reader's result: [ChipReadResult.Complete], [ChipReadResult.Partial] or
-     *   [ChipReadResult.Failed].
-     * @throws ApduTransportException when no chip could be connected, as [connect] says; the
-     *   session has already ended then.
-     * @throws IllegalStateException when [connect] or [read] was already called on this session.
-     */
-    @Throws(ApduTransportException::class, CancellationException::class)
-    public suspend fun read(
-        reader: ChipReader,
-        options: ChipReadOptions,
-    ): ChipReadResult = readEnding({ it is ChipReadResult.Complete }) { reader.read(it, options) }
-
-    /**
-     * Connects, runs [block], then ends the session: with success only when [block] returned a
-     * value that [succeeded] accepts, with the failure message on every other path.
-     */
-    internal suspend fun <T> readEnding(
-        succeeded: (T) -> Boolean,
-        block: suspend (CoreNfcTransport) -> T,
-    ): T {
-        val transport = connect()
-        var success = false
-        try {
-            val result = block(transport)
-            success = succeeded(result)
-            return result
-        } finally {
-            if (success) end() else end(failureMessage)
         }
     }
 
@@ -315,46 +248,13 @@ public class CoreNfcSession internal constructor(
         val closed = NfcUnavailable(NfcUnavailable.Reason.CLOSED)
         target.transport?.stop(closed)
         target.pending?.completeExceptionally(ApduTransportException(closed))
-        target.port?.let { release(it, ending) }
-    }
-
-    /**
-     * Ends the system session with [ending], once: not when the system already ended it, not a
-     * second time, and after begin() returns when it is still running.
-     */
-    private fun release(
-        session: ReaderSessionPort,
-        ending: Ending,
-    ) {
-        val now =
-            locked {
-                when {
-                    systemEnded || invalidateSent -> {
-                        false
-                    }
-
-                    beginning -> {
-                        if (deferredEnding == null) deferredEnding = ending
-                        false
-                    }
-
-                    else -> {
-                        invalidateSent = true
-                        true
-                    }
-                }
-            }
-        if (now) ending.applyTo(session)
+        target.port?.end(ending.errorMessage)
     }
 
     /** One kind of ending: success when [errorMessage] is `null`, else a failure with that text. */
     private class Ending(
         val errorMessage: String?,
-    ) {
-        fun applyTo(session: ReaderSessionPort) {
-            if (errorMessage == null) session.invalidate() else session.invalidate(errorMessage)
-        }
-    }
+    )
 
     /**
      * Hands over what the session still holds and lets go of it, so the system session, its
@@ -369,7 +269,7 @@ public class CoreNfcSession internal constructor(
     }
 
     private class Ended(
-        val port: ReaderSessionPort?,
+        val port: OwnedReaderSession?,
         val pending: CompletableDeferred<CoreNfcTransport>?,
         val transport: CoreNfcTransport?,
     )
@@ -411,7 +311,7 @@ public class CoreNfcSession internal constructor(
      * session with the failure message, so no session stays open and blocks the next one.
      */
     private fun handleConnected(
-        session: ReaderSessionPort,
+        session: OwnedReaderSession,
         channel: Iso7816Channel,
         failure: ConnectFailure?,
     ) {
@@ -452,7 +352,7 @@ public class CoreNfcSession internal constructor(
 
             is ConnectOutcome.Failed -> {
                 outcome.waiting.completeExceptionally(ApduTransportException(outcome.error))
-                release(session, Ending(failureMessage))
+                session.end(failureMessage)
             }
         }
     }
@@ -472,17 +372,22 @@ public class CoreNfcSession internal constructor(
     }
 
     private fun handleInvalidated(platformError: NfcError) {
+        val session =
+            locked {
+                val held = owned
+                owned = null
+                held
+            }
         val (error, target) =
             locked {
                 // Core NFC reports "user canceled" also when the app itself ended the session.
                 val error = if (endedByApp) NfcUnavailable(NfcUnavailable.Reason.CLOSED) else platformError
                 ended = true
-                systemEnded = true
                 error to takeEnded()
             }
         target.transport?.stop(error)
         target.pending?.completeExceptionally(ApduTransportException(error))
-        LiveSessions.remove(this)
+        session?.systemEnd()
     }
 
     private inline fun <T> locked(block: () -> T): T {
@@ -514,39 +419,39 @@ public class CoreNfcSession internal constructor(
 }
 
 /**
- * The sessions whose system session has begun and not yet ended. Core NFC holds its delegate
- * weakly, so without this an app that drops every reference mid-read would leave a system session
- * whose callbacks reach no one, and that nothing ends before the system's time limit. Each entry
- * is removed when the system reports the end, so nothing outlives the system session.
+ * The owners of every system session that has begun and not yet ended ([CoreNfcSession] and
+ * [CoreNfcChipRead] objects). Core NFC holds its delegate weakly, so without this an app that drops
+ * every reference mid-read would leave a system session whose callbacks reach no one, and that
+ * nothing ends before the system's time limit. Each entry is removed when the system reports the
+ * end, so nothing outlives the system session.
  */
-@OptIn(ExperimentalTesseraChipApi::class)
 internal object LiveSessions {
     private val lock = NSLock()
-    private val sessions = mutableSetOf<CoreNfcSession>()
+    private val owners = mutableSetOf<Any>()
 
-    fun add(session: CoreNfcSession) {
+    fun add(owner: Any) {
         lock.lock()
         try {
-            sessions += session
+            owners += owner
         } finally {
             lock.unlock()
         }
     }
 
-    fun remove(session: CoreNfcSession) {
+    fun remove(owner: Any) {
         lock.lock()
         try {
-            sessions -= session
+            owners -= owner
         } finally {
             lock.unlock()
         }
     }
 
-    /** Whether [session] is live, for tests. */
-    fun contains(session: CoreNfcSession): Boolean {
+    /** Whether [owner] holds a live system session, for tests. */
+    fun contains(owner: Any): Boolean {
         lock.lock()
         try {
-            return session in sessions
+            return owner in owners
         } finally {
             lock.unlock()
         }

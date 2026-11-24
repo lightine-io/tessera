@@ -1,10 +1,6 @@
 package io.lightine.tessera.emrtd.nfc
 
 import io.lightine.tessera.emrtd.ApduTransportException
-import io.lightine.tessera.emrtd.ChipAccessKey
-import io.lightine.tessera.emrtd.ChipReadOptions
-import io.lightine.tessera.emrtd.ChipReadResult
-import io.lightine.tessera.emrtd.ChipReader
 import io.lightine.tessera.types.errors.NfcError
 import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.errors.NfcTimeout
@@ -410,71 +406,6 @@ class CoreNfcInterruptionTest {
             session.end(FAILURE)
             assertEquals(listOf<String?>(FAILURE), port.endings)
             aNewSessionReadsLikeAFirstOne()
-        }
-
-    // --- After the last byte: the ending ---------------------------------------------------------
-
-    @Test
-    fun ending__a_complete_read_ends_with_success_once() =
-        runTest {
-            onBegin = { it.events.onTagsDetected(listOf(FakeTag(FakeChannel()))) }
-            val session = session()
-            assertEquals("done", session.readEnding({ true }) { "done" })
-            session.end(FAILURE)
-            assertEquals(listOf<String?>(null), port.endings)
-            assertFalse(LiveSessions.contains(session))
-        }
-
-    @Test
-    fun ending__a_read_that_is_not_complete_ends_with_the_failure_text() =
-        runTest {
-            onBegin = { it.events.onTagsDetected(listOf(FakeTag(FakeChannel()))) }
-            session().readEnding({ false }) { "partial" }
-            assertEquals(listOf<String?>(FAILURE), port.endings)
-        }
-
-    @Test
-    fun ending__a_read_that_throws_ends_with_the_failure_text_and_rethrows() =
-        runTest {
-            onBegin = { it.events.onTagsDetected(listOf(FakeTag(FakeChannel()))) }
-            val thrown = IllegalStateException("app bug")
-            assertSame(thrown, assertFailsWith<IllegalStateException> { session().readEnding<Unit>({ true }) { throw thrown } })
-            assertEquals(listOf<String?>(FAILURE), port.endings)
-        }
-
-    @Test
-    fun ending__a_read_cancelled_mid_way_ends_with_the_failure_text() =
-        runTest {
-            val channel = FakeChannel().apply { holdAnswers = true }
-            onBegin = { it.events.onTagsDetected(listOf(FakeTag(channel))) }
-            val session = session()
-            val reading = async { session.readEnding({ true }) { it.transceive(READ) } }
-            runCurrent()
-            reading.cancel()
-            runCurrent()
-            assertEquals(listOf<String?>(FAILURE), port.endings)
-            assertEquals(1, channel.sent.size)
-        }
-
-    @Test
-    fun ending__a_failed_connect_in_read_is_thrown_and_ended_once() =
-        runTest {
-            onBegin = { it.events.onTagsDetected(listOf(FakeTag(FakeChannel(), connectError = NfcUnavailable(Reason.REQUEST_REFUSED)))) }
-            val session = session()
-            assertEquals(NfcUnavailable(Reason.REQUEST_REFUSED), errorOf { session.readEnding({ true }) { } })
-            assertEquals(listOf<String?>(FAILURE), port.endings)
-        }
-
-    @Test
-    fun ending__read_with_the_chip_reader_ends_a_failed_read_with_the_failure_text() =
-        runTest {
-            // Every command is refused, so access is not granted: Failed, never the success mark.
-            val channel = FakeChannel().apply { answer = byteArrayOf(0x6D, 0x00) }
-            onBegin = { it.events.onTagsDetected(listOf(FakeTag(channel))) }
-            val options = ChipReadOptions(ChipAccessKey.Can("123456"), setOf(1))
-            val result = session().read(ChipReader(), options)
-            assertIs<ChipReadResult.Failed>(result)
-            assertEquals(listOf<String?>(FAILURE), port.endings)
         }
 
     // --- Between two reads ----------------------------------------------------------------------

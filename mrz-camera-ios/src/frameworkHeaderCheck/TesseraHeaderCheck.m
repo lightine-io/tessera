@@ -13,7 +13,7 @@ static void tesseraCameraTypes(TesseraAVCaptureMrzScanner *scanner, TesseraMrzPa
 
 // Chip reading (emrtd-core, emrtd-nfc-ios, types).
 static void tesseraChipTypes(id<NFCISO7816Tag> tag) {
-    TesseraCoreNfcSession *session = [[TesseraCoreNfcSession alloc] initWithAlertMessage:@"text"];
+    TesseraCoreNfcSession *session = [[TesseraCoreNfcSession alloc] initWithAlertMessage:@"text" failureMessage:@"text"];
     [session connectWithCompletionHandler:^(TesseraCoreNfcTransport *transport, NSError *error) {
         id<TesseraApduTransport> seam = transport;
         (void)seam.maxCommandLength;
@@ -43,4 +43,24 @@ static void tesseraChipTypes(id<NFCISO7816Tag> tag) {
     (void)failure;
     (void)mrzKey;
     (void)canKey;
+}
+
+// The read that owns the whole session (emrtd-nfc-ios, emrtd-core).
+static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChipReadObserver> observer) {
+    id<TesseraChipReadHandle> shortest = [TesseraCoreNfcChipRead.companion startOptions:options observer:observer];
+    TesseraCoreNfcReadSettings *defaults = [[TesseraCoreNfcReadSettings alloc] init];
+    TesseraLinkLossPolicyResume *resume = [[TesseraLinkLossPolicyResume alloc] initWithMaxRestarts:2 error:nil];
+    TesseraCoreNfcReadSettings *settings = [[TesseraCoreNfcReadSettings alloc] initWithLinkLoss:resume
+                                                                             settleDelayMillis:400
+                                                                          commandTimeoutMillis:5000
+                                                                      waitAfterSystemEndMillis:1000
+                                                                                         error:nil];
+    id<TesseraCoreNfcSheetTexts> texts = TesseraCoreNfcDefaultSheetTexts.shared;
+    id<TesseraChipReadHandle> full = [TesseraCoreNfcChipRead.companion startOptions:options texts:texts settings:settings observer:observer];
+    id<TesseraChipReadHandle> withTexts = [TesseraCoreNfcChipRead.companion startOptions:options texts:texts observer:observer];
+    [full cancel];
+    BOOL ended = shortest.isEnded;
+    (void)ended;
+    (void)defaults;
+    (void)withTexts;
 }

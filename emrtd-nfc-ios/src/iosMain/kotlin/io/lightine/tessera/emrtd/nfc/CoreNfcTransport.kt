@@ -2,6 +2,7 @@ package io.lightine.tessera.emrtd.nfc
 
 import io.lightine.tessera.emrtd.ApduTransport
 import io.lightine.tessera.emrtd.ApduTransportException
+import io.lightine.tessera.emrtd.ChipStartSelection
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.NfcError
 import io.lightine.tessera.types.errors.NfcTagLost
@@ -10,6 +11,7 @@ import io.lightine.tessera.types.errors.NfcUnavailable
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import platform.CoreNFC.NFCISO7816TagProtocol
 import platform.Foundation.NSLock
 import kotlin.concurrent.Volatile
@@ -31,7 +33,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * A failed exchange throws [ApduTransportException], whose `error` is:
  * - [NfcTagLost] when the tag left the field or the link broke;
  * - [NfcTimeout] (with no time limit, as Core NFC does not say one) when the chip did not answer
- *   after the reader's retries, or when the session's own time limit passed;
+ *   after the reader's retries, or when the session's own time limit passed; with the time limit
+ *   in milliseconds when a transport from [CoreNfcChipRead] waited longer than
+ *   [CoreNfcReadSettings.commandTimeoutMillis] for one answer (that transport then stops);
  * - [NfcUnavailable] with reason `CANCELLED_BY_USER` when the person ended the session with the
  *   sheet's Cancel button, `CLOSED` after [close] or after the app ended the session,
  *   `REQUEST_REFUSED` when Core NFC refused the command (it was not sent), `ENDED_BY_SYSTEM`
@@ -53,6 +57,9 @@ import kotlin.coroutines.cancellation.CancellationException
 public class CoreNfcTransport internal constructor(
     private val channel: Iso7816Channel,
     keepAlive: Any? = null,
+    // A time limit of the SDK's own for one command, in milliseconds; `null` for none. Used by
+    // CoreNfcChipRead: Core NFC has been seen to wait far longer than a chip may take.
+    private val commandTimeoutMillis: Long? = null,
 ) : ApduTransport {
     /**
      * Wraps a tag your own `NFCTagReaderSession` found and connected with `connect(to:)`.
@@ -96,6 +103,19 @@ public class CoreNfcTransport internal constructor(
      */
     public val supportsPace: Boolean? get() = channel.supportsPace
 
+    /**
+     * [ChipStartSelection.EMRTD_APPLICATION] when Core NFC reports that it selected the eMRTD
+     * application when it found the tag (`initialSelectedAID`, from the select identifiers in your
+     * Info.plist or the session's configuration); [ChipStartSelection.UNKNOWN] otherwise.
+     */
+    override val startSelection: ChipStartSelection
+        get() =
+            if (channel.initialSelectedAid?.equals(EMRTD_AID_HEX, ignoreCase = true) == true) {
+                ChipStartSelection.EMRTD_APPLICATION
+            } else {
+                ChipStartSelection.UNKNOWN
+            }
+
     @Throws(ApduTransportException::class, CancellationException::class)
     override suspend fun transceive(command: ByteArray): ByteArray =
         lock.withLock {
@@ -118,7 +138,18 @@ public class CoreNfcTransport internal constructor(
                 }
             }
             try {
-                result.await()
+                val limit = commandTimeoutMillis
+                if (limit == null) {
+                    result.await()
+                } else {
+                    // Waits without holding any thread. On expiry the command counts as lost: the
+                    // transport stops, so nothing more is sent on it and a late answer is dropped.
+                    withTimeoutOrNull(limit) { result.await() } ?: run {
+                        val timeout = NfcTimeout(limit)
+                        stop(timeout)
+                        throw ApduTransportException(timeout)
+                    }
+                }
             } catch (e: CancellationException) {
                 // The command is still out and Core NFC cannot take it back: its answer would be
                 // lost, and the chip's secure messaging counter has moved past it. Nothing more

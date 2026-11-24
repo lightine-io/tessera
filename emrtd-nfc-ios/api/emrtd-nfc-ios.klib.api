@@ -6,6 +6,58 @@
 // - Show declarations: true
 
 // Library unique name: <io.lightine.tessera:emrtd-nfc-ios>
+abstract interface io.lightine.tessera.emrtd.nfc/ChipReadHandle { // io.lightine.tessera.emrtd.nfc/ChipReadHandle|null[0]
+    abstract val isEnded // io.lightine.tessera.emrtd.nfc/ChipReadHandle.isEnded|{}isEnded[0]
+        abstract fun <get-isEnded>(): kotlin/Boolean // io.lightine.tessera.emrtd.nfc/ChipReadHandle.isEnded.<get-isEnded>|<get-isEnded>(){}[0]
+
+    abstract fun cancel() // io.lightine.tessera.emrtd.nfc/ChipReadHandle.cancel|cancel(){}[0]
+}
+
+abstract interface io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts { // io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts|null[0]
+    abstract fun textFor(io.lightine.tessera.emrtd/ChipReadUpdate): kotlin/String // io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts.textFor|textFor(io.lightine.tessera.emrtd.ChipReadUpdate){}[0]
+    abstract fun textForEnding(io.lightine.tessera.emrtd/ChipReadEnding): kotlin/String // io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts.textForEnding|textForEnding(io.lightine.tessera.emrtd.ChipReadEnding){}[0]
+}
+
+final class io.lightine.tessera.emrtd.nfc/CoreNfcChipRead : io.lightine.tessera.emrtd.nfc/ChipReadHandle { // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead|null[0]
+    final val isEnded // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.isEnded|{}isEnded[0]
+        final fun <get-isEnded>(): kotlin/Boolean // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.isEnded.<get-isEnded>|<get-isEnded>(){}[0]
+
+    final fun cancel() // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.cancel|cancel(){}[0]
+
+    final object Companion { // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.Companion|null[0]
+        final fun start(io.lightine.tessera.emrtd/ChipReadOptions, io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts, io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings, io.lightine.tessera.emrtd/ChipReadObserver): io.lightine.tessera.emrtd.nfc/ChipReadHandle // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.Companion.start|start(io.lightine.tessera.emrtd.ChipReadOptions;io.lightine.tessera.emrtd.nfc.CoreNfcSheetTexts;io.lightine.tessera.emrtd.nfc.CoreNfcReadSettings;io.lightine.tessera.emrtd.ChipReadObserver){}[0]
+        final fun start(io.lightine.tessera.emrtd/ChipReadOptions, io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts, io.lightine.tessera.emrtd/ChipReadObserver): io.lightine.tessera.emrtd.nfc/ChipReadHandle // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.Companion.start|start(io.lightine.tessera.emrtd.ChipReadOptions;io.lightine.tessera.emrtd.nfc.CoreNfcSheetTexts;io.lightine.tessera.emrtd.ChipReadObserver){}[0]
+        final fun start(io.lightine.tessera.emrtd/ChipReadOptions, io.lightine.tessera.emrtd/ChipReadObserver): io.lightine.tessera.emrtd.nfc/ChipReadHandle // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.Companion.start|start(io.lightine.tessera.emrtd.ChipReadOptions;io.lightine.tessera.emrtd.ChipReadObserver){}[0]
+    }
+}
+
+final class io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings { // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings|null[0]
+    constructor <init>() // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.<init>|<init>(){}[0]
+    constructor <init>(io.lightine.tessera.emrtd/LinkLossPolicy = ..., kotlin/Long = ..., kotlin/Long = ..., kotlin/Long = ...) // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.<init>|<init>(io.lightine.tessera.emrtd.LinkLossPolicy;kotlin.Long;kotlin.Long;kotlin.Long){}[0]
+
+    final val commandTimeoutMillis // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.commandTimeoutMillis|{}commandTimeoutMillis[0]
+        final fun <get-commandTimeoutMillis>(): kotlin/Long // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.commandTimeoutMillis.<get-commandTimeoutMillis>|<get-commandTimeoutMillis>(){}[0]
+    final val linkLoss // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.linkLoss|{}linkLoss[0]
+        final fun <get-linkLoss>(): io.lightine.tessera.emrtd/LinkLossPolicy // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.linkLoss.<get-linkLoss>|<get-linkLoss>(){}[0]
+    final val settleDelayMillis // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.settleDelayMillis|{}settleDelayMillis[0]
+        final fun <get-settleDelayMillis>(): kotlin/Long // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.settleDelayMillis.<get-settleDelayMillis>|<get-settleDelayMillis>(){}[0]
+    final val waitAfterSystemEndMillis // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.waitAfterSystemEndMillis|{}waitAfterSystemEndMillis[0]
+        final fun <get-waitAfterSystemEndMillis>(): kotlin/Long // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.waitAfterSystemEndMillis.<get-waitAfterSystemEndMillis>|<get-waitAfterSystemEndMillis>(){}[0]
+
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.toString|toString(){}[0]
+
+    final object Companion { // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Companion|null[0]
+        final const val DEFAULT_COMMAND_TIMEOUT_MILLIS // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Companion.DEFAULT_COMMAND_TIMEOUT_MILLIS|{}DEFAULT_COMMAND_TIMEOUT_MILLIS[0]
+            final fun <get-DEFAULT_COMMAND_TIMEOUT_MILLIS>(): kotlin/Long // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Companion.DEFAULT_COMMAND_TIMEOUT_MILLIS.<get-DEFAULT_COMMAND_TIMEOUT_MILLIS>|<get-DEFAULT_COMMAND_TIMEOUT_MILLIS>(){}[0]
+        final const val DEFAULT_RESTARTS // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Companion.DEFAULT_RESTARTS|{}DEFAULT_RESTARTS[0]
+            final fun <get-DEFAULT_RESTARTS>(): kotlin/Int // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Companion.DEFAULT_RESTARTS.<get-DEFAULT_RESTARTS>|<get-DEFAULT_RESTARTS>(){}[0]
+        final const val DEFAULT_SETTLE_DELAY_MILLIS // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Companion.DEFAULT_SETTLE_DELAY_MILLIS|{}DEFAULT_SETTLE_DELAY_MILLIS[0]
+            final fun <get-DEFAULT_SETTLE_DELAY_MILLIS>(): kotlin/Long // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Companion.DEFAULT_SETTLE_DELAY_MILLIS.<get-DEFAULT_SETTLE_DELAY_MILLIS>|<get-DEFAULT_SETTLE_DELAY_MILLIS>(){}[0]
+        final const val DEFAULT_WAIT_AFTER_SYSTEM_END_MILLIS // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Companion.DEFAULT_WAIT_AFTER_SYSTEM_END_MILLIS|{}DEFAULT_WAIT_AFTER_SYSTEM_END_MILLIS[0]
+            final fun <get-DEFAULT_WAIT_AFTER_SYSTEM_END_MILLIS>(): kotlin/Long // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Companion.DEFAULT_WAIT_AFTER_SYSTEM_END_MILLIS.<get-DEFAULT_WAIT_AFTER_SYSTEM_END_MILLIS>|<get-DEFAULT_WAIT_AFTER_SYSTEM_END_MILLIS>(){}[0]
+    }
+}
+
 final class io.lightine.tessera.emrtd.nfc/CoreNfcSession { // io.lightine.tessera.emrtd.nfc/CoreNfcSession|null[0]
     constructor <init>(kotlin/String, kotlin/String) // io.lightine.tessera.emrtd.nfc/CoreNfcSession.<init>|<init>(kotlin.String;kotlin.String){}[0]
 
@@ -16,7 +68,6 @@ final class io.lightine.tessera.emrtd.nfc/CoreNfcSession { // io.lightine.tesser
     final fun end() // io.lightine.tessera.emrtd.nfc/CoreNfcSession.end|end(){}[0]
     final fun end(kotlin/String) // io.lightine.tessera.emrtd.nfc/CoreNfcSession.end|end(kotlin.String){}[0]
     final suspend fun connect(): io.lightine.tessera.emrtd.nfc/CoreNfcTransport // io.lightine.tessera.emrtd.nfc/CoreNfcSession.connect|connect(){}[0]
-    final suspend fun read(io.lightine.tessera.emrtd/ChipReader, io.lightine.tessera.emrtd/ChipReadOptions): io.lightine.tessera.emrtd/ChipReadResult // io.lightine.tessera.emrtd.nfc/CoreNfcSession.read|read(io.lightine.tessera.emrtd.ChipReader;io.lightine.tessera.emrtd.ChipReadOptions){}[0]
 
     final object Companion { // io.lightine.tessera.emrtd.nfc/CoreNfcSession.Companion|null[0]
         final const val EMRTD_APPLICATION_ID // io.lightine.tessera.emrtd.nfc/CoreNfcSession.Companion.EMRTD_APPLICATION_ID|{}EMRTD_APPLICATION_ID[0]
@@ -32,6 +83,8 @@ final class io.lightine.tessera.emrtd.nfc/CoreNfcTransport : io.lightine.tessera
 
     final val maxCommandLength // io.lightine.tessera.emrtd.nfc/CoreNfcTransport.maxCommandLength|{}maxCommandLength[0]
         final fun <get-maxCommandLength>(): kotlin/Int // io.lightine.tessera.emrtd.nfc/CoreNfcTransport.maxCommandLength.<get-maxCommandLength>|<get-maxCommandLength>(){}[0]
+    final val startSelection // io.lightine.tessera.emrtd.nfc/CoreNfcTransport.startSelection|{}startSelection[0]
+        final fun <get-startSelection>(): io.lightine.tessera.emrtd/ChipStartSelection // io.lightine.tessera.emrtd.nfc/CoreNfcTransport.startSelection.<get-startSelection>|<get-startSelection>(){}[0]
     final val supportsExtendedLength // io.lightine.tessera.emrtd.nfc/CoreNfcTransport.supportsExtendedLength|{}supportsExtendedLength[0]
         final fun <get-supportsExtendedLength>(): kotlin/Boolean // io.lightine.tessera.emrtd.nfc/CoreNfcTransport.supportsExtendedLength.<get-supportsExtendedLength>|<get-supportsExtendedLength>(){}[0]
     final val supportsPace // io.lightine.tessera.emrtd.nfc/CoreNfcTransport.supportsPace|{}supportsPace[0]
@@ -39,4 +92,16 @@ final class io.lightine.tessera.emrtd.nfc/CoreNfcTransport : io.lightine.tessera
 
     final fun close() // io.lightine.tessera.emrtd.nfc/CoreNfcTransport.close|close(){}[0]
     final suspend fun transceive(kotlin/ByteArray): kotlin/ByteArray // io.lightine.tessera.emrtd.nfc/CoreNfcTransport.transceive|transceive(kotlin.ByteArray){}[0]
+}
+
+final object io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts : io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts { // io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts|null[0]
+    final const val BAR_WIDTH // io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts.BAR_WIDTH|{}BAR_WIDTH[0]
+        final fun <get-BAR_WIDTH>(): kotlin/Int // io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts.BAR_WIDTH.<get-BAR_WIDTH>|<get-BAR_WIDTH>(){}[0]
+    final const val MOVE_HINT_AFTER_MILLIS // io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts.MOVE_HINT_AFTER_MILLIS|{}MOVE_HINT_AFTER_MILLIS[0]
+        final fun <get-MOVE_HINT_AFTER_MILLIS>(): kotlin/Long // io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts.MOVE_HINT_AFTER_MILLIS.<get-MOVE_HINT_AFTER_MILLIS>|<get-MOVE_HINT_AFTER_MILLIS>(){}[0]
+
+    final fun progressBar(io.lightine.tessera.emrtd/ChipReadProgress): kotlin/String // io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts.progressBar|progressBar(io.lightine.tessera.emrtd.ChipReadProgress){}[0]
+    final fun progressBar(io.lightine.tessera.emrtd/ChipReadProgress, kotlin/Int): kotlin/String // io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts.progressBar|progressBar(io.lightine.tessera.emrtd.ChipReadProgress;kotlin.Int){}[0]
+    final fun textFor(io.lightine.tessera.emrtd/ChipReadUpdate): kotlin/String // io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts.textFor|textFor(io.lightine.tessera.emrtd.ChipReadUpdate){}[0]
+    final fun textForEnding(io.lightine.tessera.emrtd/ChipReadEnding): kotlin/String // io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts.textForEnding|textForEnding(io.lightine.tessera.emrtd.ChipReadEnding){}[0]
 }
