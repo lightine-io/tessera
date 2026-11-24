@@ -89,6 +89,33 @@ final enum class io.lightine.tessera.emrtd.trust/MasterListProblem : kotlin/Enum
     final fun values(): kotlin/Array<io.lightine.tessera.emrtd.trust/MasterListProblem> // io.lightine.tessera.emrtd.trust/MasterListProblem.values|values#static(){}[0]
 }
 
+final enum class io.lightine.tessera.emrtd.trust/TrustAnchorLoadKind : kotlin/Enum<io.lightine.tessera.emrtd.trust/TrustAnchorLoadKind> { // io.lightine.tessera.emrtd.trust/TrustAnchorLoadKind|null[0]
+    enum entry CERTIFICATE // io.lightine.tessera.emrtd.trust/TrustAnchorLoadKind.CERTIFICATE|null[0]
+    enum entry MASTER_LIST // io.lightine.tessera.emrtd.trust/TrustAnchorLoadKind.MASTER_LIST|null[0]
+    enum entry PEM_CERTIFICATES // io.lightine.tessera.emrtd.trust/TrustAnchorLoadKind.PEM_CERTIFICATES|null[0]
+    enum entry UNRECOGNIZED // io.lightine.tessera.emrtd.trust/TrustAnchorLoadKind.UNRECOGNIZED|null[0]
+
+    final val entries // io.lightine.tessera.emrtd.trust/TrustAnchorLoadKind.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd.trust/TrustAnchorLoadKind> // io.lightine.tessera.emrtd.trust/TrustAnchorLoadKind.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd.trust/TrustAnchorLoadKind // io.lightine.tessera.emrtd.trust/TrustAnchorLoadKind.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd.trust/TrustAnchorLoadKind> // io.lightine.tessera.emrtd.trust/TrustAnchorLoadKind.values|values#static(){}[0]
+}
+
+final enum class io.lightine.tessera.emrtd.trust/TrustAnchorLoadProblem : kotlin/Enum<io.lightine.tessera.emrtd.trust/TrustAnchorLoadProblem> { // io.lightine.tessera.emrtd.trust/TrustAnchorLoadProblem|null[0]
+    enum entry NOT_A_LOCAL_FILE // io.lightine.tessera.emrtd.trust/TrustAnchorLoadProblem.NOT_A_LOCAL_FILE|null[0]
+    enum entry NOT_FOUND // io.lightine.tessera.emrtd.trust/TrustAnchorLoadProblem.NOT_FOUND|null[0]
+    enum entry NOT_READABLE // io.lightine.tessera.emrtd.trust/TrustAnchorLoadProblem.NOT_READABLE|null[0]
+    enum entry NOT_RECOGNIZED // io.lightine.tessera.emrtd.trust/TrustAnchorLoadProblem.NOT_RECOGNIZED|null[0]
+    enum entry TOO_LARGE // io.lightine.tessera.emrtd.trust/TrustAnchorLoadProblem.TOO_LARGE|null[0]
+
+    final val entries // io.lightine.tessera.emrtd.trust/TrustAnchorLoadProblem.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd.trust/TrustAnchorLoadProblem> // io.lightine.tessera.emrtd.trust/TrustAnchorLoadProblem.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.lightine.tessera.emrtd.trust/TrustAnchorLoadProblem // io.lightine.tessera.emrtd.trust/TrustAnchorLoadProblem.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.lightine.tessera.emrtd.trust/TrustAnchorLoadProblem> // io.lightine.tessera.emrtd.trust/TrustAnchorLoadProblem.values|values#static(){}[0]
+}
+
 final enum class io.lightine.tessera.emrtd.trust/TrustAnchorProblem : kotlin/Enum<io.lightine.tessera.emrtd.trust/TrustAnchorProblem> { // io.lightine.tessera.emrtd.trust/TrustAnchorProblem|null[0]
     enum entry INVALID_CERTIFICATE_FIELD // io.lightine.tessera.emrtd.trust/TrustAnchorProblem.INVALID_CERTIFICATE_FIELD|null[0]
     enum entry MALFORMED_ENCODING // io.lightine.tessera.emrtd.trust/TrustAnchorProblem.MALFORMED_ENCODING|null[0]
@@ -764,6 +791,32 @@ final class io.lightine.tessera.emrtd.trust/TrustAnchor { // io.lightine.tessera
     }
 }
 
+final class io.lightine.tessera.emrtd.trust/TrustAnchorLoad { // io.lightine.tessera.emrtd.trust/TrustAnchorLoad|null[0]
+    final val anchors // io.lightine.tessera.emrtd.trust/TrustAnchorLoad.anchors|{}anchors[0]
+        final fun <get-anchors>(): kotlin.collections/List<io.lightine.tessera.emrtd.trust/TrustAnchor> // io.lightine.tessera.emrtd.trust/TrustAnchorLoad.anchors.<get-anchors>|<get-anchors>(){}[0]
+    final val kind // io.lightine.tessera.emrtd.trust/TrustAnchorLoad.kind|{}kind[0]
+        final fun <get-kind>(): io.lightine.tessera.emrtd.trust/TrustAnchorLoadKind // io.lightine.tessera.emrtd.trust/TrustAnchorLoad.kind.<get-kind>|<get-kind>(){}[0]
+    final val masterList // io.lightine.tessera.emrtd.trust/TrustAnchorLoad.masterList|{}masterList[0]
+        final fun <get-masterList>(): io.lightine.tessera.emrtd.trust/MasterList? // io.lightine.tessera.emrtd.trust/TrustAnchorLoad.masterList.<get-masterList>|<get-masterList>(){}[0]
+    final val problem // io.lightine.tessera.emrtd.trust/TrustAnchorLoad.problem|{}problem[0]
+        final fun <get-problem>(): io.lightine.tessera.emrtd.trust/TrustAnchorLoadProblem? // io.lightine.tessera.emrtd.trust/TrustAnchorLoad.problem.<get-problem>|<get-problem>(){}[0]
+    final val unreadable // io.lightine.tessera.emrtd.trust/TrustAnchorLoad.unreadable|{}unreadable[0]
+        final fun <get-unreadable>(): kotlin.collections/List<io.lightine.tessera.emrtd.trust/UnreadableTrustAnchor> // io.lightine.tessera.emrtd.trust/TrustAnchorLoad.unreadable.<get-unreadable>|<get-unreadable>(){}[0]
+
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.trust/TrustAnchorLoad.toString|toString(){}[0]
+}
+
+final class io.lightine.tessera.emrtd.trust/UnreadableTrustAnchor { // io.lightine.tessera.emrtd.trust/UnreadableTrustAnchor|null[0]
+    final val offset // io.lightine.tessera.emrtd.trust/UnreadableTrustAnchor.offset|{}offset[0]
+        final fun <get-offset>(): kotlin/Int // io.lightine.tessera.emrtd.trust/UnreadableTrustAnchor.offset.<get-offset>|<get-offset>(){}[0]
+    final val position // io.lightine.tessera.emrtd.trust/UnreadableTrustAnchor.position|{}position[0]
+        final fun <get-position>(): kotlin/Int // io.lightine.tessera.emrtd.trust/UnreadableTrustAnchor.position.<get-position>|<get-position>(){}[0]
+    final val problem // io.lightine.tessera.emrtd.trust/UnreadableTrustAnchor.problem|{}problem[0]
+        final fun <get-problem>(): io.lightine.tessera.emrtd.trust/TrustAnchorProblem // io.lightine.tessera.emrtd.trust/UnreadableTrustAnchor.problem.<get-problem>|<get-problem>(){}[0]
+
+    final fun toString(): kotlin/String // io.lightine.tessera.emrtd.trust/UnreadableTrustAnchor.toString|toString(){}[0]
+}
+
 final class io.lightine.tessera.emrtd/AccessReport { // io.lightine.tessera.emrtd/AccessReport|null[0]
     final val cardAccessRead // io.lightine.tessera.emrtd/AccessReport.cardAccessRead|{}cardAccessRead[0]
         final fun <get-cardAccessRead>(): kotlin/Boolean // io.lightine.tessera.emrtd/AccessReport.cardAccessRead.<get-cardAccessRead>|<get-cardAccessRead>(){}[0]
@@ -1304,6 +1357,11 @@ sealed class io.lightine.tessera.emrtd/ChipReadResult { // io.lightine.tessera.e
 
 final object io.lightine.tessera.emrtd.trust/MasterListReader { // io.lightine.tessera.emrtd.trust/MasterListReader|null[0]
     final fun read(kotlin/ByteArray, kotlin.collections/List<io.lightine.tessera.emrtd.trust/TrustAnchor> = ...): io.lightine.tessera.emrtd.trust/MasterListRead // io.lightine.tessera.emrtd.trust/MasterListReader.read|read(kotlin.ByteArray;kotlin.collections.List<io.lightine.tessera.emrtd.trust.TrustAnchor>){}[0]
+}
+
+final object io.lightine.tessera.emrtd.trust/TrustAnchors { // io.lightine.tessera.emrtd.trust/TrustAnchors|null[0]
+    final fun load(kotlin/ByteArray): io.lightine.tessera.emrtd.trust/TrustAnchorLoad // io.lightine.tessera.emrtd.trust/TrustAnchors.load|load(kotlin.ByteArray){}[0]
+    final fun load(kotlin/String): io.lightine.tessera.emrtd.trust/TrustAnchorLoad // io.lightine.tessera.emrtd.trust/TrustAnchors.load|load(kotlin.String){}[0]
 }
 
 final object io.lightine.tessera.emrtd/ChipMrzComparison { // io.lightine.tessera.emrtd/ChipMrzComparison|null[0]
