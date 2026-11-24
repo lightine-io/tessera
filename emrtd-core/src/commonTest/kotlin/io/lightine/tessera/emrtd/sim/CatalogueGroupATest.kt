@@ -396,4 +396,101 @@ class CatalogueGroupATest {
                 assertNotEquals(0, flow.chip.received.size)
             }
         }
+    // --- Strengthened rows (the existing tests did not cover the stimulus) ---------------------------
+
+    /** A-16 (P4 ISO7816_C_08a-c): 6A80, 6A88 or 6F00 to MSE:Set AT with one suite: no GENERAL AUTHENTICATE, no BAC. */
+    @Test
+    fun a16_setAtAnswered6A80_6A88Or6F00WithOneSuite_endsWithNoPaceStepAndNoBac() =
+        runTest {
+            Sim.withChips { c, keys ->
+                for (sw in listOf(0x6A80, 0x6A88, 0x6F00)) {
+                    val flow = FakeReadFlowChip.build(c, keys, FlowAccess.PACE_ONLY)
+                    flow.pace!!.refuseSetAt = sw
+                    val error = Sim.failed(Sim.read(flow))
+                    assertTrue(error is ChipUnsupportedAlgorithm || error is ChipAccessDenied, "${sw.toString(16)}: $error")
+                    assertEquals(
+                        0,
+                        flow.chip.count(0x10, 0x86) + flow.chip.count(0x00, 0x86),
+                        "no GENERAL AUTHENTICATE after ${sw.toString(16)}",
+                    )
+                    assertEquals(0, bacOrPaceCommands(flow))
+                    assertTrue(flow.chip.last().isCommand(0x00, 0x22))
+                }
+            }
+        }
+
+    /**
+     * A-18, A-20, A-25 (P4 ISO7816_C_10, C_12, C_18): 6A80 or 6F00 at GENERAL AUTHENTICATE steps 1,
+     * 2 and 3. The existing test answers only the first chained step and has neither word.
+     */
+    @Test
+    fun a18_a20_a25_6A80Or6F00AtEachEarlyPaceStep_endsWithThatWordAndNothingAfter() =
+        runTest {
+            Sim.withChips { c, keys ->
+                for (step in 1..3) {
+                    for (sw in listOf(0x6A80, 0x6F00)) {
+                        var seen = 0
+                        val refuse =
+                            FakeCommandHandler { _, cmd ->
+                                if (cmd.cla == 0x10 && cmd.ins == 0x86 && ++seen == step) ResponseApdu(ByteArray(0), sw) else null
+                            }
+                        val flow = FakeReadFlowChip.build(c, keys, pace, leadingHandlers = listOf(refuse))
+                        val error = assertIs<ChipAccessDenied>(Sim.failed(Sim.read(flow)))
+                        assertEquals(
+                            ChipAccessDenied(ChipAccessProtocol.PACE, ChipAccessDenied.Reason.CHIP_REFUSED, sw),
+                            error,
+                            "step $step",
+                        )
+                        assertEquals(step, flow.chip.count(0x10, 0x86), "step $step ${sw.toString(16)}")
+                        assertTrue(flow.chip.last().isCommand(0x10, 0x86), "nothing after the refusal")
+                        assertEquals(0, bacOrPaceCommands(flow))
+                    }
+                }
+            }
+        }
+
+    /**
+     * A-35 (P4 ISO7816_C_29 to C_33). [DIFF] P4: "abort communication". The SDK finishes PACE (the
+     * session keys are valid) and reports the chip-authentication-mapping check as a fact, failed
+     * or not run, never a verdict on the chip. Covers C_32 (8B instead of 8A) and C_33 (8A with no
+     * data) through the reader; C_29 (no 8A) and bad padding are covered by
+     * PaceCamFakeChipTest::absentOrMalformedDataIsAFactNotAnAbort.
+     */
+    @Test
+    fun a35_camStep4WithTag8BOrAnEmpty8A_opensTheSessionAndTheMappingCheckIsNotPassed() =
+        runTest {
+            Sim.withChips { c, keys ->
+                val params = StandardDomainParameterValues.forId(13) as EcDomainParameters
+                val faults: List<(ByteArray) -> ByteArray> =
+                    listOf(
+                        { inner -> retag(inner, 0x8A, 0x8B) },
+                        { inner ->
+                            TlvParser().parseAll(inner).fold(ByteArray(0)) { acc, t ->
+                                acc +
+                                    if (t.tag == 0x8A) TlvWriter.encode(0x8A, ByteArray(0)) else t.encoded()
+                            }
+                        },
+                    )
+                for (fault in faults) {
+                    val cam =
+                        io.lightine.tessera.emrtd.fakechip.FakePaceCam(
+                            io.lightine.tessera.emrtd.fakechip.FakePaceMath
+                                .randomPrivateKey(c, params, c::randomBytes),
+                        )
+                    val flow =
+                        FakeReadFlowChip.build(
+                            c,
+                            keys,
+                            FlowAccess.PACE_ONLY,
+                            paceSuites = listOf(FakePaceSuite(FakeReadFlowChip.ECDH_CAM_AES128, 13)),
+                            cam = cam,
+                        )
+                    flow.pace!!.rewriteAnswer = { s, inner -> if (s == 4) fault(inner) else inner }
+                    val read = assertIs<ChipReadResult.Complete>(Sim.read(flow)).read
+                    assertEquals(ChipAccessProtocol.PACE, read.access.protocol)
+                    val outcome = read.outcomeOf(io.lightine.tessera.emrtd.ChipCheckKind.PaceChipAuthenticationMapping)
+                    assertTrue(outcome !is io.lightine.tessera.types.vocabulary.CheckOutcome.Passed, "$outcome")
+                }
+            }
+        }
 }

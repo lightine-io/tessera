@@ -169,4 +169,29 @@ class CatalogueGroupDTest {
                 assertIs<ChipReadResult.Partial>(read, "$read")
             }
         }
+
+    /** D-24 (Part 11, 6.1): INTERNAL AUTHENTICATE refused with 6985, 6D00, 6A86, 6982 or 6700: a failed fact, the read goes on. */
+    @Test
+    fun d24_internalAuthenticateRefusedWithEachWord_isAFailedFactAndTheReadGoesOn() =
+        runTest {
+            Sim.withChips { c, keys ->
+                for (sw in listOf(0x6985, 0x6D00, 0x6A86, 0x6982, 0x6700)) {
+                    val flow =
+                        FakeReadFlowChip.build(
+                            c,
+                            keys,
+                            FlowAccess.BAC,
+                            activeAuthentication = true,
+                            extraHandlers = listOf(Sim.answer(0x00, 0x88, sw)),
+                        )
+                    val read = assertIs<ChipReadResult.Complete>(Sim.read(flow, dataGroups = setOf(1, 2, 15)), sw.toString(16)).read
+                    assertEquals(
+                        CheckOutcome.Failed(ChipCheckReason.CHIP_REFUSED),
+                        read.outcomeOf(ChipCheckKind.ActiveAuthentication),
+                        sw.toString(16),
+                    )
+                    assertEquals(CheckOutcome.Passed, read.outcomeOf(ChipCheckKind.DataGroupHashMatches(15)))
+                }
+            }
+        }
 }
