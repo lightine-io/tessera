@@ -32,8 +32,10 @@ import kotlin.coroutines.cancellation.CancellationException
  * - [NfcTimeout] (with no time limit, as Core NFC does not say one) when the chip did not answer
  *   after the reader's retries, or when the session's own time limit passed;
  * - [NfcUnavailable] with reason `CANCELLED_BY_USER` when the person ended the session with the
- *   sheet's Cancel button, `CLOSED` after [close] or after the app ended the session, or another
- *   reason when the system ended the session for it.
+ *   sheet's Cancel button, `CLOSED` after [close] or after the app ended the session,
+ *   `REQUEST_REFUSED` when Core NFC refused the command (it was not sent), `ENDED_BY_SYSTEM`
+ *   when the system ended the session on its own, or another reason the system gave for ending
+ *   it.
  *
  * Commands go one at a time; calls to [transceive] are serialized. Cancelling the coroutine does
  * not stop a command Core NFC already sent: its answer is dropped.
@@ -46,6 +48,7 @@ import kotlin.coroutines.cancellation.CancellationException
 @ExperimentalTesseraChipApi
 public class CoreNfcTransport internal constructor(
     private val channel: Iso7816Channel,
+    keepAlive: Any? = null,
 ) : ApduTransport {
     /**
      * Wraps a tag your own `NFCTagReaderSession` found and connected with `connect(to:)`.
@@ -57,6 +60,12 @@ public class CoreNfcTransport internal constructor(
     public constructor(tag: NFCISO7816TagProtocol) : this(PlatformIso7816Channel(tag))
 
     private val lock = Mutex()
+
+    // The reader session the tag came from, held until the transport stops: Core NFC holds its
+    // delegate weakly (NFCTagReaderSession.h), so an app that keeps only the transport must not
+    // lose the session's callbacks in the middle of a read.
+    @Volatile
+    private var keepAlive: Any? = keepAlive
 
     @Volatile
     private var stopReason: NfcError? = null
@@ -115,6 +124,7 @@ public class CoreNfcTransport internal constructor(
     /** Stops the transport with [reason], unless it is already stopped. */
     internal fun stop(reason: NfcError) {
         if (stopReason == null) stopReason = reason
+        keepAlive = null
         inFlight?.completeExceptionally(ApduTransportException(stopReason ?: reason))
     }
 

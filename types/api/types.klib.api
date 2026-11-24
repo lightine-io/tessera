@@ -808,8 +808,10 @@ final class io.lightine.tessera.types.errors/NfcUnavailable : io.lightine.tesser
         enum entry CANCELLED_BY_USER // io.lightine.tessera.types.errors/NfcUnavailable.Reason.CANCELLED_BY_USER|null[0]
         enum entry CLOSED // io.lightine.tessera.types.errors/NfcUnavailable.Reason.CLOSED|null[0]
         enum entry DISABLED // io.lightine.tessera.types.errors/NfcUnavailable.Reason.DISABLED|null[0]
+        enum entry ENDED_BY_SYSTEM // io.lightine.tessera.types.errors/NfcUnavailable.Reason.ENDED_BY_SYSTEM|null[0]
         enum entry NOT_PERMITTED // io.lightine.tessera.types.errors/NfcUnavailable.Reason.NOT_PERMITTED|null[0]
         enum entry NOT_SUPPORTED // io.lightine.tessera.types.errors/NfcUnavailable.Reason.NOT_SUPPORTED|null[0]
+        enum entry REQUEST_REFUSED // io.lightine.tessera.types.errors/NfcUnavailable.Reason.REQUEST_REFUSED|null[0]
 
         final val entries // io.lightine.tessera.types.errors/NfcUnavailable.Reason.entries|#static{}entries[0]
             final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.types.errors/NfcUnavailable.Reason> // io.lightine.tessera.types.errors/NfcUnavailable.Reason.entries.<get-entries>|<get-entries>#static(){}[0]

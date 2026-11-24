@@ -44,9 +44,29 @@ public data class NfcUnavailable(
          * The system's NFC reader is busy with something else for now, such as a payment, so it
          * cannot be used at this moment.
          *
+         * The platform documents this as temporary: wait, then try again.
+         *
          * @since 1.0.0
          */
         BUSY,
+
+        /**
+         * The system ended the NFC session on its own: not the app, and not the person.
+         *
+         * A new session started soon after may be refused for a short time. The SDK does not know
+         * why the system ended the session.
+         *
+         * @since 1.0.0
+         */
+        ENDED_BY_SYSTEM,
+
+        /**
+         * The system's NFC reader refused a request from the SDK, such as a command or a session
+         * setting it does not accept, so the request was not carried out.
+         *
+         * @since 1.0.0
+         */
+        REQUEST_REFUSED,
     }
 
     /** English text for logs: the reason. */
@@ -59,6 +79,8 @@ public data class NfcUnavailable(
                 Reason.CLOSED -> "The connection to the chip was closed by the app"
                 Reason.CANCELLED_BY_USER -> "The person ended the NFC reading"
                 Reason.BUSY -> "The NFC reader is busy with another task"
+                Reason.ENDED_BY_SYSTEM -> "The system ended the NFC session"
+                Reason.REQUEST_REFUSED -> "The NFC reader refused the request"
             }
 
     /** `NfcUnavailable: ` followed by [description]. */

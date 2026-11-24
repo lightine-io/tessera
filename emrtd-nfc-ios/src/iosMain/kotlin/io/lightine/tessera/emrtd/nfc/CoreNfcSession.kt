@@ -3,6 +3,8 @@ package io.lightine.tessera.emrtd.nfc
 import io.lightine.tessera.emrtd.ApduTransportException
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.NfcError
+import io.lightine.tessera.types.errors.NfcTagLost
+import io.lightine.tessera.types.errors.NfcTimeout
 import io.lightine.tessera.types.errors.NfcUnavailable
 import kotlinx.coroutines.CompletableDeferred
 import platform.Foundation.NSLock
@@ -14,10 +16,10 @@ import kotlin.coroutines.cancellation.CancellationException
  *
  * One session reads one chip. Call [connect], read the chip through the transport, then call
  * [end] (or `end(errorMessage)` to show a failure on the sheet). Always end the session: the
- * system sheet stays up until you do, the person cancels, or the system's time limit passes.
+ * system sheet stays up until you do, the person cancels, or the system ends it.
  *
  * ```kotlin
- * val session = CoreNfcSession(alertMessage = "Hold the top of your iPhone on the document.")
+ * val session = CoreNfcSession(alertMessage = "Hold your iPhone near the document.")
  * try {
  *     val transport = session.connect()
  *     // read the chip with transport
@@ -33,33 +35,54 @@ import kotlin.coroutines.cancellation.CancellationException
  * application (`A0000002471001`), so chips that answer only after PACE are found too. Before
  * iOS 26.4 Core NFC cannot combine the two, so the session polls ISO 14443 alone with the
  * select identifiers from your Info.plist: most chips are found this way, but a chip that refuses
- * the application select before PACE is not. When more than one tag is in the field, or the tag is
- * not an ISO 7816 tag, the session keeps looking.
+ * the application select before PACE is not. When more than one tag is in the field, the tag is
+ * not an ISO 7816 tag, or the link to the chip breaks while connecting, the session keeps looking
+ * until the person cancels or the time limit passes. Any other failure to connect ends the system
+ * session: then [connect] throws, and a later [end] does nothing, so the sheet shows no error
+ * message of yours.
+ *
+ * ## Time limits
+ *
+ * - Core NFC's headers state a limit of 60 seconds after a reader session begins (in
+ *   `NFCNDEFReaderSession.h`; `NFCTagReaderSession.h` does not repeat it). When the limit passes,
+ *   the session ends with [io.lightine.tessera.types.errors.NfcTimeout].
+ * - An engineer of the vendor has stated, outside the headers, two more limits: a connected tag
+ *   gets about 20 seconds, and a new session started right after one ends may be refused for a
+ *   short time. The headers do not state either; plan the read to be short, and let the person
+ *   try again.
  *
  * ## What your app needs
  *
- * - A paid Apple Developer Program (or Enterprise) team: Apple does not offer NFC tag reading to a
- *   free account, so a device build cannot be signed with it.
+ * - A paid developer program team (or an enterprise team): the vendor does not offer NFC tag
+ *   reading to a free account, so a device build cannot be signed with it.
  * - The entitlement `com.apple.developer.nfc.readersession.formats` with the values `TAG` and
  *   `PACE` (add the "Near Field Communication Tag Reading" capability in Xcode, then add `PACE`).
+ *   The `PACE` value is documented in Core NFC's header `NFCTagReaderSession.h`, which says that
+ *   PACE polling needs it.
  * - In Info.plist: `NFCReaderUsageDescription`, a text that says why the app reads NFC, and
  *   `com.apple.developer.nfc.readersession.iso7816.select-identifiers`, an array that holds
- *   `A0000002471001` (the eMRTD application).
+ *   `A0000002471001` (the eMRTD application). Without the usage description the system ends the
+ *   app when it uses the reader: that is not an error [connect] can report.
  * - A device with an NFC reader (iPhone 7 or later). The Simulator has none: there [connect]
  *   fails with [NfcUnavailable] `NOT_SUPPORTED`.
  *
  * ## Errors
  *
  * [connect] throws [ApduTransportException], whose `error` is:
- * - [NfcUnavailable] `NOT_SUPPORTED` when the device cannot read NFC tags, `NOT_PERMITTED` when
- *   the entitlement or the usage description is missing or the system does not allow the app to
- *   read, `DISABLED` when the radio is off, `BUSY` when the system reader is busy,
- *   `CANCELLED_BY_USER` when the person ended the sheet, and `CLOSED` when the app called [end];
- * - [io.lightine.tessera.types.errors.NfcTimeout] when the session's own time limit (about 60
- *   seconds) passed before a chip was found;
- * - [io.lightine.tessera.types.errors.NfcTagLost] when connecting to the chip failed.
+ * - [NfcUnavailable] `NOT_SUPPORTED` when the device cannot read NFC tags; `NOT_PERMITTED` when
+ *   the entitlement is missing, the select identifiers in Info.plist hold no valid entry, or the
+ *   system does not allow the app to read; `DISABLED` when the radio is off; `BUSY` when Core NFC
+ *   is busy for now (Core NFC calls this temporary: wait, then try again); `CANCELLED_BY_USER`
+ *   when the person ended the sheet; `CLOSED` when the app called [end]; `ENDED_BY_SYSTEM` when
+ *   the system ended the session on its own, for a reason the SDK is not told (the headers name
+ *   one case: the app went to the background); `REQUEST_REFUSED` when Core NFC refused a request,
+ *   such as a session setting or a command it does not accept;
+ * - [io.lightine.tessera.types.errors.NfcTimeout] when the session's own time limit passed
+ *   before a chip was connected.
  *
- * Once the session ends, the transport's [CoreNfcTransport.transceive] throws the same error.
+ * Once the session ends, the transport's [CoreNfcTransport.transceive] throws the same error. The
+ * transport keeps the system session alive while it runs, so a read goes on even when your app
+ * keeps only the transport.
  *
  * Experimental: see [ExperimentalTesseraChipApi]. In Swift, this class is `CoreNfcSession` in the
  * `Tessera` framework (call `connect()` with `try await`) and is experimental too.
@@ -173,12 +196,24 @@ public class CoreNfcSession internal constructor(
                 if (ended) return@locked null
                 ended = true
                 endedByApp = true
-                Ended(port, pending, transport)
+                takeEnded()
             } ?: return
         val closed = NfcUnavailable(NfcUnavailable.Reason.CLOSED)
         target.transport?.stop(closed)
         target.pending?.completeExceptionally(ApduTransportException(closed))
         if (errorMessage == null) target.port?.invalidate() else target.port?.invalidate(errorMessage)
+    }
+
+    /**
+     * Hands over what the session still holds and lets go of it, so the system session, its
+     * delegate and this object stop keeping each other alive. Call under the lock.
+     */
+    private fun takeEnded(): Ended {
+        val held = Ended(port, pending, transport)
+        port = null
+        pending = null
+        transport = null
+        return held
     }
 
     private class Ended(
@@ -202,28 +237,61 @@ public class CoreNfcSession internal constructor(
         val tag = tags.singleOrNull()
         val channel = tag?.iso7816
         if (tag == null || channel == null) {
-            // More than one tag, or not an ISO 7816 tag: keep looking for the chip.
+            // More than one tag, or not an ISO 7816 tag: keep looking for the chip. No text on the
+            // sheet (the app owns it) and no pause: the header asks for neither.
             session.restartPolling()
             return
         }
         locked { connecting = true }
-        tag.connect { error ->
-            val outcome =
-                locked {
-                    connecting = false
-                    val waiting = pending
-                    if (ended || waiting == null) return@locked null
-                    if (error == null) {
-                        val connected = CoreNfcTransport(channel)
+        tag.connect { error -> handleConnected(session, channel, error) }
+    }
+
+    /**
+     * What follows `connect(to:)`. Core NFC returns an error there "when there is a communication
+     * issue with the tag" (`NFCTagReaderSession.h`): a lost link or a chip that did not answer
+     * restarts polling, so the person can hold the document again and [connect] keeps waiting.
+     * Any other error fails [connect] and ends the system session, so no session stays open
+     * until the system's time limit and blocks the next one.
+     */
+    private fun handleConnected(
+        session: ReaderSessionPort,
+        channel: Iso7816Channel,
+        error: NfcError?,
+    ) {
+        val retry = error is NfcTagLost || error is NfcTimeout
+        val outcome =
+            locked {
+                connecting = false
+                val waiting = pending
+                if (ended || waiting == null) return@locked null
+                when {
+                    error == null -> {
+                        val connected = CoreNfcTransport(channel, keepAlive = session)
                         transport = connected
                         waiting to Result.success(connected)
-                    } else {
+                    }
+
+                    retry -> {
+                        null
+                    }
+
+                    else -> {
+                        ended = true
+                        endedByApp = true
+                        takeEnded()
                         waiting to Result.failure(ApduTransportException(error))
                     }
-                } ?: return@connect
-            val (waiting, result) = outcome
-            result.fold({ waiting.complete(it) }, { waiting.completeExceptionally(it) })
+                }
+            }
+        if (outcome == null) {
+            if (retry && locked { !ended }) session.restartPolling()
+            return
         }
+        val (waiting, result) = outcome
+        result.fold({ waiting.complete(it) }, {
+            waiting.completeExceptionally(it)
+            session.invalidate()
+        })
     }
 
     private fun handleInvalidated(platformError: NfcError) {
@@ -232,7 +300,7 @@ public class CoreNfcSession internal constructor(
                 // Core NFC reports "user canceled" also when the app itself ended the session.
                 val error = if (endedByApp) NfcUnavailable(NfcUnavailable.Reason.CLOSED) else platformError
                 ended = true
-                error to Ended(port, pending, transport)
+                error to takeEnded()
             }
         target.transport?.stop(error)
         target.pending?.completeExceptionally(ApduTransportException(error))
