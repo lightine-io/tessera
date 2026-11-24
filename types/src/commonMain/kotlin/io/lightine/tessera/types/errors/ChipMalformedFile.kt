@@ -82,6 +82,10 @@ public data class ChipMalformedFile(
             return "$which cannot be read: $what$where"
         }
 
+    /** A stable name of this error: see [ChipError.code]. */
+    override val code: String
+        get() = "malformed-file." + slug(reason.name)
+
     /** `ChipMalformedFile: ` followed by [description]. */
     override fun toString(): String = "ChipMalformedFile: $description"
 }

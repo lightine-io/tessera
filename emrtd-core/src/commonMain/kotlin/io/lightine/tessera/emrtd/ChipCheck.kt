@@ -195,60 +195,107 @@ public enum class ChipFileContext {
  */
 @ExperimentalTesseraChipApi
 public sealed class ChipCheckKind {
+    /**
+     * A stable, machine-readable name of this kind, for logs and keys of your own texts: lower-case
+     * words joined by hyphens, with a dot and the parameter when the kind has one (for example
+     * `data-group-hash-matches.dg1`, `signature-verifies.security-object`,
+     * `signer-within-validity-period.card-security`). It never changes once released and never
+     * holds a value from the document.
+     *
+     * @since 1.0.0
+     */
+    public abstract val code: String
+
     /** The hash of data group [dataGroup] as read equals the one EF.SOD stores (Part 11, 5.1.1 step 5). */
     public data class DataGroupHashMatches(
         public val dataGroup: Int,
-    ) : ChipCheckKind()
+    ) : ChipCheckKind() {
+        override val code: String
+            get() = "data-group-hash-matches.dg$dataGroup"
+    }
 
     /** The signature of [file] verifies under its signer certificate, and its signed attributes agree with the content. */
     public data class SignatureVerifies(
         public val file: ChipSignedFile,
-    ) : ChipCheckKind()
+    ) : ChipCheckKind() {
+        override val code: String
+            get() = "signature-verifies." + checkCodeWord(file.name)
+    }
 
     /** The signer certificate of [file] is signed by one of the roots your app supplied (Part 12, App D.1.1). */
     public data class SignerChainsToSuppliedRoot(
         public val file: ChipSignedFile,
-    ) : ChipCheckKind()
+    ) : ChipCheckKind() {
+        override val code: String
+            get() = "signer-chains-to-supplied-root." + checkCodeWord(file.name)
+    }
 
     /** The signer certificate of [file] is inside its validity period at the check time your app gave. */
     public data class SignerWithinValidityPeriod(
         public val file: ChipSignedFile,
-    ) : ChipCheckKind()
+    ) : ChipCheckKind() {
+        override val code: String
+            get() = "signer-within-validity-period." + checkCodeWord(file.name)
+    }
 
     /** The signer certificate of [file] has no critical extension the SDK does not know (Part 12, App D.1.1.3). */
     public data class SignerCriticalExtensionsRecognized(
         public val file: ChipSignedFile,
-    ) : ChipCheckKind()
+    ) : ChipCheckKind() {
+        override val code: String
+            get() = "signer-critical-extensions-recognized." + checkCodeWord(file.name)
+    }
 
     /** Every entry of EF.CardAccess appears, byte for byte, in the signed copy in [copy] (Part 11, 4.2 step 3). */
     public data class CardAccessMatchesSignedCopy(
         public val copy: ChipSignedCopy?,
-    ) : ChipCheckKind()
+    ) : ChipCheckKind() {
+        override val code: String
+            get() = "card-access-matches-signed-copy." + (copy?.name?.let(::checkCodeWord) ?: "none")
+    }
 
     /** EF.DIR as read equals its copy in EF.CardSecurity (Part 11, 4.2 step 3). */
-    public data object EfDirMatchesSignedCopy : ChipCheckKind()
+    public data object EfDirMatchesSignedCopy : ChipCheckKind() {
+        override val code: String
+            get() = "ef-dir-matches-signed-copy"
+    }
 
     /** The document code from DG1 is in the signer's document-type list (Part 11, 5.1.1 best practice 1). */
-    public data object SignerDocumentTypeMatches : ChipCheckKind()
+    public data object SignerDocumentTypeMatches : ChipCheckKind() {
+        override val code: String
+            get() = "signer-document-type-matches"
+    }
 
     /** With no document-type list: the signer key is for digital signatures only (Part 11, 5.1.1 best practice 1). */
-    public data object SignerKeyUsageIsDigitalSignatureOnly : ChipCheckKind()
+    public data object SignerKeyUsageIsDigitalSignatureOnly : ChipCheckKind() {
+        override val code: String
+            get() = "signer-key-usage-is-digital-signature-only"
+    }
 
     /**
      * The signer's country equals the matched root's country (Part 11, 5.1.1 best practice 2). Each
      * country comes from the subject name, else the alternative-name extensions; the check's
      * [ChipCheckDetail.CountrySources] says which.
      */
-    public data object SignerCountryMatchesRootCountry : ChipCheckKind()
+    public data object SignerCountryMatchesRootCountry : ChipCheckKind() {
+        override val code: String
+            get() = "signer-country-matches-root-country"
+    }
 
     /** The issue date from DG12 is inside the signer's private-key usage period (Part 11, 5.1.1 best practice 3). */
-    public data object IssueDateInSignerUsagePeriod : ChipCheckKind()
+    public data object IssueDateInSignerUsagePeriod : ChipCheckKind() {
+        override val code: String
+            get() = "issue-date-in-signer-usage-period"
+    }
 
     /**
      * The signer certificates are not on a revocation list. Always [CheckOutcome.NotRun]: the SDK
      * takes no revocation lists yet.
      */
-    public data object SignerNotRevoked : ChipCheckKind()
+    public data object SignerNotRevoked : ChipCheckKind() {
+        override val code: String
+            get() = "signer-not-revoked"
+    }
 
     /**
      * The PACE entries of the signed copy in [copy] (EF.CardSecurity, or DG14) all appear in the
@@ -259,7 +306,10 @@ public sealed class ChipCheckKind {
      */
     public data class PaceOfferMatchesSignedCopy(
         public val copy: ChipSignedCopy?,
-    ) : ChipCheckKind()
+    ) : ChipCheckKind() {
+        override val code: String
+            get() = "pace-offer-matches-signed-copy." + (copy?.name?.let(::checkCodeWord) ?: "none")
+    }
 
     /**
      * Chip authentication (Part 11, section 6.2) in [context]: the chip agreed new session keys from
@@ -268,24 +318,36 @@ public sealed class ChipCheckKind {
      */
     public data class ChipAuthentication(
         public val context: ChipFileContext?,
-    ) : ChipCheckKind()
+    ) : ChipCheckKind() {
+        override val code: String
+            get() = "chip-authentication." + (context?.name?.let(::checkCodeWord) ?: "none")
+    }
 
     /**
      * The chip-authentication data of PACE with the chip authentication mapping (Part 11,
      * 4.4.3.5.2) matches the chip's key in EF.CardSecurity. [CheckOutcome.Passed] also needs
      * EF.CardSecurity's signature and root checks to pass.
      */
-    public data object PaceChipAuthenticationMapping : ChipCheckKind()
+    public data object PaceChipAuthenticationMapping : ChipCheckKind() {
+        override val code: String
+            get() = "pace-chip-authentication-mapping"
+    }
 
     /**
      * Active authentication (Part 11, section 6.1): the chip signed a fresh challenge and the
      * signature verifies under the key in its EF.DG15. [CheckOutcome.Passed] also needs DG15 to pass
      * its hash, signature and root checks (Part 11, Appendix J).
      */
-    public data object ActiveAuthentication : ChipCheckKind()
+    public data object ActiveAuthentication : ChipCheckKind() {
+        override val code: String
+            get() = "active-authentication"
+    }
 
     /** Every field of the chip's DG1 shows the same characters as the printed MRZ (Part 11, 5.1.1 best practice 2). */
-    public data object Dg1MatchesPrintedMrz : ChipCheckKind()
+    public data object Dg1MatchesPrintedMrz : ChipCheckKind() {
+        override val code: String
+            get() = "dg1-matches-printed-mrz"
+    }
 }
 
 /**
@@ -500,3 +562,6 @@ public enum class ChipCheckReason : CheckReason {
     /** The chip's DG1 was not read or could not be parsed. */
     NO_CHIP_MRZ,
 }
+
+/** `SECURITY_OBJECT` as `security-object`. */
+private fun checkCodeWord(name: String): String = name.lowercase().replace('_', '-')

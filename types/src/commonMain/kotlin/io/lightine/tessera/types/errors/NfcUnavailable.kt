@@ -94,6 +94,10 @@ public data class NfcUnavailable(
                 Reason.READ_IN_PROGRESS -> "Another chip read is already running in this app"
             }
 
+    /** A stable name of this error: see [ChipError.code]. */
+    override val code: String
+        get() = "unavailable." + slug(reason.name)
+
     /** `NfcUnavailable: ` followed by [description]. */
     override fun toString(): String = "NfcUnavailable: $description"
 }

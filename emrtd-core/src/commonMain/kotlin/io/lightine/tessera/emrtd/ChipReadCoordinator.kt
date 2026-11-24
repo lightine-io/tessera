@@ -55,6 +55,10 @@ import kotlin.coroutines.cancellation.CancellationException
  * @param linkLoss What to do after a lost link.
  * @param observer Where the updates and the ending go.
  * @param reader The reader that runs each attempt (its telemetry sink receives the step events).
+ * @param clearKeyAtEnding Whether the coordinator takes over the access key in [options]: with
+ *   `true`, it clears the key at the ending, whatever the ending is, and not before, so every
+ *   attempt of the read (a restart or a resume after a lost link) can still use it. The platform
+ *   entry points pass `true`; a caller that owns its key passes `false`.
  * @since 1.0.0
  */
 @InternalTesseraChipApi
@@ -64,6 +68,7 @@ public class ChipReadCoordinator(
     private val linkLoss: LinkLossPolicy,
     private val observer: ChipReadObserver,
     private val reader: ChipReader = ChipReader(),
+    private val clearKeyAtEnding: Boolean = false,
 ) {
     private sealed class Item {
         class Update(
@@ -365,6 +370,8 @@ public class ChipReadCoordinator(
         before: ChipReadState? = null,
     ): Boolean {
         if (!ended.compareAndSet(false, true)) return false
+        // The one gate every ending passes: the key is wiped here, before the app hears of it.
+        if (clearKeyAtEnding) options.accessKey.clear()
         val items = ArrayList<Item>(2)
         if (before != null) items += Item.Update(ChipReadUpdate(before, lastProgress.load(), attemptOf(before), maxAttempts))
         items += Item.End(ending)

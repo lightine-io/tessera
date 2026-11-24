@@ -163,6 +163,8 @@ sealed interface io.lightine.tessera.types.vocabulary/CheckOutcome { // io.light
 final class io.lightine.tessera.types.errors/ChipAccessDenied : io.lightine.tessera.types.errors/ChipError { // io.lightine.tessera.types.errors/ChipAccessDenied|null[0]
     constructor <init>(io.lightine.tessera.types.vocabulary/ChipAccessProtocol, io.lightine.tessera.types.errors/ChipAccessDenied.Reason, kotlin/Int? = ...) // io.lightine.tessera.types.errors/ChipAccessDenied.<init>|<init>(io.lightine.tessera.types.vocabulary.ChipAccessProtocol;io.lightine.tessera.types.errors.ChipAccessDenied.Reason;kotlin.Int?){}[0]
 
+    final val code // io.lightine.tessera.types.errors/ChipAccessDenied.code|{}code[0]
+        final fun <get-code>(): kotlin/String // io.lightine.tessera.types.errors/ChipAccessDenied.code.<get-code>|<get-code>(){}[0]
     final val description // io.lightine.tessera.types.errors/ChipAccessDenied.description|{}description[0]
         final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/ChipAccessDenied.description.<get-description>|<get-description>(){}[0]
     final val protocol // io.lightine.tessera.types.errors/ChipAccessDenied.protocol|{}protocol[0]
@@ -203,6 +205,8 @@ final class io.lightine.tessera.types.errors/ChipAccessDenied : io.lightine.tess
 final class io.lightine.tessera.types.errors/ChipFileNotFound : io.lightine.tessera.types.errors/ChipError { // io.lightine.tessera.types.errors/ChipFileNotFound|null[0]
     constructor <init>(kotlin/Int, kotlin/Boolean) // io.lightine.tessera.types.errors/ChipFileNotFound.<init>|<init>(kotlin.Int;kotlin.Boolean){}[0]
 
+    final val code // io.lightine.tessera.types.errors/ChipFileNotFound.code|{}code[0]
+        final fun <get-code>(): kotlin/String // io.lightine.tessera.types.errors/ChipFileNotFound.code.<get-code>|<get-code>(){}[0]
     final val description // io.lightine.tessera.types.errors/ChipFileNotFound.description|{}description[0]
         final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/ChipFileNotFound.description.<get-description>|<get-description>(){}[0]
     final val fileId // io.lightine.tessera.types.errors/ChipFileNotFound.fileId|{}fileId[0]
@@ -221,6 +225,8 @@ final class io.lightine.tessera.types.errors/ChipFileNotFound : io.lightine.tess
 final class io.lightine.tessera.types.errors/ChipKeyCheckDigitMismatch : io.lightine.tessera.types.errors/ChipError { // io.lightine.tessera.types.errors/ChipKeyCheckDigitMismatch|null[0]
     constructor <init>(kotlin.collections/Set<io.lightine.tessera.types.vocabulary/MrzField>) // io.lightine.tessera.types.errors/ChipKeyCheckDigitMismatch.<init>|<init>(kotlin.collections.Set<io.lightine.tessera.types.vocabulary.MrzField>){}[0]
 
+    final val code // io.lightine.tessera.types.errors/ChipKeyCheckDigitMismatch.code|{}code[0]
+        final fun <get-code>(): kotlin/String // io.lightine.tessera.types.errors/ChipKeyCheckDigitMismatch.code.<get-code>|<get-code>(){}[0]
     final val description // io.lightine.tessera.types.errors/ChipKeyCheckDigitMismatch.description|{}description[0]
         final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/ChipKeyCheckDigitMismatch.description.<get-description>|<get-description>(){}[0]
     final val fields // io.lightine.tessera.types.errors/ChipKeyCheckDigitMismatch.fields|{}fields[0]
@@ -236,6 +242,8 @@ final class io.lightine.tessera.types.errors/ChipKeyCheckDigitMismatch : io.ligh
 final class io.lightine.tessera.types.errors/ChipMalformedFile : io.lightine.tessera.types.errors/ChipError { // io.lightine.tessera.types.errors/ChipMalformedFile|null[0]
     constructor <init>(kotlin/Int?, io.lightine.tessera.types.errors/ChipMalformedFile.Reason, kotlin/Int? = ...) // io.lightine.tessera.types.errors/ChipMalformedFile.<init>|<init>(kotlin.Int?;io.lightine.tessera.types.errors.ChipMalformedFile.Reason;kotlin.Int?){}[0]
 
+    final val code // io.lightine.tessera.types.errors/ChipMalformedFile.code|{}code[0]
+        final fun <get-code>(): kotlin/String // io.lightine.tessera.types.errors/ChipMalformedFile.code.<get-code>|<get-code>(){}[0]
     final val description // io.lightine.tessera.types.errors/ChipMalformedFile.description|{}description[0]
         final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/ChipMalformedFile.description.<get-description>|<get-description>(){}[0]
     final val fileId // io.lightine.tessera.types.errors/ChipMalformedFile.fileId|{}fileId[0]
@@ -273,6 +281,8 @@ final class io.lightine.tessera.types.errors/ChipMalformedFile : io.lightine.tes
 final class io.lightine.tessera.types.errors/ChipSecureMessagingLost : io.lightine.tessera.types.errors/ChipError { // io.lightine.tessera.types.errors/ChipSecureMessagingLost|null[0]
     constructor <init>(io.lightine.tessera.types.errors/ChipSecureMessagingLost.Reason, kotlin/Int? = ...) // io.lightine.tessera.types.errors/ChipSecureMessagingLost.<init>|<init>(io.lightine.tessera.types.errors.ChipSecureMessagingLost.Reason;kotlin.Int?){}[0]
 
+    final val code // io.lightine.tessera.types.errors/ChipSecureMessagingLost.code|{}code[0]
+        final fun <get-code>(): kotlin/String // io.lightine.tessera.types.errors/ChipSecureMessagingLost.code.<get-code>|<get-code>(){}[0]
     final val description // io.lightine.tessera.types.errors/ChipSecureMessagingLost.description|{}description[0]
         final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/ChipSecureMessagingLost.description.<get-description>|<get-description>(){}[0]
     final val reason // io.lightine.tessera.types.errors/ChipSecureMessagingLost.reason|{}reason[0]
@@ -308,6 +318,8 @@ final class io.lightine.tessera.types.errors/ChipSecureMessagingLost : io.lighti
 final class io.lightine.tessera.types.errors/ChipUnexpectedAnswer : io.lightine.tessera.types.errors/ChipError { // io.lightine.tessera.types.errors/ChipUnexpectedAnswer|null[0]
     constructor <init>(io.lightine.tessera.types.errors/ChipUnexpectedAnswer.Reason, kotlin/Int? = ...) // io.lightine.tessera.types.errors/ChipUnexpectedAnswer.<init>|<init>(io.lightine.tessera.types.errors.ChipUnexpectedAnswer.Reason;kotlin.Int?){}[0]
 
+    final val code // io.lightine.tessera.types.errors/ChipUnexpectedAnswer.code|{}code[0]
+        final fun <get-code>(): kotlin/String // io.lightine.tessera.types.errors/ChipUnexpectedAnswer.code.<get-code>|<get-code>(){}[0]
     final val description // io.lightine.tessera.types.errors/ChipUnexpectedAnswer.description|{}description[0]
         final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/ChipUnexpectedAnswer.description.<get-description>|<get-description>(){}[0]
     final val reason // io.lightine.tessera.types.errors/ChipUnexpectedAnswer.reason|{}reason[0]
@@ -338,6 +350,8 @@ final class io.lightine.tessera.types.errors/ChipUnexpectedAnswer : io.lightine.
 final class io.lightine.tessera.types.errors/ChipUnsupportedAlgorithm : io.lightine.tessera.types.errors/ChipError { // io.lightine.tessera.types.errors/ChipUnsupportedAlgorithm|null[0]
     constructor <init>(io.lightine.tessera.types.vocabulary/ChipAccessProtocol, io.lightine.tessera.types.errors/ChipUnsupportedAlgorithm.Reason, kotlin/Int? = ...) // io.lightine.tessera.types.errors/ChipUnsupportedAlgorithm.<init>|<init>(io.lightine.tessera.types.vocabulary.ChipAccessProtocol;io.lightine.tessera.types.errors.ChipUnsupportedAlgorithm.Reason;kotlin.Int?){}[0]
 
+    final val code // io.lightine.tessera.types.errors/ChipUnsupportedAlgorithm.code|{}code[0]
+        final fun <get-code>(): kotlin/String // io.lightine.tessera.types.errors/ChipUnsupportedAlgorithm.code.<get-code>|<get-code>(){}[0]
     final val description // io.lightine.tessera.types.errors/ChipUnsupportedAlgorithm.description|{}description[0]
         final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/ChipUnsupportedAlgorithm.description.<get-description>|<get-description>(){}[0]
     final val protocol // io.lightine.tessera.types.errors/ChipUnsupportedAlgorithm.protocol|{}protocol[0]
@@ -796,6 +810,8 @@ final class io.lightine.tessera.types.errors/MrzUnknownDocumentTypeCode : io.lig
 final class io.lightine.tessera.types.errors/NfcTimeout : io.lightine.tessera.types.errors/NfcError { // io.lightine.tessera.types.errors/NfcTimeout|null[0]
     constructor <init>(kotlin/Long?) // io.lightine.tessera.types.errors/NfcTimeout.<init>|<init>(kotlin.Long?){}[0]
 
+    final val code // io.lightine.tessera.types.errors/NfcTimeout.code|{}code[0]
+        final fun <get-code>(): kotlin/String // io.lightine.tessera.types.errors/NfcTimeout.code.<get-code>|<get-code>(){}[0]
     final val description // io.lightine.tessera.types.errors/NfcTimeout.description|{}description[0]
         final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/NfcTimeout.description.<get-description>|<get-description>(){}[0]
     final val timeoutMillis // io.lightine.tessera.types.errors/NfcTimeout.timeoutMillis|{}timeoutMillis[0]
@@ -811,6 +827,8 @@ final class io.lightine.tessera.types.errors/NfcTimeout : io.lightine.tessera.ty
 final class io.lightine.tessera.types.errors/NfcUnavailable : io.lightine.tessera.types.errors/NfcError { // io.lightine.tessera.types.errors/NfcUnavailable|null[0]
     constructor <init>(io.lightine.tessera.types.errors/NfcUnavailable.Reason) // io.lightine.tessera.types.errors/NfcUnavailable.<init>|<init>(io.lightine.tessera.types.errors.NfcUnavailable.Reason){}[0]
 
+    final val code // io.lightine.tessera.types.errors/NfcUnavailable.code|{}code[0]
+        final fun <get-code>(): kotlin/String // io.lightine.tessera.types.errors/NfcUnavailable.code.<get-code>|<get-code>(){}[0]
     final val description // io.lightine.tessera.types.errors/NfcUnavailable.description|{}description[0]
         final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/NfcUnavailable.description.<get-description>|<get-description>(){}[0]
     final val reason // io.lightine.tessera.types.errors/NfcUnavailable.reason|{}reason[0]
@@ -858,8 +876,12 @@ final class io.lightine.tessera.types.vocabulary/UnmappedCharacter { // io.light
 }
 
 sealed class io.lightine.tessera.types.errors/ChipError { // io.lightine.tessera.types.errors/ChipError|null[0]
+    abstract val code // io.lightine.tessera.types.errors/ChipError.code|{}code[0]
+        abstract fun <get-code>(): kotlin/String // io.lightine.tessera.types.errors/ChipError.code.<get-code>|<get-code>(){}[0]
     abstract val description // io.lightine.tessera.types.errors/ChipError.description|{}description[0]
         abstract fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/ChipError.description.<get-description>|<get-description>(){}[0]
+    open val statusWord // io.lightine.tessera.types.errors/ChipError.statusWord|{}statusWord[0]
+        open fun <get-statusWord>(): kotlin/Int? // io.lightine.tessera.types.errors/ChipError.statusWord.<get-statusWord>|<get-statusWord>(){}[0]
 }
 
 sealed class io.lightine.tessera.types.errors/MrzError { // io.lightine.tessera.types.errors/MrzError|null[0]
@@ -884,6 +906,8 @@ sealed class io.lightine.tessera.types.errors/MrzWarning { // io.lightine.tesser
 sealed class io.lightine.tessera.types.errors/NfcError : io.lightine.tessera.types.errors/ChipError // io.lightine.tessera.types.errors/NfcError|null[0]
 
 final object io.lightine.tessera.types.errors/ChipBlank : io.lightine.tessera.types.errors/ChipError { // io.lightine.tessera.types.errors/ChipBlank|null[0]
+    final val code // io.lightine.tessera.types.errors/ChipBlank.code|{}code[0]
+        final fun <get-code>(): kotlin/String // io.lightine.tessera.types.errors/ChipBlank.code.<get-code>|<get-code>(){}[0]
     final val description // io.lightine.tessera.types.errors/ChipBlank.description|{}description[0]
         final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/ChipBlank.description.<get-description>|<get-description>(){}[0]
 
@@ -893,6 +917,8 @@ final object io.lightine.tessera.types.errors/ChipBlank : io.lightine.tessera.ty
 }
 
 final object io.lightine.tessera.types.errors/NfcTagLost : io.lightine.tessera.types.errors/NfcError { // io.lightine.tessera.types.errors/NfcTagLost|null[0]
+    final val code // io.lightine.tessera.types.errors/NfcTagLost.code|{}code[0]
+        final fun <get-code>(): kotlin/String // io.lightine.tessera.types.errors/NfcTagLost.code.<get-code>|<get-code>(){}[0]
     final val description // io.lightine.tessera.types.errors/NfcTagLost.description|{}description[0]
         final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/NfcTagLost.description.<get-description>|<get-description>(){}[0]
 

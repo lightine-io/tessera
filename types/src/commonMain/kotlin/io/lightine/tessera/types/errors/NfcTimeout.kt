@@ -24,6 +24,10 @@ public data class NfcTimeout(
                 "The chip did not answer within $timeoutMillis ms"
             }
 
+    /** A stable name of this error: see [ChipError.code]. */
+    override val code: String
+        get() = "timeout"
+
     /** `NfcTimeout: ` followed by [description]. */
     override fun toString(): String = "NfcTimeout: $description"
 }

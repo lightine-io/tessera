@@ -276,7 +276,8 @@ private fun theAdapter(): NfcAdapter =
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class NfcChipReadTest {
-    private val options = ChipReadOptions(ChipAccessKey.Can("123456"), setOf(1, 2))
+    // A new key for each use: the entry point clears the key of a read at its ending.
+    private val options get() = ChipReadOptions(ChipAccessKey.Can("123456"), setOf(1, 2))
     private val pool = Executors.newFixedThreadPool(4) { Thread(it, "read-pool") }
     private val poolDispatcher: CoroutineDispatcher = pool.asCoroutineDispatcher()
 
@@ -867,5 +868,110 @@ class NfcChipReadTest {
         assertFailsWith<IllegalArgumentException> { NfcReadSettings(settleDelayMillis = -1) }
         assertFailsWith<IllegalArgumentException> { NfcReadSettings(waitForReturnMillis = -1) }
         assertFailsWith<IllegalArgumentException> { NfcReadSettings(waitForDocumentMillis = -1) }
+    }
+
+    // --- The polish round: the telemetry sink, the key's lifetime, the settings builder ------------
+
+    @Test
+    fun `a telemetry sink in the settings gets the read's step events and the read ends complete`() =
+        runTest {
+            val rig = rig()
+            val events = Collections.synchronizedList(mutableListOf<io.lightine.tessera.telemetry.TelemetryEvent>())
+            val sink =
+                object : io.lightine.tessera.telemetry.TelemetrySink {
+                    override fun record(event: io.lightine.tessera.telemetry.TelemetryEvent) {
+                        events += event
+                    }
+                }
+            val observer = RecordingChipObserver()
+            val read = rig.start(observer, settings = NfcReadSettings(telemetry = sink))
+            runCurrent()
+            read.onTagDiscovered(aTag())
+            advanceUntilIdle()
+            assertIs<ChipReadEnding.Complete>(observer.endings.single())
+            val steps = events.filterIsInstance<io.lightine.tessera.emrtd.ChipReadEvent>()
+            assertTrue(steps.isNotEmpty(), "the sink must hear the read's steps: $events")
+            assertTrue(steps.any { it.step == io.lightine.tessera.emrtd.ChipReadStep.READ_FILE })
+        }
+
+    @Test
+    fun `the read clears the key at its ending, every kind of ending`() =
+        runTest {
+            // Complete.
+            val complete = ChipAccessKey.Can("123456")
+            val rig = rig()
+            val a = RecordingChipObserver()
+            val read = rig.start(a, options = ChipReadOptions(complete, setOf(1)))
+            runCurrent()
+            assertFalse(complete.isCleared, "the key stays usable while the read runs")
+            read.onTagDiscovered(aTag())
+            advanceUntilIdle()
+            assertIs<ChipReadEnding.Complete>(a.endings.single())
+            assertTrue(complete.isCleared, "complete")
+
+            // Cancelled by the app.
+            val cancelled = ChipAccessKey.Can("123456")
+            val rig2 = rig()
+            val read2 = rig2.start(RecordingChipObserver(), options = ChipReadOptions(cancelled, setOf(1)))
+            runCurrent()
+            read2.cancel()
+            assertTrue(cancelled.isCleared, "cancelled")
+
+            // Not started: the device has no NFC.
+            val none = ChipAccessKey.Can("123456")
+            rig().start(RecordingChipObserver(), adapter = null, options = ChipReadOptions(none, setOf(1)))
+            runCurrent()
+            assertTrue(none.isCleared, "not started")
+        }
+
+    @Test
+    fun `a lost link keeps the key usable for the restart and the ending clears it`() =
+        runTest {
+            val key = ChipAccessKey.Can("123456")
+            val rig = rig()
+            val observer = RecordingChipObserver()
+            val read = rig.start(observer, options = ChipReadOptions(key, setOf(1)))
+            rig.platform.next += ScriptedChipChannel(failOnCommand = AFTER_ACCESS, failure = TagLostException("Tag was lost."))
+            val tag = aTag()
+            runCurrent()
+            read.onTagDiscovered(tag)
+            advanceTimeBy(NfcReadSettings.DEFAULT_SETTLE_DELAY_MILLIS)
+            runCurrent()
+            rig.platform.gone += tag
+            advanceTimeBy(1_000)
+            runCurrent()
+            assertFalse(key.isCleared, "waiting for the document to return: the restart needs the key")
+            assertTrue(observer.endings.isEmpty())
+            read.cancel()
+            assertTrue(key.isCleared)
+        }
+
+    @Test
+    fun `the settings builder changes one value and toBuilder starts from an existing object`() {
+        val sink =
+            object : io.lightine.tessera.telemetry.TelemetrySink {
+                override fun record(event: io.lightine.tessera.telemetry.TelemetryEvent) = Unit
+            }
+        val base =
+            NfcReadSettings
+                .Builder()
+                .linkLoss(LinkLossPolicy.readAgain(1))
+                .telemetry(sink)
+                .build()
+        val changed = base.toBuilder().settleDelayMillis(0).build()
+        assertEquals(0L, changed.settleDelayMillis)
+        assertEquals(LinkLossPolicy.ReadAgain(1), changed.linkLoss)
+        assertTrue(changed.telemetry === sink)
+        assertEquals(400L, base.settleDelayMillis)
+        assertNull(NfcReadSettings().telemetry)
+    }
+
+    @Test
+    fun `the entry point asks the availability question the same way reader mode does`() {
+        val context = org.robolectric.RuntimeEnvironment.getApplication()
+        assertEquals(NfcReaderMode.availability(context), NfcChipRead.availability(context))
+        // The answer type is the one the iPhone read returns.
+        val answer: NfcUnavailable.Reason? = NfcChipRead.availability(context)
+        assertTrue(answer == null || answer in NfcUnavailable.Reason.entries)
     }
 }

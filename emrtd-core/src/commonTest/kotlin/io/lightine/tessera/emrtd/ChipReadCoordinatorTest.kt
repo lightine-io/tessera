@@ -81,6 +81,74 @@ class ChipReadCoordinatorTest {
         assertIs<ChipReadEnding>(observer.calls.last())
     }
 
+    // --- The key's lifetime ----------------------------------------------------------------------
+
+    private fun owningCoordinator(
+        observer: RecordingObserver,
+        key: ChipAccessKey,
+        policy: LinkLossPolicy = LinkLossPolicy.Resume(2),
+    ) = ChipReadCoordinator(options(key), policy, observer, ChipReader(NoOpTelemetrySink), clearKeyAtEnding = true)
+
+    @Test
+    fun anOwningCoordinatorKeepsTheKeyUsableAcrossALostLinkAndClearsItAtTheEnding() =
+        runTest {
+            val key = ChipAccessKey.Can("123456")
+            val observer = RecordingObserver()
+            val c = owningCoordinator(observer, key)
+            assertTrue(c.start())
+            assertFalse(key.isCleared)
+            val lost = FailingTransport(NfcTagLost)
+            assertEquals(ChipReadAttemptOutcome.LINK_LOST, c.read(lost))
+            // A restart is allowed: the key must still open the chip.
+            assertFalse(key.isCleared)
+            c.documentFound()
+            c.connecting()
+            assertEquals(ChipReadAttemptOutcome.LINK_LOST, c.read(lost))
+            assertFalse(key.isCleared)
+            assertEquals(ChipReadAttemptOutcome.ENDED, c.read(lost))
+            assertTrue(c.isEnded)
+            assertTrue(key.isCleared)
+        }
+
+    @Test
+    fun anOwningCoordinatorClearsTheKeyAtEveryKindOfEnding() {
+        val endings: List<(ChipReadCoordinator) -> Unit> =
+            listOf(
+                { it.cancel(ChipReadEnding.Cancelled.By.APP) },
+                { it.cancel(ChipReadEnding.Cancelled.By.PERSON) },
+                { it.endedBySystem(NfcUnavailable(NfcUnavailable.Reason.ENDED_BY_SYSTEM)) },
+                { it.notStarted(NfcUnavailable.Reason.DISABLED) },
+                { it.fail(NfcUnavailable(NfcUnavailable.Reason.CLOSED)) },
+                { it.documentNotReturned() },
+            )
+        endings.forEach { ending ->
+            val key = ChipAccessKey.Can("123456")
+            val c = owningCoordinator(RecordingObserver(), key)
+            assertTrue(c.start())
+            assertFalse(key.isCleared)
+            ending(c)
+            assertTrue(c.isEnded)
+            assertTrue(key.isCleared)
+        }
+    }
+
+    @Test
+    fun aRefusedKeyIsClearedToo() {
+        val key = ChipAccessKey.Mrz("T22000129", '3', "900315", '2', "340314", '9')
+        val c = owningCoordinator(RecordingObserver(), key)
+        assertFalse(c.start())
+        assertTrue(key.isCleared)
+    }
+
+    @Test
+    fun aCoordinatorThatDoesNotOwnTheKeyLeavesItAlone() {
+        val key = ChipAccessKey.Can("123456")
+        val c = coordinator(RecordingObserver(), options = options(key))
+        assertTrue(c.start())
+        c.cancel(ChipReadEnding.Cancelled.By.APP)
+        assertFalse(key.isCleared)
+    }
+
     // --- Exactly one ending ---------------------------------------------------------------------
 
     @Test

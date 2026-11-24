@@ -42,6 +42,16 @@ import kotlin.time.TimeSource
  *
  * In Swift: `CoreNfcChipRead.companion.start(options: options, observer: observer)`.
  *
+ * ## The key
+ *
+ * The read takes the access key in `options` over from [start] until its ending: the SDK clears it
+ * ([io.lightine.tessera.emrtd.ChipAccessKey.clear]) when the read ends, whatever the ending is,
+ * and not earlier, so a restart after a lost link still has it. You do not clear it, and you do not
+ * use it for a second read: a new read needs a new key, which also keeps to one authentication
+ * attempt per action of the person. Reading with a cleared key ends the read with a
+ * [io.lightine.tessera.types.errors.ChipAccessDenied] whose reason is `KEY_CLEARED`. The
+ * low-level [io.lightine.tessera.emrtd.ChipReader.read] does not clear the key: there you own it.
+ *
  * ## What the SDK does
  *
  * - Checks the MRZ key's check digits before anything else: a key that does not add up ends with
@@ -93,7 +103,14 @@ public class CoreNfcChipRead internal constructor(
     observer: ChipReadObserver,
     private val env: CoreNfcReadEnvironment,
 ) : ChipReadHandle {
-    private val coordinator = ChipReadCoordinator(options, settings.linkLoss, Forwarder(observer), env.reader)
+    private val coordinator =
+        ChipReadCoordinator(
+            options,
+            settings.linkLoss,
+            Forwarder(observer),
+            settings.telemetry?.let { ChipReader(it) } ?: env.reader,
+            clearKeyAtEnding = true,
+        )
     private val tags = Channel<List<DetectedTag>>(Channel.UNLIMITED)
     private val alerts = AlertWriter()
 
@@ -422,6 +439,21 @@ public class CoreNfcChipRead internal constructor(
 
     /** Starts a read. */
     public companion object {
+        /**
+         * Whether this device can read chips right now, before a read starts: the same question,
+         * with the same name and return type, as `NfcChipRead.availability(context)` and
+         * `NfcReaderMode.availability(context)` on Android.
+         *
+         * @return `null` when reading is available; otherwise [NfcUnavailable.Reason.NOT_SUPPORTED]:
+         *   this device cannot read chips. A missing entitlement or Info.plist entry, or a reader
+         *   that is busy, shows only when a read starts, as [ChipReadEnding.NotStarted].
+         * @since 1.0.0
+         */
+        public fun availability(): NfcUnavailable.Reason? = availability(::platformReadingAvailable)
+
+        internal fun availability(readingAvailable: () -> Boolean): NfcUnavailable.Reason? =
+            if (readingAvailable()) null else NfcUnavailable.Reason.NOT_SUPPORTED
+
         /**
          * Starts a read with the built-in English sheet texts and the default settings. Returns at
          * once; the read runs in the background.

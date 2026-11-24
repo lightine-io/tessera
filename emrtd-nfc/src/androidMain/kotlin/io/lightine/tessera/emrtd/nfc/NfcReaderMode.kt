@@ -120,7 +120,8 @@ public object NfcReaderMode {
      *
      * @param context Any context of the app.
      * @return `null` when NFC is usable; otherwise why it is not, the same reason [enable] would
-     *   return.
+     *   return. The same question and the same return type as `CoreNfcChipRead.availability()` on
+     *   iPhone, and [NfcChipRead.availability] is the same call from the entry point.
      */
     public fun availability(context: Context): NfcUnavailable.Reason? {
         val adapter = NfcAdapter.getDefaultAdapter(context)

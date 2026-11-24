@@ -22,7 +22,7 @@ import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
 public data class ChipAccessDenied(
     val protocol: ChipAccessProtocol,
     val reason: Reason,
-    val statusWord: Int? = null,
+    override val statusWord: Int? = null,
 ) : ChipError() {
     /**
      * Why access was not granted.
@@ -103,6 +103,10 @@ public data class ChipAccessDenied(
             val sw = statusWord?.let { " (status ${it.toString(16).uppercase().padStart(4, '0')})" } ?: ""
             return "Chip access with protocol $protocol was not granted: $what$sw"
         }
+
+    /** A stable name of this error: see [ChipError.code]. */
+    override val code: String
+        get() = "access-denied." + slug(reason.name)
 
     /** `ChipAccessDenied: ` followed by [description]. */
     override fun toString(): String = "ChipAccessDenied: $description"

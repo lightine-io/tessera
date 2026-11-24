@@ -30,6 +30,10 @@ public data class ChipFileNotFound(
             }
         }
 
+    /** A stable name of this error: see [ChipError.code]. */
+    override val code: String
+        get() = "file-not-found"
+
     /** `ChipFileNotFound: ` followed by [description]. */
     override fun toString(): String = "ChipFileNotFound: $description"
 }

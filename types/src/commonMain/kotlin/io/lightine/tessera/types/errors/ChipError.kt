@@ -26,4 +26,29 @@ public sealed class ChipError {
      * colon, and this text.
      */
     public abstract val description: String
+
+    /**
+     * The status word the chip answered with, when this error carries one (for example `0x6300`
+     * for a refused key), otherwise `null`. The same value as the `statusWord` of the subtypes that
+     * have one, so an app reads it without a cast.
+     *
+     * @since 1.0.0
+     */
+    public open val statusWord: Int?
+        get() = null
+
+    /**
+     * A stable, machine-readable name of this error, for logs, metrics and keys of your own texts:
+     * lower-case words joined by hyphens, with a dot before the reason when the error has one (for
+     * example `access-denied.key-not-matched`, `tag-lost`). A code never changes once released,
+     * and it never contains a value from the document or the chip.
+     *
+     * @since 1.0.0
+     */
+    public abstract val code: String
+
+    internal companion object {
+        /** `KEY_NOT_MATCHED` as `key-not-matched`. */
+        fun slug(name: String): String = name.lowercase().replace('_', '-')
+    }
 }

@@ -16,6 +16,13 @@ import platform.posix.memcpy
 public actual object TrustAnchors {
     public actual fun load(bytes: ByteArray): TrustAnchorLoad = readTrustAnchors(bytes)
 
+    public actual fun load(
+        bytes: ByteArray,
+        heldRoots: List<TrustAnchor>,
+    ): TrustAnchorLoad = readTrustAnchors(bytes, heldRoots)
+
+    public actual fun merge(vararg loads: TrustAnchorLoad): TrustAnchorLoad = mergeTrustAnchorLoads(loads.toList())
+
     /**
      * Reads the local file at [path], so a Swift caller can pass `url.path`. The SDK never
      * downloads: a string that starts with `http://` or `https://` is answered with
@@ -24,13 +31,20 @@ public actual object TrustAnchors {
      * [TrustAnchorLoadProblem.TOO_LARGE] before it is read into memory; a real master list is about
      * 1 MB. Never throws.
      */
-    public fun load(path: String): TrustAnchorLoad = load(path, MAX_BYTES)
+    public fun load(path: String): TrustAnchorLoad = load(path, MAX_BYTES, emptyList())
+
+    /** As [load] on a path, with [heldRoots] for a master list's own checks. */
+    public fun load(
+        path: String,
+        heldRoots: List<TrustAnchor>,
+    ): TrustAnchorLoad = load(path, MAX_BYTES, heldRoots)
 
     /** The same read as [load] with a different cap, so tests can exercise [TrustAnchorLoadProblem.TOO_LARGE]. */
     @OptIn(ExperimentalForeignApi::class)
     internal fun load(
         path: String,
         maxBytes: Long,
+        heldRoots: List<TrustAnchor> = emptyList(),
     ): TrustAnchorLoad {
         if (isWebAddress(path)) return trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_A_LOCAL_FILE)
         val manager = NSFileManager.defaultManager
@@ -43,7 +57,7 @@ public actual object TrustAnchors {
         val data = manager.contentsAtPath(path) ?: return trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_READABLE)
         // The file may have grown since its size was read.
         if (data.length.toLong() > maxBytes) return trustAnchorLoadFailed(TrustAnchorLoadProblem.TOO_LARGE)
-        return readTrustAnchors(data.toKotlinByteArray())
+        return readTrustAnchors(data.toKotlinByteArray(), heldRoots)
     }
 }
 
