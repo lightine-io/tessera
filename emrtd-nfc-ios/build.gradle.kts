@@ -35,6 +35,10 @@ kotlin {
                 api(project(":emrtd-core"))
             }
         }
+        // The scripted chip of emrtd-core's tests (TES-346): its common part here, the OpenSSL test
+        // signer in iosTest. Compiled into this module's tests only.
+        commonTest { kotlin.srcDir("../emrtd-core/src/chipFixtures/kotlin") }
+        iosTest { kotlin.srcDir("../emrtd-core/src/chipFixturesIos/kotlin") }
         // iOS-only tests, so the test dependencies go on iosTest rather than an empty commonTest.
         iosTest {
             dependencies {
@@ -51,4 +55,14 @@ kotlin {
 // the iOS targets compile (macOS): the ios-compile CI job runs :emrtd-nfc-ios:checkKotlinAbi.
 tasks.matching { it.name == "checkKotlinAbi" || it.name == "checkLegacyAbi" }.configureEach {
     onlyIf("iOS klib ABI is checked on macOS only") { System.getProperty("os.name").startsWith("Mac") }
+}
+
+// The scripted chip compiled into this module's tests uses emrtd-core's internal declarations, as it
+// does in emrtd-core's own tests. Kotlin gives a test compilation that access to its own module's
+// main code through the friend-modules argument; this adds emrtd-core's main klib to the same
+// argument (which takes the last value given, so it names this module's main klib too). Test
+// compilations only: nothing published changes (TES-346).
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile>().matching { it.name.startsWith("compileTestKotlin") }.configureEach {
+    val friends = libraries.elements.map { all -> all.map { it.asFile.path }.filter { "/emrtd-" in it && "/main/klib/" in it } }
+    compilerOptions.freeCompilerArgs.addAll(friends.map { listOf("-friend-modules=" + it.joinToString(File.pathSeparator)) })
 }

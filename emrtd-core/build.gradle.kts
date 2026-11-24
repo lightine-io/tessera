@@ -153,6 +153,12 @@ kotlin {
         // host test sets the same way. iosTest's `actual` signs with OpenSSL, so nothing skips there.
         jvmTest { kotlin.srcDir("src/bouncyCastleTest/kotlin") }
         matching { it.name == "androidHostTest" }.configureEach { kotlin.srcDir("src/bouncyCastleTest/kotlin") }
+        // The scripted chip (fake chip, fake PKI, test signer interface): a plain folder of test
+        // sources, compiled into this module's tests and into the tests of emrtd-nfc and
+        // emrtd-nfc-ios, which drive whole reads through their entry points against it (TES-346).
+        // Test sources only: no published artifact carries it.
+        commonTest { kotlin.srcDir("src/chipFixtures/kotlin") }
+        iosTest { kotlin.srcDir("src/chipFixturesIos/kotlin") }
         commonTest {
             dependencies {
                 implementation(kotlin("test"))
