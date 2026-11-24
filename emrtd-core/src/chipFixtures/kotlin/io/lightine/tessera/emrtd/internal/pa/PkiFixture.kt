@@ -66,23 +66,43 @@ internal class Pki(
         signedAttributes: Boolean = true,
         contentTypeAttribute: String = CmsParser.OID_LDS_SECURITY_OBJECT,
         messageDigestOverride: ByteArray? = null,
+        /** The LDSSecurityObject's version: 0, or 1 with [ldsVersion] and [unicodeVersion] (Part 10, 4.6.2). */
+        ldsObjectVersion: Int = 0,
+        ldsVersion: String? = "0108",
+        unicodeVersion: String? = "040000",
+        /** The LDSSecurityObject's hash algorithm OID in place of [hash]'s (the stored hashes are still [hash]'s). */
+        ldsHashOid: String? = null,
+        /** The digest of the signature (SignerInfo), when it differs from [hash] (B51 LDS_H_74). */
+        signatureDigest: HashAlgorithm = hash,
+        signedDataVersion: Int = 3,
+        signerDigestOid: String? = null,
+        sid: ByteArray = dsSid,
     ): ByteArray {
         val crypto =
             io.lightine.tessera.emrtd.internal.crypto
                 .chipCrypto()
         val groups = dataGroups.entries.sortedBy { it.key }.map { (n, bytes) -> n to (hashOverrides[n] ?: crypto.digest(hash, bytes)) }
-        val lds = FakePki.ldsSecurityObject(version = 0, hashOid = FakePki.hashOid(hash), groups = groups)
+        val lds =
+            FakePki.ldsSecurityObject(
+                version = ldsObjectVersion,
+                hashOid = ldsHashOid ?: FakePki.hashOid(hash),
+                groups = groups,
+                ldsVersion = ldsVersion,
+                unicodeVersion = unicodeVersion,
+            )
         return FakePki.signedData(
             signing,
-            hash,
+            signatureDigest,
             CmsParser.OID_LDS_SECURITY_OBJECT,
             lds,
             certificates,
-            dsSid,
+            sid,
             signedAttributes = signedAttributes,
             contentTypeAttribute = contentTypeAttribute,
             messageDigestOverride = messageDigestOverride,
             fileTag = true,
+            signedDataVersion = signedDataVersion,
+            signerDigestOid = signerDigestOid,
         )
     }
 

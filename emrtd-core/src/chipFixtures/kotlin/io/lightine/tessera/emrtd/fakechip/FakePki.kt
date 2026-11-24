@@ -585,8 +585,13 @@ internal object FakePki {
         contentTypeAttribute: String = contentType,
         messageDigestOverride: ByteArray? = null,
         fileTag: Boolean = false,
+        /** The SignedData version as written (3 by RFC 5652 for this content). */
+        signedDataVersion: Int = 3,
+        /** The SignerInfo's digestAlgorithm OID in place of [digest]'s; the signature is still made with [digest]. */
+        signerDigestOid: String? = null,
     ): ByteArray {
         val digestAlg = sequence(oid(hashOid(digest)))
+        val signerDigestAlg = signerDigestOid?.let { sequence(oid(it)) } ?: digestAlg
         val attributes =
             if (signedAttributes) {
                 val md = messageDigestOverride ?: chipCrypto().digest(digest, content)
@@ -601,9 +606,9 @@ internal object FakePki {
         val signerInfo =
             sequence(
                 *listOfNotNull(
-                    integer(if (sid[0].toInt() == 0x80) 3 else 1),
+                    integer(if (sid[0].toInt() and 0xFF == 0x80) 3 else 1),
                     sid,
-                    digestAlg,
+                    signerDigestAlg,
                     attributes?.let { implicitConstructed(0, it) },
                     signing.algorithm.identifier,
                     octetString(signature),
@@ -612,7 +617,7 @@ internal object FakePki {
         val signedData =
             sequence(
                 *listOfNotNull(
-                    integer(3),
+                    integer(signedDataVersion.toLong()),
                     set(digestAlg),
                     sequence(oid(contentType), explicit(0, octetString(content))),
                     if (certificates.isNotEmpty()) implicitConstructed(0, *certificates.toTypedArray()) else null,

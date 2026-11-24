@@ -211,6 +211,10 @@ internal object FakeReadFlowChip {
         otherApplications: Map<List<Byte>, Map<Int, ByteArray>> = emptyMap(),
         /** Whether the link takes extended-length APDUs (an extended-length reader). */
         supportsExtendedLength: Boolean = false,
+        /** EF.SOD in place of the one signed from the data groups (built from them by this function). */
+        sodBuilder: ((Map<Int, ByteArray>, List<ByteArray>) -> ByteArray)? = null,
+        /** EF.COM in place of the built one (it is not hashed, so it need not match anything). */
+        efComOverride: ByteArray? = null,
     ): FlowChip {
         val groups = linkedMapOf(1 to FakeChipData.dg1(dg1Lines), 2 to dg2(dg2Bytes))
         val caKey = if (caInApplication || caInMasterFile) FakeCaKey.generate(c, 13) else null
@@ -230,11 +234,11 @@ internal object FakeReadFlowChip {
         groups.putAll(extraDataGroups)
         val efCom = FakeChipData.efCom((efComGroups ?: groups.keys.toList()).map { tagOf(it) })
         val app = HashMap<Int, ByteArray>()
-        app[LdsIds.EF_COM] = efCom
+        app[LdsIds.EF_COM] = efComOverride ?: efCom
         if (withSecurityObject) {
             val certificates = (sodCertificates ?: listOf(pki.ds)) + extraSodCertificates
             val hashed = sodGroups?.associateWith { n -> groups[n] ?: FakeGroups.group(tagOf(n), n) } ?: groups
-            app[LdsIds.EF_SOD] = pki.sod(hashed, hashOverrides = sodHashOverrides, certificates = certificates)
+            app[LdsIds.EF_SOD] = sodBuilder?.invoke(hashed, certificates) ?: pki.sod(hashed, hashOverrides = sodHashOverrides, certificates = certificates)
         }
         groups.forEach { (n, bytes) -> app[0x0100 + n] = bytes }
         app.putAll(extraApplicationFiles)
