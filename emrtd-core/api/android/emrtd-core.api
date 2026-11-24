@@ -1234,6 +1234,36 @@ public final class io/lightine/tessera/emrtd/trust/TrustAnchor$Companion {
 	public final fun fromDer ([B)Lio/lightine/tessera/emrtd/trust/TrustAnchorParse;
 }
 
+public final class io/lightine/tessera/emrtd/trust/TrustAnchorLoad {
+	public final fun getAnchors ()Ljava/util/List;
+	public final fun getKind ()Lio/lightine/tessera/emrtd/trust/TrustAnchorLoadKind;
+	public final fun getMasterList ()Lio/lightine/tessera/emrtd/trust/MasterList;
+	public final fun getProblem ()Lio/lightine/tessera/emrtd/trust/TrustAnchorLoadProblem;
+	public final fun getUnreadable ()Ljava/util/List;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/trust/TrustAnchorLoadKind : java/lang/Enum {
+	public static final field CERTIFICATE Lio/lightine/tessera/emrtd/trust/TrustAnchorLoadKind;
+	public static final field MASTER_LIST Lio/lightine/tessera/emrtd/trust/TrustAnchorLoadKind;
+	public static final field PEM_CERTIFICATES Lio/lightine/tessera/emrtd/trust/TrustAnchorLoadKind;
+	public static final field UNRECOGNIZED Lio/lightine/tessera/emrtd/trust/TrustAnchorLoadKind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/trust/TrustAnchorLoadKind;
+	public static fun values ()[Lio/lightine/tessera/emrtd/trust/TrustAnchorLoadKind;
+}
+
+public final class io/lightine/tessera/emrtd/trust/TrustAnchorLoadProblem : java/lang/Enum {
+	public static final field NOT_A_LOCAL_FILE Lio/lightine/tessera/emrtd/trust/TrustAnchorLoadProblem;
+	public static final field NOT_FOUND Lio/lightine/tessera/emrtd/trust/TrustAnchorLoadProblem;
+	public static final field NOT_READABLE Lio/lightine/tessera/emrtd/trust/TrustAnchorLoadProblem;
+	public static final field NOT_RECOGNIZED Lio/lightine/tessera/emrtd/trust/TrustAnchorLoadProblem;
+	public static final field TOO_LARGE Lio/lightine/tessera/emrtd/trust/TrustAnchorLoadProblem;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/trust/TrustAnchorLoadProblem;
+	public static fun values ()[Lio/lightine/tessera/emrtd/trust/TrustAnchorLoadProblem;
+}
+
 public abstract class io/lightine/tessera/emrtd/trust/TrustAnchorParse {
 }
 
@@ -1252,5 +1282,19 @@ public final class io/lightine/tessera/emrtd/trust/TrustAnchorProblem : java/lan
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/trust/TrustAnchorProblem;
 	public static fun values ()[Lio/lightine/tessera/emrtd/trust/TrustAnchorProblem;
+}
+
+public final class io/lightine/tessera/emrtd/trust/TrustAnchors {
+	public static final field INSTANCE Lio/lightine/tessera/emrtd/trust/TrustAnchors;
+	public final fun load (Ljava/io/File;)Lio/lightine/tessera/emrtd/trust/TrustAnchorLoad;
+	public final fun load (Ljava/io/InputStream;)Lio/lightine/tessera/emrtd/trust/TrustAnchorLoad;
+	public final fun load ([B)Lio/lightine/tessera/emrtd/trust/TrustAnchorLoad;
+}
+
+public final class io/lightine/tessera/emrtd/trust/UnreadableTrustAnchor {
+	public final fun getOffset ()I
+	public final fun getPosition ()I
+	public final fun getProblem ()Lio/lightine/tessera/emrtd/trust/TrustAnchorProblem;
+	public fun toString ()Ljava/lang/String;
 }
 
