@@ -527,6 +527,11 @@ public final class io/lightine/tessera/emrtd/ChipReadEvent : io/lightine/tessera
 public final class io/lightine/tessera/emrtd/ChipReadEvent$Companion {
 }
 
+public abstract interface class io/lightine/tessera/emrtd/ChipReadHandle {
+	public abstract fun cancel ()V
+	public abstract fun isEnded ()Z
+}
+
 public abstract interface class io/lightine/tessera/emrtd/ChipReadObserver {
 	public abstract fun onEnding (Lio/lightine/tessera/emrtd/ChipReadEnding;)V
 	public abstract fun onUpdate (Lio/lightine/tessera/emrtd/ChipReadUpdate;)V

@@ -343,6 +343,13 @@ abstract interface io.lightine.tessera.emrtd/ApduTransport { // io.lightine.tess
     abstract suspend fun transceive(kotlin/ByteArray): kotlin/ByteArray // io.lightine.tessera.emrtd/ApduTransport.transceive|transceive(kotlin.ByteArray){}[0]
 }
 
+abstract interface io.lightine.tessera.emrtd/ChipReadHandle { // io.lightine.tessera.emrtd/ChipReadHandle|null[0]
+    abstract val isEnded // io.lightine.tessera.emrtd/ChipReadHandle.isEnded|{}isEnded[0]
+        abstract fun <get-isEnded>(): kotlin/Boolean // io.lightine.tessera.emrtd/ChipReadHandle.isEnded.<get-isEnded>|<get-isEnded>(){}[0]
+
+    abstract fun cancel() // io.lightine.tessera.emrtd/ChipReadHandle.cancel|cancel(){}[0]
+}
+
 abstract interface io.lightine.tessera.emrtd/ChipReadObserver { // io.lightine.tessera.emrtd/ChipReadObserver|null[0]
     abstract fun onEnding(io.lightine.tessera.emrtd/ChipReadEnding) // io.lightine.tessera.emrtd/ChipReadObserver.onEnding|onEnding(io.lightine.tessera.emrtd.ChipReadEnding){}[0]
     abstract fun onUpdate(io.lightine.tessera.emrtd/ChipReadUpdate) // io.lightine.tessera.emrtd/ChipReadObserver.onUpdate|onUpdate(io.lightine.tessera.emrtd.ChipReadUpdate){}[0]
