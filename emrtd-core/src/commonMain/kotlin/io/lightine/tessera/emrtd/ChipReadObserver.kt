@@ -7,8 +7,10 @@ import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
  * Receives a chip read's updates and its one ending.
  *
  * Calls never overlap and come in order: every [onUpdate], then exactly one [onEnding], then
- * nothing more. They come from the read's own thread, never from the main thread by promise:
- * hand the values to your UI thread yourself, and return quickly.
+ * nothing more. Which thread a call comes on is not promised: most come from the read's own
+ * thread, but the first update and the updates and ending that a start or a cancel causes may
+ * come on the thread that called it, and none is promised to be the main thread. Hand the values
+ * to your UI thread yourself, and return quickly.
  *
  * Updates and endings never carry document data: no file content, no key, no value read from the
  * document. An exception thrown by the observer is ignored and never changes the read.

@@ -92,10 +92,11 @@ import java.util.concurrent.atomic.AtomicReference
  *   tries the earlier `Tag` again every second.
  * - When NFC is switched off during the read, ends with [ChipReadEnding.EndedBySystem] and
  *   [NfcUnavailable.Reason.DISABLED], instead of waiting for a document that cannot come.
- * - Closes the link on every path: the ending goes to the observer first, and the platform's
- *   close, which talks to the tag and can take up to the command time limit, runs in the
- *   background after it. The next link, of this read or a later one, waits for that close (at
- *   most the command time limit), so the two never race on the tag.
+ * - Closes the link on every path, and the observer is never blocked by it: the read starts the
+ *   close just before it hands the ending to the observer, and the platform's close, which talks
+ *   to the tag and can take up to the command time limit, runs in the background. The next
+ *   link, of this read or a later one, waits for that close (at most the command time limit), so
+ *   the two never race on the tag.
  * - Tags found while a command runs, or after the ending, are ignored: never two reads at once.
  *
  * ## Threads

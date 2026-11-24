@@ -22,7 +22,12 @@ import io.lightine.tessera.types.errors.NfcUnavailable
  */
 @ExperimentalTesseraChipApi
 public sealed class ChipReadEnding {
-    /** How many attempts sent commands to a chip: 0 when none did, more than 1 after a lost link. */
+    /**
+     * How many attempts sent commands to a chip: 0 when none did, more than 1 after a lost link.
+     * A read that ends while it waits for the document after a lost link counts only the attempts
+     * that ran, so this can be one less than the [ChipReadUpdate.attempt] of the last updates,
+     * which already name the attempt the read was getting ready for.
+     */
     public abstract val attempts: Int
 
     /** The progress when the read ended: 1.0 only for [Complete]; the last value otherwise. */
