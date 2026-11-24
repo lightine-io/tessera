@@ -49,10 +49,47 @@ class FileReaderTest {
             reader.selectMasterFile()
             assertContentEquals(bytes, reader.readFile(0x2F01))
             assertEquals(ChipCommands.INS_SELECT, CommandApdu.decode(chip.received[0])!!.ins)
-            assertContentEquals(
-                byteArrayOf(0x3F, 0x00),
-                CommandApdu.decode(chip.received[1])!!.data,
-            )
+            // SELECT MF as Part 10, Table 1 gives it: no Lc, no data, no Le.
+            assertContentEquals(hex("00A4000C"), chip.received[1])
+        }
+
+    @Test
+    fun select_master_file_falls_back_to_the_identifier_form_when_the_table_1_form_is_refused() =
+        runTest {
+            val files =
+                FakeFileSystem(
+                    masterFiles = mapOf(LdsIds.EF_CARD_ACCESS to TlvWriter.encode(0x31, byteArrayOf(1))),
+                    applications = mapOf(LdsIds.LDS1_AID.toList() to emptyMap()),
+                )
+            val chip = FakeChip(files, startIn = LdsIds.LDS1_AID.toList(), acceptsSelectMf = false)
+            val reader = FileReader(plain(chip))
+
+            reader.selectMasterFile()
+            assertNull(chip.currentApplication)
+            assertContentEquals(hex("00A4000C"), chip.received[0])
+            assertContentEquals(hex("00A4000C023F00"), chip.received[1])
+
+            // Refused in both forms: the second answer's failure, and the application stays current.
+            val refusing = FakeChip(files, startIn = LdsIds.LDS1_AID.toList(), acceptsSelectMf = false, acceptsSelectMfById = false)
+            val failure = assertFailsWith<FileStatusFailure> { FileReader(plain(refusing)).selectMasterFile() }
+            assertEquals(StatusWord.INCORRECT_P1_P2, failure.statusWord)
+            assertEquals(LdsIds.LDS1_AID.toList(), refusing.currentApplication)
+            assertEquals(2, refusing.received.size)
+        }
+
+    @Test
+    fun an_ef_under_another_df_is_not_found() =
+        runTest {
+            // EF.CardAccess is in the master file; with the application current, SELECT 011C (P1 02) is 6A82.
+            val files =
+                FakeFileSystem(
+                    masterFiles = mapOf(LdsIds.EF_CARD_ACCESS to TlvWriter.encode(0x31, byteArrayOf(1))),
+                    applications = mapOf(LdsIds.LDS1_AID.toList() to emptyMap()),
+                )
+            val reader = FileReader(plain(FakeChip(files, startIn = LdsIds.LDS1_AID.toList())))
+            assertFailsWith<FileNotFound> { reader.readFile(LdsIds.EF_CARD_ACCESS) }
+            reader.selectMasterFile()
+            assertContentEquals(TlvWriter.encode(0x31, byteArrayOf(1)), reader.readFile(LdsIds.EF_CARD_ACCESS))
         }
 
     @Test
@@ -85,6 +122,53 @@ class FileReaderTest {
             assertEquals(0x54, offsetObject.tag)
             val offset = offsetObject.value().fold(0) { n, b -> (n shl 8) or (b.toInt() and 0xFF) }
             assertTrue(offset > 32_767)
+        }
+
+    @Test
+    fun a_file_crossing_32_767_bytes_reads_b0_up_to_the_boundary_and_b1_after_it_in_do53() =
+        runTest {
+            for (extended in listOf(false, true)) {
+                val bytes = TlvWriter.encode(0x75, ByteArray(33_000) { (it * 13 % 251).toByte() })
+                val chip =
+                    FakeChip(
+                        FakeFileSystem(applications = mapOf(LdsIds.LDS1_AID.toList() to mapOf(0x0102 to bytes))),
+                        maxCommandLength = if (extended) FakeChip.EXTENDED_MAX_COMMAND else FakeChip.SHORT_MAX_COMMAND,
+                        supportsExtendedLength = extended,
+                        handlers = listOf(FakeFiles),
+                    )
+                val reader = FileReader(plain(chip))
+                reader.selectApplication()
+
+                assertContentEquals(bytes, reader.readFile(0x0102, extendedLengthAllowed = extended), "extended=$extended")
+                assertEquals(bytes.size, reader.bytesReadSoFar)
+                val commands = chip.received.mapNotNull(CommandApdu::decode)
+                // B0 never reads past offset 32 767 (Part 10, 3.6.3.1, Note 1) ...
+                val b0 = commands.filter { it.ins == ChipCommands.INS_READ_BINARY }
+                assertTrue(b0.all { ((it.p1 shl 8) or it.p2) + it.ne!! <= 32_768 }, "extended=$extended")
+                // ... and B1 starts exactly at 32 768.
+                val b1Offsets =
+                    commands
+                        .filter { it.ins == ChipCommands.INS_READ_BINARY_ODD }
+                        .map { TlvParser().parseSingle(it.data).value().fold(0) { n, b -> (n shl 8) or (b.toInt() and 0xFF) } }
+                assertEquals(32_768, b1Offsets.first(), "extended=$extended")
+                assertTrue(b1Offsets.zipWithNext().all { (a, b) -> b > a })
+            }
+        }
+
+    @Test
+    fun a_b1_answer_that_is_not_one_do53_is_refused() =
+        runTest {
+            val bytes = TlvWriter.encode(0x75, ByteArray(33_000))
+            for (answer in listOf(hex("0102"), hex("5305010203"), hex("540101"), hex("53020102FF"))) {
+                val raw =
+                    FakeCommandHandler { _, command ->
+                        if (command.ins == ChipCommands.INS_READ_BINARY_ODD) ResponseApdu(answer, StatusWord.SUCCESS) else null
+                    }
+                val reader = FileReader(plain(chip(mapOf(0x0102 to bytes), listOf(raw, FakeFiles))))
+                reader.selectApplication()
+                assertFailsWith<FileProtocolFailure>(answer.joinToString()) { reader.readFile(0x0102) }
+                assertEquals(32_768, reader.bytesReadSoFar)
+            }
         }
 
     @Test
@@ -264,6 +348,8 @@ class FileReaderTest {
 
             val failure = assertFailsWith<ApduTransportException> { reader.readFile(LdsIds.EF_DG1) }
             assertSame(NfcTagLost, failure.error)
+            // One chunk of 0xDF arrived before the tag left: telemetry reports that much.
+            assertEquals(FileReader.DEFAULT_SHORT_CHUNK, reader.bytesReadSoFar)
         }
 
     @Test
@@ -344,6 +430,8 @@ class FileReaderTest {
         }
 
     private fun plain(chip: FakeChip): ApduSender = ApduChannel(PlainApduSender(chip))
+
+    private fun hex(s: String): ByteArray = s.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
 
     private fun chip(
         files: Map<Int, ByteArray>,

@@ -107,7 +107,8 @@ private class Stop(
  * One whole chip read, in the order of Doc 9303 Part 11, Appendix J.1 (with the EF.CardSecurity
  * part of J.2):
  *
- * 1. Access (section 4.2): read EF.CardAccess in the master file. When it offers a PACE suite the
+ * 1. Access (section 4.2): read EF.CardAccess in the master file (see [readMasterFile] for how the
+ *    master file is made current when the read starts in the application). When it offers a PACE suite the
  *    reader runs, run PACE with the best one (the chip authentication mapping first, as J.1
  *    recommends, then the strongest cipher), sending the parameter ID when EF.CardAccess lists more
  *    than one suite (section 4.4.4.1). Otherwise select the application and run BAC; a chip that
@@ -140,6 +141,11 @@ internal class ReadFlow(
     private var reader = FileReader(plain)
     private var crypto: ChipCrypto? = null
     private var extended = false
+
+    // The current DF. The read starts with either one current: on Android the master file is
+    // current after activation; on iOS the system has already selected the eMRTD application.
+    private var masterFileCurrent = false
+    private var masterFileSelectSent = false
 
     private val files = ArrayList<ChipFile>()
     private val fileErrors = ArrayList<ChipFileError>()
@@ -430,12 +436,19 @@ internal class ReadFlow(
             accessDone = true
             event(ChipReadStep.READ_FILE, ChipReadStepOutcome.SUCCEEDED, start, fileId = LdsIds.EF_COM, bytes = bytes.size)
             true
-        } catch (e: FileSecurityStatusNotSatisfied) {
-            event(ChipReadStep.READ_FILE, ChipReadStepOutcome.FAILED, start, fileId = LdsIds.EF_COM, sw = SW_SECURITY)
-            false
         } catch (e: FileReadFailure) {
-            event(ChipReadStep.READ_FILE, ChipReadStepOutcome.FAILED, start, fileId = LdsIds.EF_COM)
+            event(
+                ChipReadStep.READ_FILE,
+                ChipReadStepOutcome.FAILED,
+                start,
+                fileId = LdsIds.EF_COM,
+                sw = statusOf(e),
+                bytes = bytesSoFar(),
+            )
             false
+        } catch (e: Exception) {
+            fileReadEnded(e, start, LdsIds.EF_COM)
+            throw e
         }
     }
 
@@ -443,6 +456,7 @@ internal class ReadFlow(
         val start = TimeSource.Monotonic.markNow()
         try {
             reader.selectApplication(extended)
+            masterFileCurrent = false
             event(ChipReadStep.SELECT_APPLICATION, ChipReadStepOutcome.SUCCEEDED, start)
         } catch (e: FileNotFound) {
             event(ChipReadStep.SELECT_APPLICATION, ChipReadStepOutcome.FAILED, start, sw = SW_NOT_FOUND)
@@ -453,7 +467,13 @@ internal class ReadFlow(
         }
     }
 
-    /** After PACE: EF.CardSecurity (J.2 steps 2 and 3), then chip authentication in the master file when it applies. */
+    /**
+     * After PACE: EF.CardSecurity (J.2 steps 2 and 3), then chip authentication in the master file
+     * when it applies. PACE ran with the master file current (EF.CardAccess was read there), and
+     * PACE leaves it current (Part 11, 4.2: "the Current DF can be either the Master File (if PACE
+     * was used) or the eMRTD Application"), so 011D here is EF.CardSecurity, never the
+     * application's EF.SOD; [readMasterFile] still refuses to read it from any other DF.
+     */
     private suspend fun readCardSecurity() {
         val bytes = readMasterFile(FILE_CARD_SECURITY) ?: return
         cardSecurity = bytes
@@ -474,11 +494,29 @@ internal class ReadFlow(
         runChipAuthentication(infos, CaContext.MASTER_FILE)
     }
 
-    /** Reads a master-file EF; `null` when the chip does not have it or does not let the reader read it. */
+    /**
+     * Reads a master-file EF; `null` when the chip does not have it or does not let the reader read it.
+     *
+     * SELECT by file identifier finds an EF under the current DF only (Part 10, 3.6.2), and the read
+     * may start with the eMRTD application current. The reader does not select the master file up
+     * front, because Part 10, 3.6.1.1 recommends against SELECT MF and some chips refuse it: it
+     * selects the EF first. EF.ATR/INFO and EF.CardAccess exist only in the master file, so a 9000
+     * shows the master file is current. Any other answer, before the master file was selected
+     * once, makes the reader select it ([FileReader.selectMasterFile]) and select the EF again;
+     * when the chip refuses SELECT MF, the first answer stands. 6A82 from the master file still
+     * means the chip does not have the file (for EF.CardAccess: it offers no PACE).
+     *
+     * EF.CardSecurity's identifier is also EF.SOD's in the application, so it is read only once the
+     * master file is known to be current.
+     */
     private suspend fun readMasterFile(fid: Int): ByteArray? {
         val start = TimeSource.Monotonic.markNow()
         return try {
-            val bytes = reader.readFile(fid, extended)
+            if (!selectInMasterFile(fid)) {
+                event(ChipReadStep.READ_FILE, ChipReadStepOutcome.SKIPPED, start, fileId = fid)
+                return null
+            }
+            val bytes = reader.readCurrentFile(fid, extended)
             files += ChipFile(fid, true, bytes)
             event(ChipReadStep.READ_FILE, ChipReadStepOutcome.SUCCEEDED, start, fileId = fid, bytes = bytes.size)
             bytes
@@ -486,10 +524,69 @@ internal class ReadFlow(
             event(ChipReadStep.READ_FILE, ChipReadStepOutcome.SKIPPED, start, fileId = fid, sw = SW_NOT_FOUND)
             null
         } catch (e: FileReadFailure) {
-            event(ChipReadStep.READ_FILE, ChipReadStepOutcome.FAILED, start, fileId = fid)
+            event(ChipReadStep.READ_FILE, ChipReadStepOutcome.FAILED, start, fileId = fid, sw = statusOf(e), bytes = bytesSoFar())
             null
+        } catch (e: Exception) {
+            fileReadEnded(e, start, fid)
+            throw e
         }
     }
+
+    /**
+     * Makes [fid] the current EF in the master file, selecting the master file when it is not
+     * current; `false` when the master file cannot be made current for EF.CardSecurity.
+     */
+    private suspend fun selectInMasterFile(fid: Int): Boolean {
+        // 011D in the application is EF.SOD: never read it as EF.CardSecurity.
+        if (fid == FILE_CARD_SECURITY && !masterFileCurrent && !selectMasterFile()) return false
+        try {
+            reader.selectFile(fid, extended)
+        } catch (e: FileReadFailure) {
+            if (masterFileCurrent || masterFileSelectSent || !selectMasterFile()) throw e
+            reader.selectFile(fid, extended)
+        }
+        masterFileCurrent = true
+        return true
+    }
+
+    /** Sends SELECT MF once per read; `true` when the chip took it. */
+    private suspend fun selectMasterFile(): Boolean {
+        if (masterFileSelectSent) return masterFileCurrent
+        masterFileSelectSent = true
+        return try {
+            reader.selectMasterFile(extended)
+            masterFileCurrent = true
+            true
+        } catch (e: FileReadFailure) {
+            false
+        }
+    }
+
+    /**
+     * A file read that ended the whole read (a lost tag, a lost session, an answer with no status
+     * word): the READ_FILE event still goes out, with the status word when there is one and the
+     * bytes read so far. The caller rethrows.
+     */
+    private fun fileReadEnded(
+        e: Exception,
+        start: TimeSource.Monotonic.ValueTimeMark,
+        fid: Int,
+    ) {
+        if (e is CancellationException) return
+        val sw = (e as? SecureMessagingException)?.sw
+        event(ChipReadStep.READ_FILE, ChipReadStepOutcome.FAILED, start, fileId = fid, sw = sw, bytes = bytesSoFar())
+    }
+
+    /** The bytes of the file the last read had received when it failed; `null` when it received none. */
+    private fun bytesSoFar(): Int? = reader.bytesReadSoFar.takeIf { it > 0 }
+
+    private fun statusOf(e: FileReadFailure): Int? =
+        when (e) {
+            is FileNotFound -> SW_NOT_FOUND
+            is FileSecurityStatusNotSatisfied -> SW_SECURITY
+            is FileStatusFailure -> e.statusWord
+            is MalformedFile, is FileProtocolFailure -> null
+        }
 
     // --- Application --------------------------------------------------------------------------
 
@@ -569,9 +666,12 @@ internal class ReadFlow(
             if (requested) fileErrors += ChipFileError(fid, false, ChipFileNotFound(fid, listedByChip = true))
             null
         } catch (e: FileReadFailure) {
-            event(ChipReadStep.READ_FILE, ChipReadStepOutcome.FAILED, start, fileId = fid, sw = (e as? FileStatusFailure)?.statusWord)
+            event(ChipReadStep.READ_FILE, ChipReadStepOutcome.FAILED, start, fileId = fid, sw = statusOf(e), bytes = bytesSoFar())
             fileErrors += ChipFileError(fid, false, fileFailure(e, fid))
             null
+        } catch (e: Exception) {
+            fileReadEnded(e, start, fid)
+            throw e
         }
     }
 
@@ -686,6 +786,7 @@ internal class ReadFlow(
                 caChecks[where] = state
                 try {
                     reader.selectApplication(extended)
+                    masterFileCurrent = false
                 } catch (e: FileReadFailure) {
                     // An answer that verified but is not 9000 does not confirm the keys.
                     event(ChipReadStep.CHIP_AUTHENTICATION, ChipReadStepOutcome.FAILED, start, protocol = "CA")
