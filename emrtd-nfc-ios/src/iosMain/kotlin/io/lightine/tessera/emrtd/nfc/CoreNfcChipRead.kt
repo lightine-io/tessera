@@ -572,7 +572,7 @@ public class CoreNfcChipRead internal constructor(
         internal const val MIN_TIME_FOR_A_NEW_START_MILLIS = 10_000L
 
         /** How often the waiting state repeats with the time waited. */
-        internal const val WAITING_REPORT_MILLIS = 2_000L
+        internal const val WAITING_REPORT_MILLIS = ChipReadCoordinator.WAITING_REPORT_MILLIS
 
         /** The longest a new read waits for the previous system session to be released. */
         internal const val RELEASE_WAIT_LIMIT_MILLIS = 5_000L
@@ -592,7 +592,7 @@ public class CoreNfcChipRead internal constructor(
         private val CLOSED = NfcUnavailable(NfcUnavailable.Reason.CLOSED)
 
         /** Failed connects in a row (a lost link, no answer) after which the read ends. */
-        private const val MAX_CONNECT_ATTEMPTS = 3
+        private const val MAX_CONNECT_ATTEMPTS = ChipReadCoordinator.MAX_CONNECT_ATTEMPTS
 
         /** Ends after which the next read waits before it begins a session. */
         private val RESTING_REASONS = setOf(NfcUnavailable.Reason.ENDED_BY_SYSTEM, NfcUnavailable.Reason.BUSY)

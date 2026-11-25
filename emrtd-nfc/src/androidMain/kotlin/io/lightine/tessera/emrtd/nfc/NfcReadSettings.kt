@@ -1,5 +1,6 @@
 package io.lightine.tessera.emrtd.nfc
 
+import io.lightine.tessera.emrtd.ChipReadCoordinator
 import io.lightine.tessera.emrtd.ChipReadEnding
 import io.lightine.tessera.emrtd.LinkLossPolicy
 import io.lightine.tessera.emrtd.ObserverThread
@@ -196,7 +197,7 @@ public class NfcReadSettings
             public const val DEFAULT_RESTARTS: Int = 2
 
             /** The default [settleDelayMillis]: 400. */
-            public const val DEFAULT_SETTLE_DELAY_MILLIS: Long = 400
+            public const val DEFAULT_SETTLE_DELAY_MILLIS: Long = ChipReadCoordinator.DEFAULT_SETTLE_DELAY_MILLIS
 
             /** The default [commandTimeoutMillis]: 5000, the same as [IsoDepTransport.DEFAULT_TIMEOUT_MILLIS]. */
             public const val DEFAULT_COMMAND_TIMEOUT_MILLIS: Long = IsoDepTransport.DEFAULT_TIMEOUT_MILLIS

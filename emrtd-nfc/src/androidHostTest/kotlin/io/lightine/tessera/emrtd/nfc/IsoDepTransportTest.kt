@@ -40,7 +40,8 @@ private class FakeChannel(
     var transceiveCalls = 0
     var closeCalls = 0
     var threadName: String? = null
-    var closeThreadName: String? = null
+    @Volatile var closeThreadName: String? = null
+    val closed = java.util.concurrent.CountDownLatch(1)
     val calls = mutableListOf<String>()
 
     override val isConnected: Boolean get() = connected
@@ -72,6 +73,7 @@ private class FakeChannel(
         closeThreadName = Thread.currentThread().name
         closeCalls++
         connected = false
+        closed.countDown()
     }
 }
 
@@ -384,8 +386,8 @@ class IsoDepTransportTest {
         val caller = Thread.currentThread().name
 
         transport.close()
-        val deadline = System.currentTimeMillis() + 5_000
-        while (channel.closeThreadName == null && System.currentTimeMillis() < deadline) Thread.sleep(10)
+        // A latch, not a clock: the test waits for the close itself (the bound only stops a hang).
+        assertTrue(channel.closed.await(20, java.util.concurrent.TimeUnit.SECONDS), "the platform close never ran")
 
         val closeThread = channel.closeThreadName!!
         assertTrue(closeThread != caller && closeThread.contains("DefaultDispatcher"), closeThread)

@@ -1,6 +1,7 @@
 package io.lightine.tessera.emrtd.nfc
 
 import io.lightine.tessera.emrtd.ApduTransportException
+import io.lightine.tessera.emrtd.ChipReadCoordinator
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.NfcError
 import io.lightine.tessera.types.errors.NfcUnavailable
@@ -402,7 +403,7 @@ public class CoreNfcSession internal constructor(
     /** Facts about NFC on this device. */
     public companion object {
         /** Failed connects in a row (a lost link, no answer) after which [connect] gives up. */
-        private const val MAX_CONNECT_ATTEMPTS = 3
+        private const val MAX_CONNECT_ATTEMPTS = ChipReadCoordinator.MAX_CONNECT_ATTEMPTS
 
         /**
          * Whether this device can read NFC tags at all (`NFCTagReaderSession.readingAvailable`).

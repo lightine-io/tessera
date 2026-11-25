@@ -257,8 +257,8 @@ internal class PlatformReaderSession internal constructor(
          *
          * The class is looked up by name at run time, never named in code: Kotlin/Native links a
          * named Objective-C class as a strong symbol, and an app built with this framework would
-         * then fail to launch on iOS 18 to 26.3, where the class does not exist. The object is
-         * set up with its property setters, which are plain messages.
+         * then fail to launch on iOS 15 (the framework's minimum) to 26.3, where the class does not
+         * exist. The object is set up with its property setters, which are plain messages.
          */
         @OptIn(BetaInteropApi::class) // the class object from NSClassFromString
         internal fun emrtdConfiguration(): NFCTagReaderSessionConfiguration? {

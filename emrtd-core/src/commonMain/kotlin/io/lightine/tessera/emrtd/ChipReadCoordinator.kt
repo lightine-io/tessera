@@ -90,6 +90,15 @@ public class ChipReadCoordinator private constructor(
             clearKeyAtEnding: Boolean = false,
         ): ChipReadCoordinator = ChipReadCoordinator(options, linkLoss, observer, reader, clearKeyAtEnding)
 
+        /** How often a platform reports [ChipReadState.WaitingForDocument] again: every 2 seconds, on both platforms. */
+        public const val WAITING_REPORT_MILLIS: Long = 2_000
+
+        /** Failed connects in a row (a lost link, no answer, before any command) after which a platform ends the read. */
+        public const val MAX_CONNECT_ATTEMPTS: Int = 3
+
+        /** The default settle time after a document is found, before the first command, on both platforms. */
+        public const val DEFAULT_SETTLE_DELAY_MILLIS: Long = 400
+
         private val SYSTEM_REASONS = setOf(NfcUnavailable.Reason.ENDED_BY_SYSTEM, NfcUnavailable.Reason.DISABLED)
 
         /** The chip answered about the key: never tried again with it. */

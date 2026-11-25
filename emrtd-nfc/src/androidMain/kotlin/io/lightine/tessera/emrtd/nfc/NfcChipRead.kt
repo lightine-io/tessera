@@ -680,14 +680,14 @@ public class NfcChipRead internal constructor(
             return read
         }
 
-        /** How often the waiting state repeats with the time waited, as on iPhone. */
-        internal const val WAITING_REPORT_MILLIS = 2_000L
+        /** How often the waiting state repeats with the time waited: the shared value. */
+        internal const val WAITING_REPORT_MILLIS = ChipReadCoordinator.WAITING_REPORT_MILLIS
 
         /** After a lost link with no new discovery, how often the earlier Tag is tried again. */
         internal const val SAME_TAG_RETRY_MILLIS = 1_000L
 
-        /** Failed connects in a row after which the read ends, as on iPhone. */
-        internal const val MAX_CONNECT_ATTEMPTS = 3
+        /** Failed connects in a row after which the read ends: the shared value. */
+        internal const val MAX_CONNECT_ATTEMPTS = ChipReadCoordinator.MAX_CONNECT_ATTEMPTS
 
         /**
          * [time] plus [millis], at most [Long.MAX_VALUE]: a wait the app sets to a very large value
