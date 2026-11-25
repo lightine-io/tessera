@@ -555,16 +555,27 @@ public final class io/lightine/tessera/types/errors/NfcTagLost : io/lightine/tes
 }
 
 public final class io/lightine/tessera/types/errors/NfcTimeout : io/lightine/tessera/types/errors/NfcError {
-	public fun <init> (Ljava/lang/Long;)V
+	public fun <init> (Ljava/lang/Long;Lio/lightine/tessera/types/errors/NfcTimeout$Limit;)V
 	public final fun component1 ()Ljava/lang/Long;
-	public final fun copy (Ljava/lang/Long;)Lio/lightine/tessera/types/errors/NfcTimeout;
-	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/NfcTimeout;Ljava/lang/Long;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/NfcTimeout;
+	public final fun component2 ()Lio/lightine/tessera/types/errors/NfcTimeout$Limit;
+	public final fun copy (Ljava/lang/Long;Lio/lightine/tessera/types/errors/NfcTimeout$Limit;)Lio/lightine/tessera/types/errors/NfcTimeout;
+	public static synthetic fun copy$default (Lio/lightine/tessera/types/errors/NfcTimeout;Ljava/lang/Long;Lio/lightine/tessera/types/errors/NfcTimeout$Limit;ILjava/lang/Object;)Lio/lightine/tessera/types/errors/NfcTimeout;
 	public fun equals (Ljava/lang/Object;)Z
 	public fun getCode ()Ljava/lang/String;
 	public fun getDescription ()Ljava/lang/String;
+	public final fun getLimit ()Lio/lightine/tessera/types/errors/NfcTimeout$Limit;
 	public final fun getTimeoutMillis ()Ljava/lang/Long;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/types/errors/NfcTimeout$Limit : java/lang/Enum {
+	public static final field COMMAND Lio/lightine/tessera/types/errors/NfcTimeout$Limit;
+	public static final field SESSION Lio/lightine/tessera/types/errors/NfcTimeout$Limit;
+	public static final field WAIT_FOR_DOCUMENT Lio/lightine/tessera/types/errors/NfcTimeout$Limit;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/errors/NfcTimeout$Limit;
+	public static fun values ()[Lio/lightine/tessera/types/errors/NfcTimeout$Limit;
 }
 
 public final class io/lightine/tessera/types/errors/NfcUnavailable : io/lightine/tessera/types/errors/NfcError {
@@ -581,16 +592,21 @@ public final class io/lightine/tessera/types/errors/NfcUnavailable : io/lightine
 }
 
 public final class io/lightine/tessera/types/errors/NfcUnavailable$Reason : java/lang/Enum {
+	public static final field ACCESS_NOT_ANSWERED Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static final field ACTIVITY_DESTROYED Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static final field BUSY Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static final field CANCELLED_BY_USER Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static final field CLOSED Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+	public static final field COMMAND_TOO_LONG Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static final field DISABLED Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static final field ENDED_BY_SYSTEM Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+	public static final field NOT_ELIGIBLE Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static final field NOT_PERMITTED Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static final field NOT_SUPPORTED Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static final field READ_IN_PROGRESS Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static final field REQUEST_REFUSED Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+	public static final field TAG_READING_DISABLED Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+	public static final field UNEXPECTED_FAULT Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public static fun values ()[Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;

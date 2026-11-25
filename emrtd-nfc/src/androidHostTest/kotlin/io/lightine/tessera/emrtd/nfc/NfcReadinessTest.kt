@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.nfc.NfcAdapter
 import android.os.Looper
-import org.robolectric.RuntimeEnvironment
 import io.lightine.tessera.emrtd.ChipAccessKey
 import io.lightine.tessera.emrtd.ChipReadEnding
 import io.lightine.tessera.emrtd.ChipReadOptions
@@ -20,6 +19,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.util.Collections
@@ -202,7 +202,14 @@ class NfcReadinessTest {
             val heard = mutableListOf<ChipReadReadiness>()
             env.readiness.add(app) { heard += it }
             val observer = RecordingChipObserver()
-            val read = NfcChipRead.start(ChipReadOptions(ChipAccessKey.Can("123456"), setOf(1)), theAdapter(), observer, NfcReadSettings(), env)
+            val read =
+                NfcChipRead.start(
+                    ChipReadOptions(ChipAccessKey.Can("123456"), setOf(1)),
+                    theAdapter(),
+                    observer,
+                    NfcReadSettings(),
+                    env,
+                )
             runCurrent()
             assertEquals(ChipReadReadiness.ReadInProgress, env.readiness.current(app))
             read.cancel()

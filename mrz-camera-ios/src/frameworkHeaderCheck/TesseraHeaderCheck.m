@@ -174,6 +174,29 @@ static void tesseraChipReadStates(TesseraChipReadState *state, TesseraChipReadEn
     (void)noAnswer;
 }
 
+// Which time limit passed, the setup and link reasons told apart, and Core NFC's raw code on the
+// ending (types, emrtd-core; TES-346).
+static void tesseraChipReadTruthfulEndings(TesseraNfcTimeout *timeout, TesseraChipReadEnding *ending) {
+    TesseraNfcTimeoutLimit *limit = timeout.limit;
+    BOOL sessionLimit = limit == TesseraNfcTimeoutLimit.session;
+    BOOL appWait = limit == TesseraNfcTimeoutLimit.waitForDocument;
+    BOOL commandLimit = limit == TesseraNfcTimeoutLimit.command;
+    TesseraNfcUnavailableReason *reasons[] = {
+        TesseraNfcUnavailableReason.notPermitted,
+        TesseraNfcUnavailableReason.notEligible,
+        TesseraNfcUnavailableReason.accessNotAnswered,
+        TesseraNfcUnavailableReason.commandTooLong,
+        TesseraNfcUnavailableReason.tagReadingDisabled,
+        TesseraNfcUnavailableReason.unexpectedFault,
+    };
+    TesseraInt *systemCode = ending.systemCode;
+    (void)sessionLimit;
+    (void)appWait;
+    (void)commandLimit;
+    (void)reasons;
+    (void)systemCode;
+}
+
 // The raw Core NFC code of a session the system ended, a renewed session, and a planned handover
 // of the tag with how long its connection had lasted, as telemetry facts (emrtd-core).
 static void tesseraChipReadEvents(TesseraChipReadEvent *event) {

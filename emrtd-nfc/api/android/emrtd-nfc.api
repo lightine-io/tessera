@@ -21,10 +21,12 @@ public final class io/lightine/tessera/emrtd/nfc/IsoDepTransport$Companion {
 
 public final class io/lightine/tessera/emrtd/nfc/NfcChipRead : android/nfc/NfcAdapter$ReaderCallback, io/lightine/tessera/emrtd/ChipReadHandle {
 	public static final field Companion Lio/lightine/tessera/emrtd/nfc/NfcChipRead$Companion;
+	public static final fun addReadinessListener (Landroid/content/Context;Lio/lightine/tessera/emrtd/ChipReadReadinessListener;)Lio/lightine/tessera/emrtd/ChipReadReadinessRegistration;
 	public static final fun availability (Landroid/content/Context;)Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public fun cancel ()V
 	public fun isEnded ()Z
 	public fun onTagDiscovered (Landroid/nfc/Tag;)V
+	public static final fun readiness (Landroid/content/Context;)Lio/lightine/tessera/emrtd/ChipReadReadiness;
 	public static final fun start (Landroid/app/Activity;Lio/lightine/tessera/emrtd/ChipReadOptions;Lio/lightine/tessera/emrtd/ChipReadObserver;)Lio/lightine/tessera/emrtd/nfc/NfcChipRead;
 	public static final fun start (Landroid/app/Activity;Lio/lightine/tessera/emrtd/ChipReadOptions;Lio/lightine/tessera/emrtd/ChipReadObserver;Lio/lightine/tessera/emrtd/nfc/NfcReadSettings;)Lio/lightine/tessera/emrtd/nfc/NfcChipRead;
 	public static final fun start (Lio/lightine/tessera/emrtd/ChipReadOptions;Landroid/nfc/NfcAdapter;Lio/lightine/tessera/emrtd/ChipReadObserver;)Lio/lightine/tessera/emrtd/nfc/NfcChipRead;
@@ -32,7 +34,9 @@ public final class io/lightine/tessera/emrtd/nfc/NfcChipRead : android/nfc/NfcAd
 }
 
 public final class io/lightine/tessera/emrtd/nfc/NfcChipRead$Companion {
+	public final fun addReadinessListener (Landroid/content/Context;Lio/lightine/tessera/emrtd/ChipReadReadinessListener;)Lio/lightine/tessera/emrtd/ChipReadReadinessRegistration;
 	public final fun availability (Landroid/content/Context;)Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+	public final fun readiness (Landroid/content/Context;)Lio/lightine/tessera/emrtd/ChipReadReadiness;
 	public final fun start (Landroid/app/Activity;Lio/lightine/tessera/emrtd/ChipReadOptions;Lio/lightine/tessera/emrtd/ChipReadObserver;)Lio/lightine/tessera/emrtd/nfc/NfcChipRead;
 	public final fun start (Landroid/app/Activity;Lio/lightine/tessera/emrtd/ChipReadOptions;Lio/lightine/tessera/emrtd/ChipReadObserver;Lio/lightine/tessera/emrtd/nfc/NfcReadSettings;)Lio/lightine/tessera/emrtd/nfc/NfcChipRead;
 	public final fun start (Lio/lightine/tessera/emrtd/ChipReadOptions;Landroid/nfc/NfcAdapter;Lio/lightine/tessera/emrtd/ChipReadObserver;)Lio/lightine/tessera/emrtd/nfc/NfcChipRead;

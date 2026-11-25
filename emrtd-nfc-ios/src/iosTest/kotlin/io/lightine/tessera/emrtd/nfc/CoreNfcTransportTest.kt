@@ -50,7 +50,11 @@ class CoreNfcTransportTest {
     @Test
     fun a_platform_error_is_thrown_as_its_typed_error() =
         runTest {
-            listOf(NfcTagLost, NfcTimeout(null, NfcTimeout.Limit.COMMAND), NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER)).forEach { expected ->
+            listOf(
+                NfcTagLost,
+                NfcTimeout(null, NfcTimeout.Limit.COMMAND),
+                NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER),
+            ).forEach { expected ->
                 val transport = CoreNfcTransport(FakeChannel().apply { error = expected })
                 assertEquals(expected, errorOf { transport.transceive(select) })
             }

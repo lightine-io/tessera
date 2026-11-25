@@ -62,7 +62,11 @@ class CoreNfcErrorMappingTest {
             Triple(CoreNfcErrorCode.PARAMETER_OUT_OF_BOUND, refused, refused),
             Triple(CoreNfcErrorCode.RADIO_DISABLED, NfcUnavailable(Reason.DISABLED), NfcUnavailable(Reason.DISABLED)),
             Triple(CoreNfcErrorCode.INELIGIBLE, NfcUnavailable(Reason.NOT_ELIGIBLE), NfcUnavailable(Reason.NOT_ELIGIBLE)),
-            Triple(CoreNfcErrorCode.ACCESS_NOT_ACCEPTED, NfcUnavailable(Reason.ACCESS_NOT_ANSWERED), NfcUnavailable(Reason.ACCESS_NOT_ANSWERED)),
+            Triple(
+                CoreNfcErrorCode.ACCESS_NOT_ACCEPTED,
+                NfcUnavailable(Reason.ACCESS_NOT_ANSWERED),
+                NfcUnavailable(Reason.ACCESS_NOT_ANSWERED),
+            ),
             Triple(CoreNfcErrorCode.TAG_CONNECTION_LOST, NfcTagLost, NfcTagLost),
             Triple(CoreNfcErrorCode.RETRY_EXCEEDED, NfcTimeout(null, NfcTimeout.Limit.COMMAND), NfcTimeout(null, NfcTimeout.Limit.COMMAND)),
             Triple(CoreNfcErrorCode.TAG_RESPONSE_ERROR, NfcTagLost, NfcTagLost),
@@ -70,7 +74,11 @@ class CoreNfcErrorMappingTest {
             Triple(CoreNfcErrorCode.TAG_NOT_CONNECTED, NfcTagLost, NfcTagLost),
             Triple(CoreNfcErrorCode.PACKET_TOO_LONG, NfcUnavailable(Reason.COMMAND_TOO_LONG), NfcUnavailable(Reason.COMMAND_TOO_LONG)),
             Triple(CoreNfcErrorCode.USER_CANCELED, NfcUnavailable(Reason.CANCELLED_BY_USER), NfcUnavailable(Reason.CANCELLED_BY_USER)),
-            Triple(CoreNfcErrorCode.SESSION_TIMEOUT, NfcTimeout(null, NfcTimeout.Limit.SESSION), NfcTimeout(null, NfcTimeout.Limit.SESSION)),
+            Triple(
+                CoreNfcErrorCode.SESSION_TIMEOUT,
+                NfcTimeout(null, NfcTimeout.Limit.SESSION),
+                NfcTimeout(null, NfcTimeout.Limit.SESSION),
+            ),
             Triple(CoreNfcErrorCode.SESSION_TERMINATED_UNEXPECTEDLY, endedBySystem, endedBySystem),
             Triple(CoreNfcErrorCode.SYSTEM_IS_BUSY, NfcUnavailable(Reason.BUSY), NfcUnavailable(Reason.BUSY)),
             // Codes of other kinds of session (NDEF, payment): not expected here, so treated as unknown.

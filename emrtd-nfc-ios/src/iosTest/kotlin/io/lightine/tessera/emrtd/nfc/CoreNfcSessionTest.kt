@@ -88,7 +88,9 @@ class CoreNfcSessionTest {
             val chip = FakeTag(FakeChannel())
             onBegin = {
                 it.events.onTagsDetected(listOf(FakeTag(FakeChannel(), connectError = NfcTagLost)))
-                it.events.onTagsDetected(listOf(FakeTag(FakeChannel(), connectError = NfcTimeout(null, NfcTimeout.Limit.COMMAND), retryable = true)))
+                it.events.onTagsDetected(
+                    listOf(FakeTag(FakeChannel(), connectError = NfcTimeout(null, NfcTimeout.Limit.COMMAND), retryable = true)),
+                )
                 assertEquals(2, it.restarts)
                 assertFalse(it.invalidated)
                 it.events.onTagsDetected(listOf(chip))

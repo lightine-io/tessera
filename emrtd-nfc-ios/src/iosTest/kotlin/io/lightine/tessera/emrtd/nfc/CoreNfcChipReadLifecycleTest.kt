@@ -345,7 +345,8 @@ class CoreNfcChipReadLifecycleTest {
         chipReadTest {
             val chip = FakeChip()
             val (read, rec) = start()
-            val noAnswer = ConnectFailure(NfcTimeout(null, NfcTimeout.Limit.COMMAND), retryable = true, systemCode = CoreNfcErrorCode.RETRY_EXCEEDED)
+            val noAnswer =
+                ConnectFailure(NfcTimeout(null, NfcTimeout.Limit.COMMAND), retryable = true, systemCode = CoreNfcErrorCode.RETRY_EXCEEDED)
             repeat(3) {
                 present(FakeChipTag(chip, noAnswer))
                 step(400)

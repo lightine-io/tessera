@@ -214,7 +214,12 @@ class CoreNfcInterruptionTest {
     @Test
     fun connecting__the_session_time_limit_passes__timeout_without_restarting_polling() =
         runTest {
-            onBegin = { it.events.onTagsDetected(listOf(FakeTag(FakeChannel(), connectError = NfcTimeout(null, NfcTimeout.Limit.SESSION), retryable = false))) }
+            onBegin =
+                {
+                    it.events.onTagsDetected(
+                        listOf(FakeTag(FakeChannel(), connectError = NfcTimeout(null, NfcTimeout.Limit.SESSION), retryable = false)),
+                    )
+                }
             assertEquals(NfcTimeout(null, NfcTimeout.Limit.SESSION), errorOf { session().connect() })
             assertEquals(0, port.restarts)
             assertEquals(listOf<String?>(FAILURE), port.endings)

@@ -5,6 +5,7 @@ import io.lightine.tessera.emrtd.ChipReadProgress
 import io.lightine.tessera.emrtd.ChipReadState
 import io.lightine.tessera.emrtd.ChipReadUpdate
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
+import io.lightine.tessera.types.errors.ChipAccessDenied
 import io.lightine.tessera.types.errors.ChipKeyCheckDigitMismatch
 import io.lightine.tessera.types.errors.NfcNoAnswer
 
@@ -159,7 +160,8 @@ public object CoreNfcDefaultSheetTexts : CoreNfcSheetTexts {
     /**
      * A short line per ending, for example "Done" or "Reading failed. Try again." A read that
      * failed because the chip never answered ([NfcNoAnswer]) says "No answer from the chip. Try
-     * another position."
+     * another position." A [ChipReadEnding.KeyNotAccepted] whose reason is `CHIP_REFUSED` says
+     * "The chip refused access.", since that refusal need not be about the details.
      */
     override fun textForEnding(ending: ChipReadEnding): String =
         when (ending) {
@@ -180,7 +182,12 @@ public object CoreNfcDefaultSheetTexts : CoreNfcSheetTexts {
             }
 
             is ChipReadEnding.KeyNotAccepted -> {
-                "The chip did not accept the details. Check them and try again."
+                // A refused protocol step need not be about the details: say only what happened.
+                if (ending.error.reason == ChipAccessDenied.Reason.CHIP_REFUSED) {
+                    "The chip refused access."
+                } else {
+                    "The chip did not accept the details. Check them and try again."
+                }
             }
 
             is ChipReadEnding.KeyRejected -> {

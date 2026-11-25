@@ -1642,6 +1642,8 @@ sealed class io.lightine.tessera.emrtd/ChipReadEnding { // io.lightine.tessera.e
         abstract fun <get-attempts>(): kotlin/Int // io.lightine.tessera.emrtd/ChipReadEnding.attempts.<get-attempts>|<get-attempts>(){}[0]
     abstract val progress // io.lightine.tessera.emrtd/ChipReadEnding.progress|{}progress[0]
         abstract fun <get-progress>(): io.lightine.tessera.emrtd/ChipReadProgress // io.lightine.tessera.emrtd/ChipReadEnding.progress.<get-progress>|<get-progress>(){}[0]
+    open val systemCode // io.lightine.tessera.emrtd/ChipReadEnding.systemCode|{}systemCode[0]
+        open fun <get-systemCode>(): kotlin/Int? // io.lightine.tessera.emrtd/ChipReadEnding.systemCode.<get-systemCode>|<get-systemCode>(){}[0]
 
     final class Cancelled : io.lightine.tessera.emrtd/ChipReadEnding { // io.lightine.tessera.emrtd/ChipReadEnding.Cancelled|null[0]
         final val attempts // io.lightine.tessera.emrtd/ChipReadEnding.Cancelled.attempts|{}attempts[0]
@@ -1683,6 +1685,8 @@ sealed class io.lightine.tessera.emrtd/ChipReadEnding { // io.lightine.tessera.e
             final fun <get-progress>(): io.lightine.tessera.emrtd/ChipReadProgress // io.lightine.tessera.emrtd/ChipReadEnding.EndedBySystem.progress.<get-progress>|<get-progress>(){}[0]
         final val reason // io.lightine.tessera.emrtd/ChipReadEnding.EndedBySystem.reason|{}reason[0]
             final fun <get-reason>(): io.lightine.tessera.types.errors/NfcError // io.lightine.tessera.emrtd/ChipReadEnding.EndedBySystem.reason.<get-reason>|<get-reason>(){}[0]
+        final val systemCode // io.lightine.tessera.emrtd/ChipReadEnding.EndedBySystem.systemCode|{}systemCode[0]
+            final fun <get-systemCode>(): kotlin/Int? // io.lightine.tessera.emrtd/ChipReadEnding.EndedBySystem.systemCode.<get-systemCode>|<get-systemCode>(){}[0]
 
         final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipReadEnding.EndedBySystem.toString|toString(){}[0]
     }
@@ -1696,6 +1700,8 @@ sealed class io.lightine.tessera.emrtd/ChipReadEnding { // io.lightine.tessera.e
             final fun <get-error>(): io.lightine.tessera.types.errors/ChipError // io.lightine.tessera.emrtd/ChipReadEnding.Failed.error.<get-error>|<get-error>(){}[0]
         final val progress // io.lightine.tessera.emrtd/ChipReadEnding.Failed.progress|{}progress[0]
             final fun <get-progress>(): io.lightine.tessera.emrtd/ChipReadProgress // io.lightine.tessera.emrtd/ChipReadEnding.Failed.progress.<get-progress>|<get-progress>(){}[0]
+        final val systemCode // io.lightine.tessera.emrtd/ChipReadEnding.Failed.systemCode|{}systemCode[0]
+            final fun <get-systemCode>(): kotlin/Int? // io.lightine.tessera.emrtd/ChipReadEnding.Failed.systemCode.<get-systemCode>|<get-systemCode>(){}[0]
 
         final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipReadEnding.Failed.toString|toString(){}[0]
     }
@@ -1729,6 +1735,8 @@ sealed class io.lightine.tessera.emrtd/ChipReadEnding { // io.lightine.tessera.e
             final fun <get-progress>(): io.lightine.tessera.emrtd/ChipReadProgress // io.lightine.tessera.emrtd/ChipReadEnding.NotStarted.progress.<get-progress>|<get-progress>(){}[0]
         final val reason // io.lightine.tessera.emrtd/ChipReadEnding.NotStarted.reason|{}reason[0]
             final fun <get-reason>(): io.lightine.tessera.types.errors/NfcUnavailable.Reason // io.lightine.tessera.emrtd/ChipReadEnding.NotStarted.reason.<get-reason>|<get-reason>(){}[0]
+        final val systemCode // io.lightine.tessera.emrtd/ChipReadEnding.NotStarted.systemCode|{}systemCode[0]
+            final fun <get-systemCode>(): kotlin/Int? // io.lightine.tessera.emrtd/ChipReadEnding.NotStarted.systemCode.<get-systemCode>|<get-systemCode>(){}[0]
 
         final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipReadEnding.NotStarted.toString|toString(){}[0]
     }
@@ -1744,6 +1752,8 @@ sealed class io.lightine.tessera.emrtd/ChipReadEnding { // io.lightine.tessera.e
             final fun <get-stoppedBy>(): io.lightine.tessera.types.errors/ChipError // io.lightine.tessera.emrtd/ChipReadEnding.Partial.stoppedBy.<get-stoppedBy>|<get-stoppedBy>(){}[0]
         final val stoppedIn // io.lightine.tessera.emrtd/ChipReadEnding.Partial.stoppedIn|{}stoppedIn[0]
             final fun <get-stoppedIn>(): io.lightine.tessera.emrtd/ChipReadState? // io.lightine.tessera.emrtd/ChipReadEnding.Partial.stoppedIn.<get-stoppedIn>|<get-stoppedIn>(){}[0]
+        final val systemCode // io.lightine.tessera.emrtd/ChipReadEnding.Partial.systemCode|{}systemCode[0]
+            final fun <get-systemCode>(): kotlin/Int? // io.lightine.tessera.emrtd/ChipReadEnding.Partial.systemCode.<get-systemCode>|<get-systemCode>(){}[0]
 
         final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipReadEnding.Partial.toString|toString(){}[0]
     }

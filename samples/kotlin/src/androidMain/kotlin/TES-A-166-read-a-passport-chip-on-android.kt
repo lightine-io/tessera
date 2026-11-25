@@ -110,7 +110,11 @@ fun handle(ending: ChipReadEnding) {
 fun describe(error: ChipError): String = when (error) {
     is NfcTagLost -> "The document moved. Hold it still against the phone."
     is NfcNoAnswer -> "No answer from the chip. Try another position."
-    is NfcTimeout -> "The chip did not answer in time. Try again."
+    is NfcTimeout -> when (error.limit) { // which time limit passed, as a fact
+        NfcTimeout.Limit.COMMAND -> "The chip did not answer in time. Try again."
+        NfcTimeout.Limit.WAIT_FOR_DOCUMENT -> "No document was found in time. Try again."
+        NfcTimeout.Limit.SESSION -> "The reading took too long. Try again."
+    }
     is ChipAccessDenied -> "The chip did not accept the MRZ values."
     else -> error.description
 }

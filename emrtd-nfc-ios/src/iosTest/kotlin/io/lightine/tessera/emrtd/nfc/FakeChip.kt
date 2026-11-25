@@ -25,6 +25,8 @@ internal class FakeChip(
     private val scope: CoroutineScope? = null,
     private val answerDelayMillis: Long = 0,
     private val bacRefusesKey: Boolean = false,
+    // The status word EXTERNAL AUTHENTICATE is refused with: 6300 by default, the chip not matching the key.
+    private val bacRefusalSw: ByteArray = SW_KEY_NOT_MATCHED,
     dg1Size: Int = 400,
     override val initialSelectedAid: String? = null,
 ) : Iso7816Channel {
@@ -95,7 +97,7 @@ internal class FakeChip(
             INS_SELECT -> select(c, p1)
             INS_READ_BINARY -> readBinary(c, p1, p2)
             INS_GET_CHALLENGE -> if (bacRefusesKey) ByteArray(8) { (it + 1).toByte() } + OK else SW_NOT_SUPPORTED
-            INS_EXTERNAL_AUTHENTICATE -> SW_KEY_NOT_MATCHED
+            INS_EXTERNAL_AUTHENTICATE -> bacRefusalSw
             else -> SW_NOT_SUPPORTED
         }
     }

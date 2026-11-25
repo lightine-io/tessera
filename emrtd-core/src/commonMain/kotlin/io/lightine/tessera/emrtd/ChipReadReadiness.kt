@@ -5,11 +5,12 @@ import io.lightine.tessera.types.errors.NfcUnavailable
 
 /**
  * Whether a new chip read started now is expected to be accepted at once: for an app that enables
- * its "read the chip" button only when a read can begin. On iPhone, ask
- * `CoreNfcChipRead.readiness()` and register a listener with
- * `CoreNfcChipRead.addReadinessListener` to hear when it changes. Android has no such query yet:
- * there the system has no wait between reads, and `NfcChipRead.availability(context)` tells whether
- * NFC can be used.
+ * its "read the chip" button only when a read can begin. The same shape on both platforms: on
+ * iPhone, ask `CoreNfcChipRead.readiness()` and register a listener with
+ * `CoreNfcChipRead.addReadinessListener`; on Android, `NfcChipRead.readiness(context)` and
+ * `NfcChipRead.addReadinessListener(context, listener)`. Android has no wait between reads, so it
+ * never reports [NotYet]; its listener also hears NFC switched on and off. iPhone has no signal
+ * for that, so there a radio switched off shows only when a read starts.
  *
  * It is the SDK's own bookkeeping, stated as facts, not a promise from the system: a start is
  * always allowed, and a start made while the value is [NotYet] waits in
@@ -37,7 +38,7 @@ public sealed class ChipReadReadiness {
      * the system ended the last reader session on its own, or refused one as busy, and the SDK
      * treats the system as ready the read setting `waitAfterSystemEndMillis` after it saw that end;
      * or the last session the SDK ended was not yet reported closed by the system, for which it
-     * waits at most 5 seconds. Android never reports this value.
+     * waits at most 5 seconds. Android never reports this value: it has no wait between reads.
      *
      * @property remainingMillis The longest a read started now would wait before it begins a
      *   session, in milliseconds, as the SDK counts it now: at least 1. An upper bound, not a
@@ -63,7 +64,8 @@ public sealed class ChipReadReadiness {
 
     /**
      * Chips cannot be read on this device, for [reason], as the platform read's `availability()`
-     * reports it.
+     * reports it: on Android no NFC reader, NFC off, or its option for reading tags off; on iPhone
+     * only no NFC reader, the one thing Core NFC can tell before a read.
      *
      * @property reason Why.
      * @since 1.0.0
@@ -109,8 +111,10 @@ public sealed class ChipReadReadiness {
 /**
  * Hears when a platform read's [ChipReadReadiness] changes: from one kind to another (for example
  * from [ChipReadReadiness.ReadInProgress] to [ChipReadReadiness.NotYet], then to
- * [ChipReadReadiness.Ready]), never twice in a row with the same kind. Called on the main thread,
- * one call at a time, in order. Not called at registration: register, then ask `readiness()` for
+ * [ChipReadReadiness.Ready], or from [ChipReadReadiness.Ready] to
+ * [ChipReadReadiness.Unavailable] when NFC is switched off on Android), never twice in a row with
+ * the same kind; two [ChipReadReadiness.Unavailable] values with different reasons count as
+ * different. Called on the main thread, one call at a time, in order. Not called at registration: register, then ask `readiness()` for
  * the value now. An exception it throws is ignored.
  *
  * Experimental: see [ExperimentalTesseraChipApi].

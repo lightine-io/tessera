@@ -521,6 +521,7 @@ public final class io/lightine/tessera/emrtd/ChipRead {
 public abstract class io/lightine/tessera/emrtd/ChipReadEnding {
 	public abstract fun getAttempts ()I
 	public abstract fun getProgress ()Lio/lightine/tessera/emrtd/ChipReadProgress;
+	public fun getSystemCode ()Ljava/lang/Integer;
 }
 
 public final class io/lightine/tessera/emrtd/ChipReadEnding$Cancelled : io/lightine/tessera/emrtd/ChipReadEnding {
@@ -549,6 +550,7 @@ public final class io/lightine/tessera/emrtd/ChipReadEnding$EndedBySystem : io/l
 	public fun getAttempts ()I
 	public fun getProgress ()Lio/lightine/tessera/emrtd/ChipReadProgress;
 	public final fun getReason ()Lio/lightine/tessera/types/errors/NfcError;
+	public fun getSystemCode ()Ljava/lang/Integer;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -557,6 +559,7 @@ public final class io/lightine/tessera/emrtd/ChipReadEnding$Failed : io/lightine
 	public fun getAttempts ()I
 	public final fun getError ()Lio/lightine/tessera/types/errors/ChipError;
 	public fun getProgress ()Lio/lightine/tessera/emrtd/ChipReadProgress;
+	public fun getSystemCode ()Ljava/lang/Integer;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -578,6 +581,7 @@ public final class io/lightine/tessera/emrtd/ChipReadEnding$NotStarted : io/ligh
 	public fun getAttempts ()I
 	public fun getProgress ()Lio/lightine/tessera/emrtd/ChipReadProgress;
 	public final fun getReason ()Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+	public fun getSystemCode ()Ljava/lang/Integer;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -587,6 +591,7 @@ public final class io/lightine/tessera/emrtd/ChipReadEnding$Partial : io/lightin
 	public final fun getRead ()Lio/lightine/tessera/emrtd/ChipRead;
 	public final fun getStoppedBy ()Lio/lightine/tessera/types/errors/ChipError;
 	public final fun getStoppedIn ()Lio/lightine/tessera/emrtd/ChipReadState;
+	public fun getSystemCode ()Ljava/lang/Integer;
 	public fun toString ()Ljava/lang/String;
 }
 

@@ -151,6 +151,19 @@ class CoreNfcSheetTextsTest {
             assertEquals(NfcNoAnswer, assertIs<ChipReadEnding.Failed>(endings[2]).error)
             assertEquals("No answer from the chip. Try another position.", defaults.textForEnding(endings[2]))
             assertEquals(endings.size, endings.map { defaults.textForEnding(it) }.toSet().size, "one text per kind")
+            assertEquals("The chip did not accept the details. Check them and try again.", defaults.textForEnding(endings[3]))
+        }
+
+    @Test
+    fun ending_texts__a_refused_protocol_step_does_not_blame_the_details() =
+        chipReadTest {
+            val (_, rec) = start(options = ChipReadHarness.mrzOptions(), settings = oneSession())
+            // 6985 "conditions of use not satisfied": a refusal that names no key state.
+            present(FakeChipTag(FakeChip(bacRefusesKey = true, bacRefusalSw = byteArrayOf(0x69, 0x85.toByte()))))
+            step(400)
+            val ending = assertIs<ChipReadEnding.KeyNotAccepted>(rec.ending)
+            assertEquals(io.lightine.tessera.types.errors.ChipAccessDenied.Reason.CHIP_REFUSED, ending.error.reason)
+            assertEquals("The chip refused access.", defaults.textForEnding(ending))
         }
 
     @Test

@@ -503,7 +503,12 @@ class NfcChipReadTest {
             assertEquals(refused, ending.reason)
             read.cancel()
             assertOneEnding(observer)
-            assertTrue(rig.env.registry.isLive().not(), "a refused read frees the slot")
+            assertTrue(
+                rig.env.registry
+                    .isLive()
+                    .not(),
+                "a refused read frees the slot",
+            )
         }
 
     @Test
