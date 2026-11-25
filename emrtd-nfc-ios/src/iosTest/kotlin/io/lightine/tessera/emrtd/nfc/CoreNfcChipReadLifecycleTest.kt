@@ -288,7 +288,7 @@ class CoreNfcChipReadLifecycleTest {
     fun link_lost__with_less_than_10_seconds_of_the_session_left_the_read_does_not_start_again() =
         chipReadTest {
             val chip = FakeChip().apply { loseAt += 3 }
-            val (read, rec) = start()
+            val (read, rec) = start(settings = oneSession())
             step(51_000)
             // The new searches while no document was reported (one every 4 seconds) are not the
             // restarts after a loss.
@@ -309,7 +309,7 @@ class CoreNfcChipReadLifecycleTest {
             // Each answer takes a second: the attempt starts with 20 s left and loses the link at
             // about 7 s left.
             val chip = FakeChip(scope = scope, answerDelayMillis = 1_000, dg1Size = 3_000).apply { loseAt += 13 }
-            val (read, rec) = start()
+            val (read, rec) = start(settings = oneSession())
             step(40_000)
             val searches = port.restarts
             present(FakeChipTag(chip))
@@ -409,7 +409,7 @@ class CoreNfcChipReadLifecycleTest {
     fun codes__every_code_while_waiting_maps_to_its_ending_and_the_sdk_ends_nothing() =
         chipReadTest {
             for (code in allCodes) {
-                val (read, rec) = start()
+                val (read, rec) = start(settings = oneSession())
                 systemEnds(code)
                 assertTrue(expectedBeforeDocument(code)(rec.ending), "code $code gave ${rec.ending}")
                 assertTrue(port.endings.isEmpty(), "code $code")
@@ -570,11 +570,11 @@ class CoreNfcChipReadLifecycleTest {
     @Test
     fun between_reads__a_start_right_after_a_system_end_waits_in_starting() =
         chipReadTest {
-            val (first, _) = start()
+            val (first, _) = start(settings = oneSession())
             step(3_000)
             systemEnds(CoreNfcErrorCode.SESSION_TERMINATED_UNEXPECTEDLY)
             assertNothingLeft(first)
-            val (second, rec) = start()
+            val (second, rec) = start(settings = oneSession())
             assertEquals(listOf("Starting"), rec.names)
             step(999)
             assertEquals(1, ports.size)
@@ -594,11 +594,11 @@ class CoreNfcChipReadLifecycleTest {
                         nfcErrorFor(platform.CoreNFC.NFCErrorDomain, CoreNfcErrorCode.SYSTEM_IS_BUSY, CoreNfcErrorSource.SESSION_END),
                     )
                 }
-            val (first, rec) = start()
+            val (first, rec) = start(settings = oneSession())
             assertEquals(Reason.BUSY, assertIs<ChipReadEnding.NotStarted>(rec.ending).reason)
             assertNothingLeft(first)
             onBegin = {}
-            val (second, next) = start()
+            val (second, next) = start(settings = oneSession())
             step(999)
             assertEquals(1, ports.size)
             step(1)

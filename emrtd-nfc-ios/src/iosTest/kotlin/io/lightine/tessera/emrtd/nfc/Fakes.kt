@@ -79,6 +79,12 @@ internal class FakeSessionPort(
     /** Called by begin(), like Core NFC calling the delegate once polling finds tags. */
     var onBegin: (FakeSessionPort) -> Unit = {}
 
+    /**
+     * Whether begin() reports the session as on (`didBecomeActive`) after [onBegin], as Core NFC
+     * does for a session it accepts; never when the session already ended in [onBegin].
+     */
+    var reportActive = true
+
     /** How many times the system ended the session on its own, through [systemEnd]. */
     var systemEnds = 0
 
@@ -121,6 +127,7 @@ internal class FakeSessionPort(
     override fun begin() {
         began = true
         onBegin(this)
+        if (reportActive && systemEnds == 0 && endings.isEmpty()) events.onActive()
     }
 
     /** Called by restartPolling(), like Core NFC polling again (a document still near is found again). */
@@ -135,13 +142,18 @@ internal class FakeSessionPort(
         onRestart(this)
     }
 
+    /** Runs inside each invalidate call before it records it: a test can block here. */
+    var onInvalidate: () -> Unit = {}
+
     override fun invalidate() {
+        onInvalidate()
         log("invalidate")
         endings += null
         if (reportEnd) events.onInvalidated(NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER), CoreNfcErrorCode.USER_CANCELED)
     }
 
     override fun invalidate(errorMessage: String) {
+        onInvalidate()
         log("invalidate:$errorMessage")
         endings += errorMessage
         if (reportEnd) events.onInvalidated(NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER), CoreNfcErrorCode.USER_CANCELED)

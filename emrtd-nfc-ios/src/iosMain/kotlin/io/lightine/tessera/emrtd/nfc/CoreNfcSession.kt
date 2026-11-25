@@ -431,12 +431,15 @@ public class CoreNfcSession internal constructor(
  */
 internal object LiveSessions {
     private val lock = NSLock()
-    private val owners = mutableSetOf<Any>()
+
+    // An owner with more than one live session ([CoreNfcChipRead] while it renews its session) is
+    // counted once per session, so the end of the old one does not let go of the new one.
+    private val owners = mutableMapOf<Any, Int>()
 
     fun add(owner: Any) {
         lock.lock()
         try {
-            owners += owner
+            owners[owner] = (owners[owner] ?: 0) + 1
         } finally {
             lock.unlock()
         }
@@ -445,7 +448,8 @@ internal object LiveSessions {
     fun remove(owner: Any) {
         lock.lock()
         try {
-            owners -= owner
+            val left = (owners[owner] ?: return) - 1
+            if (left > 0) owners[owner] = left else owners.remove(owner)
         } finally {
             lock.unlock()
         }

@@ -74,7 +74,7 @@ class CoreNfcSearchRestartTest {
     @Test
     fun no_document_for_20_seconds__a_new_search_every_4_seconds_and_the_waiting_updates_unchanged() =
         chipReadTest {
-            val (read, rec) = startTimed()
+            val (read, rec) = startTimed(oneSession())
             step(20_000)
             assertEquals(listOf(4_000L, 8_000L, 12_000L, 16_000L, 20_000L), port.restartTimes)
             assertEquals((0..10).map { it * 2_000L }, waitedTimes(rec), "a waiting update every 2 seconds, as before")
@@ -88,7 +88,7 @@ class CoreNfcSearchRestartTest {
     fun a_document_reported__no_new_search_while_it_is_read_or_after() =
         chipReadTest {
             val chip = FakeChip(scope = scope, answerDelayMillis = 1_000)
-            val (read, rec) = startTimed()
+            val (read, rec) = startTimed(oneSession())
             step(10_000)
             assertEquals(listOf(4_000L, 8_000L), port.restartTimes)
             present(FakeChipTag(chip))
@@ -135,7 +135,7 @@ class CoreNfcSearchRestartTest {
         chipReadTest {
             val worker = HeldWorker()
             restartWorker = { worker }
-            val (read, rec) = startTimed()
+            val (read, rec) = startTimed(oneSession())
             step(4_000)
             systemEnds(CoreNfcErrorCode.SESSION_TERMINATED_UNEXPECTEDLY)
             assertIs<ChipReadEnding.EndedBySystem>(rec.ending)
@@ -147,7 +147,7 @@ class CoreNfcSearchRestartTest {
     @Test
     fun turned_off__no_new_search_at_all() =
         chipReadTest {
-            val (read, rec) = startTimed(CoreNfcReadSettings(searchRestartMillis = CoreNfcReadSettings.SEARCH_RESTART_OFF))
+            val (read, rec) = startTimed(oneSession(CoreNfcReadSettings(searchRestartMillis = CoreNfcReadSettings.SEARCH_RESTART_OFF)))
             step(20_000)
             assertEquals(0, port.restarts)
             assertEquals((0..10).map { it * 2_000L }, waitedTimes(rec))
@@ -172,7 +172,7 @@ class CoreNfcSearchRestartTest {
         chipReadTest {
             val worker = HeldWorker()
             restartWorker = { worker }
-            val (read, _) = startTimed()
+            val (read, _) = startTimed(oneSession())
             step(20_000)
             assertEquals(1, worker.blocks.size, "one posted, none added while it has not run")
             worker.runAll()
@@ -239,7 +239,7 @@ class CoreNfcSearchRestartTest {
     @Test
     fun device_case__first_contact_lost_at_12_seconds__a_later_new_search_finds_it() =
         chipReadTest {
-            val (read, rec) = startTimed()
+            val (read, rec) = startTimed(oneSession())
             firstContactLost(placedAt = 12_000, chip = FakeChip())
             step(12_400)
             assertIs<ChipReadEnding.Complete>(rec.ending)
@@ -252,7 +252,7 @@ class CoreNfcSearchRestartTest {
         chipReadTest {
             val ends = SessionEnds()
             val settings = CoreNfcReadSettings(searchRestartMillis = CoreNfcReadSettings.SEARCH_RESTART_OFF, telemetry = ends)
-            val (read, rec) = startTimed(settings)
+            val (read, rec) = startTimed(oneSession(settings))
             firstContactLost(placedAt = 0, chip = FakeChip())
             step(21_999)
             assertTrue(rec.endings.isEmpty())
@@ -330,7 +330,7 @@ class CoreNfcSearchRestartTest {
         chipReadTest {
             restartWorker = ::newSearchQueueWorker
             val stuck = StuckSetter(blockOn = RESTART)
-            val (read, rec) = startTimed()
+            val (read, rec) = startTimed(oneSession())
             port.onRestart = { stuck.hook(RESTART) }
             try {
                 step(4_000)
@@ -395,7 +395,7 @@ class CoreNfcSearchRestartTest {
         for ((code, kind) in cases) {
             chipReadTest {
                 val ends = SessionEnds()
-                val (read, rec) = startTimed(CoreNfcReadSettings(telemetry = ends))
+                val (read, rec) = startTimed(oneSession(CoreNfcReadSettings(telemetry = ends)))
                 step(5_000)
                 systemEnds(code)
                 assertEquals(kind, rec.ending::class, "code $code")
@@ -424,7 +424,7 @@ class CoreNfcSearchRestartTest {
             chipReadTest {
                 val ends = SessionEnds()
                 onBegin = { it.systemEnd(nfcErrorFor(platform.CoreNFC.NFCErrorDomain, code, CoreNfcErrorSource.SESSION_END), code) }
-                val (read, rec) = startTimed(CoreNfcReadSettings(telemetry = ends))
+                val (read, rec) = startTimed(oneSession(CoreNfcReadSettings(telemetry = ends)))
                 val ending = assertIs<ChipReadEnding.NotStarted>(rec.ending, "code $code")
                 assertEquals(reason, ending.reason)
                 val end = ends.events.single()

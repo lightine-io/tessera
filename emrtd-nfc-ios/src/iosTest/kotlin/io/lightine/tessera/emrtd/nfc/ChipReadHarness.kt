@@ -195,3 +195,15 @@ internal fun chipReadTest(block: suspend ChipReadHarness.() -> Unit) =
             harness.close()
         }
     }
+
+/**
+ * [settings] for one system session per read: no renewal and no new try after a busy refusal
+ * (TES-346). For the tests of what one session does; the renewals have their own tests.
+ */
+internal fun oneSession(settings: CoreNfcReadSettings = CoreNfcReadSettings()): CoreNfcReadSettings =
+    settings
+        .toBuilder()
+        .maxSessionRenewals(CoreNfcReadSettings.SESSION_RENEWALS_OFF)
+        .sessionRenewMillis(CoreNfcReadSettings.SESSION_RENEW_OFF)
+        .busyRetryMillis(CoreNfcReadSettings.BUSY_RETRY_OFF)
+        .build()

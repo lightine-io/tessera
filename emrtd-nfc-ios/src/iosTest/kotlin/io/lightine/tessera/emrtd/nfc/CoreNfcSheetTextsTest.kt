@@ -88,42 +88,42 @@ class CoreNfcSheetTextsTest {
         chipReadTest {
             val endings = mutableListOf<ChipReadEnding>()
             val chip = FakeChip()
-            start().second.also {
+            start(settings = oneSession()).second.also {
                 present(FakeChipTag(chip))
                 step(400)
                 endings += it.ending
             }
             // Partial: the link drops on the last command, after access was granted.
             val last = chip.sent.size
-            start(settings = CoreNfcReadSettings(linkLoss = LinkLossPolicy.End)).second.also {
+            start(settings = oneSession(CoreNfcReadSettings(linkLoss = LinkLossPolicy.End))).second.also {
                 present(FakeChipTag(FakeChip().apply { loseAt += last }))
                 step(400)
                 endings += it.ending
             }
             // Failed: the first command unanswered with too little of the session left to try again.
-            start(settings = CoreNfcReadSettings(linkLoss = LinkLossPolicy.End)).second.also {
+            start(settings = oneSession(CoreNfcReadSettings(linkLoss = LinkLossPolicy.End))).second.also {
                 step(51_000)
                 present(FakeChipTag(FakeChip().apply { loseAt += 1 }))
                 step(400)
                 endings += it.ending
             }
-            start(options = ChipReadHarness.mrzOptions()).second.also {
+            start(options = ChipReadHarness.mrzOptions(), settings = oneSession()).second.also {
                 present(FakeChipTag(FakeChip(bacRefusesKey = true)))
                 step(400)
                 endings += it.ending
             }
             endings += start(options = ChipReadHarness.mrzOptions(wrongDigit = true)).second.ending
-            start().also {
+            start(settings = oneSession()).also {
                 it.first.cancel()
                 endings += it.second.ending
             }
-            start().second.also {
+            start(settings = oneSession()).second.also {
                 systemEnds(CoreNfcErrorCode.SESSION_TIMEOUT)
                 endings += it.ending
             }
             step(2_000)
             readingAvailable = false
-            endings += start().second.ending
+            endings += start(settings = oneSession()).second.ending
 
             val kinds = endings.map { it::class.simpleName }
             assertEquals(
@@ -170,7 +170,7 @@ class CoreNfcSheetTextsTest {
 
                     override fun textForEnding(ending: ChipReadEnding): String = "app ending"
                 }
-            val (read, rec) = start(texts = texts, settings = CoreNfcReadSettings(linkLoss = LinkLossPolicy.End))
+            val (read, rec) = start(texts = texts, settings = oneSession(CoreNfcReadSettings(linkLoss = LinkLossPolicy.End)))
             assertEquals("app: WaitingForDocument", port.alerts.first())
             // Too little of the session left for another try: the unanswered first command ends it.
             step(51_000)

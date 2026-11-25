@@ -94,7 +94,9 @@ public class ChipReadUpdate internal constructor(
  * A read goes through these states in order: [Starting], [WaitingForDocument], [DocumentFound],
  * [Connecting], [OpeningAccess], then [ReadingFile] and [AuthenticatingChip] in the order the chip
  * needs, then [CheckingFiles]. [NoAnswerYet] can come after [OpeningAccess] while the chip has not
- * answered yet. [LinkLost] and [Stopping] can come at any point after the read starts. Each state
+ * answered yet. On iPhone, [RenewingSession] can come while no document was reported, followed by
+ * [WaitingForDocument] again. [LinkLost] and [Stopping] can come at any point after the read
+ * starts. Each state
  * holds only identifiers and counts, never document data.
  *
  * May gain members in a later release: an exhaustive `when` over it then stops compiling until
@@ -251,6 +253,29 @@ public sealed class ChipReadState {
     ) : ChipReadState() {
         /** `NoAnswerYet(` the tries `)`. */
         override fun toString(): String = "NoAnswerYet(tries=$tries)"
+    }
+
+    /**
+     * On iPhone only: no document was reported yet, and the read closes the system's NFC session
+     * and opens a new one, within the same read. The system sheet closes and opens again; the
+     * access key, the attempt and the restarts after a lost link stay as they were.
+     *
+     * It comes before any document was reported in the read, in two cases: the system ended the
+     * session on its own with Core NFC's code 202 ("ended unexpectedly"), or no document was
+     * reported for the read's set time since the session began. On an iPhone, a session sometimes
+     * never reported a document that was near, until the system ended it about 22 seconds later; a
+     * new session with the phone already on the document found it at once. The next state is
+     * [WaitingForDocument] when the new session is on, with the time waited counted from the start
+     * of the read. Android never reports this state.
+     *
+     * @property renewal Which new session of the read this is, from 1.
+     * @since 1.0.0
+     */
+    public class RenewingSession internal constructor(
+        public val renewal: Int,
+    ) : ChipReadState() {
+        /** `RenewingSession(` the renewal `)`. */
+        override fun toString(): String = "RenewingSession(renewal=$renewal)"
     }
 
     /**

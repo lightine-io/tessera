@@ -292,7 +292,8 @@ class CatalogueGroupKIosTest {
     fun k07_noTagReportedThenSystemEnds202_endedBySystemAndTheNextStartWaits() =
         simTest { flow ->
             documentInField = false
-            val (_, first) = start(deviceOptions(flow))
+            // One session per read: the renewal after a 202 has its own case (K-07b).
+            val (_, first) = start(deviceOptions(flow), oneSession())
             step(24_000)
             systemEnds(CoreNfcErrorCode.SESSION_TERMINATED_UNEXPECTEDLY)
             val endedAt = now()
@@ -322,7 +323,8 @@ class CatalogueGroupKIosTest {
     fun k08_newSessionRefusedBusy203_notStartedAndTheNextStartWaits() =
         simTest { flow ->
             refuseBeginWith = IosSim.codeError(CoreNfcErrorCode.SYSTEM_IS_BUSY, CoreNfcErrorSource.SESSION_END)
-            val (_, first) = start(deviceOptions(flow))
+            // No new try after the refusal: the tries have their own case (K-08b).
+            val (_, first) = start(deviceOptions(flow), oneSession())
             step(10)
             assertEquals(NfcUnavailable.Reason.BUSY, assertIs<ChipReadEnding.NotStarted>(first.ending).reason)
             val refusedAt = first.endings.single().atMillis

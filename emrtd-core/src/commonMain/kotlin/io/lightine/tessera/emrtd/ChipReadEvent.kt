@@ -21,8 +21,11 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  * @property statusWord The chip's status word, when the step ended on one.
  * @property durationMillis How long the step took, in milliseconds.
  * @property systemCode The platform's own code, for a step that ended on one: today only
- *   [ChipReadStep.SESSION_END] on iPhone, with Core NFC's `NFCReaderError` code. `null` for every
- *   other step and on Android.
+ *   [ChipReadStep.SESSION_END] on iPhone, with Core NFC's `NFCReaderError` code, and
+ *   [ChipReadStep.SESSION_RENEW] when the system's end with that code led to the renewal. `null`
+ *   for every other step and on Android.
+ * @property renewal For [ChipReadStep.SESSION_RENEW] on iPhone: which new session of the read
+ *   this is, from 1. `null` for every other step and on Android.
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
@@ -35,6 +38,7 @@ public class ChipReadEvent internal constructor(
     public val statusWord: Int?,
     public val durationMillis: Long,
     public val systemCode: Int? = null,
+    public val renewal: Int? = null,
 ) : TelemetryEvent {
     // Only the SDK makes these events, so new fields can be added later without breaking callers.
 
@@ -44,7 +48,7 @@ public class ChipReadEvent internal constructor(
     /** The fields; no document data. */
     override fun toString(): String =
         "ChipReadEvent($step, $outcome, protocol=$protocol, fileId=${fileId?.toString(16)}, byteCount=$byteCount, " +
-            "statusWord=${statusWord?.toString(16)}, durationMillis=$durationMillis, systemCode=$systemCode)"
+            "statusWord=${statusWord?.toString(16)}, durationMillis=$durationMillis, systemCode=$systemCode, renewal=$renewal)"
 
     /** Constants for [ChipReadEvent]. */
     public companion object {
@@ -88,6 +92,30 @@ public class ChipReadEvent internal constructor(
             durationMillis: Long,
         ): ChipReadEvent =
             ChipReadEvent(ChipReadStep.SESSION_END, ChipReadStepOutcome.FAILED, null, null, null, null, durationMillis, systemCode)
+
+        /**
+         * A [ChipReadStep.SESSION_RENEW] event: the read opened a new reader session, or could not.
+         *
+         * Internal: see [InternalTesseraChipApi].
+         *
+         * @param renewal Which new session of the read this is, from 1.
+         * @param systemCode The platform's code of the session end that led to it (202 on iPhone),
+         *   or `null` when the read ended the old session itself because no document was reported in
+         *   time.
+         * @param outcome [ChipReadStepOutcome.SUCCEEDED] when the new session began,
+         *   [ChipReadStepOutcome.FAILED] when the system kept refusing it.
+         * @param durationMillis The time from the decision to renew to the new session's begin, or
+         *   to the giving up, in milliseconds.
+         * @return The event, with no protocol, file, byte count or status word.
+         * @since 1.0.0
+         */
+        @InternalTesseraChipApi
+        public fun sessionRenew(
+            renewal: Int,
+            systemCode: Int?,
+            outcome: ChipReadStepOutcome,
+            durationMillis: Long,
+        ): ChipReadEvent = ChipReadEvent(ChipReadStep.SESSION_RENEW, outcome, null, null, null, null, durationMillis, systemCode, renewal)
     }
 }
 
@@ -186,6 +214,20 @@ public enum class ChipReadStep {
      * @since 1.0.0
      */
     SESSION_END,
+
+    /**
+     * On iPhone: the read closed its NFC reader session before any document was reported and
+     * opened a new one ([ChipReadState.RenewingSession]). Reported once per new session, with
+     * [ChipReadEvent.renewal] (which new session, from 1), the reason in
+     * [ChipReadEvent.systemCode] (202 when the system ended the old session with that code, `null`
+     * when the read ended it because no document was reported in time), and the time from the
+     * decision to the new session's begin. [ChipReadStepOutcome.SUCCEEDED] when the new session
+     * began, [ChipReadStepOutcome.FAILED] when the system kept refusing it as busy and the read
+     * ended. On Android there is no such event.
+     *
+     * @since 1.0.0
+     */
+    SESSION_RENEW,
 }
 
 /**

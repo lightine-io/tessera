@@ -99,10 +99,44 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  *   alone before. [CoreNfcPolling.ISO14443] polls ISO 14443 alone on every version and misses
  *   chips that answer only after PACE polling. There is no such setting on Android, where the
  *   system finds the tag.
+ * @property maxSessionRenewals How many times one read may close its system session and open a
+ *   new one while no document was reported
+ *   ([io.lightine.tessera.emrtd.ChipReadState.RenewingSession]), counting both causes: the system
+ *   ended the session with Core NFC's code 202 ("ended unexpectedly") before any document was
+ *   reported, or [sessionRenewMillis] passed with no document reported. On an iPhone about one
+ *   read in four, with the session started before the phone was on the document, never reported
+ *   the document and was ended by the system with code 202 about 22 seconds after the document
+ *   came near; a session started with the phone already on the document found it at once. A
+ *   renewal keeps the key, the attempt and the restarts after a lost link; the sheet closes and
+ *   opens again. Never after a document was reported in the read, after the read's ending began,
+ *   or after the person tapped Cancel (code 200) or the session's 60 seconds passed (code 201):
+ *   those end the read as before. Default 2. [SESSION_RENEWALS_OFF] (0) turns renewals off: a 202
+ *   then ends the read with [io.lightine.tessera.emrtd.ChipReadEnding.EndedBySystem]. When the
+ *   renewals are used up, the next 202 ends the read that way too. There is no such setting on
+ *   Android, where the system has no such session.
+ * @property sessionRenewMillis How long a system session may go with no document reported before
+ *   the read ends it itself and opens a new one, counted from the session's begin, within
+ *   [maxSessionRenewals]. Default 10000, well before the system's own end at about 22 seconds,
+ *   after two new searches ([searchRestartMillis]). [SESSION_RENEW_OFF] (0) turns it off; the
+ *   renewal after the system's code 202 still happens. Any other value must be at least
+ *   [MIN_SESSION_RENEW_MILLIS] (5000): a shorter one would close the sheet before a person had
+ *   time to bring the phone to the document.
+ * @property busyRetryMillis How long the read keeps trying to begin a system session that the
+ *   system refused as busy (Core NFC's code 203), counted from the first refusal: it tries again
+ *   after 0.5, 1, 2, then every 3 seconds, the last try at this bound. On an iPhone the system may
+ *   refuse a new session for a short time after one ended. It applies to the first session (the
+ *   read stays in [io.lightine.tessera.emrtd.ChipReadState.Starting]; when the bound passes the read
+ *   ends with [io.lightine.tessera.emrtd.ChipReadEnding.NotStarted] and
+ *   [io.lightine.tessera.types.errors.NfcUnavailable.Reason.BUSY]) and to a renewed one (when the
+ *   bound passes the read ends with [io.lightine.tessera.emrtd.ChipReadEnding.EndedBySystem] and
+ *   that reason: the read had started). A refusal costs no renewal. Default 6000.
+ *   [BUSY_RETRY_OFF] (0) turns it off: the first refusal ends the read.
  * @throws IllegalArgumentException when [commandTimeoutMillis], [readTimeoutMillis] or
- *   [commandTimeoutBeforeAccessMillis] is not positive, [settleDelayMillis] or
- *   [waitAfterSystemEndMillis] is negative, or [searchRestartMillis] is neither
- *   [SEARCH_RESTART_OFF] nor at least [MIN_SEARCH_RESTART_MILLIS].
+ *   [commandTimeoutBeforeAccessMillis] is not positive, [settleDelayMillis],
+ *   [waitAfterSystemEndMillis], [maxSessionRenewals] or [busyRetryMillis] is negative,
+ *   [searchRestartMillis] is neither [SEARCH_RESTART_OFF] nor at least
+ *   [MIN_SEARCH_RESTART_MILLIS], or [sessionRenewMillis] is neither [SESSION_RENEW_OFF] nor at
+ *   least [MIN_SESSION_RENEW_MILLIS].
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
@@ -119,8 +153,15 @@ public class CoreNfcReadSettings
         public val readTimeoutMillis: Long = DEFAULT_READ_TIMEOUT_MILLIS,
         public val searchRestartMillis: Long = DEFAULT_SEARCH_RESTART_MILLIS,
         public val polling: CoreNfcPolling = CoreNfcPolling.AUTOMATIC,
+        public val maxSessionRenewals: Int = DEFAULT_MAX_SESSION_RENEWALS,
+        public val sessionRenewMillis: Long = DEFAULT_SESSION_RENEW_MILLIS,
+        public val busyRetryMillis: Long = DEFAULT_BUSY_RETRY_MILLIS,
     ) {
-        /** The defaults: [LinkLossPolicy.Resume] with 2 restarts, 400, 5000, 1000, 1500, 2000 and 4000 milliseconds, [CoreNfcPolling.AUTOMATIC]. */
+        /**
+         * The defaults: [LinkLossPolicy.Resume] with 2 restarts, 400, 5000, 1000, 1500, 2000 and
+         * 4000 milliseconds, [CoreNfcPolling.AUTOMATIC], 2 session renewals, 10000 and 6000
+         * milliseconds.
+         */
         public constructor() : this(LinkLossPolicy.Resume(DEFAULT_RESTARTS))
 
         init {
@@ -132,6 +173,11 @@ public class CoreNfcReadSettings
             require(searchRestartMillis == SEARCH_RESTART_OFF || searchRestartMillis >= MIN_SEARCH_RESTART_MILLIS) {
                 "searchRestartMillis must be 0 (off) or at least $MIN_SEARCH_RESTART_MILLIS"
             }
+            require(maxSessionRenewals >= 0) { "maxSessionRenewals must not be negative" }
+            require(sessionRenewMillis == SESSION_RENEW_OFF || sessionRenewMillis >= MIN_SESSION_RENEW_MILLIS) {
+                "sessionRenewMillis must be 0 (off) or at least $MIN_SESSION_RENEW_MILLIS"
+            }
+            require(busyRetryMillis >= 0) { "busyRetryMillis must not be negative" }
         }
 
         /** The values, never document data. */
@@ -140,7 +186,8 @@ public class CoreNfcReadSettings
                 "commandTimeoutMillis=$commandTimeoutMillis, readTimeoutMillis=$readTimeoutMillis, " +
                 "commandTimeoutBeforeAccessMillis=$commandTimeoutBeforeAccessMillis, " +
                 "waitAfterSystemEndMillis=$waitAfterSystemEndMillis, searchRestartMillis=$searchRestartMillis, " +
-                "observerOn=$observerOn, polling=$polling)"
+                "observerOn=$observerOn, polling=$polling, maxSessionRenewals=$maxSessionRenewals, " +
+                "sessionRenewMillis=$sessionRenewMillis, busyRetryMillis=$busyRetryMillis)"
 
         /**
          * A builder that starts from these values, so one value can change without naming the
@@ -160,6 +207,9 @@ public class CoreNfcReadSettings
                 .readTimeoutMillis(readTimeoutMillis)
                 .searchRestartMillis(searchRestartMillis)
                 .polling(polling)
+                .maxSessionRenewals(maxSessionRenewals)
+                .sessionRenewMillis(sessionRenewMillis)
+                .busyRetryMillis(busyRetryMillis)
 
         /** The time limit for one command before access: the smaller of the two limits. */
         internal val effectiveTimeoutBeforeAccessMillis: Long
@@ -190,6 +240,9 @@ public class CoreNfcReadSettings
             private var readTimeoutMillis: Long = DEFAULT_READ_TIMEOUT_MILLIS
             private var searchRestartMillis: Long = DEFAULT_SEARCH_RESTART_MILLIS
             private var polling: CoreNfcPolling = CoreNfcPolling.AUTOMATIC
+            private var maxSessionRenewals: Int = DEFAULT_MAX_SESSION_RENEWALS
+            private var sessionRenewMillis: Long = DEFAULT_SESSION_RENEW_MILLIS
+            private var busyRetryMillis: Long = DEFAULT_BUSY_RETRY_MILLIS
 
             /** What the read does when the link to the chip is lost. */
             public fun linkLoss(policy: LinkLossPolicy): Builder = apply { linkLoss = policy }
@@ -221,6 +274,15 @@ public class CoreNfcReadSettings
             /** What the system session polls for. */
             public fun polling(choice: CoreNfcPolling): Builder = apply { polling = choice }
 
+            /** How many times one read may open a new system session while no document was reported; [SESSION_RENEWALS_OFF] for never. */
+            public fun maxSessionRenewals(count: Int): Builder = apply { maxSessionRenewals = count }
+
+            /** How long a session may go with no document reported before the read opens a new one; [SESSION_RENEW_OFF] for never. */
+            public fun sessionRenewMillis(millis: Long): Builder = apply { sessionRenewMillis = millis }
+
+            /** How long the read keeps trying to begin a session the system refused as busy; [BUSY_RETRY_OFF] for not at all. */
+            public fun busyRetryMillis(millis: Long): Builder = apply { busyRetryMillis = millis }
+
             /**
              * The settings.
              *
@@ -239,6 +301,9 @@ public class CoreNfcReadSettings
                     readTimeoutMillis,
                     searchRestartMillis,
                     polling,
+                    maxSessionRenewals,
+                    sessionRenewMillis,
+                    busyRetryMillis,
                 )
         }
 
@@ -271,5 +336,26 @@ public class CoreNfcReadSettings
 
             /** The shortest [searchRestartMillis] other than [SEARCH_RESTART_OFF]: 2000. */
             public const val MIN_SEARCH_RESTART_MILLIS: Long = 2_000
+
+            /** The default [maxSessionRenewals]: 2. */
+            public const val DEFAULT_MAX_SESSION_RENEWALS: Int = 2
+
+            /** The [maxSessionRenewals] that turns renewals off: 0. */
+            public const val SESSION_RENEWALS_OFF: Int = 0
+
+            /** The default [sessionRenewMillis]: 10000. */
+            public const val DEFAULT_SESSION_RENEW_MILLIS: Long = 10_000
+
+            /** The [sessionRenewMillis] that turns the renewal on a timer off: 0. */
+            public const val SESSION_RENEW_OFF: Long = 0
+
+            /** The shortest [sessionRenewMillis] other than [SESSION_RENEW_OFF]: 5000. */
+            public const val MIN_SESSION_RENEW_MILLIS: Long = 5_000
+
+            /** The default [busyRetryMillis]: 6000. */
+            public const val DEFAULT_BUSY_RETRY_MILLIS: Long = 6_000
+
+            /** The [busyRetryMillis] that turns the tries after a busy refusal off: 0. */
+            public const val BUSY_RETRY_OFF: Long = 0
         }
     }

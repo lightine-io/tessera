@@ -34,6 +34,9 @@ internal class OwnedReaderSession(
     private var systemEnded = false
     private var released = false
 
+    // Whether this session put [keeper] in [LiveSessions]: taken out once, by the system's end.
+    private var kept = false
+
     /** Whether the SDK asked for the ending (the system's later report is then only its echo). */
     val endedBySdk: Boolean get() = locked { endRequested }
 
@@ -55,6 +58,7 @@ internal class OwnedReaderSession(
                     false
                 } else {
                     beginning = true
+                    kept = true
                     true
                 }
             }
@@ -122,15 +126,18 @@ internal class OwnedReaderSession(
      * @return `false` when the end was already reported.
      */
     fun systemEnd(): Boolean {
+        var letGo = false
         val first =
             locked {
                 if (systemEnded) return@locked false
                 systemEnded = true
+                letGo = kept
+                kept = false
                 val firstRelease = !released
                 released = true
                 firstRelease
             }
-        LiveSessions.remove(keeper)
+        if (letGo) LiveSessions.remove(keeper)
         if (first) onReleased()
         return first
     }

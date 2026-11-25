@@ -116,6 +116,8 @@ internal class IosSim(
                         val refusal = refuseBeginWith
                         if (refusal != null) {
                             refuseBeginWith = null
+                            // A refused session never becomes active.
+                            p.reportActive = false
                             later(0) { p.systemEnd(refusal) }
                         } else {
                             findDocument(p, arriveAfterMillis)

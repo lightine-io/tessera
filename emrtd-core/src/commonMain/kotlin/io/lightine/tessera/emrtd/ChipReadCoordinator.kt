@@ -281,6 +281,31 @@ public class ChipReadCoordinator private constructor(
     }
 
     /**
+     * The update [waiting] would publish now for [waitedMillis], without publishing it: for a
+     * platform that shows its text before the reader is on.
+     *
+     * @param waitedMillis How long the reader has waited so far, in milliseconds.
+     * @return The update.
+     */
+    @JvmSynthetic
+    public fun waitingUpdate(waitedMillis: Long): ChipReadUpdate = updateOf(ChipReadState.WaitingForDocument(waitedMillis))
+
+    /**
+     * The platform closes its reader session and opens a new one while no document was reported:
+     * [ChipReadState.RenewingSession]. No attempt or restart is used; call [waiting] when the new
+     * session is on.
+     *
+     * @param renewal Which new session of the read this is, from 1.
+     * @return The update, published unless the read has ended.
+     */
+    @JvmSynthetic
+    public fun renewingSession(renewal: Int): ChipReadUpdate {
+        val state = ChipReadState.RenewingSession(renewal)
+        publish(state)
+        return updateOf(state)
+    }
+
+    /**
      * A document is found and nothing was sent yet: [ChipReadState.DocumentFound]. While the read
      * shows [ChipReadState.NoAnswerYet] it does nothing: that state stays.
      */
@@ -670,9 +695,11 @@ public class ChipReadCoordinator private constructor(
         return (started + next).coerceAtLeast(1)
     }
 
+    private fun updateOf(state: ChipReadState): ChipReadUpdate = ChipReadUpdate(state, lastProgress.load(), attemptOf(state), maxAttempts)
+
     private fun publish(state: ChipReadState) {
         if (isEnded) return
-        post(listOf(Item.Update(ChipReadUpdate(state, lastProgress.load(), attemptOf(state), maxAttempts))))
+        post(listOf(Item.Update(updateOf(state))))
     }
 
     /** The gate: only the first ending passes; [before] goes out right before of it. */

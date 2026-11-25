@@ -68,6 +68,12 @@ internal class ConnectFailure(
 
 /** What the reader session reports. Called on the session's own serial queue, never the main queue. */
 internal interface ReaderSessionEvents {
+    /**
+     * The session is on: the sheet shows and the reader polls (`tagReaderSessionDidBecomeActive`).
+     * A session the system refuses (busy, for example) ends without it.
+     */
+    fun onActive() {}
+
     fun onTagsDetected(tags: List<DetectedTag>)
 
     /**
@@ -198,7 +204,8 @@ private class SessionDelegate(
 ) : NSObject(),
     NFCTagReaderSessionDelegateProtocol {
     override fun tagReaderSessionDidBecomeActive(session: NFCTagReaderSession) {
-        // Nothing to do: the system sheet is showing and the reader is polling.
+        // The system sheet is showing and the reader is polling.
+        events.onActive()
     }
 
     override fun tagReaderSession(

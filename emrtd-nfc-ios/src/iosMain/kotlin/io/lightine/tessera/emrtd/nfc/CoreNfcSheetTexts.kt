@@ -79,6 +79,8 @@ public object CoreNfcDefaultSheetTexts : CoreNfcSheetTexts {
      * - No answer yet: "Found, no answer yet. Move the phone a little."
      * - Link lost: "Connection lost. Hold the document again." with the attempt the read now
      *   waits for, for example "Try 2 of 3".
+     * - Renewing the session: "Searching again", shown as the old sheet closes; the new sheet opens
+     *   with the waiting text.
      * - Stopping: "Stopping".
      */
     override fun textFor(update: ChipReadUpdate): String {
@@ -131,6 +133,11 @@ public object CoreNfcDefaultSheetTexts : CoreNfcSheetTexts {
 
             ChipReadState.Stopping -> {
                 "Stopping"
+            }
+
+            is ChipReadState.RenewingSession -> {
+                // Shown as the old session closes; the new one opens with the waiting text.
+                "Searching again"
             }
 
             else -> {

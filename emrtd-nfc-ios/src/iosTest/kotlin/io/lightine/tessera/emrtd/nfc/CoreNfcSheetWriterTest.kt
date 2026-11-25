@@ -193,7 +193,7 @@ class CoreNfcSheetWriterTest {
     @Test
     fun the_default_text_does_not_change_in_20_seconds_of_waiting() =
         chipReadTest {
-            val (read, rec) = start()
+            val (read, rec) = start(settings = oneSession())
             step(20_000)
             assertEquals(11, rec.states.count { it is ChipReadState.WaitingForDocument })
             assertEquals(listOf("Hold the top of your iPhone on the document and move it slowly"), port.alerts)
@@ -272,7 +272,7 @@ class CoreNfcSheetWriterTest {
         val (read, rec) =
             start(
                 texts = ChangingTexts,
-                settings = CoreNfcReadSettings(telemetry = events),
+                settings = oneSession(CoreNfcReadSettings(telemetry = events)),
                 recorder = recorder,
             )
         // The first text goes through the queue before the session begins; a stuck one is left to the test.
