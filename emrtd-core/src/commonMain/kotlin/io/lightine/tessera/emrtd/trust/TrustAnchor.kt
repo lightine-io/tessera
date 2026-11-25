@@ -5,6 +5,7 @@ import io.lightine.tessera.emrtd.internal.x509.X509Certificate
 import io.lightine.tessera.emrtd.internal.x509.X509Exception
 import io.lightine.tessera.emrtd.internal.x509.X509Parser
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
+import kotlin.jvm.JvmStatic
 
 /**
  * A root certificate the app supplies: a country signing certificate (CSCA) the app chose to use
@@ -12,7 +13,7 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  *
  * The SDK never bundles or downloads root certificates; which roots to use is the app's choice. The
  * SDK only checks, as facts, whether a chip's signer certificate is signed by one of the roots the
- * app passed in. A trust anchor here is just a certificate that was read: nothing about it has been
+ * app passed in. A trust anchor here is only a certificate that was read: nothing about it has been
  * checked, and the SDK never says a root is trustworthy.
  *
  * Make one from a DER certificate with [fromDer], or read many from a master list with
@@ -60,6 +61,7 @@ public class TrustAnchor internal constructor(
          * the reason and where in the bytes it was found, as an offset counted from the first byte
          * of the DER passed here. Never throws for bad data.
          */
+        @JvmStatic
         public fun fromDer(der: ByteArray): TrustAnchorParse =
             try {
                 TrustAnchorParse.Parsed(TrustAnchor(X509Parser.parse(der.copyOf())))
@@ -73,6 +75,10 @@ public class TrustAnchor internal constructor(
 
 /**
  * The outcome of reading a root certificate.
+ *
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -95,6 +101,10 @@ public sealed class TrustAnchorParse {
 
 /**
  * Why a root certificate could not be read.
+ *
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *

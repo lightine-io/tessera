@@ -131,7 +131,8 @@ class BacAppendixDTest {
                         PlainApduSender(transport),
                         c,
                         nineCharacterKey(),
-                    ) { n -> randoms.removeFirst().also { assertEquals(n, it.size) } }
+                        random = { n -> randoms.removeFirst().also { assertEquals(n, it.size) } },
+                    )
                 // D.3 inspection system step 4: SSC.
                 assertEquals("887022120C06C226", channel.sscCopy().toHex())
 

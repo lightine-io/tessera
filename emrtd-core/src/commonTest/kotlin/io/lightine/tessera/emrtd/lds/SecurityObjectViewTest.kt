@@ -3,6 +3,7 @@ package io.lightine.tessera.emrtd.lds
 import io.lightine.tessera.emrtd.fakechip.FakePki
 import io.lightine.tessera.emrtd.internal.asn1.DerWriter
 import io.lightine.tessera.emrtd.internal.cms.BerNormalizer
+import io.lightine.tessera.emrtd.trust.TrustAnchorProblem
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -37,6 +38,7 @@ class SecurityObjectViewTest {
         assertFalse(view.hashAlgorithmHasParameters)
         assertEquals(listOf(1, 2, 14), view.dataGroupHashes.map { it.number })
         assertContentEquals(FakePki.fakeHash(14), view.hashOf(14))
+        assertContentEquals(FakePki.fakeHash(14), view.dataGroupHashes.last().hash)
         assertNull(view.hashOf(3))
         assertEquals("0108", view.ldsVersion)
         assertEquals("040000", view.unicodeVersion)
@@ -154,6 +156,36 @@ class SecurityObjectViewTest {
         assertEquals(1, view.unreadableCertificateCount)
         assertEquals(1, view.certificates.size)
         assertEquals(true, view.certificates.single().isCa)
+        val unreadable = view.unreadableCertificates.single()
+        assertEquals(0, unreadable.position)
+        assertEquals(DerWriter.sequence(DerWriter.integer(1)).size, unreadable.length)
+    }
+
+    @Test
+    fun eachUnreadableCertificateNamesItsPositionLengthProblemAndOffset() {
+        val badField = FakePki.certificate(notBefore = DerWriter.utcTime("249901000000Z"))
+        // Well-formed DER that is not a certificate: a sequence holding one integer.
+        val badEncoding = DerWriter.sequence(DerWriter.integer(1))
+        val view =
+            parsed(
+                FakePki.sod(
+                    FakePki.ldsSecurityObject(1, groups = groups),
+                    certificates = listOf(FakePki.cscaCertificate(), badField, badEncoding),
+                ),
+            )
+        assertEquals(1, view.certificates.size)
+        val (field, encoding) = view.unreadableCertificates
+        assertEquals(1, field.position)
+        assertEquals(badField.size, field.length)
+        assertEquals(TrustAnchorProblem.INVALID_CERTIFICATE_FIELD, field.problem)
+        assertTrue(field.offset > 0)
+        assertEquals(2, encoding.position)
+        assertEquals(badEncoding.size, encoding.length)
+        assertEquals(TrustAnchorProblem.MALFORMED_ENCODING, encoding.problem)
+        assertEquals(
+            "UnreadableSignerCertificate(position=1, length=${badField.size}, problem=INVALID_CERTIFICATE_FIELD, offset=${field.offset})",
+            field.toString(),
+        )
     }
 
     @Test
@@ -161,6 +193,19 @@ class SecurityObjectViewTest {
         val cert = FakePki.documentSignerCertificate(extra = listOf(FakePki.Ext("1.2.3.4.5.6", true, DerWriter.nullValue())))
         val view = parsed(FakePki.sod(FakePki.ldsSecurityObject(1, groups = groups), certificates = listOf(cert)))
         assertEquals(listOf("1.2.3.4.5.6"), view.certificates.single().unrecognizedCriticalExtensions)
+        val unknown =
+            view.certificates
+                .single()
+                .extensions
+                .single { it.oid == "1.2.3.4.5.6" }
+        assertTrue(unknown.critical)
+        assertFalse(unknown.recognized)
+        assertTrue(
+            view.certificates
+                .single()
+                .extensions
+                .any { it.recognized },
+        )
     }
 
     @Test

@@ -7,6 +7,7 @@ import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.ChipMalformedFile
 import io.lightine.tessera.types.vocabulary.ReadMethod
+import kotlin.jvm.JvmStatic
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -74,6 +75,7 @@ public class Dg1View private constructor(
          * @param referenceTime the instant that picks the century of two-digit years and sets the
          *   date warnings, as for [MrzParser.parse]. Defaults to the current time.
          */
+        @JvmStatic
         public fun parse(
             bytes: ByteArray,
             referenceTime: Instant = Clock.System.now(),

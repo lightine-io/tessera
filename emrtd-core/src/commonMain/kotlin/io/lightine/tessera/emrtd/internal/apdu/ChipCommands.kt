@@ -18,20 +18,26 @@ internal object ChipCommands {
     /** SELECT P2: return no file control information. */
     const val SELECT_NO_FCI = 0x0C
 
-    /**
-     * SELECT an application by AID: `00 A4 04 0C`, data = AID, no Le (Part 10, section 3.6.1.2).
-     * The reader never sends SELECT MF (`00 A4 00 0C`), which Part 10, section 3.6.1.1 advises against.
-     */
+    /** SELECT an application by AID: `00 A4 04 0C`, data = AID, no Le (Part 10, section 3.6.1.2). */
     fun selectApplication(aid: ByteArray): CommandApdu = CommandApdu(0x00, INS_SELECT, SELECT_BY_AID, SELECT_NO_FCI, aid)
 
-    /** SELECT an elementary file by its two-byte file identifier: `00 A4 02 0C`, data = FID, no Le. */
+    /**
+     * SELECT an elementary file under the current DF by its two-byte file identifier: `00 A4 02 0C`,
+     * data = FID, no Le (Part 10, Table 3). The DF that holds the EF must be current (section 3.6.2).
+     */
     fun selectFile(fid: Int): CommandApdu {
         require(fid in 0..0xFFFF) { "fid out of range" }
         return CommandApdu(0x00, INS_SELECT, SELECT_EF_UNDER_CURRENT_DF, SELECT_NO_FCI, byteArrayOf((fid shr 8).toByte(), fid.toByte()))
     }
 
-    /** SELECT the master file: `00 A4 00 0C 02 3F 00`. */
-    fun selectMasterFile(): CommandApdu = CommandApdu(0x00, INS_SELECT, 0x00, SELECT_NO_FCI, byteArrayOf(0x3F, 0x00))
+    /** SELECT the master file as Part 10, Table 1 gives it: `00 A4 00 0C`, no data, no Le. */
+    fun selectMasterFile(): CommandApdu = CommandApdu(0x00, INS_SELECT, 0x00, SELECT_NO_FCI)
+
+    /**
+     * SELECT the master file by its file identifier: `00 A4 00 0C 02 3F 00` (ISO/IEC 7816-4). Sent
+     * only when a chip does not accept the Table 1 form; many chips and readers use this one.
+     */
+    fun selectMasterFileById(): CommandApdu = CommandApdu(0x00, INS_SELECT, 0x00, SELECT_NO_FCI, byteArrayOf(0x3F, 0x00))
 
     /** READ BINARY of the current EF at a 15-bit [offset]: `00 B0 P1 P2 Le`. */
     fun readBinary(

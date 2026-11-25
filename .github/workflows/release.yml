@@ -125,13 +125,13 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: ./gradlew publishToMavenCentral
 
-      - name: Build the Tessera XCFramework
-        run: ./gradlew :mrz-camera-ios:packTesseraXCFramework
+      - name: Build the TesseraCore XCFramework
+        run: ./gradlew :mrz-camera-ios:packTesseraCoreXCFramework
 
       - name: Compute SPM checksum
         id: checksum
         run: |
-          ZIP="mrz-camera-ios/build/distributions/Tessera.xcframework.zip"
+          ZIP="mrz-camera-ios/build/distributions/TesseraCore.xcframework.zip"
           SUM=$(swift package compute-checksum "$ZIP")
           echo "checksum=$SUM" >> "$GITHUB_OUTPUT"
 
@@ -142,7 +142,7 @@ jobs:
         run: |
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
-          ZIP="mrz-camera-ios/build/distributions/Tessera.xcframework.zip"
+          ZIP="mrz-camera-ios/build/distributions/TesseraCore.xcframework.zip"
           # Consumer-facing notes: install blocks + this version's CHANGELOG section (the
           # Keep-a-Changelog discipline guarantees the section exists at tag time) + the SPM
           # checksum, which stays in the release body as the independent second authenticity
@@ -171,7 +171,7 @@ jobs:
               inblock  { print }
             ' CHANGELOG.md
             echo
-            echo "\`Tessera.xcframework.zip\` SHA-256 checksum (for the SPM \`binaryTarget\` — the independent second authenticity channel):"
+            echo "\`TesseraCore.xcframework.zip\` SHA-256 checksum (for the SPM \`binaryTarget\` — the independent second authenticity channel):"
             echo
             echo '```'
             echo "$CHECKSUM"
@@ -230,7 +230,7 @@ jobs:
 
           # Partial-rerun guard: if a prior run already merged Package.swift but did not tag, tag only.
           CUR=$(gh api "repos/${REPO}/contents/Package.swift" --jq '.content' | base64 -d)
-          if printf '%s' "${CUR}" | grep -q "releases/download/${TAG}/Tessera.xcframework.zip"; then
+          if printf '%s' "${CUR}" | grep -q "releases/download/${TAG}/TesseraCore.xcframework.zip"; then
             echo "::notice::Package.swift already at ${TAG} on main; tagging only."
             MERGE=$(gh api "repos/${REPO}/git/ref/heads/main" --jq '.object.sha')
             gh api -X POST "repos/${REPO}/git/refs" -f ref="refs/tags/${TAG}" -f sha="${MERGE}" >/dev/null
@@ -239,8 +239,14 @@ jobs:
 
           # Render the new Package.swift: swap only the download URL's version and the checksum.
           NEW=$(printf '%s' "${CUR}" \
-            | sed -E "s#(releases/download/)v[0-9][^/]*(/Tessera\.xcframework\.zip)#\1${TAG}\2#" \
+            | sed -E "s#(releases/download/)v[0-9][^/]*(/TesseraCore\.xcframework\.zip)#\1${TAG}\2#" \
             | sed -E "s#(checksum: \")[a-f0-9]{64}(\")#\1${CHECKSUM}\2#")
+          # Fail closed if the url pattern did not match (for example a Package.swift that still names
+          # another asset): never open a pin PR that points at a file this release did not upload.
+          if ! printf '%s' "${NEW}" | grep -q "releases/download/${TAG}/TesseraCore.xcframework.zip"; then
+            echo "::error::Package.swift on ${REPO} main has no binaryTarget url ending in /TesseraCore.xcframework.zip; fix it by hand, then re-run."
+            exit 1
+          fi
 
           # Branch off the current default-branch head (reset a stale branch if a prior run left one).
           BASE=$(gh api "repos/${REPO}/git/ref/heads/main" --jq '.object.sha')
@@ -345,10 +351,10 @@ jobs:
       - name: Validate publish task graph (no upload, no secrets)
         run: ./gradlew publishToMavenCentral --dry-run
 
-      - name: Build the Tessera XCFramework
-        run: ./gradlew :mrz-camera-ios:packTesseraXCFramework
+      - name: Build the TesseraCore XCFramework
+        run: ./gradlew :mrz-camera-ios:packTesseraCoreXCFramework
 
       - name: Compute SPM checksum (sanity)
         run: |
-          ZIP="mrz-camera-ios/build/distributions/Tessera.xcframework.zip"
+          ZIP="mrz-camera-ios/build/distributions/TesseraCore.xcframework.zip"
           swift package compute-checksum "$ZIP"

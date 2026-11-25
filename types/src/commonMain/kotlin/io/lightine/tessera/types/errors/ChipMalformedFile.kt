@@ -29,6 +29,10 @@ public data class ChipMalformedFile(
     /**
      * What is wrong with a file.
      *
+     * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+     * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+     * that is your choice, and today the compiler warns that such an `else` is redundant.
+     *
      * @since 1.0.0
      */
     public enum class Reason {
@@ -79,6 +83,10 @@ public data class ChipMalformedFile(
             val where = if (offset == null) "" else " (at byte offset $offset)"
             return "$which cannot be read: $what$where"
         }
+
+    /** A stable name of this error: see [ChipError.code]. */
+    override val code: String
+        get() = "malformed-file." + slug(reason.name)
 
     /** `ChipMalformedFile: ` followed by [description]. */
     override fun toString(): String = "ChipMalformedFile: $description"

@@ -23,9 +23,9 @@ internal enum class SmFailure {
     WRONG_PADDING,
 
     /**
-     * The chip answered without secure messaging with a status word that ends a session (a
-     * secure-messaging error or "security status not satisfied"; section 9.8.5): it has dropped
-     * its session keys.
+     * The chip answered without secure messaging with a status word other than 9000. Inside a
+     * session that happens only when the chip aborts it (section 9.8.5): it has dropped its
+     * session keys.
      */
     CHIP_ENDED_SESSION,
 

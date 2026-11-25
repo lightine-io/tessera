@@ -22,7 +22,10 @@ class CoreNfcSimulatorTest {
     @Test
     fun the_real_session_reports_not_supported_on_the_simulator() =
         runTest {
-            val error = assertFailsWith<ApduTransportException> { CoreNfcSession("Hold the iPhone on the document").connect() }.error
+            val error =
+                assertFailsWith<ApduTransportException> {
+                    CoreNfcSession("Hold your iPhone near the document", "Reading failed").connect()
+                }.error
             assertEquals(NfcUnavailable(NfcUnavailable.Reason.NOT_SUPPORTED), error)
         }
 }

@@ -1,5 +1,6 @@
 package io.lightine.tessera.emrtd
 
+import io.lightine.tessera.types.vocabulary.MrzField
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -117,5 +118,43 @@ class ChipAccessKeyTest {
             val e = assertFailsWith<IllegalArgumentException> { case() }
             assertFalse("T22000129" in e.message.orEmpty() || "34a7" in e.message.orEmpty())
         }
+    }
+
+    @Test
+    fun check_digit_findings_name_each_field_whose_digit_does_not_match() {
+        // The specimen key's expiry check digit is not the computed one (1): only that field is named.
+        assertEquals(setOf(MrzField.DATE_OF_EXPIRY), specimenKey().checkDigitFindings)
+        assertTrue(ChipAccessKey.Mrz("T22000129", '3', "900315", '2', "340314", '1').checkDigitFindings.isEmpty())
+        val key = ChipAccessKey.Mrz("AB12<<<<<", '0', "9003<<", '<', "340314", '9')
+        assertEquals(
+            setOf(MrzField.DOCUMENT_NUMBER, MrzField.DATE_OF_BIRTH, MrzField.DATE_OF_EXPIRY),
+            key.checkDigitFindings,
+        )
+        assertEquals(setOf(MrzField.DATE_OF_EXPIRY), ChipAccessKey.Mrz("T22000129", '3', "900315", '2', "340314", '4').checkDigitFindings)
+        // The key still holds the values as given: a finding, not a correction.
+        assertContentEquals(
+            "T22000129390031523403144".encodeToByteArray(),
+            ChipAccessKey.Mrz("T22000129", '3', "900315", '2', "340314", '4').secretCopy(),
+        )
+    }
+
+    @Test
+    fun check_digits_of_the_icao_examples_match_including_a_long_document_number() {
+        // Doc 9303 Part 11, Appendix D: the nine-character number, and the TD1 number that goes on
+        // in the optional data (its check digit covers the whole number).
+        assertTrue(ChipAccessKey.Mrz("L898902C<", '3', "690806", '1', "940623", '6').checkDigitFindings.isEmpty())
+        assertTrue(
+            ChipAccessKey.Mrz
+                .fromPrintedFields(
+                    "D23145890",
+                    '<',
+                    "7349<<<<<<<<<<<",
+                    "340712",
+                    '7',
+                    "950712",
+                    '2',
+                ).checkDigitFindings
+                .isEmpty(),
+        )
     }
 }

@@ -13,6 +13,7 @@ public final class io/lightine/tessera/emrtd/pcsc/SmartCardTransport : io/lighti
 	public synthetic fun <init> (Ljavax/smartcardio/CardChannel;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun close ()V
 	public fun getMaxCommandLength ()I
+	public fun getStartSelection ()Lio/lightine/tessera/emrtd/ChipStartSelection;
 	public fun getSupportsExtendedLength ()Z
 	public fun transceive ([BLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }

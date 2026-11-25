@@ -39,6 +39,16 @@ internal enum class PaceFailure {
     SET_AUTHENTICATION_TEMPLATE_REFUSED,
 
     /**
+     * MSE:Set AT answered with a status word about the password, not the suite: a warning (62xx,
+     * 63xx; TR-03110-3, B.14.1: 63CX "the password has been selected", X tries left; 6283 "the
+     * password is deactivated") or 6982 to 6985 (blocked, deactivated, suspended; B.14.2). Those
+     * meanings are for passwords with a try counter; the MRZ and the CAN have none, so the read
+     * reports only the status word. Another suite uses the same password, so no other suite is
+     * tried.
+     */
+    PASSWORD_STATE,
+
+    /**
      * A GENERAL AUTHENTICATE step answered an error status word. At the mutual authentication
      * step, 6300 ("authentication failed") usually means the password (MRZ values or CAN) does not
      * match the one the chip was set up with.
@@ -71,7 +81,10 @@ internal enum class PaceFailure {
 
     /**
      * A command or the expected answer of a step does not fit a short APDU, and extended length is
-     * not allowed (the transport or the chip's statement, Part 11, section 9.3.1.2).
+     * not allowed (the transport or the chip's statement, Part 11, section 9.3.1.2), or a command
+     * is longer than the transport sends. Checked before MSE:Set AT for the largest command of the
+     * run, so [PaceException.step] is [PaceStep.SET_AUTHENTICATION_TEMPLATE] and nothing was sent;
+     * at a later step the chip had already answered a GENERAL AUTHENTICATE.
      */
     EXTENDED_LENGTH_REQUIRED,
 }

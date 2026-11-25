@@ -4,6 +4,7 @@ import io.lightine.tessera.emrtd.fakechip.FakeChipData
 import io.lightine.tessera.emrtd.fakechip.FakePaceCam
 import io.lightine.tessera.emrtd.fakechip.FakePaceMath
 import io.lightine.tessera.emrtd.fakechip.FakePaceSuite
+import io.lightine.tessera.emrtd.fakechip.FakePki
 import io.lightine.tessera.emrtd.fakechip.FakeProtectedFile
 import io.lightine.tessera.emrtd.fakechip.FakeReadFlowChip
 import io.lightine.tessera.emrtd.fakechip.FakeReadFlowChip.DH_GM_3DES
@@ -14,6 +15,7 @@ import io.lightine.tessera.emrtd.fakechip.FakeTagLoss
 import io.lightine.tessera.emrtd.fakechip.FlowAccess
 import io.lightine.tessera.emrtd.fakechip.FlowChip
 import io.lightine.tessera.emrtd.internal.apdu.LdsIds
+import io.lightine.tessera.emrtd.internal.asn1.DerWriter
 import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
 import io.lightine.tessera.emrtd.internal.crypto.ChipCryptoUnavailableException
 import io.lightine.tessera.emrtd.internal.crypto.EcDomainParameters
@@ -179,6 +181,12 @@ class ChipReaderTest {
                         .contentEquals(efCom),
                 )
                 assertTrue(read.dataGroup(1)!!.bytes().contentEquals(dg1))
+                val kept = read.dataGroup(1)!!
+                assertEquals(dg1.size, kept.size)
+                assertEquals(1, kept.dataGroup)
+                assertFalse(kept.inMasterFile)
+                assertEquals("ChipFile(0101, ${dg1.size} bytes, attempt 1)", kept.toString())
+                assertNull(read.files.first { it.fileId == LdsIds.EF_COM }.dataGroup)
                 // The hash in the security object still judges the kept bytes.
                 assertPassiveAuthenticationPassed(read)
             }
@@ -262,6 +270,14 @@ class ChipReaderTest {
                 val read = complete(read(flow))
                 assertEquals(ChipPaceMapping.CHIP_AUTHENTICATION, read.access.paceMapping)
                 assertEquals(3, read.access.offeredPace.size)
+                val offered = read.access.offeredPace
+                assertEquals(suites.map { it.oid }, offered.map { it.protocolOid })
+                assertEquals(
+                    listOf(ChipPaceMapping.CHIP_AUTHENTICATION, ChipPaceMapping.GENERIC, ChipPaceMapping.GENERIC),
+                    offered.map { it.mapping },
+                )
+                assertEquals(listOf<Int?>(13, 13, 0), offered.map { it.parameterId })
+                assertTrue(offered.all { it.readerCanRun })
                 // Set AT carries the parameter ID (tag 84) when EF.CardAccess lists several suites.
                 val setAt = assertNotNull(flow.pace!!.lastSetAtData)
                 assertTrue(setAt.indices.any { setAt[it] == 0x84.toByte() && it + 2 < setAt.size && setAt[it + 2] == 13.toByte() })
@@ -604,6 +620,40 @@ class ChipReaderTest {
             }
         }
 
+    @Test
+    fun anEfSodThatIsNotSignedDataOrHoldsAnotherContentIsNamedSo() =
+        runTest {
+            withChips { c, keys ->
+                val notSigned =
+                    DerWriter.tlv(
+                        0x77,
+                        DerWriter.sequence(DerWriter.oid("1.2.840.113549.1.7.1"), DerWriter.explicit(0, DerWriter.nullValue())),
+                    )
+                // A security object whose content type's last arc is 2: SignedData, not an LDS security object.
+                val sod = FakePki.sod(FakePki.ldsSecurityObject(1, groups = listOf(1 to FakePki.fakeHash(1))))
+                val oidBytes = DerWriter.oid(FakePki.OID_LDS_SECURITY_OBJECT)
+                val at = (0..sod.size - oidBytes.size).first { i -> oidBytes.indices.all { sod[i + it] == oidBytes[it] } }
+                val otherContent = sod.copyOf().also { it[at + oidBytes.size - 1] = 2 }
+                val cases =
+                    listOf(
+                        TlvWriter.encode(0x77, byteArrayOf(0x30, 0x03, 0x02, 0x01)) to ChipMalformedFile.Reason.NOT_VALID_TLV,
+                        notSigned to ChipMalformedFile.Reason.NOT_SIGNED_DATA,
+                        otherContent to ChipMalformedFile.Reason.UNEXPECTED_CONTENT_TYPE,
+                    )
+                for ((file, reason) in cases) {
+                    val flow = FakeReadFlowChip.build(c, keys, FlowAccess.PLAIN, extraApplicationFiles = mapOf(0x011D to file))
+                    val error =
+                        complete(read(flow))
+                            .fileErrors
+                            .map { it.error }
+                            .filterIsInstance<ChipMalformedFile>()
+                            .single()
+                    assertEquals(reason, error.reason, "$reason")
+                    assertEquals("malformed-file." + reason.name.lowercase().replace('_', '-'), error.code)
+                }
+            }
+        }
+
     // --- Telemetry, options, names, MIXED -----------------------------------------------------
 
     @Test
@@ -697,6 +747,16 @@ class ChipReaderTest {
                 val differs = assertNotNull(ChipMrzComparison.combine(printedOther, read))
                 assertEquals(CheckOutcome.Failed(ChipCheckReason.FIELDS_DIFFER), differs.check.outcome)
                 assertTrue(MrzField.DOCUMENT_NUMBER in differs.differingFields)
+                assertEquals(
+                    MrzFieldComparison(MrzField.DOCUMENT_NUMBER, false),
+                    differs.fieldComparisons.single {
+                        it.field ==
+                            MrzField.DOCUMENT_NUMBER
+                    },
+                )
+                assertTrue(differs.fieldComparisons.single { it.field == MrzField.DATE_OF_BIRTH }.sameAsPrinted)
+                assertTrue(same.fieldComparisons.isNotEmpty() && same.fieldComparisons.all { it.sameAsPrinted })
+                assertTrue(same.fieldComparisons.single { it.field == MrzField.SEX }.sameAsPrinted)
                 // The chip's values stay the chip's: nothing is corrected or picked from print.
                 val doc = (differs.parseResult as ParseResult.Success).document
                 assertEquals(

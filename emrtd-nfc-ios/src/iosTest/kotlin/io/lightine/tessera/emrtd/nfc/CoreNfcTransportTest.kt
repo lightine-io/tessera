@@ -50,7 +50,11 @@ class CoreNfcTransportTest {
     @Test
     fun a_platform_error_is_thrown_as_its_typed_error() =
         runTest {
-            listOf(NfcTagLost, NfcTimeout(null), NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER)).forEach { expected ->
+            listOf(
+                NfcTagLost,
+                NfcTimeout(null, NfcTimeout.Limit.COMMAND),
+                NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER),
+            ).forEach { expected ->
                 val transport = CoreNfcTransport(FakeChannel().apply { error = expected })
                 assertEquals(expected, errorOf { transport.transceive(select) })
             }
@@ -103,6 +107,66 @@ class CoreNfcTransportTest {
 
             assertContentEquals(byteArrayOf(0x90.toByte(), 0x00), first.await())
             assertContentEquals(byteArrayOf(0x6A, 0x82.toByte()), second.await())
+        }
+
+    @Test
+    fun a_cancelled_command_stops_the_transport_so_no_second_command_can_overlap_it() =
+        runTest {
+            val channel = FakeChannel().apply { holdAnswers = true }
+            val transport = CoreNfcTransport(channel)
+            val first = async { transport.transceive(byteArrayOf(1)) }
+            runCurrent()
+
+            first.cancel()
+            runCurrent()
+            // Core NFC still has the first command; a second one must not go out beside it.
+            assertEquals(NfcUnavailable(NfcUnavailable.Reason.CLOSED), errorOf { transport.transceive(byteArrayOf(2)) })
+            channel.held.single().invoke(byteArrayOf(0x90.toByte(), 0x00), null)
+
+            assertEquals(1, channel.sent.size)
+            assertEquals(NfcUnavailable(NfcUnavailable.Reason.CLOSED), errorOf { transport.transceive(byteArrayOf(3)) })
+            assertEquals(1, channel.sent.size)
+        }
+
+    @Test
+    fun a_command_waiting_behind_a_cancelled_one_is_not_sent() =
+        runTest {
+            val channel = FakeChannel().apply { holdAnswers = true }
+            val transport = CoreNfcTransport(channel)
+            val first = async { transport.transceive(byteArrayOf(1)) }
+            val second = async { runCatching { transport.transceive(byteArrayOf(2)) }.exceptionOrNull() }
+            runCurrent()
+
+            first.cancel()
+            runCurrent()
+
+            assertEquals(NfcUnavailable(NfcUnavailable.Reason.CLOSED), (second.await() as ApduTransportException).error)
+            assertEquals(1, channel.sent.size)
+        }
+
+    @Test
+    fun close_from_another_thread_during_a_command_ends_it_at_once() =
+        runTest {
+            val channel = FakeChannel().apply { holdAnswers = true }
+            val transport = CoreNfcTransport(channel)
+            val call = async { runCatching { transport.transceive(select) }.exceptionOrNull() }
+            runCurrent()
+
+            transport.close()
+
+            assertEquals(NfcUnavailable(NfcUnavailable.Reason.CLOSED), (call.await() as ApduTransportException).error)
+            channel.held.single().invoke(byteArrayOf(0x90.toByte(), 0x00), null)
+            assertEquals(1, channel.sent.size)
+        }
+
+    @Test
+    fun the_first_stop_reason_stays_whatever_comes_after() =
+        runTest {
+            val transport = CoreNfcTransport(FakeChannel())
+            transport.stop(NfcTagLost)
+            transport.close()
+            transport.stop(NfcTimeout(null, NfcTimeout.Limit.COMMAND))
+            assertEquals(NfcTagLost, errorOf { transport.transceive(select) })
         }
 
     @Test

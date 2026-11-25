@@ -155,7 +155,13 @@ internal object SignatureChecks {
             } catch (e: Asn1Exception) {
                 null
             } ?: return PaOutcome.Failed(PaFailure.MESSAGE_DIGEST_ATTRIBUTE_MISSING)
-        if (!crypto.digest(digestAlgorithm, sd.eContent).contentEquals(digest)) return PaOutcome.Failed(PaFailure.MESSAGE_DIGEST_DIFFERS)
+        val computed =
+            try {
+                crypto.digest(digestAlgorithm, sd.eContent)
+            } catch (e: ChipCryptoException) {
+                return PaOutcome.NotRun(PaNotRun.UNSUPPORTED_ALGORITHM)
+            }
+        if (!computed.contentEquals(digest)) return PaOutcome.Failed(PaFailure.MESSAGE_DIGEST_DIFFERS)
         return verifySignature(crypto, scheme, key, signedAttributes, info.signature)
     }
 

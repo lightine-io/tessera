@@ -4,6 +4,7 @@ package io.lightine.tessera.types.errors
 
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
+import io.lightine.tessera.types.vocabulary.MrzField
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -19,10 +20,21 @@ class NfcTagLostTest {
     }
 }
 
+class NfcNoAnswerTest {
+    @Test
+    fun is_an_nfc_error_with_its_own_code() {
+        val error: ChipError = NfcNoAnswer
+        assertIs<NfcError>(error)
+        assertEquals("no-answer", error.code)
+        assertEquals("NfcNoAnswer: ${NfcNoAnswer.description}", NfcNoAnswer.toString())
+        assertTrue(error.code != NfcTagLost.code && error.description != NfcTagLost.description)
+    }
+}
+
 class NfcTimeoutTest {
     @Test
     fun stores_the_time_limit_verbatim_and_names_it() {
-        val error = NfcTimeout(timeoutMillis = 5000)
+        val error = NfcTimeout(timeoutMillis = 5000, limit = NfcTimeout.Limit.COMMAND)
         assertEquals(5000L, error.timeoutMillis)
         assertTrue("5000" in error.description, error.description)
         assertIs<NfcError>(error)
@@ -30,9 +42,20 @@ class NfcTimeoutTest {
 
     @Test
     fun unknown_time_limit_has_its_own_text() {
-        val error = NfcTimeout(timeoutMillis = null)
+        val error = NfcTimeout(timeoutMillis = null, limit = NfcTimeout.Limit.SESSION)
         assertEquals(null, error.timeoutMillis)
         assertFalse("null" in error.description, error.description)
+    }
+
+    @Test
+    fun each_limit_says_which_limit_passed_and_only_a_command_limit_blames_the_chip() {
+        val texts = NfcTimeout.Limit.entries.associateWith { NfcTimeout(1000, it).description }
+        assertEquals(texts.size, texts.values.toSet().size)
+        assertTrue("chip did not answer" in texts.getValue(NfcTimeout.Limit.COMMAND))
+        assertFalse("chip" in texts.getValue(NfcTimeout.Limit.WAIT_FOR_DOCUMENT), texts.toString())
+        assertFalse("chip" in texts.getValue(NfcTimeout.Limit.SESSION), texts.toString())
+        assertTrue("app" in texts.getValue(NfcTimeout.Limit.WAIT_FOR_DOCUMENT))
+        assertTrue("session" in texts.getValue(NfcTimeout.Limit.SESSION))
     }
 }
 
@@ -47,6 +70,13 @@ class NfcUnavailableTest {
             assertIs<NfcError>(error)
         }
     }
+
+    @Test
+    fun no_reason_text_blames_the_app_or_claims_a_missing_reader_for_a_refused_command() {
+        assertFalse("by the app" in NfcUnavailable(NfcUnavailable.Reason.CLOSED).description)
+        assertFalse("no NFC reader" in NfcUnavailable(NfcUnavailable.Reason.COMMAND_TOO_LONG).description)
+        assertTrue("too long" in NfcUnavailable(NfcUnavailable.Reason.COMMAND_TOO_LONG).description)
+    }
 }
 
 /**
@@ -57,7 +87,8 @@ class NfcUnavailableTest {
  */
 class ChipErrorTextTest {
     private val errors: List<ChipError> =
-        listOf(NfcTagLost, NfcTimeout(1234), NfcTimeout(null)) +
+        listOf(NfcTagLost, NfcNoAnswer, NfcTimeout(null, NfcTimeout.Limit.COMMAND)) +
+            NfcTimeout.Limit.entries.map { NfcTimeout(1234, it) } +
             NfcUnavailable.Reason.entries.map { NfcUnavailable(it) } +
             listOf(
                 ChipMalformedFile(null, ChipMalformedFile.Reason.NOT_VALID_TLV),
@@ -70,7 +101,11 @@ class ChipErrorTextTest {
             listOf(ChipSecureMessagingLost(ChipSecureMessagingLost.Reason.CHIP_ENDED_SESSION, 0x6988)) +
             ChipUnsupportedAlgorithm.Reason.entries.map { ChipUnsupportedAlgorithm(ChipAccessProtocol.PACE, it) } +
             listOf(ChipFileNotFound(0x0102, true), ChipFileNotFound(0x010B, false), ChipBlank) +
-            ChipUnexpectedAnswer.Reason.entries.map { ChipUnexpectedAnswer(it, 0x6F00) }
+            ChipUnexpectedAnswer.Reason.entries.map { ChipUnexpectedAnswer(it, 0x6F00) } +
+            listOf(
+                ChipKeyCheckDigitMismatch(setOf(MrzField.DATE_OF_BIRTH)),
+                ChipKeyCheckDigitMismatch(setOf(MrzField.DATE_OF_EXPIRY, MrzField.DOCUMENT_NUMBER)),
+            )
 
     @Test
     fun to_string_is_the_class_name_then_the_description() {
@@ -88,12 +123,13 @@ class ChipErrorTextTest {
     @Test
     fun sample_list_covers_every_concrete_type() {
         assertEquals(errors.size, errors.count { exhaustive(it) })
-        assertEquals(10, errors.map { it::class }.toSet().size)
+        assertEquals(12, errors.map { it::class }.toSet().size)
     }
 
     private fun exhaustive(e: ChipError): Boolean =
         when (e) {
             is NfcTagLost,
+            is NfcNoAnswer,
             is NfcTimeout,
             is NfcUnavailable,
             is ChipMalformedFile,
@@ -103,6 +139,7 @@ class ChipErrorTextTest {
             is ChipFileNotFound,
             is ChipUnexpectedAnswer,
             is ChipBlank,
+            is ChipKeyCheckDigitMismatch,
             -> true
         }
 }
@@ -166,5 +203,22 @@ class ChipProtocolErrorsTest {
         val texts = ChipUnexpectedAnswer.Reason.entries.map { ChipUnexpectedAnswer(it).description }
         assertEquals(texts.size, texts.toSet().size)
         assertTrue("blank" in ChipBlank.description)
+    }
+}
+
+class ChipKeyCheckDigitMismatchTest {
+    @Test
+    fun names_the_fields_in_mrz_order_and_never_a_value() {
+        val error = ChipKeyCheckDigitMismatch(setOf(MrzField.DATE_OF_EXPIRY, MrzField.DOCUMENT_NUMBER))
+        assertEquals(setOf(MrzField.DOCUMENT_NUMBER, MrzField.DATE_OF_EXPIRY), error.fields)
+        assertTrue("document number, date of expiry" in error.description, error.description)
+        assertFalse(error.description.any { it.isDigit() }, error.description)
+        assertIs<ChipError>(error)
+    }
+
+    @Test
+    fun a_read_in_progress_has_its_own_reason() {
+        val error = NfcUnavailable(NfcUnavailable.Reason.READ_IN_PROGRESS)
+        assertTrue("already running" in error.description, error.description)
     }
 }

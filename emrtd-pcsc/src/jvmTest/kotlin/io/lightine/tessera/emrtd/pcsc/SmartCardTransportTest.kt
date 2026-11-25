@@ -165,7 +165,7 @@ class SmartCardTransportTest {
                 )
             }
 
-        assertEquals(NfcTimeout(1234), error.error)
+        assertEquals(NfcTimeout(1234, NfcTimeout.Limit.WAIT_FOR_DOCUMENT), error.error)
         assertEquals(1234, terminal.waitTimeoutMillis)
     }
 

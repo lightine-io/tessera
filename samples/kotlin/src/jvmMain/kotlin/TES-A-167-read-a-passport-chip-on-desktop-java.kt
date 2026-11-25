@@ -7,6 +7,8 @@ import io.lightine.tessera.emrtd.ChipAccessKey
 import io.lightine.tessera.emrtd.ChipReadOptions
 import io.lightine.tessera.emrtd.ChipReadResult
 import io.lightine.tessera.emrtd.ChipReader
+import io.lightine.tessera.emrtd.CanKeyResult
+import io.lightine.tessera.emrtd.MrzKeyResult
 import io.lightine.tessera.emrtd.pcsc.PcscReaders
 import kotlinx.coroutines.runBlocking
 import kotlin.time.Clock
@@ -18,14 +20,18 @@ fun firstReaderName(): String? = PcscReaders.listReaders().firstOrNull()
 
 // region TES-A-167 block 4
 // Replace the values with the ones printed in your document's MRZ.
-val key = ChipAccessKey.Mrz(
-    documentNumber = "T22000129",
-    documentNumberCheckDigit = '3',
-    dateOfBirth = "900315",
-    dateOfBirthCheckDigit = '2',
-    dateOfExpiry = "340314",
-    dateOfExpiryCheckDigit = '1',
-)
+fun accessKey(): ChipAccessKey.Mrz? =
+    when (val result = ChipAccessKey.Mrz.fromTypedFields(
+        documentNumber = "T22000129",
+        dateOfBirth = "900315",
+        dateOfExpiry = "340314",
+    )) {
+        is MrzKeyResult.Built -> result.key
+        is MrzKeyResult.NotBuilt -> {
+            println("No key could be made: ${result.problem}")
+            null
+        }
+    }
 // endregion
 
 // region TES-A-167 block 5
@@ -40,6 +46,7 @@ suspend fun readChip(readerName: String, key: ChipAccessKey): ChipReadResult {
 
 // region TES-A-167 block 6
 fun main() {
+    val key = accessKey() ?: return
     try {
         val reader = firstReaderName() ?: return println("No reader found")
         println("Put the document on $reader")
@@ -51,17 +58,23 @@ fun main() {
     } catch (e: ApduTransportException) {
         println("Reader problem: ${e.error.description}")
     } finally {
-        key.clear()
+        key.clear() // ChipReader.read does not clear the key
     }
 }
 // endregion
 
 // region TES-A-167 block 7
-val canKey = ChipAccessKey.Can("123456") // the card access number printed on your document
-val options = ChipReadOptions(
-    accessKey = canKey,
-    dataGroups = setOf(1, 2, 11),
-    checkTime = Clock.System.now(),
-    allowExtendedLength = false,
-)
+fun optionsWithCan(): ChipReadOptions? =
+    when (val result = ChipAccessKey.Can.from("123456")) { // the card access number printed on your document
+        is CanKeyResult.Built -> ChipReadOptions(
+            accessKey = result.key,
+            dataGroups = setOf(1, 2, 11),
+            checkTime = Clock.System.now(),
+            allowExtendedLength = false,
+        )
+        is CanKeyResult.NotBuilt -> {
+            println("No key could be made: ${result.problem}")
+            null
+        }
+    }
 // endregion

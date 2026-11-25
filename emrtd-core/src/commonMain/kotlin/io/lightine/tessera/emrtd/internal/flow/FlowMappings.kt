@@ -40,6 +40,7 @@ import io.lightine.tessera.types.errors.ChipAccessDenied
 import io.lightine.tessera.types.errors.ChipError
 import io.lightine.tessera.types.errors.ChipMalformedFile
 import io.lightine.tessera.types.errors.ChipSecureMessagingLost
+import io.lightine.tessera.types.errors.ChipUnsupportedAlgorithm
 import io.lightine.tessera.types.vocabulary.CheckOutcome
 import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
 
@@ -255,10 +256,27 @@ internal object FlowMappings {
             e.sw,
         )
 
+    /**
+     * A BAC failure. EXTERNAL AUTHENTICATE refused with 6300, 63CX or 6982: the chip refused the
+     * reader's proof of the key ([ChipAccessDenied.Reason.KEY_NOT_MATCHED]); with any other status
+     * word (6983, 6984, 6985, a 6Cxx the reader does not answer with a second command, any other):
+     * the chip refusing ([ChipAccessDenied.Reason.CHIP_REFUSED]). The status word is always kept.
+     *
+     * No status word is read as a state of the key: BAC has no try counter (Doc 9303 Part 11,
+     * 4.3), and the MRZ key cannot be blocked, suspended or deactivated. 63CX as "X tries left"
+     * and 6983 as "blocked" belong to passwords with a counter under PACE (TR-03110-3, B.14).
+     */
     fun bac(e: BacException): ChipError =
         when (e.failure) {
             BacFailure.AUTHENTICATION_REFUSED -> {
-                ChipAccessDenied(ChipAccessProtocol.BAC, ChipAccessDenied.Reason.KEY_NOT_MATCHED, e.sw)
+                val sw = e.sw
+                val reason =
+                    if (sw != null && (sw shr 8 == 0x63 || sw == SW_SECURITY_STATUS_NOT_SATISFIED)) {
+                        ChipAccessDenied.Reason.KEY_NOT_MATCHED
+                    } else {
+                        ChipAccessDenied.Reason.CHIP_REFUSED
+                    }
+                ChipAccessDenied(ChipAccessProtocol.BAC, reason, sw)
             }
 
             BacFailure.CHALLENGE_REFUSED -> {
@@ -275,26 +293,44 @@ internal object FlowMappings {
         }
 
     /**
-     * A PACE failure after the chip took the suite. 63xx at a GENERAL AUTHENTICATE step means the
-     * chip did not match the password (section 4.4.4.2); other refusals and wrong answers are named
-     * as such.
+     * A PACE failure that ends the read. The status word is always kept.
+     * - GENERAL AUTHENTICATE: 6300 or 63CX at mutual authentication means the chip refused the
+     *   reader's proof of the password (Part 11, section 4.4.4.2; [ChipAccessDenied.Reason.KEY_NOT_MATCHED]);
+     *   any other status word, at any step, is the chip refusing ([ChipAccessDenied.Reason.CHIP_REFUSED]).
+     * - MSE:Set AT answered with a status word about the password ([PaceFailure.PASSWORD_STATE]:
+     *   a warning 62xx or 63xx, or 6982 to 6985): the chip refusing, and the reader stopped before
+     *   the password was used.
+     * - A command too long to send after GENERAL AUTHENTICATE started is the extended-length limit.
+     *
+     * No status word is read as a state of the password. TR-03110-3 (B.14.1, B.14.2) defines 63C0
+     * and 6983 as "blocked", 63C1 and 6985 as "suspended", 6984 and 6283 as "deactivated" and 63CX
+     * as "X tries left" for passwords with a try counter (PIN, PUK). The SDK sends only the MRZ and
+     * the CAN, which have none (TR-03110 Part 1, section 2.3), so for them these words say what the
+     * chip answered and nothing about the key's state.
      */
     fun pace(e: PaceException): ChipError =
         when (e.failure) {
             PaceFailure.STEP_REFUSED -> {
                 val sw = e.sw
-                if (sw != null && sw shr 8 == 0x63 && e.step == PaceStep.MUTUAL_AUTHENTICATION) {
-                    ChipAccessDenied(ChipAccessProtocol.PACE, ChipAccessDenied.Reason.KEY_NOT_MATCHED, sw)
-                } else {
-                    ChipAccessDenied(ChipAccessProtocol.PACE, ChipAccessDenied.Reason.CHIP_REFUSED, sw)
-                }
+                val reason =
+                    if (sw != null && sw shr 8 == 0x63 && e.step == PaceStep.MUTUAL_AUTHENTICATION) {
+                        ChipAccessDenied.Reason.KEY_NOT_MATCHED
+                    } else {
+                        ChipAccessDenied.Reason.CHIP_REFUSED
+                    }
+                ChipAccessDenied(ChipAccessProtocol.PACE, reason, sw)
             }
 
+            PaceFailure.PASSWORD_STATE,
             PaceFailure.SET_AUTHENTICATION_TEMPLATE_REFUSED,
             PaceFailure.REFERENCED_DATA_NOT_FOUND,
             PaceFailure.ALGORITHM_NOT_SUPPORTED,
             -> {
                 ChipAccessDenied(ChipAccessProtocol.PACE, ChipAccessDenied.Reason.CHIP_REFUSED, e.sw)
+            }
+
+            PaceFailure.EXTENDED_LENGTH_REQUIRED -> {
+                ChipUnsupportedAlgorithm(ChipAccessProtocol.PACE, ChipUnsupportedAlgorithm.Reason.EXTENDED_LENGTH_REQUIRED)
             }
 
             else -> {
@@ -318,4 +354,5 @@ internal object FlowMappings {
         )
 
     const val FILE_SOD = 0x011D
+    private const val SW_SECURITY_STATUS_NOT_SATISFIED = 0x6982
 }

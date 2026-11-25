@@ -1,8 +1,8 @@
-// Compiled (syntax only, never linked or shipped) against the generated header of the Tessera
+// Compiled (syntax only, never linked or shipped) against the generated header of the TesseraCore
 // framework by the checkTesseraFrameworkHeader Gradle task. Each line names a public type or member
 // that Swift apps reach through the umbrella; one that drops out of the export list, or is renamed,
 // fails the compile. Add a line when a module joins the umbrella.
-#import <Tessera/Tessera.h>
+#import <TesseraCore/TesseraCore.h>
 #import <CoreNFC/CoreNFC.h>
 
 // Camera and MRZ (mrz-camera-ios, mrz-ocr-core, mrz-core, types).
@@ -13,7 +13,7 @@ static void tesseraCameraTypes(TesseraAVCaptureMrzScanner *scanner, TesseraMrzPa
 
 // Chip reading (emrtd-core, emrtd-nfc-ios, types).
 static void tesseraChipTypes(id<NFCISO7816Tag> tag) {
-    TesseraCoreNfcSession *session = [[TesseraCoreNfcSession alloc] initWithAlertMessage:@"text"];
+    TesseraCoreNfcSession *session = [[TesseraCoreNfcSession alloc] initWithAlertMessage:@"text" failureMessage:@"text"];
     [session connectWithCompletionHandler:^(TesseraCoreNfcTransport *transport, NSError *error) {
         id<TesseraApduTransport> seam = transport;
         (void)seam.maxCommandLength;
@@ -43,4 +43,196 @@ static void tesseraChipTypes(id<NFCISO7816Tag> tag) {
     (void)failure;
     (void)mrzKey;
     (void)canKey;
+}
+
+// The key from a document, the options builder, roots, codes (emrtd-core, types).
+static void tesseraEasyApi(TesseraMrzDocument *document, TesseraParseResult *result, TesseraKotlinByteArray *bytes,
+                           TesseraChipError *error, TesseraChipCheckKind *kind) {
+    TesseraMrzKeyResult *fromDocument = [TesseraChipAccessKeyMrzCompanion.shared fromDocument:document];
+    TesseraMrzKeyResult *fromResult = [TesseraChipAccessKeyMrzCompanion.shared fromResult:result];
+    TesseraMrzKeyResult *typed = [TesseraChipAccessKeyMrzCompanion.shared fromTypedFieldsDocumentNumber:@"" dateOfBirth:@"" dateOfExpiry:@""];
+    TesseraChipAccessKeyCan *can = [[TesseraChipAccessKeyCan alloc] initWithCan:@"123456" error:nil];
+    TesseraCanKeyResult *canResult = [TesseraChipAccessKeyCanCompanion.shared fromCan:@"123456"];
+    TesseraNormalizedMrzFields *normalized = [TesseraChipAccessKeyMrzCompanion.shared normalizeTypedFieldsDocumentNumber:@" t1 "
+                                                                                                           dateOfBirth:@"900315"
+                                                                                                          dateOfExpiry:@"340314"];
+    NSSet<TesseraMrzField *> *changedFields = normalized.changedFields;
+    TesseraChipReadOptions *options = [[[[TesseraChipReadOptionsBuilder alloc] initWithAccessKey:can]
+        dataGroupsNumbers:@[ @(1), @(2) ]] buildAndReturnError:nil];
+    TesseraChipReadOptions *withPrinted = [[[[[TesseraChipReadOptionsBuilder alloc] initWithAccessKey:can]
+        dataGroupsNumbers:@[ @(1), @(2) ]] printedDocumentDocument:document] buildAndReturnError:nil];
+    TesseraTrustAnchorLoad *roots = [TesseraTrustAnchors.shared loadBytes:bytes heldRoots:@[]];
+    TesseraTrustAnchorLoad *more = [TesseraTrustAnchors.shared loadPath:@"roots.ml" heldRoots:@[]];
+    TesseraTrustAnchorLoad *both = [roots plusOther:more];
+    NSString *code = error.code;
+    TesseraInt *statusWord = error.statusWord;
+    NSString *checkCode = kind.code;
+    (void)fromDocument;
+    (void)fromResult;
+    (void)typed;
+    (void)canResult;
+    (void)changedFields;
+    (void)withPrinted;
+    (void)options;
+    (void)both;
+    (void)code;
+    (void)statusWord;
+    (void)checkCode;
+}
+
+// The read that owns the whole session (emrtd-nfc-ios, emrtd-core).
+static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChipReadObserver> observer) {
+    id<TesseraChipReadHandle> shortest = [TesseraCoreNfcChipRead.companion startOptions:options observer:observer];
+    TesseraCoreNfcReadSettings *defaults = [[TesseraCoreNfcReadSettings alloc] init];
+    TesseraLinkLossPolicyResume *resume = [[TesseraLinkLossPolicyResume alloc] initWithMaxRestarts:2 error:nil];
+    TesseraCoreNfcReadSettings *settings = [[TesseraCoreNfcReadSettings alloc] initWithLinkLoss:resume
+                                                                             settleDelayMillis:400
+                                                                          commandTimeoutMillis:5000
+                                                                      waitAfterSystemEndMillis:1000
+                                                                                     telemetry:nil
+                                                                                    observerOn:TesseraObserverThread.main
+                                                              commandTimeoutBeforeAccessMillis:1500
+                                                                             readTimeoutMillis:2000
+                                                                           searchRestartMillis:4000
+                                                                                       polling:TesseraCoreNfcPolling.automatic
+                                                                            maxSessionRenewals:2
+                                                                            sessionRenewMillis:10000
+                                                                               busyRetryMillis:6000
+                                                                            tagTimeLimitMillis:18000
+                                                                                         error:nil];
+    TesseraCoreNfcReadSettings *built = [[[[[[TesseraCoreNfcReadSettingsBuilder alloc] init]
+        linkLossPolicy:[TesseraLinkLossPolicyCompanion.shared readAgainMaxRestarts:1 error:nil]] telemetrySink:nil]
+        observerOnThread:TesseraObserverThread.caller] buildAndReturnError:nil];
+    TesseraCoreNfcReadSettings *changed = [[settings.toBuilder settleDelayMillisMillis:0] buildAndReturnError:nil];
+    TesseraCoreNfcReadSettings *shorter = [[settings.toBuilder commandTimeoutBeforeAccessMillisMillis:900] buildAndReturnError:nil];
+    int64_t beforeAccess = settings.commandTimeoutBeforeAccessMillis;
+    TesseraCoreNfcReadSettings *shorterReads = [[settings.toBuilder readTimeoutMillisMillis:1000] buildAndReturnError:nil];
+    int64_t reads = settings.readTimeoutMillis;
+    TesseraCoreNfcReadSettings *noSearchRestarts =
+        [[settings.toBuilder searchRestartMillisMillis:TesseraCoreNfcReadSettings.companion.SEARCH_RESTART_OFF] buildAndReturnError:nil];
+    int64_t searchRestart = settings.searchRestartMillis;
+    TesseraCoreNfcReadSettings *iso14443Only = [[settings.toBuilder pollingChoice:TesseraCoreNfcPolling.iso14443] buildAndReturnError:nil];
+    TesseraCoreNfcPolling *polling = settings.polling;
+    TesseraCoreNfcPolling *combined = TesseraCoreNfcPolling.iso14443AndPace;
+    TesseraChipReadStep *sessionEnd = TesseraChipReadStep.sessionEnd;
+    TesseraCoreNfcReadSettings *noRenewals =
+        [[[[settings.toBuilder maxSessionRenewalsCount:TesseraCoreNfcReadSettings.companion.SESSION_RENEWALS_OFF]
+            sessionRenewMillisMillis:TesseraCoreNfcReadSettings.companion.SESSION_RENEW_OFF]
+            busyRetryMillisMillis:TesseraCoreNfcReadSettings.companion.BUSY_RETRY_OFF] buildAndReturnError:nil];
+    int32_t renewals = settings.maxSessionRenewals;
+    int64_t renewAfter = settings.sessionRenewMillis;
+    int64_t busyRetry = settings.busyRetryMillis;
+    TesseraCoreNfcReadSettings *oneConnection =
+        [[settings.toBuilder tagTimeLimitMillisMillis:TesseraCoreNfcReadSettings.companion.TAG_TIME_LIMIT_OFF] buildAndReturnError:nil];
+    int64_t tagTimeLimit = settings.tagTimeLimitMillis;
+    int64_t shortestTagTimeLimit = TesseraCoreNfcReadSettings.companion.MIN_TAG_TIME_LIMIT_MILLIS;
+    TesseraLinkLossPolicy *noRestart = TesseraLinkLossPolicyCompanion.shared.end;
+    TesseraLinkLossPolicy *resumeTwice = [TesseraLinkLossPolicyCompanion.shared resumeMaxRestarts:2 error:nil];
+    TesseraNfcUnavailableReason *unavailable = TesseraCoreNfcChipRead.companion.availability;
+    (void)built;
+    (void)changed;
+    (void)shorter;
+    (void)beforeAccess;
+    (void)shorterReads;
+    (void)reads;
+    (void)noSearchRestarts;
+    (void)searchRestart;
+    (void)iso14443Only;
+    (void)polling;
+    (void)combined;
+    (void)sessionEnd;
+    (void)noRenewals;
+    (void)renewals;
+    (void)renewAfter;
+    (void)busyRetry;
+    (void)oneConnection;
+    (void)tagTimeLimit;
+    (void)shortestTagTimeLimit;
+    (void)noRestart;
+    (void)resumeTwice;
+    (void)unavailable;
+    id<TesseraCoreNfcSheetTexts> texts = TesseraCoreNfcDefaultSheetTexts.shared;
+    id<TesseraChipReadHandle> full = [TesseraCoreNfcChipRead.companion startOptions:options observer:observer texts:texts settings:settings];
+    id<TesseraChipReadHandle> withTexts = [TesseraCoreNfcChipRead.companion startOptions:options observer:observer texts:texts];
+    [full cancel];
+    BOOL ended = shortest.isEnded;
+    (void)ended;
+    (void)defaults;
+    (void)withTexts;
+}
+
+// A state an app's observer tells apart (emrtd-core): found, but no answer yet; and the ending
+// error of a chip that never answered (types).
+static void tesseraChipReadStates(TesseraChipReadState *state, TesseraChipReadEndingFailed *failed) {
+    if ([state isKindOfClass:TesseraChipReadStateNoAnswerYet.class]) {
+        int32_t tries = ((TesseraChipReadStateNoAnswerYet *)state).tries;
+        (void)tries;
+    }
+    BOOL neverAnswered = [failed.error isKindOfClass:TesseraNfcNoAnswer.class];
+    TesseraNfcError *noAnswer = TesseraNfcNoAnswer.shared;
+    (void)neverAnswered;
+    (void)noAnswer;
+}
+
+// Which time limit passed, the setup and link reasons told apart, and Core NFC's raw code on the
+// ending (types, emrtd-core; TES-346).
+static void tesseraChipReadTruthfulEndings(TesseraNfcTimeout *timeout, TesseraChipReadEnding *ending) {
+    TesseraNfcTimeoutLimit *limit = timeout.limit;
+    BOOL sessionLimit = limit == TesseraNfcTimeoutLimit.session;
+    BOOL appWait = limit == TesseraNfcTimeoutLimit.waitForDocument;
+    BOOL commandLimit = limit == TesseraNfcTimeoutLimit.command;
+    TesseraNfcUnavailableReason *reasons[] = {
+        TesseraNfcUnavailableReason.notPermitted,
+        TesseraNfcUnavailableReason.notEligible,
+        TesseraNfcUnavailableReason.accessNotAnswered,
+        TesseraNfcUnavailableReason.commandTooLong,
+        TesseraNfcUnavailableReason.tagReadingDisabled,
+        TesseraNfcUnavailableReason.unexpectedFault,
+    };
+    TesseraInt *systemCode = ending.systemCode;
+    (void)sessionLimit;
+    (void)appWait;
+    (void)commandLimit;
+    (void)reasons;
+    (void)systemCode;
+}
+
+// The raw Core NFC code of a session the system ended, a renewed session, and a planned handover
+// of the tag with how long its connection had lasted, as telemetry facts (emrtd-core).
+static void tesseraChipReadEvents(TesseraChipReadEvent *event) {
+    BOOL handedOver = event.step == TesseraChipReadStep.tagHandover;
+    int64_t tagMillis = event.durationMillis;
+    (void)handedOver;
+    (void)tagMillis;
+    BOOL sessionEnded = event.step == TesseraChipReadStep.sessionEnd;
+    TesseraInt *systemCode = event.systemCode;
+    BOOL renewed = event.step == TesseraChipReadStep.sessionRenew;
+    TesseraInt *renewal = event.renewal;
+    (void)sessionEnded;
+    (void)systemCode;
+    (void)renewed;
+    (void)renewal;
+}
+
+// A read that renews its session, and whether a new read can begin now (emrtd-core, emrtd-nfc-ios).
+static void tesseraChipReadRenewalAndReadiness(TesseraChipReadState *state, id<TesseraChipReadReadinessListener> listener) {
+    if ([state isKindOfClass:TesseraChipReadStateRenewingSession.class]) {
+        int32_t renewal = ((TesseraChipReadStateRenewingSession *)state).renewal;
+        (void)renewal;
+    }
+    TesseraChipReadReadiness *now = [TesseraCoreNfcChipRead.companion readiness];
+    BOOL ready = now == TesseraChipReadReadinessReady.shared;
+    BOOL busyReader = now == TesseraChipReadReadinessReadInProgress.shared;
+    if ([now isKindOfClass:TesseraChipReadReadinessNotYet.class]) {
+        int64_t remaining = ((TesseraChipReadReadinessNotYet *)now).remainingMillis;
+        (void)remaining;
+    }
+    if ([now isKindOfClass:TesseraChipReadReadinessUnavailable.class]) {
+        TesseraNfcUnavailableReason *reason = ((TesseraChipReadReadinessUnavailable *)now).reason;
+        (void)reason;
+    }
+    id<TesseraChipReadReadinessRegistration> registration = [TesseraCoreNfcChipRead.companion addReadinessListenerListener:listener];
+    [registration remove];
+    (void)ready;
+    (void)busyReader;
 }

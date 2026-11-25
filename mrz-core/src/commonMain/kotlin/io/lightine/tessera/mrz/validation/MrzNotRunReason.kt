@@ -21,4 +21,10 @@ public enum class MrzNotRunReason : CheckReason {
 
     /** The document carries no composite check digit to check. */
     NO_COMPOSITE_CHECK_DIGIT,
+
+    ;
+
+    /** The stable code of this reason: `mrz` and the name in lower case, words joined by hyphens. */
+    override val code: String
+        get() = "mrz." + name.lowercase().replace('_', '-')
 }

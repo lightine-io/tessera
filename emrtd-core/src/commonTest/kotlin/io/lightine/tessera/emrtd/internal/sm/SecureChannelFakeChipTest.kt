@@ -197,15 +197,23 @@ class SecureChannelFakeChipTest {
         }
 
     @Test
-    fun aBareErrorStatusWordIsReturnedAndTheSessionGoesOn() =
+    fun aBareErrorStatusWordEndsTheSession() =
         withCrypto { c ->
             runTest {
+                // Part 11, 9.8.5: a chip returns status bytes without SM only when it aborts the session.
                 val s = setup(c)
                 val channel = openBac(s, c)
                 s.sm.answerNextBare = StatusWord.FILE_NOT_FOUND
-                assertEquals(StatusWord.FILE_NOT_FOUND, channel.send(ChipCommands.selectFile(LdsIds.EF_COM)).sw)
-                assertTrue(channel.isOpen)
-                assertContentEquals(efCom, readFile(channel, LdsIds.EF_COM))
+                val e = assertFailsWith<SecureMessagingException> { channel.send(ChipCommands.selectFile(LdsIds.EF_COM)) }
+                assertEquals(SmFailure.CHIP_ENDED_SESSION, e.failure)
+                assertEquals(StatusWord.FILE_NOT_FOUND, e.sw)
+                assertFalse(channel.isOpen)
+                val sent = s.chip.received.size
+                assertEquals(
+                    SmFailure.SESSION_CLOSED,
+                    assertFailsWith<SecureMessagingException> { readFile(channel, LdsIds.EF_COM) }.failure,
+                )
+                assertEquals(sent, s.chip.received.size, "nothing is sent after the chip ended the session")
             }
         }
 

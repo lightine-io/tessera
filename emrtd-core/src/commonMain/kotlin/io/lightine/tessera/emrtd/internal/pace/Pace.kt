@@ -3,6 +3,7 @@ package io.lightine.tessera.emrtd.internal.pace
 import io.lightine.tessera.emrtd.ChipAccessKey
 import io.lightine.tessera.emrtd.internal.apdu.ApduSender
 import io.lightine.tessera.emrtd.internal.apdu.CommandApdu
+import io.lightine.tessera.emrtd.internal.apdu.CommandTooLong
 import io.lightine.tessera.emrtd.internal.apdu.ExtendedLengthRequired
 import io.lightine.tessera.emrtd.internal.apdu.ResponseApdu
 import io.lightine.tessera.emrtd.internal.apdu.StatusWord
@@ -10,6 +11,7 @@ import io.lightine.tessera.emrtd.internal.crypto.BlockCipher
 import io.lightine.tessera.emrtd.internal.crypto.ChipCrypto
 import io.lightine.tessera.emrtd.internal.crypto.CipherMode
 import io.lightine.tessera.emrtd.internal.crypto.CryptoBytes
+import io.lightine.tessera.emrtd.internal.securityinfo.PaceMapping
 import io.lightine.tessera.emrtd.internal.sm.SecureChannel
 import io.lightine.tessera.emrtd.internal.sm.SessionKeys
 import io.lightine.tessera.emrtd.internal.sm.SmCipher
@@ -81,6 +83,7 @@ internal object Pace {
     const val TAG_EPHEMERAL_KEY_CHIP = 0x84
     const val TAG_TOKEN_READER = 0x85
     const val TAG_TOKEN_CHIP = 0x86
+    const val TAG_CHIP_AUTHENTICATION_DATA = 0x8A
     const val TOKEN_LENGTH = 8
     private const val CLA_PLAIN = 0x00
     private const val CLA_CHAINED = 0x10
@@ -106,6 +109,10 @@ internal object Pace {
      * Runs PACE with [key] over the plain [exchange] and returns the secure channel it opens.
      * [mapping] defaults to the reader's implementation of the suite's mapping. [newPrivateKey] and
      * [randomBytes] are the random sources (tests pass the worked examples' values).
+     * [beforeAuthentication] runs once, after the chip accepted MSE:Set AT and right before the
+     * first GENERAL AUTHENTICATE: MSE:Set AT only selects the protocol and the password (section
+     * 4.4.4.1) and needs no cryptography on the chip; the authentication starts with GENERAL
+     * AUTHENTICATE.
      *
      * @throws PaceException when the suite is not supported, the chip refuses, or an answer is wrong.
      */
@@ -118,13 +125,14 @@ internal object Pace {
         mapping: Mapping? = Mappings.forKind(suite.mapping),
         newPrivateKey: (PaceGroup) -> ByteArray = { it.generatePrivateKey(crypto) },
         randomBytes: (Int) -> ByteArray = crypto::randomBytes,
+        beforeAuthentication: suspend () -> Unit = {},
     ): PaceResult {
         if (mapping == null || mapping.kind != suite.mapping) throw PaceException(PaceFailure.UNSUPPORTED_SUITE)
         val passwordType = PacePasswordType.of(key)
         val context = MappingContext(crypto, suite, newPrivateKey, randomBytes)
         val run = Run(exchange, crypto, suite, options)
         try {
-            return run.execute(key, passwordType, mapping, context)
+            return run.execute(key, passwordType, mapping, context, beforeAuthentication)
         } finally {
             mapping.wipe()
         }
@@ -144,18 +152,27 @@ internal object Pace {
             passwordType: PacePasswordType,
             mapping: Mapping,
             context: MappingContext,
+            beforeAuthentication: suspend () -> Unit,
         ): PaceResult {
-            val setAt = send(PaceStep.SET_AUTHENTICATION_TEMPLATE, setAuthenticationTemplate(suite, passwordType, options.sendParameterId))
+            val setAtCommand = setAuthenticationTemplate(suite, passwordType, options.sendParameterId)
+            // A size limit that can be known now is checked before anything is sent: once a GENERAL
+            // AUTHENTICATE has been answered, the password has been used and no other suite may run.
+            if (!fits(setAtCommand) || !fits(largestGeneralAuthenticate())) {
+                throw PaceException(PaceFailure.EXTENDED_LENGTH_REQUIRED, PaceStep.SET_AUTHENTICATION_TEMPLATE)
+            }
+            val setAt = send(PaceStep.SET_AUTHENTICATION_TEMPLATE, setAtCommand)
             if (setAt.sw != StatusWord.SUCCESS) {
                 val failure =
-                    when (setAt.sw) {
-                        SW_WRONG_DATA -> PaceFailure.ALGORITHM_NOT_SUPPORTED
-                        SW_REFERENCED_DATA_NOT_FOUND -> PaceFailure.REFERENCED_DATA_NOT_FOUND
+                    when {
+                        isPasswordState(setAt.sw) -> PaceFailure.PASSWORD_STATE
+                        setAt.sw == SW_WRONG_DATA -> PaceFailure.ALGORITHM_NOT_SUPPORTED
+                        setAt.sw == SW_REFERENCED_DATA_NOT_FOUND -> PaceFailure.REFERENCED_DATA_NOT_FOUND
                         else -> PaceFailure.SET_AUTHENTICATION_TEMPLATE_REFUSED
                     }
                 throw PaceException(failure, PaceStep.SET_AUTHENTICATION_TEMPLATE, setAt.sw)
             }
 
+            beforeAuthentication()
             // Step 1: the encrypted nonce.
             val z =
                 generalAuthenticate(
@@ -217,7 +234,15 @@ internal object Pace {
             // Step 4: the tokens.
             try {
                 val readerToken = token(keys, ephemeral.tokenInput(oid, chipKey))
-                val answer = generalAuthenticate(PaceStep.MUTUAL_AUTHENTICATION, TAG_TOKEN_READER, readerToken, TAG_TOKEN_CHIP, last = true)
+                val answer =
+                    generalAuthenticate(
+                        PaceStep.MUTUAL_AUTHENTICATION,
+                        TAG_TOKEN_READER,
+                        readerToken,
+                        TAG_TOKEN_CHIP,
+                        last = true,
+                        refused = if (mapping.kind == PaceMapping.CHIP_AUTHENTICATION) emptySet() else setOf(TAG_CHIP_AUTHENTICATION_DATA),
+                    )
                 val expected = token(keys, ephemeral.tokenInput(oid, readerKey))
                 if (!CryptoBytes.constantTimeEquals(expected, answer.getValue(TAG_TOKEN_CHIP))) {
                     throw PaceException(PaceFailure.WRONG_CHIP_TOKEN, PaceStep.MUTUAL_AUTHENTICATION)
@@ -244,7 +269,11 @@ internal object Pace {
         /**
          * One GENERAL AUTHENTICATE step: sends 0x7C holding [tag] with [value] (an empty 0x7C when
          * [tag] is null) and returns the data objects of the chip's 0x7C by tag, which must hold
-         * [expectedTag].
+         * [expectedTag]. In steps 1 to 3 the answer holds that one object and nothing else (Part 11,
+         * 4.4.4.3; TR RF Part 4, ISO7816_C_16, C_17, C_21, C_22: a reader fails after an answer that
+         * holds other objects, such as all the components of a key). In step 4 an object in
+         * [refused] ends the run too (ISO7816_C_35: chip authentication data from a chip whose
+         * mapping is not the chip authentication mapping).
          */
         private suspend fun generalAuthenticate(
             step: PaceStep,
@@ -252,14 +281,9 @@ internal object Pace {
             value: ByteArray,
             expectedTag: Int,
             last: Boolean,
+            refused: Set<Int> = emptySet(),
         ): Map<Int, ByteArray> {
-            val inner = if (tag == null) ByteArray(0) else TlvWriter.encode(tag, value)
-            val data = TlvWriter.encode(TAG_DYNAMIC_AUTHENTICATION_DATA, inner)
-            // An answer holds 0x7C around one public key at most, plus a few short objects.
-            val needsLongAnswer = suite.group.maxPublicKeyLength + 16 > CommandApdu.MAX_SHORT_NE
-            val ne = if (needsLongAnswer && options.extendedLengthAllowed) CommandApdu.MAX_EXTENDED_NE else CommandApdu.MAX_SHORT_NE
-            val command = CommandApdu(if (last) CLA_PLAIN else CLA_CHAINED, INS_GENERAL_AUTHENTICATE, 0x00, 0x00, data, ne)
-            val answer = send(step, command)
+            val answer = send(step, generalAuthenticateCommand(tag, value, last))
             if (answer.sw != StatusWord.SUCCESS) throw PaceException(PaceFailure.STEP_REFUSED, step, answer.sw)
             val objects =
                 try {
@@ -270,9 +294,43 @@ internal object Pace {
                     throw PaceException(PaceFailure.MALFORMED_RESPONSE, step, cause = e)
                 }
             if (expectedTag !in objects) throw PaceException(PaceFailure.MALFORMED_RESPONSE, step)
+            if (!last && objects.size != 1) throw PaceException(PaceFailure.MALFORMED_RESPONSE, step)
+            if (objects.keys.any { it in refused }) throw PaceException(PaceFailure.MALFORMED_RESPONSE, step)
             return objects
         }
 
+        private fun generalAuthenticateCommand(
+            tag: Int?,
+            value: ByteArray,
+            last: Boolean,
+        ): CommandApdu {
+            val inner = if (tag == null) ByteArray(0) else TlvWriter.encode(tag, value)
+            val data = TlvWriter.encode(TAG_DYNAMIC_AUTHENTICATION_DATA, inner)
+            // An answer holds 0x7C around one public key at most, plus a few short objects.
+            val needsLongAnswer = suite.group.maxPublicKeyLength + 16 > CommandApdu.MAX_SHORT_NE
+            val ne = if (needsLongAnswer && options.extendedLengthAllowed) CommandApdu.MAX_EXTENDED_NE else CommandApdu.MAX_SHORT_NE
+            return CommandApdu(if (last) CLA_PLAIN else CLA_CHAINED, INS_GENERAL_AUTHENTICATE, 0x00, 0x00, data, ne)
+        }
+
+        /**
+         * The longest GENERAL AUTHENTICATE of the run: a public key of the group's largest size
+         * (mapping data of the generic and chip authentication mappings, and the ephemeral keys,
+         * are public keys of this group; the integrated mapping's nonce is shorter).
+         */
+        private fun largestGeneralAuthenticate(): CommandApdu =
+            generalAuthenticateCommand(TAG_EPHEMERAL_KEY_READER, ByteArray(suite.group.maxPublicKeyLength), last = false)
+
+        /** Whether [command] can be sent: short, or extended where allowed, and within the transport's limit. */
+        private fun fits(command: CommandApdu): Boolean {
+            val extendedOk = options.extendedLengthAllowed && exchange.supportsExtendedLength
+            return (command.fitsShort || extendedOk) && command.encodedLength() <= exchange.maxCommandLength
+        }
+
+        /**
+         * Sends one command exactly once ([exchange] is the raw sender: no 61xx or 6Cxx follow-up).
+         * A command the transport cannot carry becomes [PaceFailure.EXTENDED_LENGTH_REQUIRED] at
+         * [step].
+         */
         private suspend fun send(
             step: PaceStep,
             command: CommandApdu,
@@ -281,8 +339,22 @@ internal object Pace {
                 exchange.send(command, options.extendedLengthAllowed)
             } catch (e: ExtendedLengthRequired) {
                 throw PaceException(PaceFailure.EXTENDED_LENGTH_REQUIRED, step, cause = e)
+            } catch (e: CommandTooLong) {
+                throw PaceException(PaceFailure.EXTENDED_LENGTH_REQUIRED, step, cause = e)
             }
     }
+
+    /**
+     * A status word to MSE:Set AT that is about the password, not the suite (TR-03110-3, B.14.1
+     * and B.14.2): a warning 62xx or 63xx (63CX: selected with X tries left) or 6982 to 6985.
+     */
+    internal fun isPasswordState(sw: Int): Boolean =
+        sw shr 8 == 0x62 ||
+            sw shr 8 == 0x63 ||
+            sw == StatusWord.SECURITY_STATUS_NOT_SATISFIED ||
+            sw == StatusWord.AUTHENTICATION_METHOD_BLOCKED ||
+            sw == StatusWord.REFERENCE_DATA_NOT_USABLE ||
+            sw == StatusWord.CONDITIONS_OF_USE_NOT_SATISFIED
 
     /** The content octets of the DER encoding of a dotted [oid] (tag 0x06 left out). */
     internal fun oidContent(oid: String): ByteArray {

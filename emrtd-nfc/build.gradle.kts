@@ -35,6 +35,8 @@ kotlin {
     sourceSets {
         all {
             languageSettings.optIn("io.lightine.tessera.types.ExperimentalTesseraChipApi")
+            // The read coordinator in emrtd-core, public only for Tessera's own NFC modules.
+            languageSettings.optIn("io.lightine.tessera.emrtd.InternalTesseraChipApi")
         }
         androidMain {
             dependencies {
@@ -43,12 +45,26 @@ kotlin {
                 api(project(":emrtd-core"))
             }
         }
+        // The scripted chip of emrtd-core's tests (TES-346), compiled into this module's tests only.
+        commonTest { kotlin.srcDir("../emrtd-core/src/chipFixtures/kotlin") }
+        getByName("androidHostTest").kotlin.srcDir("../emrtd-core/src/bouncyCastleTest/kotlin")
         // By name: the typed accessor is not generated on the run that first enables the host test.
         getByName("androidHostTest").dependencies {
+            // The test signer of the scripted chip's fake PKI.
+            implementation(libs.bouncycastle.bcprov)
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)
             // android.nfc.TagLostException must be constructible in a host test.
             implementation(libs.robolectric)
         }
     }
+}
+
+// The scripted chip compiled into this module's host tests uses emrtd-core's internal declarations,
+// as it does in emrtd-core's own tests. Kotlin gives a test compilation that access to its own
+// module's main code through the friend-paths argument; this names emrtd-core's main classes there
+// too, with this module's own. The host-test compilation only: nothing published changes (TES-346).
+tasks.named<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>("compileAndroidHostTest").configure {
+    val friends = libraries.elements.map { all -> all.map { it.asFile.path }.filter { "/emrtd-" in it && "/build/" in it } }
+    compilerOptions.freeCompilerArgs.addAll(friends.map { listOf("-Xfriend-paths=" + it.joinToString(",")) })
 }

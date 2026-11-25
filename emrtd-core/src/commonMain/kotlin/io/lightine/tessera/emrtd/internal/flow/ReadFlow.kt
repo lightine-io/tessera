@@ -4,12 +4,14 @@ import io.lightine.tessera.emrtd.AccessReport
 import io.lightine.tessera.emrtd.ApduTransport
 import io.lightine.tessera.emrtd.ApduTransportException
 import io.lightine.tessera.emrtd.ChipAccessKey
+import io.lightine.tessera.emrtd.ChipAuthMethod
 import io.lightine.tessera.emrtd.ChipCheck
 import io.lightine.tessera.emrtd.ChipCheckKind
 import io.lightine.tessera.emrtd.ChipCheckReason
 import io.lightine.tessera.emrtd.ChipFile
 import io.lightine.tessera.emrtd.ChipFileContext
 import io.lightine.tessera.emrtd.ChipFileError
+import io.lightine.tessera.emrtd.ChipMrzComparison
 import io.lightine.tessera.emrtd.ChipPaceOffer
 import io.lightine.tessera.emrtd.ChipPassword
 import io.lightine.tessera.emrtd.ChipRead
@@ -18,8 +20,10 @@ import io.lightine.tessera.emrtd.ChipReadOptions
 import io.lightine.tessera.emrtd.ChipReadResult
 import io.lightine.tessera.emrtd.ChipReadStep
 import io.lightine.tessera.emrtd.ChipReadStepOutcome
+import io.lightine.tessera.emrtd.ChipResumeOutcome
 import io.lightine.tessera.emrtd.ChipSignedCopy
 import io.lightine.tessera.emrtd.ChipSignedFile
+import io.lightine.tessera.emrtd.ChipStartSelection
 import io.lightine.tessera.emrtd.internal.aa.ActiveAuthentication
 import io.lightine.tessera.emrtd.internal.aa.ActiveAuthenticationFailure
 import io.lightine.tessera.emrtd.internal.aa.ActiveAuthenticationResult
@@ -60,6 +64,7 @@ import io.lightine.tessera.emrtd.internal.pace.Pace
 import io.lightine.tessera.emrtd.internal.pace.PaceException
 import io.lightine.tessera.emrtd.internal.pace.PaceFailure
 import io.lightine.tessera.emrtd.internal.pace.PaceOptions
+import io.lightine.tessera.emrtd.internal.pace.PaceStep
 import io.lightine.tessera.emrtd.internal.pace.PaceSuite
 import io.lightine.tessera.emrtd.internal.securityinfo.AtrInfoParser
 import io.lightine.tessera.emrtd.internal.securityinfo.ChipSecurityFiles
@@ -85,18 +90,36 @@ import io.lightine.tessera.emrtd.lds.EfComView
 import io.lightine.tessera.emrtd.lds.LdsParseResult
 import io.lightine.tessera.emrtd.lds.SecurityObjectParse
 import io.lightine.tessera.emrtd.lds.SecurityObjectView
+import io.lightine.tessera.mrz.model.MrzDocument
 import io.lightine.tessera.telemetry.TelemetrySink
 import io.lightine.tessera.types.errors.ChipAccessDenied
 import io.lightine.tessera.types.errors.ChipBlank
 import io.lightine.tessera.types.errors.ChipError
 import io.lightine.tessera.types.errors.ChipFileNotFound
+import io.lightine.tessera.types.errors.ChipKeyCheckDigitMismatch
 import io.lightine.tessera.types.errors.ChipMalformedFile
 import io.lightine.tessera.types.errors.ChipUnexpectedAnswer
 import io.lightine.tessera.types.errors.ChipUnsupportedAlgorithm
 import io.lightine.tessera.types.vocabulary.CheckOutcome
 import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.time.Instant
 import kotlin.time.TimeSource
+
+/**
+ * What one attempt leaves for the next after a lost link, under [io.lightine.tessera.emrtd.LinkLossPolicy.Resume]:
+ * the EF.SOD it read whole, the data groups it holds (each with the attempt that read it), and the
+ * bytes of a data group the loss cut off.
+ */
+internal class ResumeCarry(
+    val securityObject: ByteArray?,
+    val files: List<ChipFile>,
+    val unfinished: Pair<Int, ByteArray>?,
+) {
+    companion object {
+        val EMPTY = ResumeCarry(null, emptyList(), null)
+    }
+}
 
 /** Ends the read with [error]; the caught place decides Partial or Failed. */
 private class Stop(
@@ -107,7 +130,8 @@ private class Stop(
  * One whole chip read, in the order of Doc 9303 Part 11, Appendix J.1 (with the EF.CardSecurity
  * part of J.2):
  *
- * 1. Access (section 4.2): read EF.CardAccess in the master file. When it offers a PACE suite the
+ * 1. Access (section 4.2): read EF.CardAccess in the master file (see [readMasterFile] for how the
+ *    master file is made current when the read starts in the application). When it offers a PACE suite the
  *    reader runs, run PACE with the best one (the chip authentication mapping first, as J.1
  *    recommends, then the strongest cipher), sending the parameter ID when EF.CardAccess lists more
  *    than one suite (section 4.4.4.1). Otherwise select the application and run BAC; a chip that
@@ -123,8 +147,14 @@ private class Stop(
  *    authentication facts, which Appendix J calls complete only together with passive
  *    authentication of the file that holds the key.
  *
- * Once access is granted, a stop gives Partial with the checks run over what was read; before it
- * (or for a blank chip) it gives Failed. Every session key is wiped when the read ends, however it
+ * Before any command, an MRZ key whose check digits do not match their fields ends the read with
+ * [ChipKeyCheckDigitMismatch], unless the app allows it. Once access is granted, a stop gives
+ * Partial with the checks run over what was read; before it (or for a blank chip) it gives Failed.
+ *
+ * With a [carry] from an earlier attempt (resume after a lost link), EF.SOD is read again and,
+ * only when it equals the earlier one byte for byte, the earlier data groups whose hash in EF.SOD
+ * passes are kept and a data group cut off by the loss continues from its last byte; a continued
+ * data group is kept only when its hash matches EF.SOD at once, else it is read again in full. Everything else is read again. Every session key is wiped when the read ends, however it
  * ends. Telemetry events carry protocol names, status words, file identifiers, byte counts and
  * timings only, and a sink that throws never changes the read.
  */
@@ -133,21 +163,54 @@ internal class ReadFlow(
     private val options: ChipReadOptions,
     private val telemetry: TelemetrySink,
     private val cryptoProvider: () -> ChipCrypto = ::chipCrypto,
+    private val reporter: FlowReporter = FlowReporter(ProgressTracker()) { _, _ -> },
+    private val attempt: Int = 1,
+    private val carry: ResumeCarry? = null,
+    // Called once, right before the first command that uses the key: BAC's EXTERNAL AUTHENTICATE
+    // or PACE's first GENERAL AUTHENTICATE, or when a plain chip was found with no access
+    // protocol. The commands before it cost the chip nothing about the key and need no public-key
+    // work on it: the plain SELECTs and READ BINARYs, BAC's GET CHALLENGE (a random number) and
+    // PACE's MSE:Set AT (it selects the protocol and the password; the SDK sends only the MRZ and
+    // CAN references, which have no retry counter). The coordinator uses it to set the general
+    // command time limit and to know that the chip was asked something about the key.
+    private val accessStage: suspend () -> Unit = {},
 ) {
     private val plain = PlainApduSender(transport)
     private var channel: SecureChannel? = null
     private val sender: ApduSender get() = channel ?: plain
-    private var reader = FileReader(plain)
+
+    // The file being read, for the chunk updates.
+    private var currentFid = 0
+    private var currentInMasterFile = false
+    private val chunkListener =
+        FileReader.ChunkListener { fid, bytesRead, bytesTotal ->
+            reporter.fileChunk(fid ?: currentFid, currentInMasterFile, bytesRead, bytesTotal)
+        }
+    private var reader = FileReader(plain).also { it.listener = chunkListener }
+
+    // Resume (a carry from an earlier attempt).
+    private var resumeOutcome = ChipResumeOutcome.NOT_RESUMED
+    private var securityObjectStageReached = false
+    private var resumeFrom: Pair<Int, ByteArray>? = null
+    private var lostPart: Pair<Int, ByteArray>? = null
     private var crypto: ChipCrypto? = null
     private var extended = false
+
+    // The current DF. The read starts with either one current: on Android the master file is
+    // current after activation; on iOS the system has already selected the eMRTD application.
+    private var masterFileCurrent = false
+    private var masterFileSelectSent = false
 
     private val files = ArrayList<ChipFile>()
     private val fileErrors = ArrayList<ChipFileError>()
 
     // Access.
     private var protocol = ChipAccessProtocol.NONE
+    private var attempting = ChipAccessProtocol.NONE
+    private var applicationSelectedAfterKeySwitch = false
     private var accessDone = false
     private var cardAccessRead = false
+    private var accessStageEntered = false
     private var offered: List<ChipPaceOffer> = emptyList()
     private var cardAccessInfos: SecurityInfos? = null
     private var paceSuite: PaceSuite? = null
@@ -157,6 +220,7 @@ internal class ReadFlow(
     private var cardAccess: ByteArray? = null
     private var cardSecurity: ByteArray? = null
     private var cardSecurityInfos: SecurityInfos? = null
+    private var efDir: ByteArray? = null
     private var dg14Infos: SecurityInfos? = null
 
     // Chip authentication (one fact per place it was tried) and active authentication.
@@ -175,22 +239,26 @@ internal class ReadFlow(
     /** The chip authentication mapping evidence, for tests: wiped when [run] returns. */
     internal val mappingEvidence: ChipAuthMappingEvidence? get() = camEvidence
 
+    /**
+     * Runs the read. Total: every throwable other than cancellation, an [Error] such as running out
+     * of memory on a large file or of stack on a hostile structure included, becomes a typed Failed
+     * or Partial result ([errorOf]) and is not rethrown; cancellation passes through as it is. Keys
+     * are wiped however the read ends.
+     */
     suspend fun run(): ChipReadResult {
         val start = TimeSource.Monotonic.markNow()
         val result =
             try {
-                execute()
-                ChipReadResult.Complete(assemble())
-            } catch (s: Stop) {
-                stopped(s.error)
-            } catch (e: ApduTransportException) {
-                stopped(e.error)
-            } catch (e: SecureMessagingException) {
-                stopped(FlowMappings.secureMessaging(e))
-            } catch (e: MalformedResponse) {
-                stopped(ChipUnexpectedAnswer(ChipUnexpectedAnswer.Reason.NO_STATUS_WORD))
-            } catch (e: CommandTooLong) {
-                stopped(ChipUnexpectedAnswer(ChipUnexpectedAnswer.Reason.UNUSABLE_FILE_ANSWER))
+                val error =
+                    try {
+                        execute()
+                        null
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Throwable) {
+                        errorOf(e)
+                    }
+                finish(error)
             } finally {
                 openedChannels.forEach { it.close() }
                 camEvidence?.wipe()
@@ -200,6 +268,20 @@ internal class ReadFlow(
         return result
     }
 
+    /** The result for a read that ended with [error], or Complete when it is `null`; never throws. */
+    private fun finish(error: ChipError?): ChipReadResult =
+        try {
+            if (error == null) {
+                reporter.checkingFiles()
+                ChipReadResult.Complete(assemble())
+            } else {
+                stopped(error)
+            }
+        } catch (e: Throwable) {
+            // Putting the result together failed: the error stands without the read's content.
+            ChipReadResult.Failed(error ?: errorOf(e), if (accessDone) accessReport() else null)
+        }
+
     private fun stopped(error: ChipError): ChipReadResult =
         if (accessDone && error != ChipBlank) {
             ChipReadResult.Partial(assemble(), error)
@@ -207,9 +289,82 @@ internal class ReadFlow(
             ChipReadResult.Failed(error, if (accessDone) accessReport() else null)
         }
 
+    /** The access protocol of the error: the one that opened the chip, or the one being tried. */
+    private val errorProtocol: ChipAccessProtocol get() = if (accessDone) protocol else attempting
+
+    /**
+     * The typed error for an exception that ended the read. Exceptions with a meaning map to it;
+     * the rest are faults the reader did not expect, never left to escape [run]:
+     * - a key cleared while the read ran: [ChipAccessDenied.Reason.KEY_CLEARED];
+     * - a backend cryptography failure: [ChipUnsupportedAlgorithm.Reason.CRYPTOGRAPHY_FAILED];
+     * - an answer that grew past the limit ([ResponseTooLong]) or any other exception: during
+     *   access [ChipAccessDenied.Reason.UNEXPECTED_CHIP_ANSWER], after it
+     *   [ChipUnexpectedAnswer.Reason.UNUSABLE_FILE_ANSWER].
+     */
+    private fun errorOf(e: Throwable): ChipError =
+        when (e) {
+            is Stop -> {
+                e.error
+            }
+
+            is ApduTransportException -> {
+                e.error
+            }
+
+            is SecureMessagingException -> {
+                FlowMappings.secureMessaging(e)
+            }
+
+            is MalformedResponse -> {
+                ChipUnexpectedAnswer(ChipUnexpectedAnswer.Reason.NO_STATUS_WORD)
+            }
+
+            is CommandTooLong, is ExtendedLengthRequired -> {
+                ChipUnexpectedAnswer(ChipUnexpectedAnswer.Reason.UNUSABLE_FILE_ANSWER)
+            }
+
+            is PaceException -> {
+                FlowMappings.pace(e)
+            }
+
+            is BacException -> {
+                FlowMappings.bac(e)
+            }
+
+            is ChipCryptoException -> {
+                ChipUnsupportedAlgorithm(errorProtocol, ChipUnsupportedAlgorithm.Reason.CRYPTOGRAPHY_FAILED)
+            }
+
+            else -> {
+                when {
+                    options.accessKey.isCleared -> ChipAccessDenied(errorProtocol, ChipAccessDenied.Reason.KEY_CLEARED)
+                    !accessDone -> ChipAccessDenied(errorProtocol, ChipAccessDenied.Reason.UNEXPECTED_CHIP_ANSWER)
+                    else -> ChipUnexpectedAnswer(ChipUnexpectedAnswer.Reason.UNUSABLE_FILE_ANSWER)
+                }
+            }
+        }
+
+    /**
+     * What this attempt leaves for the next one: its own EF.SOD, data groups and cut-off data group
+     * once it reached EF.SOD; otherwise what it was given, unchanged.
+     */
+    fun carryOut(): ResumeCarry {
+        if (!securityObjectStageReached) return carry ?: ResumeCarry.EMPTY
+        val dataGroups = files.filter { it.dataGroup != null }
+        val unfinished = lostPart ?: resumeFrom
+        return ResumeCarry(appFile(LdsIds.EF_SOD), dataGroups, unfinished?.takeIf { u -> dataGroups.none { it.fileId == u.first } })
+    }
+
     private suspend fun execute() {
         val key = options.accessKey
         if (key.isCleared) throw Stop(ChipAccessDenied(ChipAccessProtocol.NONE, ChipAccessDenied.Reason.KEY_CLEARED))
+        // A value read or typed with a mistake would cost the chip an access attempt: refuse the key
+        // before any command (Part 11, 4.3.2 derives the key from the fields and their check digits).
+        if (key is ChipAccessKey.Mrz && key.checkDigitFindings.isNotEmpty() && !options.allowCheckDigitMismatch) {
+            throw Stop(ChipKeyCheckDigitMismatch(key.checkDigitFindings))
+        }
+        reporter.beginAttempt(options.dataGroups)
+        reporter.openingAccess(null)
         crypto =
             try {
                 cryptoProvider()
@@ -220,10 +375,20 @@ internal class ReadFlow(
         readExtendedLengthStatement()
         val infos = readCardAccess()
         val suites = infos?.let(::paceSuites).orEmpty()
+        reporter.probeDone(
+            when {
+                suites.isNotEmpty() -> ChipAccessProtocol.PACE
+                key is ChipAccessKey.Mrz && crypto != null -> ChipAccessProtocol.BAC
+                else -> ChipAccessProtocol.NONE
+            },
+        )
         if (suites.isNotEmpty()) {
             openWithPace(key, suites, infos!!.paceInfos.size > 1)
             readCardSecurity()
-            selectApplication()
+            // Chip authentication in the master file that switched keys has already selected the
+            // application under the new keys, and its verified 9000 made it current: nothing
+            // between that SELECT and here changes the current DF, so a second one is redundant.
+            if (!applicationSelectedAfterKeySwitch) selectApplication()
         } else {
             openWithoutPace(key, infos)
         }
@@ -312,33 +477,49 @@ internal class ReadFlow(
                 ?: throw Stop(
                     ChipUnsupportedAlgorithm(ChipAccessProtocol.PACE, ChipUnsupportedAlgorithm.Reason.NO_CRYPTOGRAPHY_ON_PLATFORM),
                 )
+        attempting = ChipAccessProtocol.PACE
         var refusedSw: Int? = null
         var needsExtended = false
+        // One authentication attempt per run of the flow: another suite is tried only when nothing of this one
+        // reached GENERAL AUTHENTICATE (Pace checks every size it can before MSE:Set AT) and the
+        // chip's answer to MSE:Set AT was about the suite, not the password. Every other failure
+        // ends the read, and BAC is never tried after PACE.
         for (suite in suites) {
             val start = TimeSource.Monotonic.markNow()
             val name = paceName(suite)
             try {
-                val result = Pace.open(plain, c, key, suite, PaceOptions(sendParameterId, extended))
+                val result =
+                    Pace.open(
+                        plain,
+                        c,
+                        key,
+                        suite,
+                        PaceOptions(sendParameterId, extended),
+                        beforeAuthentication = ::enterAccessStage,
+                    )
                 // The channel is owned here before anything else can fail, so its keys are always wiped.
                 useChannel(result.channel)
                 camEvidence = result.mappingEvidence as? ChipAuthMappingEvidence
                 protocol = ChipAccessProtocol.PACE
                 paceSuite = suite
                 accessDone = true
+                reporter.accessGranted(ChipAccessProtocol.PACE)
                 event(ChipReadStep.PACE, ChipReadStepOutcome.SUCCEEDED, start, protocol = name)
                 return
             } catch (e: PaceException) {
                 event(ChipReadStep.PACE, ChipReadStepOutcome.FAILED, start, protocol = name, sw = e.sw)
+                val atSetAt = e.step == PaceStep.SET_AUTHENTICATION_TEMPLATE
                 when {
                     e.failure == PaceFailure.UNSUPPORTED_SUITE -> {
                         // Nothing was sent for this suite; try the next one.
                     }
 
-                    e.failure == PaceFailure.EXTENDED_LENGTH_REQUIRED -> {
+                    atSetAt && e.failure == PaceFailure.EXTENDED_LENGTH_REQUIRED -> {
+                        // Found before MSE:Set AT went out (or MSE:Set AT itself did not fit): nothing was sent.
                         needsExtended = true
                     }
 
-                    e.failure in SET_AT_REFUSALS -> {
+                    atSetAt && e.failure in SET_AT_REFUSALS -> {
                         refusedSw = e.sw
                     }
 
@@ -346,16 +527,15 @@ internal class ReadFlow(
                         throw Stop(FlowMappings.pace(e))
                     }
                 }
-            } catch (e: ExtendedLengthRequired) {
-                event(ChipReadStep.PACE, ChipReadStepOutcome.FAILED, start, protocol = name)
-                needsExtended = true
-            } catch (e: CommandTooLong) {
-                // A command longer than the transport sends: the same limit as a missing extended length.
-                event(ChipReadStep.PACE, ChipReadStepOutcome.FAILED, start, protocol = name)
-                needsExtended = true
             } catch (e: ChipCryptoException) {
                 event(ChipReadStep.PACE, ChipReadStepOutcome.FAILED, start, protocol = name)
                 throw Stop(ChipUnsupportedAlgorithm(ChipAccessProtocol.PACE, ChipUnsupportedAlgorithm.Reason.CRYPTOGRAPHY_FAILED))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Anything else ends the read ([run] types it); no other suite is tried.
+                event(ChipReadStep.PACE, ChipReadStepOutcome.FAILED, start, protocol = name)
+                throw e
             }
         }
         val reason =
@@ -370,7 +550,7 @@ internal class ReadFlow(
     private fun useChannel(ch: SecureChannel) {
         openedChannels += ch
         channel = ch
-        reader = FileReader(ch)
+        reader = FileReader(ch).also { it.listener = chunkListener }
     }
 
     private suspend fun openWithoutPace(
@@ -382,18 +562,25 @@ internal class ReadFlow(
         val offersUnusablePace = infos != null && infos.paceInfos.isNotEmpty()
         val c = crypto
         if (key is ChipAccessKey.Mrz && c != null) {
+            attempting = ChipAccessProtocol.BAC
             val start = TimeSource.Monotonic.markNow()
             try {
-                val opened = Bac.open(plain, c, key)
+                val opened = Bac.open(plain, c, key, beforeAuthentication = ::enterAccessStage)
                 useChannel(opened)
                 protocol = ChipAccessProtocol.BAC
                 accessDone = true
+                reporter.accessGranted(ChipAccessProtocol.BAC)
                 event(ChipReadStep.BAC, ChipReadStepOutcome.SUCCEEDED, start, protocol = "BAC")
                 return
             } catch (e: BacException) {
                 event(ChipReadStep.BAC, ChipReadStepOutcome.FAILED, start, protocol = "BAC", sw = e.sw)
                 if (e.failure != BacFailure.CHALLENGE_REFUSED) throw Stop(FlowMappings.bac(e))
-                if (probePlain()) return
+                reporter.accessProtocol(ChipAccessProtocol.NONE)
+                if (probePlain()) {
+                    // A plain chip: what follows is read with the general time limit.
+                    enterAccessStage()
+                    return
+                }
                 throw Stop(noWayIn(offersUnusablePace, FlowMappings.bac(e)))
             } catch (e: ChipCryptoException) {
                 event(ChipReadStep.BAC, ChipReadStepOutcome.FAILED, start, protocol = "BAC")
@@ -401,13 +588,24 @@ internal class ReadFlow(
             }
         }
         // No BAC possible here (a card access number, or no cryptography): a plain chip still reads.
-        if (probePlain()) return
+        if (probePlain()) {
+            // A plain chip: what follows is read with the general time limit.
+            enterAccessStage()
+            return
+        }
         val error =
             when {
                 key is ChipAccessKey.Can -> ChipAccessDenied(ChipAccessProtocol.NONE, ChipAccessDenied.Reason.KEY_NEEDS_PACE)
                 else -> ChipUnsupportedAlgorithm(ChipAccessProtocol.BAC, ChipUnsupportedAlgorithm.Reason.NO_CRYPTOGRAPHY_ON_PLATFORM)
             }
         throw Stop(noWayIn(offersUnusablePace, error))
+    }
+
+    /** The plain commands before access are done: see [accessStage]. Once per attempt. */
+    private suspend fun enterAccessStage() {
+        if (accessStageEntered) return
+        accessStageEntered = true
+        accessStage()
     }
 
     private fun noWayIn(
@@ -425,17 +623,25 @@ internal class ReadFlow(
         val start = TimeSource.Monotonic.markNow()
         return try {
             val bytes = reader.readFile(LdsIds.EF_COM, extended)
-            files += ChipFile(LdsIds.EF_COM, false, bytes)
+            files += ChipFile(LdsIds.EF_COM, false, bytes, attempt)
             protocol = ChipAccessProtocol.NONE
             accessDone = true
+            reporter.accessGranted(ChipAccessProtocol.NONE)
             event(ChipReadStep.READ_FILE, ChipReadStepOutcome.SUCCEEDED, start, fileId = LdsIds.EF_COM, bytes = bytes.size)
             true
-        } catch (e: FileSecurityStatusNotSatisfied) {
-            event(ChipReadStep.READ_FILE, ChipReadStepOutcome.FAILED, start, fileId = LdsIds.EF_COM, sw = SW_SECURITY)
-            false
         } catch (e: FileReadFailure) {
-            event(ChipReadStep.READ_FILE, ChipReadStepOutcome.FAILED, start, fileId = LdsIds.EF_COM)
+            event(
+                ChipReadStep.READ_FILE,
+                ChipReadStepOutcome.FAILED,
+                start,
+                fileId = LdsIds.EF_COM,
+                sw = statusOf(e),
+                bytes = bytesSoFar(),
+            )
             false
+        } catch (e: Exception) {
+            fileReadEnded(e, start, LdsIds.EF_COM)
+            throw e
         }
     }
 
@@ -443,6 +649,7 @@ internal class ReadFlow(
         val start = TimeSource.Monotonic.markNow()
         try {
             reader.selectApplication(extended)
+            masterFileCurrent = false
             event(ChipReadStep.SELECT_APPLICATION, ChipReadStepOutcome.SUCCEEDED, start)
         } catch (e: FileNotFound) {
             event(ChipReadStep.SELECT_APPLICATION, ChipReadStepOutcome.FAILED, start, sw = SW_NOT_FOUND)
@@ -453,7 +660,13 @@ internal class ReadFlow(
         }
     }
 
-    /** After PACE: EF.CardSecurity (J.2 steps 2 and 3), then chip authentication in the master file when it applies. */
+    /**
+     * After PACE: EF.CardSecurity (J.2 steps 2 and 3), then chip authentication in the master file
+     * when it applies. PACE ran with the master file current (EF.CardAccess was read there), and
+     * PACE leaves it current (Part 11, 4.2: "the Current DF can be either the Master File (if PACE
+     * was used) or the eMRTD Application"), so 011D here is EF.CardSecurity, never the
+     * application's EF.SOD; [readMasterFile] still refuses to read it from any other DF.
+     */
     private suspend fun readCardSecurity() {
         val bytes = readMasterFile(FILE_CARD_SECURITY) ?: return
         cardSecurity = bytes
@@ -470,33 +683,133 @@ internal class ReadFlow(
                 return
             }
         cardSecurityInfos = infos
+        // EF.CardSecurity holds a signed copy of EF.DIR (Part 11, 9.2.11, EFDIRInfo): read EF.DIR
+        // too, while the master file is current, so the copy can be compared (EfDirMatchesSignedCopy).
+        if (infos.efDirInfo != null) efDir = readMasterFile(FILE_EF_DIR, toEnd = true)
         if (camEvidence != null || infos.chipAuthenticationInfos.isEmpty()) return
         runChipAuthentication(infos, CaContext.MASTER_FILE)
     }
 
-    /** Reads a master-file EF; `null` when the chip does not have it or does not let the reader read it. */
-    private suspend fun readMasterFile(fid: Int): ByteArray? {
+    /**
+     * Reads a master-file EF; `null` when the chip does not have it or does not let the reader read it.
+     *
+     * SELECT by file identifier finds an EF under the current DF only (Part 10, 3.6.2), and the read
+     * may start with the eMRTD application current. The reader does not select the master file up
+     * front, because Part 10, 3.6.1.1 recommends against SELECT MF and some chips refuse it: it
+     * selects the EF first. EF.ATR/INFO and EF.CardAccess exist only in the master file, so a 9000
+     * shows the master file is current. Any other answer, before the master file was selected
+     * once, makes the reader select it ([FileReader.selectMasterFile]) and select the EF again;
+     * when the chip refuses SELECT MF, the first answer stands. 6A82 from the master file still
+     * means the chip does not have the file (for EF.CardAccess: it offers no PACE).
+     *
+     * EF.CardSecurity's identifier is also EF.SOD's in the application, so it is read only once the
+     * master file is known to be current.
+     */
+    private suspend fun readMasterFile(
+        fid: Int,
+        toEnd: Boolean = false,
+    ): ByteArray? {
         val start = TimeSource.Monotonic.markNow()
+        startFile(fid, true)
         return try {
-            val bytes = reader.readFile(fid, extended)
-            files += ChipFile(fid, true, bytes)
+            if (!selectInMasterFile(fid)) {
+                event(ChipReadStep.READ_FILE, ChipReadStepOutcome.SKIPPED, start, fileId = fid)
+                reporter.fileEnded(fid, true)
+                return null
+            }
+            val bytes = if (toEnd) reader.readCurrentFileToEnd(fid, extended) else reader.readCurrentFile(fid, extended)
+            reporter.fileEnded(fid, true)
+            files += ChipFile(fid, true, bytes, attempt)
             event(ChipReadStep.READ_FILE, ChipReadStepOutcome.SUCCEEDED, start, fileId = fid, bytes = bytes.size)
             bytes
         } catch (e: FileNotFound) {
             event(ChipReadStep.READ_FILE, ChipReadStepOutcome.SKIPPED, start, fileId = fid, sw = SW_NOT_FOUND)
+            reporter.fileEnded(fid, true)
             null
         } catch (e: FileReadFailure) {
-            event(ChipReadStep.READ_FILE, ChipReadStepOutcome.FAILED, start, fileId = fid)
+            event(ChipReadStep.READ_FILE, ChipReadStepOutcome.FAILED, start, fileId = fid, sw = statusOf(e), bytes = bytesSoFar())
+            reporter.fileEnded(fid, true)
             null
+        } catch (e: Exception) {
+            fileReadEnded(e, start, fid)
+            throw e
         }
     }
+
+    /**
+     * Makes [fid] the current EF in the master file, selecting the master file when it is not
+     * current; `false` when the master file cannot be made current for EF.CardSecurity.
+     */
+    private suspend fun selectInMasterFile(fid: Int): Boolean {
+        // The platform says the application is current (iOS): a SELECT of a master-file EF there is
+        // bound to fail, so the master file is selected first; when the chip refuses it, the file
+        // cannot be reached.
+        if (!masterFileCurrent && !masterFileSelectSent && transport.startSelection == ChipStartSelection.EMRTD_APPLICATION) {
+            if (!selectMasterFile()) return false
+        }
+        // 011D in the application is EF.SOD: never read it as EF.CardSecurity.
+        if (fid == FILE_CARD_SECURITY && !masterFileCurrent && !selectMasterFile()) return false
+        try {
+            reader.selectFile(fid, extended)
+        } catch (e: FileReadFailure) {
+            if (masterFileCurrent || masterFileSelectSent || !selectMasterFile()) throw e
+            reader.selectFile(fid, extended)
+        }
+        masterFileCurrent = true
+        return true
+    }
+
+    /** Sends SELECT MF once per read; `true` when the chip took it. */
+    private suspend fun selectMasterFile(): Boolean {
+        if (masterFileSelectSent) return masterFileCurrent
+        masterFileSelectSent = true
+        return try {
+            reader.selectMasterFile(extended)
+            masterFileCurrent = true
+            true
+        } catch (e: FileReadFailure) {
+            false
+        }
+    }
+
+    /**
+     * A file read that ended the whole read (a lost tag, a lost session, an answer with no status
+     * word): the READ_FILE event still goes out, with the status word when there is one and the
+     * bytes read so far. The caller rethrows.
+     */
+    private fun fileReadEnded(
+        e: Exception,
+        start: TimeSource.Monotonic.ValueTimeMark,
+        fid: Int,
+    ) {
+        if (e is CancellationException) return
+        val sw = (e as? SecureMessagingException)?.sw
+        event(ChipReadStep.READ_FILE, ChipReadStepOutcome.FAILED, start, fileId = fid, sw = sw, bytes = bytesSoFar())
+    }
+
+    /** The bytes of the file the last read had received when it failed; `null` when it received none. */
+    private fun bytesSoFar(): Int? = reader.bytesReadSoFar.takeIf { it > 0 }
+
+    private fun statusOf(e: FileReadFailure): Int? =
+        when (e) {
+            is FileNotFound -> SW_NOT_FOUND
+            is FileSecurityStatusNotSatisfied -> SW_SECURITY
+            is FileStatusFailure -> e.statusWord
+            is MalformedFile, is FileProtocolFailure -> null
+        }
 
     // --- Application --------------------------------------------------------------------------
 
     private suspend fun readApplication() {
-        val efCom = appFile(LdsIds.EF_COM) ?: readAppFile(LdsIds.EF_COM, true)
+        val efCom =
+            appFile(LdsIds.EF_COM)?.also { reporter.fileEnded(LdsIds.EF_COM, false) }
+                ?: readAppFile(LdsIds.EF_COM, true)
         val sod = readAppFile(LdsIds.EF_SOD, true)
+        securityObjectStageReached = true
+        carry?.let { compareWithEarlier(it, sod) }
         val listed = listedDataGroups(efCom, sod)
+        val planned = (options.dataGroups + setOf(14, 15)).filter { listed == null || it in listed }
+        reporter.planFiles(planned.map { 0x0100 + it }.toSet())
 
         val dg14 = readDataGroup(14, requested = 14 in options.dataGroups, listed = listed)
         val dg15 = readDataGroup(15, requested = 15 in options.dataGroups, listed = listed)
@@ -514,11 +827,42 @@ internal class ReadFlow(
             }
 
         chipOrActiveAuthentication(dg14Infos, dg14Unreadable, dg15)
+        reporter.authenticationPhaseDone()
 
         for (n in options.dataGroups.sorted()) {
             if (n == 14 || n == 15) continue
             readDataGroup(n, requested = true, listed = listed)
         }
+    }
+
+    /**
+     * Resume: keeps the earlier data groups, and the cut-off one for continuing, only when EF.SOD
+     * read in this attempt is byte for byte the earlier one. EF.SOD is the chip's signed list of
+     * data group hashes, so it shows the same document with the same data; the chip's radio
+     * identifier would not (many chips give a random one). Each earlier data group is kept only
+     * when its hash in this EF.SOD passes, the rule the continued file follows too: one that
+     * EF.SOD does not list, or whose bytes do not match, is read again in full in this session.
+     */
+    private fun compareWithEarlier(
+        earlier: ResumeCarry,
+        sod: ByteArray?,
+    ) {
+        val before = earlier.securityObject
+        resumeOutcome =
+            when {
+                sod == null || before == null -> ChipResumeOutcome.NOTHING_TO_COMPARE
+                !sod.contentEquals(before) -> ChipResumeOutcome.SECURITY_OBJECT_DIFFERS
+                else -> ChipResumeOutcome.SAME_SECURITY_OBJECT
+            }
+        if (resumeOutcome != ChipResumeOutcome.SAME_SECURITY_OBJECT) return
+        for (file in earlier.files) {
+            if (appFile(file.fileId) != null) continue
+            val number = file.dataGroup ?: continue
+            if (!hashVouches(number, file.raw())) continue
+            files += file
+            reporter.fileKept(file.fileId)
+        }
+        resumeFrom = earlier.unfinished
     }
 
     /** The data groups EF.COM and EF.SOD name together, or `null` when neither could be read. */
@@ -545,8 +889,11 @@ internal class ReadFlow(
         val fid = 0x0100 + number
         if (listed != null && number !in listed) {
             if (requested) fileErrors += ChipFileError(fid, false, ChipFileNotFound(fid, listedByChip = false))
+            reporter.fileDropped(fid)
             return null
         }
+        // Kept from an earlier attempt (resume): not read again.
+        appFile(fid)?.let { return it }
         return readAppFile(fid, requested)
     }
 
@@ -559,20 +906,73 @@ internal class ReadFlow(
         requested: Boolean,
     ): ByteArray? {
         val start = TimeSource.Monotonic.markNow()
+        val part = resumeFrom?.takeIf { it.first == fid }
+        startFile(fid, false, part?.second?.size ?: 0)
         return try {
-            val bytes = reader.readFile(fid, extended)
-            files += ChipFile(fid, false, bytes)
-            event(ChipReadStep.READ_FILE, ChipReadStepOutcome.SUCCEEDED, start, fileId = fid, bytes = bytes.size)
-            bytes
+            val file = if (part != null) continueFile(fid, part.second) else ChipFile(fid, false, reader.readFile(fid, extended), attempt)
+            files += file
+            reporter.fileEnded(fid, false)
+            event(ChipReadStep.READ_FILE, ChipReadStepOutcome.SUCCEEDED, start, fileId = fid, bytes = file.size)
+            file.raw()
         } catch (e: FileNotFound) {
             event(ChipReadStep.READ_FILE, ChipReadStepOutcome.FAILED, start, fileId = fid, sw = SW_NOT_FOUND)
+            reporter.fileEnded(fid, false)
             if (requested) fileErrors += ChipFileError(fid, false, ChipFileNotFound(fid, listedByChip = true))
             null
         } catch (e: FileReadFailure) {
-            event(ChipReadStep.READ_FILE, ChipReadStepOutcome.FAILED, start, fileId = fid, sw = (e as? FileStatusFailure)?.statusWord)
+            event(ChipReadStep.READ_FILE, ChipReadStepOutcome.FAILED, start, fileId = fid, sw = statusOf(e), bytes = bytesSoFar())
+            reporter.fileEnded(fid, false)
             fileErrors += ChipFileError(fid, false, fileFailure(e, fid))
             null
+        } catch (e: Exception) {
+            // A data group cut off by a lost link keeps its bytes so far, for a resume.
+            if (fid in DATA_GROUP_IDS) reader.unfinished()?.takeIf { it.first == fid }?.let { lostPart = it }
+            fileReadEnded(e, start, fid)
+            throw e
         }
+    }
+
+    /**
+     * Continues data group [fid] after [prefix] (bytes from the attempt before, under the same
+     * EF.SOD). The joined bytes are kept only when their hash matches EF.SOD; otherwise, or when
+     * the hash cannot be checked, the file is read again in full, once, in this session.
+     */
+    private suspend fun continueFile(
+        fid: Int,
+        prefix: ByteArray,
+    ): ChipFile {
+        resumeFrom = null
+        val joined = reader.resumeFile(fid, prefix, extended)
+        if (hashVouches(fid - 0x0100, joined)) return ChipFile(fid, false, joined, attempt, continuedAt = prefix.size)
+        startFile(fid, false)
+        return ChipFile(fid, false, reader.readFile(fid, extended), attempt)
+    }
+
+    /** Whether EF.SOD's stored hash of data group [number] matches [bytes]: `false` when it cannot be checked. */
+    private fun hashVouches(
+        number: Int,
+        bytes: ByteArray,
+    ): Boolean {
+        val sod = appFile(LdsIds.EF_SOD) ?: return false
+        return try {
+            PassiveAuthentication { crypto ?: throw ChipCryptoUnavailableException() }
+                .run(PaInputs(securityObject = sod, dataGroups = mapOf(number to bytes)))
+                .any { it.kind == PaCheckKind.DataGroupHashMatches(number) && it.outcome == PaOutcome.Passed }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun startFile(
+        fid: Int,
+        inMasterFile: Boolean,
+        bytesAlready: Int = 0,
+    ) {
+        currentFid = fid
+        currentInMasterFile = inMasterFile
+        reporter.fileStarted(fid, inMasterFile, bytesAlready)
     }
 
     private fun fileFailure(
@@ -649,9 +1049,12 @@ internal class ReadFlow(
             return
         }
         val start = TimeSource.Monotonic.markNow()
+        reporter.authenticating(ChipAuthMethod.CHIP_AUTHENTICATION)
         val outcome =
             try {
-                ChipAuthentication.run(ch, c, infos, context, extended)
+                ChipAuthentication.run(ch, c, infos, context, extended).also {
+                    reporter.authenticated(ChipAuthMethod.CHIP_AUTHENTICATION)
+                }
             } catch (e: ChipCryptoException) {
                 event(ChipReadStep.CHIP_AUTHENTICATION, ChipReadStepOutcome.FAILED, start, protocol = "CA")
                 caChecks[where] = CaState(CheckOutcome.NotRun(ChipCheckReason.CRYPTOGRAPHY_FAILED))
@@ -686,6 +1089,8 @@ internal class ReadFlow(
                 caChecks[where] = state
                 try {
                     reader.selectApplication(extended)
+                    masterFileCurrent = false
+                    applicationSelectedAfterKeySwitch = true
                 } catch (e: FileReadFailure) {
                     // An answer that verified but is not 9000 does not confirm the keys.
                     event(ChipReadStep.CHIP_AUTHENTICATION, ChipReadStepOutcome.FAILED, start, protocol = "CA")
@@ -707,9 +1112,12 @@ internal class ReadFlow(
             return
         }
         val start = TimeSource.Monotonic.markNow()
+        reporter.authenticating(ChipAuthMethod.ACTIVE_AUTHENTICATION)
         val result =
             try {
-                ActiveAuthentication(sender, c).authenticate(dg15, dg14?.activeAuthenticationInfos?.firstOrNull(), extended)
+                ActiveAuthentication(sender, c).authenticate(dg15, dg14?.activeAuthenticationInfos?.firstOrNull(), extended).also {
+                    reporter.authenticated(ChipAuthMethod.ACTIVE_AUTHENTICATION)
+                }
             } catch (e: ChipCryptoException) {
                 event(ChipReadStep.ACTIVE_AUTHENTICATION, ChipReadStepOutcome.FAILED, start, protocol = "AA")
                 aaOutcome = CheckOutcome.NotRun(ChipCheckReason.CRYPTOGRAPHY_FAILED)
@@ -808,6 +1216,7 @@ internal class ReadFlow(
         checks += ChipCheck(ChipCheckKind.PaceChipAuthenticationMapping, camOutcome(pa))
         val aaPassed = aaNeedsKeyFileChecks && applicationKeyFilePassed(pa, 15)
         checks += ChipCheck(ChipCheckKind.ActiveAuthentication, if (aaPassed) CheckOutcome.Passed else aaOutcome)
+        options.printedDocument?.let { printed -> checks += printedMrzCheck(printed, dg1) }
         return ChipRead(
             access = accessReport(),
             files = files.toList(),
@@ -823,7 +1232,26 @@ internal class ReadFlow(
             dg16 = dg16,
             securityObject = sod,
             checks = checks,
+            resume = resumeOutcome,
         )
+    }
+
+    /**
+     * The printed MRZ against the chip's DG1, from the characters only. DG1's parsed view needs a
+     * check time; the comparison does not (it reads the raw characters), so with no check time DG1
+     * is parsed for this check alone, at a fixed reference time that no result shows.
+     */
+    private fun printedMrzCheck(
+        printed: MrzDocument,
+        dg1: Dg1View?,
+    ): ChipCheck {
+        val view =
+            dg1 ?: appFile(FILE_DG1)?.let { (Dg1View.parse(it, COMPARISON_REFERENCE_TIME) as? LdsParseResult.Success)?.view }
+        return if (view == null) {
+            ChipCheck(ChipCheckKind.Dg1MatchesPrintedMrz, CheckOutcome.NotRun(ChipCheckReason.NO_CHIP_MRZ))
+        } else {
+            ChipMrzComparison.printedCheck(printed, view.document)
+        }
     }
 
     /** The signed copy of EF.CardAccess's entries: EF.CardSecurity when it was read and readable, else DG14. */
@@ -896,6 +1324,7 @@ internal class ReadFlow(
                 dataGroups = groups,
                 cardAccess = cardAccess,
                 cardSecurity = cardSecurity,
+                efDir = efDir,
                 roots = options.trustAnchors.map { it.certificate },
                 signerCertificate = options.signerCertificate?.certificate,
                 at = options.checkTime?.let { CertTimes.fromEpochSeconds(it.epochSeconds) },
@@ -1003,15 +1432,26 @@ internal class ReadFlow(
 
     private companion object {
         const val FILE_ATR_INFO = 0x2F01
+
+        /** EF.DIR in the master file (Part 10, 3.11.1). */
+        const val FILE_EF_DIR = 0x2F00
         const val FILE_CARD_SECURITY = 0x011D
         const val FILE_DG1 = 0x0101
+
+        /** Picks the century of two-digit years when DG1 is parsed only to compare its characters; never shown. */
+        private val COMPARISON_REFERENCE_TIME = Instant.fromEpochSeconds(0)
         const val FILE_DG14 = 0x010E
         const val FILE_DG15 = 0x010F
         const val TAG_MRZ = 0x5F1F
         const val SW_NOT_FOUND = 0x6A82
         const val SW_SECURITY = 0x6982
+        val DATA_GROUP_IDS = 0x0101..0x0110
 
-        /** MSE:Set AT refusals: the chip did not take the suite, so nothing was agreed and the next suite may be tried. */
+        /**
+         * MSE:Set AT refusals about the suite: the chip did not take it, nothing was agreed and the
+         * password was not used, so the next suite may be tried. [PaceFailure.PASSWORD_STATE] is
+         * not one of them.
+         */
         val SET_AT_REFUSALS =
             setOf(
                 PaceFailure.ALGORITHM_NOT_SUPPORTED,

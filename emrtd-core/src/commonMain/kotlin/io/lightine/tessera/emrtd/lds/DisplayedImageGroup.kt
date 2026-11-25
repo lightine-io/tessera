@@ -2,6 +2,7 @@ package io.lightine.tessera.emrtd.lds
 
 import io.lightine.tessera.emrtd.internal.lds.ImageGroupReader
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
+import kotlin.jvm.JvmStatic
 
 /**
  * DG5 (displayed portrait) or DG7 (displayed signature or usual mark), read down to the image
@@ -43,6 +44,7 @@ public class DisplayedImageGroup internal constructor(
          *
          * @param bytes the whole content of the file
          */
+        @JvmStatic
         public fun parseDg5(bytes: ByteArray): LdsParseResult<DisplayedImageGroup> = ImageGroupReader.readDisplayed(bytes, dg7 = false)
 
         /**
@@ -51,6 +53,7 @@ public class DisplayedImageGroup internal constructor(
          *
          * @param bytes the whole content of the file
          */
+        @JvmStatic
         public fun parseDg7(bytes: ByteArray): LdsParseResult<DisplayedImageGroup> = ImageGroupReader.readDisplayed(bytes, dg7 = true)
     }
 }

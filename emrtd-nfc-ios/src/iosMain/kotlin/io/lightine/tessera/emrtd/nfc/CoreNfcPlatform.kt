@@ -1,6 +1,7 @@
 package io.lightine.tessera.emrtd.nfc
 
 import io.lightine.tessera.types.errors.NfcError
+import io.lightine.tessera.types.errors.NfcUnavailable
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.convert
@@ -21,6 +22,7 @@ import platform.Foundation.NSProcessInfo
 import platform.Foundation.create
 import platform.darwin.NSObject
 import platform.darwin.NSObjectMeta
+import platform.darwin.dispatch_queue_create
 import platform.posix.memcpy
 
 // The parts of Core NFC that the transport and the session use, behind small interfaces, so the
@@ -31,6 +33,12 @@ import platform.posix.memcpy
 internal interface Iso7816Channel {
     /** Whether the chip says it supports PACE, or `null` when the system cannot say (before iOS 26.4). */
     val supportsPace: Boolean?
+
+    /**
+     * The application the system selected when it found the tag (`initialSelectedAID`, a hex
+     * string), or `null` when it does not say.
+     */
+    val initialSelectedAid: String?
 
     /** Sends [command]. [onDone] gets the answer with its two status-word bytes, or an error. */
     fun send(
@@ -45,14 +53,39 @@ internal interface DetectedTag {
     val iso7816: Iso7816Channel?
 
     /** Connects the session to this tag; [onDone] gets `null` on success. */
-    fun connect(onDone: (error: NfcError?) -> Unit)
+    fun connect(onDone: (failure: ConnectFailure?) -> Unit)
 }
 
-/** What the reader session reports. Called on the session's own queue. */
+/**
+ * Why `connect(to:)` failed: the typed [error], and whether polling may restart for another try.
+ * Only a lost link or a chip that did not answer may ([connectRetryable]); a session that is
+ * ending (its time limit, an ended session) or a refused request may not.
+ */
+internal class ConnectFailure(
+    val error: NfcError,
+    val retryable: Boolean,
+    // Core NFC's raw code, a fact for the ending; `null` for an error of another domain.
+    val systemCode: Long? = null,
+)
+
+/** What the reader session reports. Called on the session's own serial queue, never the main queue. */
 internal interface ReaderSessionEvents {
+    /**
+     * The session is on: the sheet shows and the reader polls (`tagReaderSessionDidBecomeActive`).
+     * A session the system refuses (busy, for example) ends without it.
+     */
+    fun onActive() {}
+
     fun onTagsDetected(tags: List<DetectedTag>)
 
-    fun onInvalidated(error: NfcError)
+    /**
+     * The session ended. [systemCode] is the raw `NFCReaderError` code when the error is of Core
+     * NFC's domain (`NFCErrorDomain`), else `null`.
+     */
+    fun onInvalidated(
+        error: NfcError,
+        systemCode: Long? = null,
+    )
 }
 
 /** The system reader session. */
@@ -100,21 +133,49 @@ internal class PlatformIso7816Channel(
     // send a message the tag object does not know.
     override val supportsPace: Boolean? = if (isAtLeastIos264()) tag.supportsPACE else null
 
+    // Available from iOS 13 (NFCISO7816Tag.h), so on every system the module supports.
+    override val initialSelectedAid: String? = tag.initialSelectedAID
+
     override fun send(
         command: ByteArray,
         onDone: (answer: ByteArray?, error: NfcError?) -> Unit,
-    ) {
-        // The SDK builds every command, so the bytes are always a well-formed APDU.
-        val apdu = NFCISO7816APDU(data = command.toNSData())
-        tag.sendCommandAPDU(apdu) { data: NSData?, sw1: UByte, sw2: UByte, error: NSError? ->
-            if (error != null) {
-                onDone(null, nfcErrorFor(error))
-            } else {
-                onDone((data?.toByteArray() ?: ByteArray(0)) + byteArrayOf(sw1.toByte(), sw2.toByte()), null)
-            }
+    ) = sendApdu(command, onDone) { apdu, completion -> tag.sendCommandAPDU(apdu, completion) }
+}
+
+/** What `sendCommandAPDU(_:completionHandler:)` calls back with: data, SW1, SW2 and an error. */
+internal typealias ApduCompletion = (data: NSData?, sw1: UByte, sw2: UByte, error: NSError?) -> Unit
+
+/**
+ * Sends [command] with [send] and gives [onDone] the answer with its status word, or an error.
+ *
+ * Core NFC's `initWithData:` returns nil when the bytes are not a valid APDU (`NFCISO7816Tag.h`):
+ * then nothing is sent and [onDone] gets [NfcUnavailable] `REQUEST_REFUSED` for this command.
+ */
+internal fun sendApdu(
+    command: ByteArray,
+    onDone: (answer: ByteArray?, error: NfcError?) -> Unit,
+    send: (apdu: NFCISO7816APDU, completion: ApduCompletion) -> Unit,
+) {
+    val apdu = commandApdu(command)
+    if (apdu == null) {
+        onDone(null, NfcUnavailable(NfcUnavailable.Reason.REQUEST_REFUSED))
+        return
+    }
+    send(apdu) { data: NSData?, sw1: UByte, sw2: UByte, error: NSError? ->
+        if (error != null) {
+            onDone(null, nfcErrorFor(error, CoreNfcErrorSource.TAG_OPERATION))
+        } else {
+            onDone((data?.toByteArray() ?: ByteArray(0)) + byteArrayOf(sw1.toByte(), sw2.toByte()), null)
         }
     }
 }
+
+/**
+ * [command] as a Core NFC APDU, or `null` when Core NFC finds no valid APDU in it. The Kotlin
+ * constructor cannot return null, so this calls the initializer itself, which can.
+ */
+@Suppress("DEPRECATION", "DEPRECATION_ERROR") // alloc and initWithData: stand behind the constructor, which hides the nil
+internal fun commandApdu(command: ByteArray): NFCISO7816APDU? = NFCISO7816APDU.alloc()?.initWithData(command.toNSData())
 
 /** A tag from `tagReaderSession(_:didDetect:)`. */
 private class PlatformDetectedTag(
@@ -124,8 +185,18 @@ private class PlatformDetectedTag(
     override val iso7816: Iso7816Channel? =
         (tag as? NFCISO7816TagProtocol)?.let { PlatformIso7816Channel(it) }
 
-    override fun connect(onDone: (error: NfcError?) -> Unit) {
-        session.connectToTag(tag) { error: NSError? -> onDone(error?.let { nfcErrorFor(it) }) }
+    override fun connect(onDone: (failure: ConnectFailure?) -> Unit) {
+        session.connectToTag(tag) { error: NSError? ->
+            onDone(
+                error?.let {
+                    ConnectFailure(
+                        nfcErrorFor(it, CoreNfcErrorSource.TAG_OPERATION),
+                        connectRetryable(it.domain, it.code),
+                        systemCodeOf(it.domain, it.code),
+                    )
+                },
+            )
+        }
     }
 }
 
@@ -139,14 +210,18 @@ private class SessionDelegate(
 ) : NSObject(),
     NFCTagReaderSessionDelegateProtocol {
     override fun tagReaderSessionDidBecomeActive(session: NFCTagReaderSession) {
-        // Nothing to do: the system sheet is showing and the reader is polling.
+        // The system sheet is showing and the reader is polling.
+        events.onActive()
     }
 
     override fun tagReaderSession(
         session: NFCTagReaderSession,
         didInvalidateWithError: NSError,
     ) {
-        events.onInvalidated(nfcErrorFor(didInvalidateWithError))
+        events.onInvalidated(
+            nfcErrorFor(didInvalidateWithError, CoreNfcErrorSource.SESSION_END),
+            systemCodeOf(didInvalidateWithError.domain, didInvalidateWithError.code),
+        )
     }
 
     override fun tagReaderSession(
@@ -161,19 +236,34 @@ private class SessionDelegate(
 /**
  * The real thing: an `NFCTagReaderSession` that looks for ISO 14443 tags.
  *
- * From iOS 26.4 it uses the session Configuration with ISO 14443 and PACE polling together and the
+ * With [CoreNfcPolling.AUTOMATIC] or [CoreNfcPolling.ISO14443_AND_PACE], from iOS 26.4 it uses the session Configuration with ISO 14443 and PACE polling together and the
  * eMRTD application as the only select identifier, so chips that answer only after PACE are found
  * too. Before iOS 26.4, PACE polling cannot be combined with ISO 14443 (it would find PACE chips
- * only), so it polls ISO 14443 alone, with the select identifiers from the app's Info.plist.
+ * only), so it polls ISO 14443 alone, with the select identifiers from the app's Info.plist. With [CoreNfcPolling.ISO14443] it polls ISO 14443 alone on every version, the way
+ * used before iOS 26.4 (see [configurationFor]).
+ *
+ * Both ways get the session's own serial queue: the delegate calls and the tag completions run on
+ * it (`NFCReaderSession.h`, `sessionQueue`), never on the main queue. The Configuration initializer
+ * declares the queue non-null, so it is never passed nil.
  */
-internal class PlatformReaderSession(
+internal class PlatformReaderSession internal constructor(
     events: ReaderSessionEvents,
+    configuration: NFCTagReaderSessionConfiguration?,
 ) : ReaderSessionPort {
+    constructor(events: ReaderSessionEvents) : this(events, CoreNfcPolling.AUTOMATIC)
+
+    constructor(events: ReaderSessionEvents, polling: CoreNfcPolling) :
+        this(events, configurationFor(polling, ::emrtdConfiguration))
+
     private val delegate = SessionDelegate(events)
 
     private val session: NFCTagReaderSession =
-        emrtdConfiguration()?.let { NFCTagReaderSession(configuration = it, delegate = delegate, queue = null) }
-            ?: NFCTagReaderSession(pollingOption = NFCPollingISO14443, delegate = delegate, queue = null)
+        newTagReaderSession(
+            configuration,
+            newSessionQueue(),
+            withConfiguration = { config, queue -> NFCTagReaderSession(configuration = config, delegate = delegate, queue = queue) },
+            withPolling = { queue -> NFCTagReaderSession(pollingOption = NFCPollingISO14443, delegate = delegate, queue = queue) },
+        )
 
     override fun setAlertMessage(text: String) {
         session.alertMessage = text
@@ -187,18 +277,18 @@ internal class PlatformReaderSession(
 
     override fun invalidate(errorMessage: String) = session.invalidateSessionWithErrorMessage(errorMessage)
 
-    private companion object {
+    internal companion object {
         /**
          * The iOS 26.4 session Configuration: ISO 14443 and PACE polling, the eMRTD application as
          * the only select identifier. `null` before iOS 26.4.
          *
          * The class is looked up by name at run time, never named in code: Kotlin/Native links a
          * named Objective-C class as a strong symbol, and an app built with this framework would
-         * then fail to launch on iOS 18 to 26.3, where the class does not exist. The object is
-         * set up with its property setters, which are plain messages.
+         * then fail to launch on iOS 15 (the framework's minimum) to 26.3, where the class does not
+         * exist. The object is set up with its property setters, which are plain messages.
          */
         @OptIn(BetaInteropApi::class) // the class object from NSClassFromString
-        fun emrtdConfiguration(): NFCTagReaderSessionConfiguration? {
+        internal fun emrtdConfiguration(): NFCTagReaderSessionConfiguration? {
             if (!isAtLeastIos264()) return null
             val meta = NSClassFromString(CONFIGURATION_CLASS) as? NSObjectMeta ?: return null
             val configuration: NFCTagReaderSessionConfiguration = meta.new()?.uncheckedAs() ?: return null
@@ -208,9 +298,42 @@ internal class PlatformReaderSession(
             return configuration
         }
 
-        const val CONFIGURATION_CLASS = "NFCTagReaderSessionConfiguration"
+        private const val CONFIGURATION_CLASS = "NFCTagReaderSessionConfiguration"
     }
 }
+
+/**
+ * The session Configuration to open the session with for [polling], or `null` to open it with the
+ * ISO 14443 polling option: [CoreNfcPolling.ISO14443] never asks for one, so its session is opened
+ * as before iOS 26.4 (the initializer proven there, with the app's Info.plist select identifiers);
+ * the other choices take [configuration], which is `null` where the system has none. Generic so the
+ * tests can check each choice with and without a Configuration.
+ */
+internal fun <C : Any> configurationFor(
+    polling: CoreNfcPolling,
+    configuration: () -> C?,
+): C? =
+    when (polling) {
+        CoreNfcPolling.ISO14443 -> null
+        CoreNfcPolling.AUTOMATIC, CoreNfcPolling.ISO14443_AND_PACE -> configuration()
+    }
+
+/** A new serial dispatch queue for one reader session (a `null` attribute makes it serial). */
+internal fun newSessionQueue(): NSObject = checkNotNull(dispatch_queue_create(SESSION_QUEUE_LABEL, null))
+
+private const val SESSION_QUEUE_LABEL = "io.lightine.tessera.emrtd.nfc.session"
+
+/**
+ * Makes the reader session the way the system allows, always with [queue]: with the Configuration
+ * when there is one, else with the polling option. Generic so the tests can check the queue: the
+ * Simulator cannot make a real `NFCTagReaderSession`.
+ */
+internal fun <C : Any, S> newTagReaderSession(
+    configuration: C?,
+    queue: NSObject,
+    withConfiguration: (configuration: C, queue: NSObject) -> S,
+    withPolling: (queue: NSObject) -> S,
+): S = if (configuration != null) withConfiguration(configuration, queue) else withPolling(queue)
 
 /** A cast the compiler does not check, so the type's class symbol is not referenced. */
 @Suppress("UNCHECKED_CAST")

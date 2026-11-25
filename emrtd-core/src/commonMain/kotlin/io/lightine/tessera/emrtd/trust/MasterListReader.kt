@@ -18,6 +18,7 @@ import io.lightine.tessera.emrtd.internal.x509.X509Parser
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.vocabulary.CheckOutcome
 import io.lightine.tessera.types.vocabulary.CheckReason
+import kotlin.jvm.JvmStatic
 
 /**
  * Reads a CSCA master list (Doc 9303 Part 12, 9) that the app obtained itself, for example a
@@ -45,6 +46,7 @@ public object MasterListReader {
      * @return [MasterListRead.Read] with the list, or [MasterListRead.Unreadable]. Never throws for
      * bad data.
      */
+    @JvmStatic
     public fun read(
         file: ByteArray,
         roots: List<TrustAnchor> = emptyList(),
@@ -179,6 +181,10 @@ public class MasterListCheck internal constructor(
 /**
  * What a master-list fact is about.
  *
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
@@ -201,6 +207,10 @@ public enum class MasterListCheckKind {
  *
  * Implements [CheckReason], the shared reason type of [CheckOutcome], so a master-list check's
  * outcome carries a typed reason like every other module's checks.
+ *
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -249,10 +259,20 @@ public enum class MasterListCheckReason : CheckReason {
 
     /** This platform has no cryptography backend yet. */
     CRYPTO_UNAVAILABLE,
+
+    ;
+
+    /** The stable code of this reason: `master-list` and the name in lower case, words joined by hyphens. */
+    override val code: String
+        get() = "master-list." + name.lowercase().replace('_', '-')
 }
 
 /**
  * The outcome of reading a master list.
+ *
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -275,6 +295,10 @@ public sealed class MasterListRead {
 
 /**
  * Why a master list could not be read.
+ *
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *

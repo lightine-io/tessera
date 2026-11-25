@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Link test: an iOS simulator app that links its own OpenSSL next to the Tessera framework links
+# Link test: an iOS simulator app that links its own OpenSSL next to the TesseraCore framework links
 # with no duplicate symbols, and neither copy of OpenSSL is visible to the other. Proves
 # scripts/hide-openssl-symbols.sh did its job.
 #
-# Usage: test-openssl-symbol-clash.sh <Tessera.framework> <app-libcrypto.a> <openssl-include-dir>
+# Usage: test-openssl-symbol-clash.sh <TesseraCore.framework> <app-libcrypto.a> <openssl-include-dir>
 #
 # Two checks:
 # 1. The framework defines no global symbol that the app's libcrypto defines. Without hiding, a
@@ -20,13 +20,14 @@
 set -euo pipefail
 
 if [ "$#" -ne 3 ]; then
-  echo "usage: $0 <Tessera.framework> <app-libcrypto.a> <openssl-include-dir>" >&2
+  echo "usage: $0 <TesseraCore.framework> <app-libcrypto.a> <openssl-include-dir>" >&2
   exit 2
 fi
 FRAMEWORK="$1"
 APP_LIBCRYPTO="$2"
 INCLUDE="$3"
-BIN="$FRAMEWORK/Tessera"
+# The binary inside a framework bears the framework's name.
+BIN="$FRAMEWORK/$(basename "$FRAMEWORK" .framework)"
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -55,14 +56,14 @@ EOF
 
 SDK="$(xcrun --sdk iphonesimulator --show-sdk-path)"
 # -ObjC loads the framework's object (it holds Objective-C classes).
-if ! xcrun --sdk iphonesimulator clang -target arm64-apple-ios18.0-simulator -isysroot "$SDK" \
+if ! xcrun --sdk iphonesimulator clang -target arm64-apple-ios15.0-simulator -isysroot "$SDK" \
   -I "$INCLUDE" "$WORK/main.c" -Wl,-force_load,"$APP_LIBCRYPTO" "$BIN" -ObjC -Wl,-dead_strip \
   -framework Foundation -framework UIKit -framework CoreGraphics -framework CoreMedia \
   -framework CoreVideo -framework AVFoundation -framework Vision -framework ImageIO \
   -lc++ -lz -o "$WORK/app" > "$WORK/link.log" 2>&1; then
   echo "$(grep -c 'duplicate symbol' "$WORK/link.log" || true) duplicate symbols; first lines of the link log:" >&2
   head -20 "$WORK/link.log" >&2
-  echo "link test FAILED: the app's OpenSSL and the Tessera framework do not link together" >&2
+  echo "link test FAILED: the app's OpenSSL and the TesseraCore framework do not link together" >&2
   exit 1
 fi
-echo "link test passed: an app with its own OpenSSL links the Tessera framework with no shared or duplicate symbols"
+echo "link test passed: an app with its own OpenSSL links the TesseraCore framework with no shared or duplicate symbols"

@@ -86,14 +86,14 @@ class ChipReaderFailurePathTest {
                         caInApplication = true,
                         leadingHandlers = listOf(FakeAfterKeySwitch(bareStatus = 0x6A82)),
                     )
-                val read =
-                    when (val r = read(flow)) {
-                        is ChipReadResult.Complete -> r.read
-                        is ChipReadResult.Partial -> r.read
-                        is ChipReadResult.Failed -> error("$r")
-                    }
+                // A bare answer inside secure messaging means the chip ended the session (Part 11, 9.8.5).
+                val partial = assertIs<ChipReadResult.Partial>(read(flow))
+                assertEquals(ChipSecureMessagingLost(ChipSecureMessagingLost.Reason.CHIP_ENDED_SESSION, 0x6A82), partial.stoppedBy)
                 assertEquals(1, flow.ca!!.restarts)
-                assertEquals(CheckOutcome.Failed(ChipCheckReason.NEW_KEYS_NOT_CONFIRMED), read.ca(ChipFileContext.EMRTD_APPLICATION))
+                assertEquals(
+                    CheckOutcome.Failed(ChipCheckReason.NEW_KEYS_NOT_CONFIRMED),
+                    partial.read.ca(ChipFileContext.EMRTD_APPLICATION),
+                )
             }
         }
 

@@ -24,8 +24,8 @@ OPENSSL_SHA256="603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a
 OPENSSL_LTS_END="2030-04-08"
 OPENSSL_URL="https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz"
 
-# iOS 18 is the SDK's minimum (the XCFramework and the Swift package require it too).
-IOS_MIN="18.0"
+# iOS 15 is the SDK's minimum (the XCFramework and the Swift package require it too).
+IOS_MIN="15.0"
 
 # Only what chip reading needs: EVP digests, ciphers and CMAC, BIGNUM, prime-field EC, RSA, DSA, DH,
 # and the default provider built in. No TLS, no networking, no config file loading, no legacy

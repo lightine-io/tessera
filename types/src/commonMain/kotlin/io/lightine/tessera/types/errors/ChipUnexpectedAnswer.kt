@@ -15,10 +15,14 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
 @ExperimentalTesseraChipApi
 public data class ChipUnexpectedAnswer(
     val reason: Reason,
-    val statusWord: Int? = null,
+    override val statusWord: Int? = null,
 ) : ChipError() {
     /**
      * What was wrong with the answer.
+     *
+     * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+     * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+     * that is your choice, and today the compiler warns that such an `else` is redundant.
      *
      * @since 1.0.0
      */
@@ -45,6 +49,10 @@ public data class ChipUnexpectedAnswer(
             val sw = statusWord?.let { " (status ${it.toString(16).uppercase().padStart(4, '0')})" } ?: ""
             return "The chip gave $what$sw"
         }
+
+    /** A stable name of this error: see [ChipError.code]. */
+    override val code: String
+        get() = "unexpected-answer." + slug(reason.name)
 
     /** `ChipUnexpectedAnswer: ` followed by [description]. */
     override fun toString(): String = "ChipUnexpectedAnswer: $description"

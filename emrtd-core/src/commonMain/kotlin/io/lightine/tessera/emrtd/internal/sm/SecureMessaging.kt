@@ -109,13 +109,15 @@ internal class SecureMessaging(
     /**
      * The plain form of the chip's [response]. Increments the SSC first, whatever the answer.
      *
-     * An answer with no data is a bare status word, which a chip sends without secure messaging:
+     * An answer with no data is a bare status word, which a chip sends without secure messaging.
+     * Every protected answer carries DO'8E' (section 9.8.4: "Response APDU: [DO'85' or DO'87']
+     * [DO'99'] DO'8E'"), and a chip returns status bytes without secure messaging only when it
+     * aborts the session on an SM error (section 9.8.5), after which it has deleted its session
+     * keys (sections 9.8.3, 9.8.5). So inside a session:
      * - 9000 bare is unauthenticated: [SmFailure.MISSING_MAC];
-     * - a secure-messaging error (6987, 6988) or 6982 means the chip ended the session (section
-     *   9.8.5): [SmFailure.CHIP_ENDED_SESSION];
-     * - any other status word is returned as it is and the session goes on. Section 9.8.5 asks for
-     *   protected answers here, but chips are known to answer some errors bare; whether such a chip
-     *   still counts that answer in its SSC needs a real-device check.
+     * - any other bare status word (6987, 6988, 6982 or any other) means the chip ended the
+     *   session: [SmFailure.CHIP_ENDED_SESSION] with that status word. The reader never sends
+     *   another command in it.
      *
      * @throws SecureMessagingException when the answer cannot be authenticated or read.
      */
@@ -127,22 +129,8 @@ internal class SecureMessaging(
             throw SecureMessagingException(SmFailure.PLAIN_ANSWER_LENGTH_HINT, response.sw)
         }
         if (response.data.isEmpty()) {
-            when (response.sw) {
-                StatusWord.SUCCESS -> {
-                    throw SecureMessagingException(SmFailure.MISSING_MAC)
-                }
-
-                StatusWord.SM_DATA_OBJECTS_MISSING,
-                StatusWord.SM_DATA_OBJECTS_INCORRECT,
-                StatusWord.SECURITY_STATUS_NOT_SATISFIED,
-                -> {
-                    throw SecureMessagingException(SmFailure.CHIP_ENDED_SESSION, response.sw)
-                }
-
-                else -> {
-                    return response
-                }
-            }
+            if (response.sw == StatusWord.SUCCESS) throw SecureMessagingException(SmFailure.MISSING_MAC)
+            throw SecureMessagingException(SmFailure.CHIP_ENDED_SESSION, response.sw)
         }
         val objects =
             try {

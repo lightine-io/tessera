@@ -38,6 +38,16 @@ afterEvaluate {
 }
 
 kotlin {
+    // ABI tracking (tessera.public-api): declarations marked @InternalTesseraChipApi (public only so
+    // Tessera's NFC modules can share them, such as the read coordinator) are left out of the dumps:
+    // they are not consumer API and may change in any release.
+    @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
+    abiValidation.filters {
+        exclude {
+            annotatedWith.add("io.lightine.tessera.emrtd.InternalTesseraChipApi")
+        }
+    }
+
     // The JVM target carries the host tests for this platform-agnostic core, so they run on the
     // JVM `check` runner with no Android SDK and no device. It is also a published artifact
     // (`tessera-emrtd-core-jvm`, listed in the BOM): a JVM app can read a chip through a USB
@@ -96,13 +106,19 @@ kotlin {
                         .asFile.path,
                 )
             }
-        tasks.named(libcrypto.interopProcessingTaskName).configure { dependsOn(buildOpenSsl) }
+        tasks.named(libcrypto.interopProcessingTaskName).configure {
+            dependsOn(buildOpenSsl)
+            // The klib embeds libcrypto.a, and the task does not track that file by itself: without
+            // this input a rebuilt library (a new minimum iOS version, new options) stays out of the klib.
+            inputs.files(outDir.map { it.file("stamp.txt") })
+        }
     }
 
     sourceSets {
         all {
             // The module's own code uses its experimental API freely; callers still opt in.
             languageSettings.optIn("io.lightine.tessera.types.ExperimentalTesseraChipApi")
+            languageSettings.optIn("io.lightine.tessera.emrtd.InternalTesseraChipApi")
         }
         commonMain {
             dependencies {
@@ -137,6 +153,12 @@ kotlin {
         // host test sets the same way. iosTest's `actual` signs with OpenSSL, so nothing skips there.
         jvmTest { kotlin.srcDir("src/bouncyCastleTest/kotlin") }
         matching { it.name == "androidHostTest" }.configureEach { kotlin.srcDir("src/bouncyCastleTest/kotlin") }
+        // The scripted chip (fake chip, fake PKI, test signer interface): a plain folder of test
+        // sources, compiled into this module's tests and into the tests of emrtd-nfc and
+        // emrtd-nfc-ios, which drive whole reads through their entry points against it (TES-346).
+        // Test sources only: no published artifact carries it.
+        commonTest { kotlin.srcDir("src/chipFixtures/kotlin") }
+        iosTest { kotlin.srcDir("src/chipFixturesIos/kotlin") }
         commonTest {
             dependencies {
                 implementation(kotlin("test"))

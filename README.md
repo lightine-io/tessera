@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![CI](https://github.com/lightine-io/tessera/actions/workflows/check.yml/badge.svg)](https://github.com/lightine-io/tessera/actions/workflows/check.yml)
 
-Tessera is a free, open-source SDK that reads, validates, and generates the data in the MRZ (machine-readable zone) of passports, ID cards, and visas. It runs on Android, iOS, and the JVM. It reports what it read and checked; your app decides what to do with that.
+Tessera is a free, open-source SDK that reads, validates, and generates the data in the MRZ (machine-readable zone) of passports, ID cards, and visas, and, as experimental API, the data on a passport's chip over NFC. It runs on Android, iOS, and the JVM. It reports what it read and checked; your app decides what to do with that. The SDK never says a document is valid or genuine: there is no `isValid`, and a result with no failures means only that the checks it ran passed.
 
 It is for developers adding document reading to apps or backends. Documentation: [Start here](https://lightine.youtrack.cloud/articles/TES-A-16). API reference: [lightine-io.github.io/tessera](https://lightine-io.github.io/tessera/) (available from the 1.0.0 release).
 
@@ -35,7 +35,7 @@ Tessera's own code makes no network calls and logs nothing. On Android, the text
 
 ## Install
 
-Release 0.7.0. Minimums: minSdk 23, iOS 18, Java 21. Modules: [Choose your pieces](https://lightine.youtrack.cloud/articles/TES-A-140).
+Release 0.7.0. Minimums: minSdk 23. From the next release: Java 17 and iOS 15. The released 0.7.0 itself needs Java 21 and iOS 18. Modules: [Choose your pieces](https://lightine.youtrack.cloud/articles/TES-A-140).
 
 `build.gradle.kts` (the JVM needs only the first two lines):
 
@@ -77,6 +77,241 @@ dependencies {
 .product(name: "Tessera", package: "tessera-swift"),
 .product(name: "TesseraUI", package: "tessera-swift"),
 ```
+
+## Scanner screen in a few lines
+
+Android, Kotlin, Jetpack Compose. This is the ready-made screen: it shows the camera, finds the MRZ, and hands your app the parsed result.
+
+`app/build.gradle.kts`:
+
+```kotlin
+plugins {
+    id("org.jetbrains.kotlin.plugin.compose") version "2.4.21"
+}
+
+android {
+    buildFeatures {
+        compose = true
+    }
+}
+
+dependencies {
+    implementation(platform("io.lightine.tessera:tessera-bom:0.7.0"))
+    implementation("io.lightine.tessera:tessera-mrz-camera-ui")
+    implementation("androidx.activity:activity-compose:1.13.0")
+    implementation("androidx.compose.material3:material3:1.4.0")
+}
+```
+
+`app/src/main/AndroidManifest.xml`: Tessera declares no permission, so your app does.
+
+```xml
+<uses-permission android:name="android.permission.CAMERA" />
+```
+
+The screen reads whether the permission is held and never requests it. You hand the request to your own code through `onRequestPermission`:
+
+```kotlin
+package com.example.firstmrz
+
+import android.Manifest
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import io.lightine.tessera.mrz.camera.ui.MrzScannerConfig
+import io.lightine.tessera.mrz.camera.ui.MrzScannerResult
+import io.lightine.tessera.mrz.camera.ui.MrzScannerScreen
+import io.lightine.tessera.mrz.parsing.ParseResult
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent { FirstMrzApp() }
+    }
+}
+
+@Composable
+fun FirstMrzApp() {
+    var showScanner by rememberSaveable { mutableStateOf(false) }
+    var summary by rememberSaveable { mutableStateOf("No scan yet") }
+    val requestCamera = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { /* the scanner checks the permission again when the app resumes */ }
+
+    if (showScanner) {
+        MrzScannerScreen(
+            config = MrzScannerConfig {
+                onRequestPermission = { requestCamera.launch(Manifest.permission.CAMERA) }
+            },
+            onResult = { result ->
+                summary = when (result) {
+                    is MrzScannerResult.Confirmed -> summarize(result.result.parse)
+                    is MrzScannerResult.Cancelled -> "Closed: ${result.reason}"
+                }
+                showScanner = false
+            },
+        )
+    } else {
+        Column(Modifier.padding(24.dp)) {
+            Button(onClick = { showScanner = true }) { Text("Scan a document") }
+            Text(summary)
+        }
+    }
+}
+
+private fun summarize(parse: ParseResult): String {
+    val document = when (parse) {
+        is ParseResult.Success -> parse.document
+        is ParseResult.PartialSuccess -> parse.document
+        is ParseResult.Failure -> return "Not a readable MRZ"
+    }
+    val fields = document.commonFields
+    return "Name: ${fields.primaryIdentifier}, ${fields.secondaryIdentifier}\n" +
+        "Document number: ${fields.documentNumber}\n" +
+        "Format: ${document.format}\n" +
+        "Read by: ${parse.metadata.readMethod}"
+}
+```
+
+iOS: the Swift package has a ready-made SwiftUI screen, `TesseraUI`. See [Read your first MRZ on iOS with the ready-made screen](https://lightine.youtrack.cloud/articles/TES-A-77).
+
+## Read a chip (headless) in a few lines
+
+Experimental. Chip reading is not in release 0.7.0; the dependency lines below use version 1.0.0, as the compiled samples do. The chip API can change in any release before 1.0, and you opt in once. The SDK reports the files on the chip and the facts its checks found. It never says the document is valid or genuine, and it sends no write command.
+
+Android. `app/build.gradle.kts`:
+
+```kotlin
+dependencies {
+    implementation(platform("io.lightine.tessera:tessera-bom:1.0.0"))
+    implementation("io.lightine.tessera:tessera-emrtd-nfc")
+}
+
+kotlin {
+    compilerOptions {
+        optIn.add("io.lightine.tessera.types.ExperimentalTesseraChipApi")
+    }
+}
+```
+
+`app/src/main/AndroidManifest.xml`: the library adds the `NFC` permission itself; the feature line is yours (use `android:required="true"` if the app cannot work without NFC).
+
+```xml
+<uses-feature android:name="android.hardware.nfc" android:required="false" />
+```
+
+`NfcChipRead.start` owns the link to the chip: it turns NFC reader mode on for your screen, reads, checks, turns reader mode off at the ending, and clears the key. Start it from a person's action, such as a button, and not from `onCreate`. Your observer gets updates and exactly one ending, on the main thread. A rotation destroys the Activity and ends the read (`ChipReadEnding.EndedBySystem`, reason `ACTIVITY_DESTROYED`), and a new read spends another authentication with the chip: declare `android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"` for the read screen, or lock the orientation while it reads. Make a new key for every read, and never retry automatically after a refused key: ask the person to check the values. The read itself has already tried once more on the same link. To enable a read button only when a read can start, ask `NfcChipRead.readiness(context)` and register `NfcChipRead.addReadinessListener(context, listener)`: the listener hears NFC switched on or off, and a read starting or ending, on the main thread; remove it when the screen goes away. From Android 15 on, NFC can be on with its option for reading tags off: `availability` and the read report that as `TAG_READING_DISABLED`.
+
+```kotlin
+import android.app.Activity
+import io.lightine.tessera.emrtd.ChipAccessKey
+import io.lightine.tessera.emrtd.ChipCheckKind
+import io.lightine.tessera.emrtd.ChipRead
+import io.lightine.tessera.emrtd.ChipReadEnding
+import io.lightine.tessera.emrtd.ChipReadHandle
+import io.lightine.tessera.emrtd.ChipReadObserver
+import io.lightine.tessera.emrtd.ChipReadOptions
+import io.lightine.tessera.emrtd.ChipReadUpdate
+import io.lightine.tessera.emrtd.ChipSignedFile
+import io.lightine.tessera.emrtd.MrzKeyResult
+import io.lightine.tessera.emrtd.nfc.NfcChipRead
+import io.lightine.tessera.mrz.model.MrzDocument
+import io.lightine.tessera.types.errors.ChipAccessDenied
+import io.lightine.tessera.types.errors.ChipError
+import io.lightine.tessera.types.errors.NfcNoAnswer
+import io.lightine.tessera.types.errors.NfcTagLost
+import kotlin.time.Clock
+
+// show(...) stands in for your own screen code.
+
+fun accessKeyFrom(document: MrzDocument): ChipAccessKey.Mrz? =
+    when (val result = ChipAccessKey.Mrz.from(document)) {
+        is MrzKeyResult.Built -> result.key
+        is MrzKeyResult.NotBuilt -> {
+            show("No key could be made: ${result.problem}") // for example a visa, which has no chip
+            null
+        }
+    }
+
+fun startRead(activity: Activity, key: ChipAccessKey): ChipReadHandle {
+    val options = ChipReadOptions(accessKey = key, checkTime = Clock.System.now())
+    // Turns reader mode on for this screen, runs the read, turns it off at the ending.
+    return NfcChipRead.start(activity, options, ReadScreen)
+}
+
+object ReadScreen : ChipReadObserver {
+    // Both calls come on the main thread, in order, and nothing comes before start returns.
+    override fun onUpdate(update: ChipReadUpdate) = show("${update.state} ${update.progress.percent}%")
+
+    override fun onEnding(ending: ChipReadEnding) = handle(ending) // exactly once, and last
+}
+
+fun handle(ending: ChipReadEnding) {
+    when (ending) {
+        is ChipReadEnding.Complete -> showFacts(ending.read)
+        is ChipReadEnding.Partial -> {
+            showFacts(ending.read) // what was read before the stop
+            show(describe(ending.stoppedBy))
+        }
+        is ChipReadEnding.Failed -> show(describe(ending.error))
+        is ChipReadEnding.NotStarted -> show("NFC cannot be used: ${ending.reason}")
+        else -> show("The read ended: $ending") // cancelled, key rejected, ended by the system
+    }
+}
+
+fun describe(error: ChipError): String = when (error) {
+    is NfcTagLost -> "The document moved. Hold it still against the phone."
+    is NfcNoAnswer -> "No answer from the chip. Try another position."
+    is ChipAccessDenied -> "The chip did not accept the MRZ values."
+    else -> error.description
+}
+
+fun showFacts(read: ChipRead) {
+    val hashOfDg1 = read.outcomeOf(ChipCheckKind.DataGroupHashMatches(1))
+    val signature = read.outcomeOf(ChipCheckKind.SignatureVerifies(ChipSignedFile.SECURITY_OBJECT))
+    show("DG1 hash: $hashOfDg1, signature: $signature, files: ${read.files.size}")
+}
+```
+
+To leave the screen, call `read.cancel()` on the handle.
+
+If the person types the values instead, pass three strings: the document number, and the dates of birth and expiry as `YYMMDD`. Normalise first, show the person the three values and `changedFields` so they can confirm, then build the key and handle both results:
+
+```kotlin
+val fields = ChipAccessKey.Mrz.normalizeTypedFields(documentNumber, dateOfBirth, dateOfExpiry)
+when (val result = ChipAccessKey.Mrz.fromTypedFields(fields)) {
+    is MrzKeyResult.Built -> result.key
+    is MrzKeyResult.NotBuilt -> null // result.field and result.problem say what to fix
+}
+```
+
+`ChipReadState` has five members that are objects (`Starting`, `DocumentFound`, `Connecting`, `CheckingFiles`, `Stopping`) and seven that are classes with values (`WaitingForDocument`, `OpeningAccess`, `ReadingFile`, `AuthenticatingChip`, `NoAnswerYet`, `LinkLost`, `RenewingSession`): a `when` needs `is` for the classes. `RenewingSession` comes only on iPhone. `ChipReadEnding` has eight cases, all classes.
+
+To check the chip's signature, pass your own root certificates: `ChipReadOptions.Builder(key).trustAnchors(TrustAnchors.load(file).anchors)`. Every `TrustAnchors.load` form that reads a file, a stream or an address belongs off the main thread. On Android the forms are `load(File)`, `load(InputStream)`, `load(context, uri)` and `load(bytes)`; there is no `load(path)` on Android.
+
+iOS. Chip reading is in the Swift package's `Tessera` product from the next release, not in the 0.7.0 package: `import Tessera` gives it. The app needs the NFC entries in its Info.plist and the NFC entitlement (a paid Apple developer team is needed). The shortest use (it needs iOS 15 or later: see Install above for what 0.7.0 needs):
+
+```swift
+let options = try ChipReadOptions.Builder(accessKey: key).build()
+let reading = ChipReading.start(options: options)
+let finish = await reading.ending
+if case .complete(let read) = finish.outcome { /* use read */ }
+```
+
+On iPhone, when the system ends a session that reported no document, the read opens a new one once by default (`ChipReadState.RenewingSession`): a new session finds a document that the first one missed. When the new one finds nothing either, the read ends as `EndedBySystem` with 0 attempts: the system never reported the document, so ask the person to try again. After a read ends, the system may refuse a new session for a moment; the next read waits for it by itself, and `CoreNfcChipRead.readiness()` with `addReadinessListener` tells a button when a new read can begin at once. iPhone gives no signal while the app runs that NFC was switched off: a read then ends as `NotStarted` with `DISABLED`. The setup reasons differ: `NOT_PERMITTED` (entitlement or Info.plist entries), `NOT_ELIGIBLE` (the device or region is not eligible) and `ACCESS_NOT_ANSWERED` (the person has not answered the app's request to use NFC); the ending's `systemCode` holds Core NFC's own code. A read that takes longer than 18 seconds on one connection changes to a fresh connection to the document by itself and goes on where it stopped (`CoreNfcReadSettings.tagTimeLimitMillis`); the app sees a short pause, not a new state.
 
 ## Go further
 

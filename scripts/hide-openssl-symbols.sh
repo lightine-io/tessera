@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Hides OpenSSL's symbols inside a static Tessera framework binary, so an app that links its own
+# Hides OpenSSL's symbols inside the static TesseraCore framework binary, so an app that links its own
 # OpenSSL (or another library that bundles one) gets no duplicate symbols and never mixes the two.
 #
 # Usage: hide-openssl-symbols.sh <framework-binary> <openssl-symbols.txt> <ios|ios-simulator> <min-ios>
 #
-# <framework-binary> is the static archive inside Tessera.framework (one architecture), as
+# <framework-binary> is the static archive inside TesseraCore.framework (one architecture), as
 # Kotlin/Native links it: the Kotlin code plus the libcrypto objects embedded from emrtd-core's
 # klib. <openssl-symbols.txt> lists every global symbol libcrypto defines
 # (scripts/build-openssl-ios.sh writes it). The platform and minimum iOS version go into the merged

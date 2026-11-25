@@ -3,6 +3,7 @@ package io.lightine.tessera.emrtd
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.vocabulary.CheckOutcome
 import io.lightine.tessera.types.vocabulary.CheckReason
+import io.lightine.tessera.types.vocabulary.MrzField
 
 /**
  * One fact from reading a chip: what was checked, and how it came out.
@@ -45,18 +46,30 @@ public class ChipCheck internal constructor(
  * How a [ChipCheck] reached its outcome: facts about the inputs, kept beside the check so that the
  * kind stays the same whichever way the check went.
  *
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
 public sealed class ChipCheckDetail {
-    /** For [ChipCheckKind.SignatureVerifies]: where the signer certificate came from. */
+    /**
+     * For [ChipCheckKind.SignatureVerifies]: where the signer certificate came from.
+     *
+     * @property origin Where the certificate came from: the signed file or your app.
+     */
     public data class SignerCertificate(
         public val origin: ChipSignerOrigin,
     ) : ChipCheckDetail()
 
-    /** For [ChipCheckKind.SignerChainsToSuppliedRoot]: how the signer's issuer name matched the root's subject name. */
+    /**
+     * For [ChipCheckKind.SignerChainsToSuppliedRoot]: how the signer's issuer name matched the root's subject name.
+     *
+     * @property comparison How the two names were compared.
+     */
     public data class IssuerNameComparison(
         public val comparison: ChipNameComparison,
     ) : ChipCheckDetail()
@@ -64,15 +77,63 @@ public sealed class ChipCheckDetail {
     /**
      * For [ChipCheckKind.SignerCountryMatchesRootCountry]: where each country was read from, or
      * `null` on a side with no country.
+     *
+     * @property signer Where the signer certificate's country was read from, or `null` when it has none.
+     * @property root Where the matched root's country was read from, or `null` when it has none.
      */
     public data class CountrySources(
         public val signer: ChipCountrySource?,
         public val root: ChipCountrySource?,
     ) : ChipCheckDetail()
+
+    /**
+     * For [ChipCheckKind.Dg1MatchesPrintedMrz]: for each MRZ field, whether the chip's DG1 shows the
+     * same characters as the printed MRZ your app gave ([ChipReadOptions.printedDocument]). It holds
+     * no value from either MRZ.
+     *
+     * @property sameFormat Whether both MRZs have the same format (TD1, TD2, TD3).
+     * @property fields One entry for every [MrzField], in the order of [MrzField.entries].
+     */
+    public data class PrintedMrzFields(
+        public val sameFormat: Boolean,
+        public val fields: Map<MrzField, ChipFieldMatch>,
+    ) : ChipCheckDetail() {
+        /** The fields that differ, in [MrzField] order. */
+        public val differingFields: List<MrzField>
+            get() = fields.filterValues { it == ChipFieldMatch.DIFFERENT }.keys.toList()
+    }
+}
+
+/**
+ * How one MRZ field compares between the chip's DG1 and the printed MRZ. A fact about the
+ * characters, never a verdict on the document.
+ *
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
+ *
+ * Experimental: see [ExperimentalTesseraChipApi].
+ *
+ * @since 1.0.0
+ */
+@ExperimentalTesseraChipApi
+public enum class ChipFieldMatch {
+    /** Both MRZs have the field and show the same characters, check digit included. */
+    SAME,
+
+    /** Both MRZs have the field and show different characters. */
+    DIFFERENT,
+
+    /** One of the two MRZ formats has no such field, so there is nothing to compare. */
+    NOT_COMPARABLE,
 }
 
 /**
  * Where a signer certificate came from.
+ *
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -90,6 +151,10 @@ public enum class ChipSignerOrigin {
 /**
  * How two certificate names were found equal.
  *
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
@@ -105,6 +170,10 @@ public enum class ChipNameComparison {
 
 /**
  * Where a certificate's country was read from.
+ *
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -125,6 +194,10 @@ public enum class ChipCountrySource {
 /**
  * Which signed chip file a signer check is about.
  *
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
@@ -140,6 +213,10 @@ public enum class ChipSignedFile {
 
 /**
  * Where a signed copy of EF.CardAccess's entries was read from (Part 11, section 9.2.11).
+ *
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -157,6 +234,10 @@ public enum class ChipSignedCopy {
 /**
  * Where on the chip chip authentication ran (Part 11, section 6.2).
  *
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
@@ -173,66 +254,141 @@ public enum class ChipFileContext {
 /**
  * What a [ChipCheck] is about.
  *
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
 public sealed class ChipCheckKind {
-    /** The hash of data group [dataGroup] as read equals the one EF.SOD stores (Part 11, 5.1.1 step 5). */
+    /**
+     * A stable, machine-readable name of this kind, for logs and keys of your own texts: lower-case
+     * words joined by hyphens, with a dot and the parameter when the kind has one (for example
+     * `data-group-hash-matches.dg1`, `signature-verifies.security-object`,
+     * `signer-within-validity-period.card-security`). It never changes once released and never
+     * holds a value from the document.
+     *
+     * @since 1.0.0
+     */
+    public abstract val code: String
+
+    /**
+     * The hash of data group [dataGroup] as read equals the one EF.SOD stores (Part 11, 5.1.1 step 5).
+     *
+     * @property dataGroup The number of the data group (1 to 16).
+     */
     public data class DataGroupHashMatches(
         public val dataGroup: Int,
-    ) : ChipCheckKind()
+    ) : ChipCheckKind() {
+        override val code: String
+            get() = "data-group-hash-matches.dg$dataGroup"
+    }
 
-    /** The signature of [file] verifies under its signer certificate, and its signed attributes agree with the content. */
+    /**
+     * The signature of [file] verifies under its signer certificate, and its signed attributes agree with the content.
+     *
+     * @property file Which signed chip file the check is about.
+     */
     public data class SignatureVerifies(
         public val file: ChipSignedFile,
-    ) : ChipCheckKind()
+    ) : ChipCheckKind() {
+        override val code: String
+            get() = "signature-verifies." + checkCodeWord(file.name)
+    }
 
-    /** The signer certificate of [file] is signed by one of the roots your app supplied (Part 12, App D.1.1). */
+    /**
+     * The signer certificate of [file] is signed by one of the roots your app supplied (Part 12, App D.1.1).
+     *
+     * @property file Which signed chip file the check is about.
+     */
     public data class SignerChainsToSuppliedRoot(
         public val file: ChipSignedFile,
-    ) : ChipCheckKind()
+    ) : ChipCheckKind() {
+        override val code: String
+            get() = "signer-chains-to-supplied-root." + checkCodeWord(file.name)
+    }
 
-    /** The signer certificate of [file] is inside its validity period at the check time your app gave. */
+    /**
+     * The signer certificate of [file] is inside its validity period at the check time your app gave.
+     *
+     * @property file Which signed chip file the check is about.
+     */
     public data class SignerWithinValidityPeriod(
         public val file: ChipSignedFile,
-    ) : ChipCheckKind()
+    ) : ChipCheckKind() {
+        override val code: String
+            get() = "signer-within-validity-period." + checkCodeWord(file.name)
+    }
 
-    /** The signer certificate of [file] has no critical extension the SDK does not know (Part 12, App D.1.1.3). */
+    /**
+     * The signer certificate of [file] has no critical extension the SDK does not know (Part 12, App D.1.1.3).
+     *
+     * @property file Which signed chip file the check is about.
+     */
     public data class SignerCriticalExtensionsRecognized(
         public val file: ChipSignedFile,
-    ) : ChipCheckKind()
+    ) : ChipCheckKind() {
+        override val code: String
+            get() = "signer-critical-extensions-recognized." + checkCodeWord(file.name)
+    }
 
-    /** Every entry of EF.CardAccess appears, byte for byte, in the signed copy in [copy] (Part 11, 4.2 step 3). */
+    /**
+     * Every entry of EF.CardAccess appears, byte for byte, in the signed copy in [copy] (Part 11, 4.2 step 3).
+     *
+     * @property copy Which signed copy is compared against, or `null` when there is no signed copy or no EF.CardAccess.
+     */
     public data class CardAccessMatchesSignedCopy(
         public val copy: ChipSignedCopy?,
-    ) : ChipCheckKind()
+    ) : ChipCheckKind() {
+        override val code: String
+            get() = "card-access-matches-signed-copy." + (copy?.name?.let(::checkCodeWord) ?: "none")
+    }
 
     /** EF.DIR as read equals its copy in EF.CardSecurity (Part 11, 4.2 step 3). */
-    public data object EfDirMatchesSignedCopy : ChipCheckKind()
+    public data object EfDirMatchesSignedCopy : ChipCheckKind() {
+        override val code: String
+            get() = "ef-dir-matches-signed-copy"
+    }
 
     /** The document code from DG1 is in the signer's document-type list (Part 11, 5.1.1 best practice 1). */
-    public data object SignerDocumentTypeMatches : ChipCheckKind()
+    public data object SignerDocumentTypeMatches : ChipCheckKind() {
+        override val code: String
+            get() = "signer-document-type-matches"
+    }
 
     /** With no document-type list: the signer key is for digital signatures only (Part 11, 5.1.1 best practice 1). */
-    public data object SignerKeyUsageIsDigitalSignatureOnly : ChipCheckKind()
+    public data object SignerKeyUsageIsDigitalSignatureOnly : ChipCheckKind() {
+        override val code: String
+            get() = "signer-key-usage-is-digital-signature-only"
+    }
 
     /**
      * The signer's country equals the matched root's country (Part 11, 5.1.1 best practice 2). Each
      * country comes from the subject name, else the alternative-name extensions; the check's
      * [ChipCheckDetail.CountrySources] says which.
      */
-    public data object SignerCountryMatchesRootCountry : ChipCheckKind()
+    public data object SignerCountryMatchesRootCountry : ChipCheckKind() {
+        override val code: String
+            get() = "signer-country-matches-root-country"
+    }
 
     /** The issue date from DG12 is inside the signer's private-key usage period (Part 11, 5.1.1 best practice 3). */
-    public data object IssueDateInSignerUsagePeriod : ChipCheckKind()
+    public data object IssueDateInSignerUsagePeriod : ChipCheckKind() {
+        override val code: String
+            get() = "issue-date-in-signer-usage-period"
+    }
 
     /**
      * The signer certificates are not on a revocation list. Always [CheckOutcome.NotRun]: the SDK
      * takes no revocation lists yet.
      */
-    public data object SignerNotRevoked : ChipCheckKind()
+    public data object SignerNotRevoked : ChipCheckKind() {
+        override val code: String
+            get() = "signer-not-revoked"
+    }
 
     /**
      * The PACE entries of the signed copy in [copy] (EF.CardSecurity, or DG14) all appear in the
@@ -240,36 +396,61 @@ public sealed class ChipCheckKind {
      * not signed, so a chip or a reader in between can strip PACE from it and push the read down to
      * BAC; this fact compares in that direction, beside [CardAccessMatchesSignedCopy], which compares
      * EF.CardAccess's entries against the copy.
+     *
+     * @property copy Which signed copy the PACE entries come from, or `null` when there is no signed copy.
      */
     public data class PaceOfferMatchesSignedCopy(
         public val copy: ChipSignedCopy?,
-    ) : ChipCheckKind()
+    ) : ChipCheckKind() {
+        override val code: String
+            get() = "pace-offer-matches-signed-copy." + (copy?.name?.let(::checkCodeWord) ?: "none")
+    }
 
     /**
      * Chip authentication (Part 11, section 6.2) in [context]: the chip agreed new session keys from
      * its static key, and its next answer verified under them. [CheckOutcome.Passed] also needs the
      * file that holds the key to pass its hash, signature and root checks (Part 11, Appendix J).
+     *
+     * @property context Which file holds the chip's key, or `null` when the read stopped before any chip authentication was tried.
      */
     public data class ChipAuthentication(
         public val context: ChipFileContext?,
-    ) : ChipCheckKind()
+    ) : ChipCheckKind() {
+        override val code: String
+            get() = "chip-authentication." + (context?.name?.let(::checkCodeWord) ?: "none")
+    }
 
     /**
      * The chip-authentication data of PACE with the chip authentication mapping (Part 11,
      * 4.4.3.5.2) matches the chip's key in EF.CardSecurity. [CheckOutcome.Passed] also needs
      * EF.CardSecurity's signature and root checks to pass.
      */
-    public data object PaceChipAuthenticationMapping : ChipCheckKind()
+    public data object PaceChipAuthenticationMapping : ChipCheckKind() {
+        override val code: String
+            get() = "pace-chip-authentication-mapping"
+    }
 
     /**
      * Active authentication (Part 11, section 6.1): the chip signed a fresh challenge and the
      * signature verifies under the key in its EF.DG15. [CheckOutcome.Passed] also needs DG15 to pass
      * its hash, signature and root checks (Part 11, Appendix J).
      */
-    public data object ActiveAuthentication : ChipCheckKind()
+    public data object ActiveAuthentication : ChipCheckKind() {
+        override val code: String
+            get() = "active-authentication"
+    }
 
-    /** Every field of the chip's DG1 shows the same characters as the printed MRZ (Part 11, 5.1.1 best practice 2). */
-    public data object Dg1MatchesPrintedMrz : ChipCheckKind()
+    /**
+     * Every field of the chip's DG1 shows the same characters as the printed MRZ (Part 11, 5.1.1
+     * best practice 2). Made only when your app gave a printed MRZ
+     * ([ChipReadOptions.printedDocument]) or combined one with a read ([ChipMrzComparison]); its
+     * [ChipCheckDetail.PrintedMrzFields] says which fields differ. Never decides what a difference
+     * means.
+     */
+    public data object Dg1MatchesPrintedMrz : ChipCheckKind() {
+        override val code: String
+            get() = "dg1-matches-printed-mrz"
+    }
 }
 
 /**
@@ -280,6 +461,10 @@ public sealed class ChipCheckKind {
  *
  * Implements [CheckReason], the shared reason type of [CheckOutcome], so a chip check's outcome
  * carries a typed reason.
+ *
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -481,4 +666,13 @@ public enum class ChipCheckReason : CheckReason {
 
     /** The chip's DG1 was not read or could not be parsed. */
     NO_CHIP_MRZ,
+
+    ;
+
+    /** The stable code of this reason: `chip` and the name in lower case, words joined by hyphens. */
+    override val code: String
+        get() = "chip." + name.lowercase().replace('_', '-')
 }
+
+/** `SECURITY_OBJECT` as `security-object`. */
+private fun checkCodeWord(name: String): String = name.lowercase().replace('_', '-')
