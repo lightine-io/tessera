@@ -69,6 +69,12 @@ internal class ChipReadHarness(
 
     /** When set, asking whether reading is available throws it: a fault the read does not expect. */
     var readingFault: Throwable? = null
+
+    /** Runs inside each question whether reading is available, for example a wait as a busy system's. */
+    var onReadingAvailable: () -> Unit = {}
+
+    /** How many times the read or the readiness asked whether reading is available. */
+    var readingAvailableAsked = 0
     var reportEnd = true
     var onBegin: (FakeSessionPort) -> Unit = {}
 
@@ -88,6 +94,8 @@ internal class ChipReadHarness(
     val env =
         CoreNfcReadEnvironment(
             readingAvailable = {
+                readingAvailableAsked++
+                onReadingAvailable()
                 readingFault?.let { throw it }
                 readingAvailable
             },

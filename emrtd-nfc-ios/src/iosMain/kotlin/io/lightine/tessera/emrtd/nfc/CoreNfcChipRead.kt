@@ -138,6 +138,10 @@ import kotlin.time.TimeSource
  * - Ends the system session on every path, exactly once: with success only for
  *   [ChipReadEnding.Complete], with the ending's text as the error message otherwise. The ending
  *   is given to the observer at once; the system takes a moment more to close the sheet.
+ * - [start] returns at once and the observer gets [io.lightine.tessera.emrtd.ChipReadState.Starting]
+ *   at once: nothing on the calling thread waits for the system. Every wait for the system (the
+ *   previous session, the rest after a system end, the question whether the device can read
+ *   tags) happens inside the read, in that state.
  * - One read at a time in the app: a [start] while another read is running ends at once with
  *   [ChipReadEnding.NotStarted] and [NfcUnavailable.Reason.READ_IN_PROGRESS]. A [start] right after
  *   a read ended waits in [io.lightine.tessera.emrtd.ChipReadState.Starting] until the previous
@@ -1227,6 +1231,10 @@ public class CoreNfcChipRead internal constructor(
          * no signal while the app runs that the radio was switched off system-wide: each call
          * asks [availability] afresh, and a radio that is off shows when a read starts, as
          * [ChipReadEnding.NotStarted] with [NfcUnavailable.Reason.DISABLED].
+         *
+         * This call asks Core NFC whether the device can read tags (`readingAvailable`), a call
+         * into the system that may take a moment while the system is busy; [start] and the
+         * listener's calls never ask it on your thread.
          *
          * @return The readiness now.
          * @since 1.0.0

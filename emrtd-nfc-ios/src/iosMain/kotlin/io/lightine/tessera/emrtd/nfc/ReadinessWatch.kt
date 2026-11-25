@@ -26,6 +26,13 @@ import kotlin.concurrent.Volatile
  * One recursive lock guards the listeners, the last value told and the timer; the calls are posted
  * under it, so their order on the main queue is the order of the changes. Recursive, so a listener
  * run in place (tests, an inline main queue) may remove itself.
+ *
+ * A change never asks Core NFC anything (TES-346): [changed] runs on the thread of the registry
+ * change, which for a read's start is the app's thread inside `CoreNfcChipRead.start`, often the
+ * main thread. It uses the device's reading support as the last [current] call found it
+ * (`NFCTagReaderSession.readingAvailable` is a call into the system: on a device a start right
+ * after a read showed nothing for 13 seconds, and a call that waited for the busy system there is
+ * the likely cause). With no listener it does nothing at all.
  */
 internal class ReadinessWatch(
     private val registry: ChipReadRegistry,
@@ -39,13 +46,24 @@ internal class ReadinessWatch(
     private var told: ChipReadReadiness? = null
     private var timer: Job? = null
 
+    // The device's reading support as the last [current] call found it; `null` before any.
+    @Volatile
+    private var lastAvailable: Boolean? = null
+
     init {
         registry.onChange = ::changed
     }
 
-    /** The value now. */
+    /** The value now. Asks Core NFC whether the device can read tags: call it on the app's own terms. */
     fun current(): ChipReadReadiness {
-        if (!readingAvailable()) return ChipReadReadiness.unavailable(NfcUnavailable.Reason.NOT_SUPPORTED)
+        val available = readingAvailable()
+        lastAvailable = available
+        return valueOf(available)
+    }
+
+    /** The value from the registry's facts and [available], with no call into the system. */
+    private fun valueOf(available: Boolean): ChipReadReadiness {
+        if (!available) return ChipReadReadiness.unavailable(NfcUnavailable.Reason.NOT_SUPPORTED)
         val facts = registry.snapshot()
         if (facts.readInProgress) return ChipReadReadiness.ReadInProgress
         val at = now()
@@ -57,17 +75,22 @@ internal class ReadinessWatch(
         val entry = Entry(listener)
         val value = current()
         locked {
-            if (told == null) told = value
+            // With no listener, changes were not followed: the value now is the one told.
+            if (told == null || listeners.isEmpty()) told = value
             listeners += entry
             schedule(value)
         }
         return entry
     }
 
-    /** The registry changed, or a wait is due to end: tell the listeners when the kind changed. */
+    /**
+     * The registry changed, or a wait is due to end: tell the listeners when the kind changed. Never
+     * calls into the system, and does nothing while no listener is registered.
+     */
     fun changed() {
         locked {
-            val value = current()
+            if (listeners.isEmpty()) return@locked
+            val value = valueOf(lastAvailable ?: true)
             schedule(value)
             if (sameKind(told, value)) return@locked
             told = value
