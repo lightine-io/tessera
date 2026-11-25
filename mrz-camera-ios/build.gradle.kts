@@ -8,7 +8,7 @@ plugins {
 // The iOS platform-I/O module: AVFoundation + Apple Vision on top of the platform-agnostic
 // mrz-ocr-core contract (ADR-021). iOS targets only — no jvm/android target, and (unlike the
 // other camera modules) no Android Gradle plugin, since there is no Android target. It is also the
-// umbrella for iOS distribution (ADR-019): it assembles the `Tessera` XCFramework, exporting
+// umbrella for iOS distribution (ADR-019): it assembles the `TesseraCore` XCFramework, exporting
 // mrz-ocr-core (and transitively mrz-core / types / telemetry) so a Swift consumer sees the
 // result, parse, and error types — not opaque handles. Since chip reading (TES-321) it also exports
 // emrtd-core and the iPhone NFC transport (emrtd-nfc-ios). The umbrella stays here rather than in a
@@ -28,13 +28,18 @@ kotlin {
     // iOS targets (ADR-017): device arm64 plus the Apple-Silicon simulator. These two
     // standard shortcuts activate Kotlin's default hierarchy template, providing the shared
     // iosMain/iosTest source sets where the AVFoundation/Vision code and its simulator tests live.
-    // Each target also produces a static framework binary; XCFramework("Tessera") bundles both slices
-    // into one `Tessera.xcframework` (device + Apple-Silicon simulator) via the `assembleTesseraXCFramework`
-    // task — the artifact SPM distributes (ADR-019).
-    val xcframework = XCFramework("Tessera")
+    // Each target also produces a static framework binary; XCFramework("TesseraCore") bundles both slices
+    // into one `TesseraCore.xcframework` (device + Apple-Silicon simulator) via the
+    // `assembleTesseraCoreXCFramework` task — the artifact SPM distributes (ADR-019). The Swift package
+    // wraps it in a hand-written `Tessera` target that re-exports it, so apps write `import Tessera`.
+    val xcframework = XCFramework("TesseraCore")
     listOf(iosArm64(), iosSimulatorArm64()).forEach { iosTarget ->
         iosTarget.binaries.framework {
-            baseName = "Tessera"
+            baseName = "TesseraCore"
+            // The Objective-C class prefix stays `Tessera` (TesseraMrzDocument, not TCMrzDocument).
+            // Kotlin/Native derives the prefix from the module name, which defaults to the framework
+            // name; `-module-name` sets it apart from the framework (and Swift module) name.
+            freeCompilerArgs += listOf("-module-name", "Tessera")
             // Static linkage is the simpler, sign-free shape for an SPM binaryTarget (no embedded
             // dynamic framework to code-sign in the consumer app).
             isStatic = true
@@ -87,7 +92,7 @@ kotlin {
             linkTaskProvider.configure {
                 inputs.file(hideScript)
                 doLast {
-                    val binary = outputFile.get().resolve("Tessera")
+                    val binary = outputFile.get().resolve("TesseraCore")
                     val process =
                         ProcessBuilder("bash", hideScript.path, binary.path, opensslSymbols.path, platform, "15.0")
                             .redirectErrorStream(true)
@@ -126,19 +131,19 @@ kotlin {
     }
 }
 
-// Packages the release Tessera.xcframework into the .zip an SPM `binaryTarget(url:checksum:)` consumes
+// Packages the release TesseraCore.xcframework into the .zip an SPM `binaryTarget(url:checksum:)` consumes
 // (ADR-019). At the 0.2.0 release this zip is attached to the GitHub release and the output of
-// `swift package compute-checksum build/distributions/Tessera.xcframework.zip` goes into the
+// `swift package compute-checksum build/distributions/TesseraCore.xcframework.zip` goes into the
 // distribution repo's Package.swift. Wired here — ahead of the release — so the full packaging path
 // (assemble → zip) is exercised and reproducible, not improvised at tag time. The zip holds the
 // `.xcframework` at its root, the layout SPM expects.
-tasks.register<Zip>("packTesseraXCFramework") {
+tasks.register<Zip>("packTesseraCoreXCFramework") {
     group = "build"
-    description = "Zips the release Tessera.xcframework for SPM binaryTarget distribution (ADR-019)."
-    dependsOn("assembleTesseraReleaseXCFramework")
+    description = "Zips the release TesseraCore.xcframework for SPM binaryTarget distribution (ADR-019)."
+    dependsOn("assembleTesseraCoreReleaseXCFramework")
     from(layout.buildDirectory.dir("XCFrameworks/release"))
-    include("Tessera.xcframework/**")
-    archiveFileName.set("Tessera.xcframework.zip")
+    include("TesseraCore.xcframework/**")
+    archiveFileName.set("TesseraCore.xcframework.zip")
     destinationDirectory.set(layout.buildDirectory.dir("distributions"))
 }
 
@@ -148,7 +153,7 @@ tasks.register<Zip>("packTesseraXCFramework") {
 // renamed, fails here. macOS only (xcrun); CI runs it in the iOS job.
 tasks.register<Exec>("checkTesseraFrameworkHeader") {
     group = "verification"
-    description = "Compiles an Objective-C file that names the umbrella's public types against Tessera.h."
+    description = "Compiles an Objective-C file that names the umbrella's public types against TesseraCore.h."
     dependsOn("linkDebugFrameworkIosSimulatorArm64")
     val frameworksDir = layout.buildDirectory.dir("bin/iosSimulatorArm64/debugFramework")
     val source = layout.projectDirectory.file("src/frameworkHeaderCheck/TesseraHeaderCheck.m")
@@ -183,7 +188,7 @@ fun opensslSlice(targetName: String): String =
 // same libcrypto build, standing in for the app's own copy. Runs in the ios-compile CI job.
 tasks.register<Exec>("checkOpenSslSymbolClash") {
     group = "verification"
-    description = "Links an app with its own OpenSSL next to the Tessera framework; fails on duplicate symbols."
+    description = "Links an app with its own OpenSSL next to the TesseraCore framework; fails on duplicate symbols."
     dependsOn("linkDebugFrameworkIosSimulatorArm64")
     val openssl =
         project(":emrtd-core")
@@ -193,7 +198,7 @@ tasks.register<Exec>("checkOpenSslSymbolClash") {
             .asFile
     val framework =
         layout.buildDirectory
-            .dir("bin/iosSimulatorArm64/debugFramework/Tessera.framework")
+            .dir("bin/iosSimulatorArm64/debugFramework/TesseraCore.framework")
             .get()
             .asFile
     executable = "bash"

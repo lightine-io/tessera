@@ -25,14 +25,14 @@ if ! xcrun simctl list devices available | grep -qF "    ${SIMULATOR} ("; then
 fi
 
 echo "==> Building the XCFramework"
-(cd "${ROOT}" && ./gradlew :mrz-camera-ios:packTesseraXCFramework)
+(cd "${ROOT}" && ./gradlew :mrz-camera-ios:packTesseraCoreXCFramework)
 
 # The pack task zips the release XCFramework from this directory; test the same bits.
-BUILT="${ROOT}/mrz-camera-ios/build/XCFrameworks/release/Tessera.xcframework"
+BUILT="${ROOT}/mrz-camera-ios/build/XCFrameworks/release/TesseraCore.xcframework"
 [ -d "${BUILT}" ] || { echo "error: ${BUILT} not found after the build" >&2; exit 2; }
 
 LOCAL_DIR="${SWIFT_DIR}/.local-xcframework"
-TARGET="${LOCAL_DIR}/Tessera.xcframework"
+TARGET="${LOCAL_DIR}/TesseraCore.xcframework"
 BACKUP=""
 
 restore() {
@@ -45,7 +45,7 @@ trap restore EXIT
 
 mkdir -p "${LOCAL_DIR}"
 if [ -e "${TARGET}" ]; then
-    BACKUP="${LOCAL_DIR}/Tessera.xcframework.backup.$$"
+    BACKUP="${LOCAL_DIR}/TesseraCore.xcframework.backup.$$"
     mv "${TARGET}" "${BACKUP}"
 fi
 cp -R "${BUILT}" "${TARGET}"

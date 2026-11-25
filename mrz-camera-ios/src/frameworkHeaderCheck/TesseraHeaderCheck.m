@@ -1,8 +1,8 @@
-// Compiled (syntax only, never linked or shipped) against the generated header of the Tessera
+// Compiled (syntax only, never linked or shipped) against the generated header of the TesseraCore
 // framework by the checkTesseraFrameworkHeader Gradle task. Each line names a public type or member
 // that Swift apps reach through the umbrella; one that drops out of the export list, or is renamed,
 // fails the compile. Add a line when a module joins the umbrella.
-#import <Tessera/Tessera.h>
+#import <TesseraCore/TesseraCore.h>
 #import <CoreNFC/CoreNFC.h>
 
 // Camera and MRZ (mrz-camera-ios, mrz-ocr-core, mrz-core, types).
