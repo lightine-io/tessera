@@ -5,6 +5,7 @@ import io.lightine.tessera.emrtd.internal.x509.X509Certificate
 import io.lightine.tessera.emrtd.internal.x509.X509Exception
 import io.lightine.tessera.emrtd.internal.x509.X509Parser
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
+import kotlin.jvm.JvmStatic
 
 /**
  * A root certificate the app supplies: a country signing certificate (CSCA) the app chose to use
@@ -60,6 +61,7 @@ public class TrustAnchor internal constructor(
          * the reason and where in the bytes it was found, as an offset counted from the first byte
          * of the DER passed here. Never throws for bad data.
          */
+        @JvmStatic
         public fun fromDer(der: ByteArray): TrustAnchorParse =
             try {
                 TrustAnchorParse.Parsed(TrustAnchor(X509Parser.parse(der.copyOf())))

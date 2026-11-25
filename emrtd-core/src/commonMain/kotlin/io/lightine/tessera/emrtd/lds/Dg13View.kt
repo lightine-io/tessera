@@ -3,6 +3,7 @@ package io.lightine.tessera.emrtd.lds
 import io.lightine.tessera.emrtd.internal.lds.LdsReader
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.ChipMalformedFile
+import kotlin.jvm.JvmStatic
 
 /**
  * EF.DG13: optional details the issuing state defines (ICAO Doc 9303 Part 10, section 4.7.13).
@@ -46,6 +47,7 @@ public class Dg13View private constructor(
          * when the file does not start with tag `6D` or its length does not fit the bytes. The
          * content is not interpreted, so it may be any bytes.
          */
+        @JvmStatic
         public fun parse(bytes: ByteArray): LdsParseResult<Dg13View> =
             LdsReader.guard(FILE_ID) {
                 val outer =

@@ -129,7 +129,7 @@ import kotlin.coroutines.cancellation.CancellationException
 @ExperimentalTesseraChipApi
 public class IsoDepTransport internal constructor(
     private val channel: IsoDepChannel,
-    private val timeoutMillis: Int,
+    private val timeoutMillis: Long,
     private val ioDispatcher: CoroutineDispatcher,
     private val nanoTime: () -> Long = System::nanoTime,
 ) : ApduTransport,
@@ -141,16 +141,17 @@ public class IsoDepTransport internal constructor(
      * @param isoDep The tag's ISO-DEP technology, from `IsoDep.get(tag)`.
      * @param timeoutMillis How long to wait for the chip to answer one command, in milliseconds.
      *   The default allows for the slow commands of a chip.
-     * @throws IllegalArgumentException when [timeoutMillis] is not positive.
+     * @throws IllegalArgumentException when [timeoutMillis] is not in 1 to [Int.MAX_VALUE] (the platform takes an `int`).
      */
     @JvmOverloads
     public constructor(
         isoDep: IsoDep,
-        timeoutMillis: Int = DEFAULT_TIMEOUT_MILLIS,
+        timeoutMillis: Long = DEFAULT_TIMEOUT_MILLIS,
     ) : this(PlatformIsoDepChannel(isoDep), timeoutMillis, Dispatchers.IO)
 
     init {
-        require(timeoutMillis > 0) { "timeoutMillis must be positive, was $timeoutMillis" }
+        // The platform's ISO-DEP time limit is an int.
+        require(timeoutMillis in 1..Int.MAX_VALUE) { "timeoutMillis must be in 1 to ${Int.MAX_VALUE}, was $timeoutMillis" }
     }
 
     private val lock = Mutex()
@@ -235,7 +236,7 @@ public class IsoDepTransport internal constructor(
         connectTried = true
         call("connect") {
             if (!channel.isConnected) channel.connect()
-            channel.setTimeout(timeoutMillis)
+            channel.setTimeout(timeoutMillis.toInt())
         }
     }
 
@@ -284,7 +285,7 @@ public class IsoDepTransport internal constructor(
          * chip up to 5 seconds for one block, so the transport sets this value after it connects and before
          * the first command.
          */
-        public const val DEFAULT_TIMEOUT_MILLIS: Int = 5_000
+        public const val DEFAULT_TIMEOUT_MILLIS: Long = 5_000
 
         private const val SHORT_APDU_MAX = 261
         private const val NANOS_PER_MILLI = 1_000_000L
@@ -306,13 +307,13 @@ public class IsoDepTransport internal constructor(
          * @throws ApduTransportException with [NfcUnavailable] (`NOT_SUPPORTED`) when the tag does not
          *   speak ISO-DEP, or another error from the list in the class description when it cannot
          *   be connected.
-         * @throws IllegalArgumentException when [timeoutMillis] is not positive.
+         * @throws IllegalArgumentException when [timeoutMillis] is not in 1 to [Int.MAX_VALUE] (the platform takes an `int`).
          */
         @JvmStatic
         @JvmOverloads
         public suspend fun open(
             tag: Tag,
-            timeoutMillis: Int = DEFAULT_TIMEOUT_MILLIS,
+            timeoutMillis: Long = DEFAULT_TIMEOUT_MILLIS,
         ): IsoDepTransport {
             val isoDep =
                 IsoDep.get(tag)
@@ -322,7 +323,7 @@ public class IsoDepTransport internal constructor(
 
         internal suspend fun open(
             channel: IsoDepChannel,
-            timeoutMillis: Int,
+            timeoutMillis: Long,
             ioDispatcher: CoroutineDispatcher,
             nanoTime: () -> Long = System::nanoTime,
         ): IsoDepTransport {

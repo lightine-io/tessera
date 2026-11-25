@@ -2,6 +2,7 @@ package io.lightine.tessera.emrtd.lds
 
 import io.lightine.tessera.emrtd.internal.lds.ImageGroupReader
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
+import kotlin.jvm.JvmStatic
 
 /**
  * DG2, the chip's face data group, read down to its containers (Doc 9303 Part 10, section 4.7.2).
@@ -41,6 +42,7 @@ public class BiometricGroup internal constructor(
          *
          * @param bytes the whole content of the file
          */
+        @JvmStatic
         public fun parse(bytes: ByteArray): LdsParseResult<BiometricGroup> = ImageGroupReader.readDg2(bytes)
     }
 }

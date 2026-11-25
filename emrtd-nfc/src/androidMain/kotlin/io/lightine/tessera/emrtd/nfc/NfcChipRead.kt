@@ -168,7 +168,8 @@ import kotlin.jvm.JvmOverloads
  * thread that calls [start] or [cancel] for the updates and the ending those cause. An exception the
  * observer throws is ignored, so it never reaches the main thread.
  *
- * The observer is held until the ending.
+ * The read lets go of the observer when it hands over the ending (with [ObserverThread.MAIN], once
+ * the main thread has run that call).
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -313,14 +314,15 @@ public class NfcChipRead internal constructor(
         var waitingSince = began
         // Before the first link: the app's limit on finding a document. After a lost link: the
         // limit on its return, counted from the loss.
-        var deadline: Long? = if (settings.hasDocumentWaitLimit) saturatingAdd(began, settings.waitForDocumentMillis) else null
+        var deadline: Long? =
+            if (settings.waitForDocumentMillis != NfcReadSettings.NO_LIMIT) saturatingAdd(began, settings.waitForDocumentMillis) else null
         var linkedOnce = false
         var lostTag: Tag? = null
         var failedConnects = 0
         while (!coordinator.isEnded) {
             val found = awaitTag(adapter, waitingSince, deadline, lostTag, linkedOnce) ?: return
             val release = CompletableDeferred<Unit>()
-            val connection = env.platform.connectionOf(found.tag, settings.commandTimeoutMillis.toInt()) { release.complete(Unit) }
+            val connection = env.platform.connectionOf(found.tag, settings.commandTimeoutMillis) { release.complete(Unit) }
             if (connection == null) {
                 // Not an ISO 14443-4 chip, so no document this read can use: keep waiting.
                 continue
@@ -483,13 +485,25 @@ public class NfcChipRead internal constructor(
         }
     }
 
-    /** Hands the coordinator's calls to the app, after the SDK's own work on the ending. */
+    /**
+     * Hands the coordinator's calls to the app, after the SDK's own work on the ending, and lets go
+     * of the app's observer at the ending, so a read the app still holds keeps nothing of it.
+     */
     private inner class Forwarder(
-        private val app: ChipReadObserver,
+        app: ChipReadObserver,
     ) : ChipReadObserver {
-        override fun onUpdate(update: ChipReadUpdate) = app.onUpdate(update)
+        // Only the coordinator's one drainer calls in, one call at a time.
+        private var app: ChipReadObserver? = app
 
-        override fun onEnding(ending: ChipReadEnding) = finish { app.onEnding(ending) }
+        override fun onUpdate(update: ChipReadUpdate) {
+            app?.onUpdate(update)
+        }
+
+        override fun onEnding(ending: ChipReadEnding) {
+            val heldApp = app ?: return
+            app = null
+            finish { heldApp.onEnding(ending) }
+        }
     }
 
     /**
@@ -584,46 +598,32 @@ public class NfcChipRead internal constructor(
         public fun availability(context: Context): NfcUnavailable.Reason? = NfcReaderMode.availability(context)
 
         /**
-         * Starts a read with the default settings. Returns at once; the read waits for reader mode
-         * to hand it a document: pass it to [NfcReaderMode.enable].
+         * Starts a read whose reader mode your app runs. Returns at once; the read waits for reader
+         * mode to hand it a document: pass it to [NfcReaderMode.enable]. The parameters come in the
+         * order of the Activity-owning start: what to read, then the observer, then the settings.
          *
          * @param options The key, the data groups, the roots and the check time.
          * @param adapter The device's NFC adapter, from `NfcAdapter.getDefaultAdapter(context)`;
          *   `null` (no NFC on the device) ends the read with [ChipReadEnding.NotStarted].
          * @param observer Gets every update and exactly one ending.
-         * @return The read: the reader-mode callback, and the handle to cancel it.
-         */
-        @JvmStatic
-        public fun start(
-            options: ChipReadOptions,
-            adapter: NfcAdapter?,
-            observer: ChipReadObserver,
-        ): NfcChipRead = start(options, adapter, NfcReadSettings(), observer)
-
-        /**
-         * Starts a read. Returns at once; the read waits for reader mode to hand it a document:
-         * pass it to [NfcReaderMode.enable].
-         *
-         * @param options The key, the data groups, the roots and the check time.
-         * @param adapter The device's NFC adapter, from `NfcAdapter.getDefaultAdapter(context)`;
-         *   `null` (no NFC on the device) ends the read with [ChipReadEnding.NotStarted].
          * @param settings What to do after a lost link, and the time limits.
-         * @param observer Gets every update and exactly one ending.
          * @return The read: the reader-mode callback, and the handle to cancel it.
+         * @since 1.0.0
          */
         @JvmStatic
+        @JvmOverloads
         public fun start(
             options: ChipReadOptions,
             adapter: NfcAdapter?,
-            settings: NfcReadSettings,
             observer: ChipReadObserver,
-        ): NfcChipRead = start(options, adapter, settings, observer, NfcReadEnvironment.process)
+            settings: NfcReadSettings = NfcReadSettings(),
+        ): NfcChipRead = start(options, adapter, observer, settings, NfcReadEnvironment.process)
 
         internal fun start(
             options: ChipReadOptions,
             adapter: NfcAdapter?,
-            settings: NfcReadSettings,
             observer: ChipReadObserver,
+            settings: NfcReadSettings,
             env: NfcReadEnvironment,
         ): NfcChipRead = NfcChipRead(options, adapter, settings, observer, env).also { it.begin() }
 
@@ -846,7 +846,7 @@ internal interface NfcChipPlatform {
      */
     fun connectionOf(
         tag: Tag,
-        timeoutMillis: Int,
+        timeoutMillis: Long,
         onReleased: () -> Unit,
     ): IsoDepConnection?
 }
@@ -863,7 +863,7 @@ internal fun interface IsoDepConnection {
 /** A connection over any channel, the wiring the platform and the tests build alike. */
 internal fun connectionOver(
     channel: IsoDepChannel,
-    timeoutMillis: Int,
+    timeoutMillis: Long,
     io: CoroutineDispatcher,
     onReleased: () -> Unit,
 ): IsoDepConnection = IsoDepConnection { IsoDepTransport.open(ReleaseSignallingChannel(channel, onReleased), timeoutMillis, io) }
@@ -874,7 +874,7 @@ internal object PlatformNfcChip : NfcChipPlatform {
 
     override fun connectionOf(
         tag: Tag,
-        timeoutMillis: Int,
+        timeoutMillis: Long,
         onReleased: () -> Unit,
     ): IsoDepConnection? {
         val isoDep = IsoDep.get(tag) ?: return null

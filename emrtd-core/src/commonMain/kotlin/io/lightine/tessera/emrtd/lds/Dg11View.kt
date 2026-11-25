@@ -3,6 +3,7 @@ package io.lightine.tessera.emrtd.lds
 import io.lightine.tessera.emrtd.internal.lds.LdsReader
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.ChipMalformedFile
+import kotlin.jvm.JvmStatic
 
 /**
  * EF.DG11: additional personal details (ICAO Doc 9303 Part 10, section 4.7.11).
@@ -80,6 +81,7 @@ public class Dg11View private constructor(
          * Reads the bytes of EF.DG11. Fails with a [ChipMalformedFile] result, never an exception,
          * when the bytes are not a DG11 (bad TLV or a different first tag).
          */
+        @JvmStatic
         public fun parse(bytes: ByteArray): LdsParseResult<Dg11View> =
             LdsReader.guard(FILE_ID) {
                 val outer = LdsReader.open(bytes, FILE_ID, TAG)

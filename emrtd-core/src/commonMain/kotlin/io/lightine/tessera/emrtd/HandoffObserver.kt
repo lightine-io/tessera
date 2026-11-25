@@ -3,6 +3,7 @@ package io.lightine.tessera.emrtd
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.jvm.JvmSynthetic
 
 /**
  * Gives every call of a [ChipReadObserver] to a thread of the platform's choice, in order, for the
@@ -24,10 +25,21 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
 @OptIn(ExperimentalAtomicApi::class)
 @InternalTesseraChipApi
 @ExperimentalTesseraChipApi
-public class HandoffObserver(
+public class HandoffObserver private constructor(
     private val app: ChipReadObserver,
     private val post: (() -> Unit) -> Unit,
 ) : ChipReadObserver {
+    /** Creates one: `HandoffObserver(app, post)`. Kotlin only: synthetic on the JVM, so Java cannot call it. */
+    @InternalTesseraChipApi
+    public companion object {
+        /** See the class parameters. */
+        @JvmSynthetic
+        public operator fun invoke(
+            app: ChipReadObserver,
+            post: (() -> Unit) -> Unit,
+        ): HandoffObserver = HandoffObserver(app, post)
+    }
+
     private val endingPosted = AtomicBoolean(false)
 
     override fun onUpdate(update: ChipReadUpdate) {

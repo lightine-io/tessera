@@ -22,7 +22,10 @@ import kotlin.jvm.JvmStatic
  * protocol again with the same key: the chip forgets its session keys when it loses power (ICAO
  * Doc 9303 Part 11, section 9.8.5). The MRZ and the card access number are not blocked by tries
  * (TR-03110 Part 1, section 2.3), so with `maxRestarts` 3 a read makes at most four access
- * attempts, all with a key that no chip has refused.
+ * attempts, all with a key that no chip has refused, as far as the read knows: the platform
+ * settings' command time limit also counts as a lost link, so a chip that answers a command
+ * after that limit has its answer dropped unread. When that late answer was a refusal of the key,
+ * the next start uses the same key again, within the restarts.
  *
  * A chip that refuses the key on a later attempt ends the read with [ChipReadEnding.KeyNotAccepted]
  * and nothing from earlier attempts: another document may have been placed on the phone, and the

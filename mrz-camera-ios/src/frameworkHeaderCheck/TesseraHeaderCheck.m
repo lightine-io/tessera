@@ -58,9 +58,9 @@ static void tesseraEasyApi(TesseraMrzDocument *document, TesseraParseResult *res
                                                                                                           dateOfExpiry:@"340314"];
     NSSet<TesseraMrzField *> *changedFields = normalized.changedFields;
     TesseraChipReadOptions *options = [[[[TesseraChipReadOptionsBuilder alloc] initWithAccessKey:can]
-        dataGroupsNumbers:[NSSet setWithObjects:@(1), @(2), nil]] buildAndReturnError:nil];
+        dataGroupsNumbers:@[ @(1), @(2) ]] buildAndReturnError:nil];
     TesseraChipReadOptions *withPrinted = [[[[[TesseraChipReadOptionsBuilder alloc] initWithAccessKey:can]
-        dataGroupsNumberCollection:@[ @(1), @(2) ]] printedDocumentDocument:document] buildAndReturnError:nil];
+        dataGroupsNumbers:@[ @(1), @(2) ]] printedDocumentDocument:document] buildAndReturnError:nil];
     TesseraTrustAnchorLoad *roots = [TesseraTrustAnchors.shared loadBytes:bytes heldRoots:@[]];
     TesseraTrustAnchorLoad *more = [TesseraTrustAnchors.shared loadPath:@"roots.ml" heldRoots:@[]];
     TesseraTrustAnchorLoad *both = [roots plusOther:more];
@@ -105,8 +105,8 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
     (void)resumeTwice;
     (void)unavailable;
     id<TesseraCoreNfcSheetTexts> texts = TesseraCoreNfcDefaultSheetTexts.shared;
-    id<TesseraChipReadHandle> full = [TesseraCoreNfcChipRead.companion startOptions:options texts:texts settings:settings observer:observer];
-    id<TesseraChipReadHandle> withTexts = [TesseraCoreNfcChipRead.companion startOptions:options texts:texts observer:observer];
+    id<TesseraChipReadHandle> full = [TesseraCoreNfcChipRead.companion startOptions:options observer:observer texts:texts settings:settings];
+    id<TesseraChipReadHandle> withTexts = [TesseraCoreNfcChipRead.companion startOptions:options observer:observer texts:texts];
     [full cancel];
     BOOL ended = shortest.isEnded;
     (void)ended;

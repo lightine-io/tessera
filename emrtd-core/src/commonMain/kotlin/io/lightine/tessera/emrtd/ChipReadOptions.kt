@@ -1,4 +1,4 @@
-// Swift labels for the two dataGroups overloads (TES-346). ObjCName is still experimental in Kotlin.
+// The Swift label of the vararg dataGroups form (TES-346). ObjCName is still experimental in Kotlin.
 @file:OptIn(kotlin.experimental.ExperimentalObjCName::class)
 
 package io.lightine.tessera.emrtd
@@ -105,21 +105,16 @@ public class ChipReadOptions
             private var allowCheckDigitMismatch: Boolean = false
             private var printedDocument: MrzDocument? = null
 
-            /** The data groups to read, by number (1 to 16), at least one. In Swift: `dataGroups(numbers: [1, 2, 11])`. */
-            public fun dataGroups(numbers: Set<Int>): Builder = apply { dataGroups = numbers.toSet() }
-
             /**
              * The data groups to read, by number (1 to 16), from any collection: a list, a range, a
-             * set. Repeats count once. An empty selection makes [build] throw. In Swift, where the
-             * set form above has the label `numbers:`, this form is `dataGroups(numberCollection:)`.
+             * set. Repeats count once. An empty selection makes [build] throw. In Swift:
+             * `dataGroups(numbers: [1, 2, 11])`.
              */
-            public fun dataGroups(
-                @ObjCName("numberCollection") numbers: Collection<Int>,
-            ): Builder = apply { dataGroups = numbers.toSet() }
+            public fun dataGroups(numbers: Collection<Int>): Builder = apply { dataGroups = numbers.toSet() }
 
             /**
              * The data groups to read, by number (1 to 16): `dataGroups(1, 2, 11)`. In Swift, where a
-             * Kotlin `vararg` is an array object, use `dataGroups(numbers:)` with a set instead;
+             * Kotlin `vararg` is an array object, use `dataGroups(numbers:)` with an array instead;
              * this form is `dataGroups(numberArray:)` there.
              */
             public fun dataGroups(

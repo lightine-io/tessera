@@ -21,6 +21,7 @@ import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.incrementAndFetch
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.jvm.JvmSynthetic
 
 /**
  * The platform-neutral part of one chip read through a platform entry point: the states, the one
@@ -65,13 +66,50 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 @InternalTesseraChipApi
 @ExperimentalTesseraChipApi
-public class ChipReadCoordinator(
+public class ChipReadCoordinator private constructor(
     private val options: ChipReadOptions,
     private val linkLoss: LinkLossPolicy,
     private val observer: ChipReadObserver,
-    private val reader: ChipReader = ChipReader(),
-    private val clearKeyAtEnding: Boolean = false,
+    private val reader: ChipReader,
+    private val clearKeyAtEnding: Boolean,
 ) {
+    /**
+     * Creates a coordinator: `ChipReadCoordinator(options, linkLoss, observer)`. Kotlin only: on the
+     * JVM this and every member are synthetic, so Java code cannot call them (the opt-in marker
+     * does not reach Java), and Objective-C and Swift do not see the class.
+     */
+    @InternalTesseraChipApi
+    public companion object {
+        /** See the class parameters. */
+        @JvmSynthetic
+        public operator fun invoke(
+            options: ChipReadOptions,
+            linkLoss: LinkLossPolicy,
+            observer: ChipReadObserver,
+            reader: ChipReader = ChipReader(),
+            clearKeyAtEnding: Boolean = false,
+        ): ChipReadCoordinator = ChipReadCoordinator(options, linkLoss, observer, reader, clearKeyAtEnding)
+
+        private val SYSTEM_REASONS = setOf(NfcUnavailable.Reason.ENDED_BY_SYSTEM, NfcUnavailable.Reason.DISABLED)
+
+        /** The chip answered about the key: never tried again with it. */
+        private val KEY_REFUSALS =
+            setOf(
+                ChipAccessDenied.Reason.KEY_NOT_MATCHED,
+                ChipAccessDenied.Reason.CHIP_REFUSED,
+                ChipAccessDenied.Reason.KEY_BLOCKED,
+                ChipAccessDenied.Reason.KEY_SUSPENDED,
+                ChipAccessDenied.Reason.KEY_DEACTIVATED,
+                ChipAccessDenied.Reason.KEY_TRIES_LIMITED,
+            )
+
+        /** A loss of the link itself, with no status word: the only kind a read starts again after. */
+        private fun isLinkLoss(error: ChipError): Boolean = error is NfcTagLost || error is NfcTimeout
+
+        /** The link was closed under the read, by the platform. */
+        private fun isClosed(error: ChipError): Boolean = error is NfcUnavailable && error.reason == NfcUnavailable.Reason.CLOSED
+    }
+
     private sealed class Item {
         class Update(
             val update: ChipReadUpdate,
@@ -103,10 +141,12 @@ public class ChipReadCoordinator(
     private val carry = AtomicReference<ResumeCarry?>(null)
 
     /** `true` once the ending is decided. */
+    @get:JvmSynthetic
     public val isEnded: Boolean
         get() = ended.load()
 
     /** The most attempts this read can make: 1 plus [LinkLossPolicy.maxRestarts]. */
+    @get:JvmSynthetic
     public val maxAttempts: Int = 1 + linkLoss.maxRestarts
 
     /**
@@ -118,6 +158,7 @@ public class ChipReadCoordinator(
      *
      * @return `false` when the read has ended (the key was refused, or it had ended already).
      */
+    @JvmSynthetic
     public fun start(): Boolean {
         publish(ChipReadState.Starting)
         val key = options.accessKey
@@ -141,6 +182,7 @@ public class ChipReadCoordinator(
      *
      * @param waitedMillis How long the reader has waited so far, in milliseconds.
      */
+    @JvmSynthetic
     public fun waiting(waitedMillis: Long) {
         if (waitingAfterLoss.load()) return
         this.waitedMillis.store(waitedMillis)
@@ -148,11 +190,13 @@ public class ChipReadCoordinator(
     }
 
     /** A document is found and nothing was sent yet: [ChipReadState.DocumentFound]. */
+    @JvmSynthetic
     public fun documentFound() {
         publish(ChipReadState.DocumentFound)
     }
 
     /** The link to the chip is being set up: [ChipReadState.Connecting]. */
+    @JvmSynthetic
     public fun connecting() {
         publish(ChipReadState.Connecting)
     }
@@ -161,6 +205,7 @@ public class ChipReadCoordinator(
      * The link could not be set up, before any command: back to waiting, with no restart used
      * ([ChipReadState.WaitingForDocument], or [ChipReadState.LinkLost] again after a lost link).
      */
+    @JvmSynthetic
     public fun connectionFailed() {
         val lost = lastLinkLost.load()
         if (waitingAfterLoss.load() && lost != null) {
@@ -198,6 +243,7 @@ public class ChipReadCoordinator(
      *   [ChipReadEnding.EndedBySystem] with the closed-link error, never as an app cancel: an app
      *   cancel ends the read before its link closes.
      */
+    @JvmSynthetic
     @Throws(CancellationException::class)
     public suspend fun read(
         transport: ApduTransport,
@@ -316,6 +362,7 @@ public class ChipReadCoordinator(
      *
      * @return `true` when this call ended the read.
      */
+    @JvmSynthetic
     public fun documentNotReturned(): Boolean {
         val loss = lastLoss.load() ?: NfcTagLost
         return end(stoppedBy(loss, null))
@@ -328,6 +375,7 @@ public class ChipReadCoordinator(
      * @param by Who cancelled.
      * @return `true` when this call ended the read.
      */
+    @JvmSynthetic
     public fun cancel(by: ChipReadEnding.Cancelled.By): Boolean {
         val stopping = if (by == ChipReadEnding.Cancelled.By.APP) ChipReadState.Stopping else null
         return end(ChipReadEnding.Cancelled(by, attemptsStarted.load(), lastProgress.load()), stopping)
@@ -339,6 +387,7 @@ public class ChipReadCoordinator(
      * @param reason What the platform reported.
      * @return `true` when this call ended the read.
      */
+    @JvmSynthetic
     public fun endedBySystem(reason: NfcError): Boolean =
         end(ChipReadEnding.EndedBySystem(reason, attemptsStarted.load(), lastProgress.load()))
 
@@ -348,6 +397,7 @@ public class ChipReadCoordinator(
      * @param reason Why.
      * @return `true` when this call ended the read.
      */
+    @JvmSynthetic
     public fun notStarted(reason: NfcUnavailable.Reason): Boolean = end(ChipReadEnding.NotStarted(reason, lastProgress.load()))
 
     /**
@@ -357,6 +407,7 @@ public class ChipReadCoordinator(
      * @param error What happened.
      * @return `true` when this call ended the read.
      */
+    @JvmSynthetic
     public fun fail(error: ChipError): Boolean = end(stoppedBy(error, null))
 
     private fun stoppedBy(
@@ -486,27 +537,6 @@ public class ChipReadCoordinator(
             // Ignored on purpose: the observer is never part of the read.
         }
         if (item is Item.End) endingDelivered = true
-    }
-
-    private companion object {
-        val SYSTEM_REASONS = setOf(NfcUnavailable.Reason.ENDED_BY_SYSTEM, NfcUnavailable.Reason.DISABLED)
-
-        /** The chip answered about the key: never tried again with it. */
-        val KEY_REFUSALS =
-            setOf(
-                ChipAccessDenied.Reason.KEY_NOT_MATCHED,
-                ChipAccessDenied.Reason.CHIP_REFUSED,
-                ChipAccessDenied.Reason.KEY_BLOCKED,
-                ChipAccessDenied.Reason.KEY_SUSPENDED,
-                ChipAccessDenied.Reason.KEY_DEACTIVATED,
-                ChipAccessDenied.Reason.KEY_TRIES_LIMITED,
-            )
-
-        /** A loss of the link itself, with no status word: the only kind a read starts again after. */
-        fun isLinkLoss(error: ChipError): Boolean = error is NfcTagLost || error is NfcTimeout
-
-        /** The link was closed under the read, by the platform. */
-        fun isClosed(error: ChipError): Boolean = error is NfcUnavailable && error.reason == NfcUnavailable.Reason.CLOSED
     }
 }
 

@@ -4,6 +4,7 @@ import io.lightine.tessera.emrtd.internal.asn1.Asn1Exception
 import io.lightine.tessera.emrtd.internal.asn1.DerReader
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import kotlin.io.encoding.Base64
+import kotlin.jvm.JvmStatic
 
 /**
  * Reads root certificates (trust anchors) from content the app already has, in one call, so the app
@@ -51,6 +52,7 @@ public expect object TrustAnchors {
      *
      * @return [TrustAnchorLoad] with what could be read, what could not, and what the content is.
      */
+    @JvmStatic
     public fun load(bytes: ByteArray): TrustAnchorLoad
 
     /**
@@ -66,6 +68,7 @@ public expect object TrustAnchors {
      * @return [TrustAnchorLoad] with what could be read, what could not, and what the content is.
      * @since 1.0.0
      */
+    @JvmStatic
     public fun load(
         bytes: ByteArray,
         heldRoots: List<TrustAnchor>,
@@ -83,6 +86,7 @@ public expect object TrustAnchors {
      *
      * @since 1.0.0
      */
+    @JvmStatic
     public fun merge(vararg loads: TrustAnchorLoad): TrustAnchorLoad
 }
 

@@ -5,6 +5,7 @@ import io.lightine.tessera.emrtd.internal.x509.X509Certificate
 import io.lightine.tessera.emrtd.internal.x509.X509Exception
 import io.lightine.tessera.emrtd.internal.x509.X509Parser
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
+import kotlin.jvm.JvmStatic
 
 /**
  * A document signer certificate the app supplies, for a chip whose EF.SOD carries none (ICAO Doc
@@ -44,6 +45,7 @@ public class DocumentSignerCertificate internal constructor(
          *   with the problem and its byte offset, counted from the start of the DER passed here;
          *   never an exception.
          */
+        @JvmStatic
         public fun fromDer(der: ByteArray): DocumentSignerCertificateParse =
             try {
                 DocumentSignerCertificateParse.Parsed(DocumentSignerCertificate(X509Parser.parse(der.copyOf())))

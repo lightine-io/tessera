@@ -19,9 +19,9 @@ final class io.lightine.tessera.emrtd.nfc/CoreNfcChipRead : io.lightine.tessera.
 
     final object Companion { // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.Companion|null[0]
         final fun availability(): io.lightine.tessera.types.errors/NfcUnavailable.Reason? // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.Companion.availability|availability(){}[0]
-        final fun start(io.lightine.tessera.emrtd/ChipReadOptions, io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts, io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings, io.lightine.tessera.emrtd/ChipReadObserver): io.lightine.tessera.emrtd/ChipReadHandle // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.Companion.start|start(io.lightine.tessera.emrtd.ChipReadOptions;io.lightine.tessera.emrtd.nfc.CoreNfcSheetTexts;io.lightine.tessera.emrtd.nfc.CoreNfcReadSettings;io.lightine.tessera.emrtd.ChipReadObserver){}[0]
-        final fun start(io.lightine.tessera.emrtd/ChipReadOptions, io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts, io.lightine.tessera.emrtd/ChipReadObserver): io.lightine.tessera.emrtd/ChipReadHandle // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.Companion.start|start(io.lightine.tessera.emrtd.ChipReadOptions;io.lightine.tessera.emrtd.nfc.CoreNfcSheetTexts;io.lightine.tessera.emrtd.ChipReadObserver){}[0]
         final fun start(io.lightine.tessera.emrtd/ChipReadOptions, io.lightine.tessera.emrtd/ChipReadObserver): io.lightine.tessera.emrtd/ChipReadHandle // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.Companion.start|start(io.lightine.tessera.emrtd.ChipReadOptions;io.lightine.tessera.emrtd.ChipReadObserver){}[0]
+        final fun start(io.lightine.tessera.emrtd/ChipReadOptions, io.lightine.tessera.emrtd/ChipReadObserver, io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts): io.lightine.tessera.emrtd/ChipReadHandle // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.Companion.start|start(io.lightine.tessera.emrtd.ChipReadOptions;io.lightine.tessera.emrtd.ChipReadObserver;io.lightine.tessera.emrtd.nfc.CoreNfcSheetTexts){}[0]
+        final fun start(io.lightine.tessera.emrtd/ChipReadOptions, io.lightine.tessera.emrtd/ChipReadObserver, io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts, io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings): io.lightine.tessera.emrtd/ChipReadHandle // io.lightine.tessera.emrtd.nfc/CoreNfcChipRead.Companion.start|start(io.lightine.tessera.emrtd.ChipReadOptions;io.lightine.tessera.emrtd.ChipReadObserver;io.lightine.tessera.emrtd.nfc.CoreNfcSheetTexts;io.lightine.tessera.emrtd.nfc.CoreNfcReadSettings){}[0]
     }
 }
 
@@ -106,11 +106,6 @@ final class io.lightine.tessera.emrtd.nfc/CoreNfcTransport : io.lightine.tessera
 }
 
 final object io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts : io.lightine.tessera.emrtd.nfc/CoreNfcSheetTexts { // io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts|null[0]
-    final const val BAR_WIDTH // io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts.BAR_WIDTH|{}BAR_WIDTH[0]
-        final fun <get-BAR_WIDTH>(): kotlin/Int // io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts.BAR_WIDTH.<get-BAR_WIDTH>|<get-BAR_WIDTH>(){}[0]
-    final const val MOVE_HINT_AFTER_MILLIS // io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts.MOVE_HINT_AFTER_MILLIS|{}MOVE_HINT_AFTER_MILLIS[0]
-        final fun <get-MOVE_HINT_AFTER_MILLIS>(): kotlin/Long // io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts.MOVE_HINT_AFTER_MILLIS.<get-MOVE_HINT_AFTER_MILLIS>|<get-MOVE_HINT_AFTER_MILLIS>(){}[0]
-
     final fun progressBar(io.lightine.tessera.emrtd/ChipReadProgress): kotlin/String // io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts.progressBar|progressBar(io.lightine.tessera.emrtd.ChipReadProgress){}[0]
     final fun progressBar(io.lightine.tessera.emrtd/ChipReadProgress, kotlin/Int): kotlin/String // io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts.progressBar|progressBar(io.lightine.tessera.emrtd.ChipReadProgress;kotlin.Int){}[0]
     final fun textFor(io.lightine.tessera.emrtd/ChipReadUpdate): kotlin/String // io.lightine.tessera.emrtd.nfc/CoreNfcDefaultSheetTexts.textFor|textFor(io.lightine.tessera.emrtd.ChipReadUpdate){}[0]

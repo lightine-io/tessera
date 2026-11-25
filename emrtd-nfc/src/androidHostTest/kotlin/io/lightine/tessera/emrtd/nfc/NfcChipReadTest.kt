@@ -198,7 +198,7 @@ internal class FakeNfcPlatform(
 
     override fun connectionOf(
         tag: Tag,
-        timeoutMillis: Int,
+        timeoutMillis: Long,
         onReleased: () -> Unit,
     ): IsoDepConnection? {
         if (tag in notIsoDep) return null
@@ -309,7 +309,7 @@ class NfcChipReadTest {
         settings: NfcReadSettings = NfcReadSettings(),
         adapter: NfcAdapter? = theAdapter(),
         options: ChipReadOptions = this@NfcChipReadTest.options,
-    ): NfcChipRead = NfcChipRead.start(options, adapter, settings, observer, env)
+    ): NfcChipRead = NfcChipRead.start(options, adapter, observer, settings, env)
 
     private fun assertOneEnding(observer: RecordingChipObserver) {
         assertEquals(1, observer.endings.size, "updates: ${observer.updates}")
@@ -861,7 +861,6 @@ class NfcChipReadTest {
         assertEquals(5_000L, settings.commandTimeoutMillis)
         assertEquals(15_000L, settings.waitForReturnMillis)
         assertEquals(NfcReadSettings.NO_LIMIT, settings.waitForDocumentMillis)
-        assertFalse(settings.hasDocumentWaitLimit)
         assertEquals(1_000L, settings.presenceCheckDelayMillis)
         assertTrue(settings.platformSounds)
         assertEquals(ObserverThread.MAIN, settings.observerOn)
@@ -886,14 +885,14 @@ class NfcChipReadTest {
                 "platformSounds=true, observerOn=MAIN)",
             built.toString(),
         )
-        assertTrue(built.hasDocumentWaitLimit)
         // A limit set, then taken away with the no-limit call, goes back to waiting for ever.
-        assertFalse(
+        assertEquals(
+            NfcReadSettings.NO_LIMIT,
             built
                 .toBuilder()
                 .noLimitForDocument()
                 .build()
-                .hasDocumentWaitLimit,
+                .waitForDocumentMillis,
         )
     }
 

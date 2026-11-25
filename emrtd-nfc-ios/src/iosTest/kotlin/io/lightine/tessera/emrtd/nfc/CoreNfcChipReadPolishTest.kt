@@ -38,6 +38,31 @@ class CoreNfcChipReadPolishTest {
             assertNothingLeft(read)
         }
 
+    /** Starts a read whose observer only the read holds; returns a weak reference to that observer. */
+    @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+    private fun ChipReadHarness.startWithUnheldObserver(): Pair<CoreNfcChipRead, kotlin.native.ref.WeakReference<Recorder>> {
+        val recorder = Recorder()
+        val (read, _) = start(recorder = recorder)
+        return read to kotlin.native.ref.WeakReference(recorder)
+    }
+
+    @OptIn(kotlin.experimental.ExperimentalNativeApi::class, kotlin.native.runtime.NativeRuntimeApi::class)
+    @Test
+    fun the_read_lets_go_of_the_observer_at_the_ending_while_the_system_closes_the_session() =
+        chipReadTest {
+            reportEnd = false
+            val (read, observer) = startWithUnheldObserver()
+            step(500)
+            read.cancel()
+            step()
+            assertTrue(LiveSessions.contains(read), "the read waits for the system's report of the session's end")
+            kotlin.native.runtime.GC.collect()
+            assertNull(observer.get(), "the observer is not kept alive by the read after the ending")
+            port.events.onInvalidated(NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER))
+            step()
+            assertFalse(LiveSessions.contains(read))
+        }
+
     @Test
     fun the_read_clears_the_key_at_its_ending_and_not_before() =
         chipReadTest {

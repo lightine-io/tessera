@@ -87,7 +87,7 @@ internal class ChipReadHarness(
         texts: CoreNfcSheetTexts = CoreNfcDefaultSheetTexts,
         recorder: Recorder = Recorder(),
     ): Pair<CoreNfcChipRead, Recorder> {
-        val read = CoreNfcChipRead.start(options, texts, settings, recorder, env)
+        val read = CoreNfcChipRead.start(options, recorder, texts, settings, env)
         test.runCurrent()
         return read to recorder
     }

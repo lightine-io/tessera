@@ -38,12 +38,17 @@ import kotlin.jvm.JvmOverloads
  *   link as the platform's ISO-DEP time limit. When it passes, the platform reports the tag as lost
  *   (it cannot tell a slow chip from a document that left), so [linkLoss] decides what follows.
  *   Default 5000: ICAO Doc 9303 Part 10, appendix B.11, lets a chip take up to 5 seconds per block.
+ *   The SDK's own command time limit counts as a lost link, so the chip may still answer the
+ *   command after the limit, and that late answer is dropped unread: when the late answer was a
+ *   refusal of the key, the read does not know it, and [linkLoss] may start again with the same
+ *   key, within its restarts.
  * @property waitForReturnMillis How long the read waits for the document to come back after a lost
  *   link, counted from the loss, before it ends with [ChipReadEnding.Partial] or
  *   [ChipReadEnding.Failed]. Default 15000.
  * @property waitForDocumentMillis How long the read may take to find a document and set up the
- *   first link to it, counted from the start, across tags whose link could not be set up;
- *   [NO_LIMIT], the default, waits without a limit ([hasDocumentWaitLimit] is then `false`). When it
+ *   first link to it, counted from the start, across tags whose link could not be set up (on
+ *   iPhone the system session's 60-second limit plays this part, so its settings have no such value);
+ *   [NO_LIMIT], the default, waits without a limit. When it
  *   passes, the read ends with [ChipReadEnding.EndedBySystem] and [NfcTimeout]. Once a first link
  *   is up it no longer applies: [waitForReturnMillis] bounds the waits after a lost link.
  * @property presenceCheckDelayMillis How often the platform checks that the document is still
@@ -92,10 +97,6 @@ public class NfcReadSettings
                 "presenceCheckDelayMillis must be in 0 to ${Int.MAX_VALUE}, was $presenceCheckDelayMillis"
             }
         }
-
-        /** `true` when [waitForDocumentMillis] is a limit; `false` for [NO_LIMIT]. */
-        public val hasDocumentWaitLimit: Boolean
-            get() = waitForDocumentMillis != NO_LIMIT
 
         /** The values, never document data. */
         override fun toString(): String =
@@ -198,7 +199,7 @@ public class NfcReadSettings
             public const val DEFAULT_SETTLE_DELAY_MILLIS: Long = 400
 
             /** The default [commandTimeoutMillis]: 5000, the same as [IsoDepTransport.DEFAULT_TIMEOUT_MILLIS]. */
-            public const val DEFAULT_COMMAND_TIMEOUT_MILLIS: Long = IsoDepTransport.DEFAULT_TIMEOUT_MILLIS.toLong()
+            public const val DEFAULT_COMMAND_TIMEOUT_MILLIS: Long = IsoDepTransport.DEFAULT_TIMEOUT_MILLIS
 
             /** The default [waitForReturnMillis]: 15000. */
             public const val DEFAULT_WAIT_FOR_RETURN_MILLIS: Long = 15_000

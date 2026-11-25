@@ -118,7 +118,7 @@ internal class AndroidSim(
 
             override fun connectionOf(
                 tag: Tag,
-                timeoutMillis: Int,
+                timeoutMillis: Long,
                 onReleased: () -> Unit,
             ): IsoDepConnection? {
                 if (tag in notIsoDep) return null
@@ -137,7 +137,7 @@ internal class AndroidSim(
         val recorder = SimRecorder(now)
         // A sink goes in through the settings, as an app passes it to the easy entry point.
         val withSink = if (telemetry == null) settings else settings.toBuilder().telemetry(telemetry).build()
-        val read = NfcChipRead.start(options, adapter(), withSink, recorder, env)
+        val read = NfcChipRead.start(options, adapter(), recorder, withSink, env)
         test.runCurrent()
         return read to recorder
     }

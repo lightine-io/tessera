@@ -17,21 +17,21 @@ import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
  * Updates and endings never carry document data: no file content, no key, no value read from the
  * document. An exception thrown by the observer is ignored and never changes the read.
  *
- * [ChipReader.read] with an observer calls only [onUpdate]: its result is the ending. The platform
- * read entry points call both.
+ * The platform read entry points call both. The low-level [ChipReader.read] takes only a
+ * [ChipReadUpdateListener], the update half, because its result is the ending; an observer is one.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
-public interface ChipReadObserver {
+public interface ChipReadObserver : ChipReadUpdateListener {
     /**
      * A change of state or progress.
      *
      * @param update Where the read is, how far it got, and which attempt it is.
      */
-    public fun onUpdate(update: ChipReadUpdate)
+    override fun onUpdate(update: ChipReadUpdate)
 
     /**
      * How the read ended. Called exactly once per read, after the last [onUpdate].
@@ -39,6 +39,27 @@ public interface ChipReadObserver {
      * @param ending The ending, with the read's result when there is one.
      */
     public fun onEnding(ending: ChipReadEnding)
+}
+
+/**
+ * Receives a chip read's updates, with no ending: what the low-level [ChipReader.read] calls, where
+ * the result it returns is the ending. A [ChipReadObserver] is one too.
+ *
+ * Calls come on the calling coroutine, one at a time and in order. An exception thrown here is
+ * ignored and never changes the read.
+ *
+ * Experimental: see [ExperimentalTesseraChipApi].
+ *
+ * @since 1.0.0
+ */
+@ExperimentalTesseraChipApi
+public fun interface ChipReadUpdateListener {
+    /**
+     * A change of state or progress.
+     *
+     * @param update Where the read is, how far it got; always attempt 1 of 1 from [ChipReader.read].
+     */
+    public fun onUpdate(update: ChipReadUpdate)
 }
 
 /**

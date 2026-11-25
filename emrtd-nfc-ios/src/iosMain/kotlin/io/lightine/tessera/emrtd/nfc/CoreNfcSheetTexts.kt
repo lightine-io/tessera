@@ -58,17 +58,18 @@ public interface CoreNfcSheetTexts {
  */
 @ExperimentalTesseraChipApi
 public object CoreNfcDefaultSheetTexts : CoreNfcSheetTexts {
-    /** How long the reader waits before the waiting text changes to a hint to move the phone. */
-    public const val MOVE_HINT_AFTER_MILLIS: Long = 8_000
+    // How long the reader waits before the waiting text changes to a hint to move the phone.
+    // Internal: an app that wants another time writes its own texts (TES-346).
+    internal const val MOVE_HINT_AFTER_MILLIS: Long = 8_000
 
-    /** The number of characters in the default [progressBar]. */
-    public const val BAR_WIDTH: Int = 10
+    // The number of characters in the default progressBar; the two-argument form takes any width.
+    internal const val BAR_WIDTH: Int = 10
 
     /**
      * A line per state:
      * - Starting: "Getting ready".
      * - Waiting for the document: "Hold your iPhone near the document"; after
-     *   [MOVE_HINT_AFTER_MILLIS], "Move the phone slowly along the document".
+     *   8 seconds, "Move the phone slowly along the document".
      * - Document found: "Found. Hold still."
      * - Connecting: "Connecting. Hold still."
      * - Opening access, reading, checking with the chip, checking the files: a line, then the
@@ -148,7 +149,7 @@ public object CoreNfcDefaultSheetTexts : CoreNfcSheetTexts {
         }
 
     /**
-     * A progress bar in characters, [BAR_WIDTH] wide: filled blocks for the work done, empty
+     * A progress bar in characters, 10 wide: filled blocks for the work done, empty
      * blocks for the rest, then the percent, for example `▓▓▓▓░░░░░░ 45%`. It never goes back,
      * because the progress never does.
      *

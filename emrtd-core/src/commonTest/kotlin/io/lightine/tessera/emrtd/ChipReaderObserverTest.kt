@@ -71,6 +71,20 @@ class ChipReaderObserverTest {
         }
 
     @Test
+    fun anUpdateListenerLambdaGetsTheSameUpdatesAsAnObserver() =
+        runTest {
+            withChips { c, keys ->
+                val flow = FakeReadFlowChip.build(c, keys, FlowAccess.BAC)
+                val heard = mutableListOf<ChipReadUpdate>()
+                // TES-346: the low-level read takes the update half only; a lambda is enough.
+                val result = ChipReader(NoOpTelemetrySink).read(flow.chip, options(flow)) { heard += it }
+                assertIs<ChipReadResult.Complete>(result)
+                assertEquals(ChipReadState.CheckingFiles, heard.last().state)
+                assertTrue(heard.all { it.attempt == 1 && it.maxAttempts == 1 })
+            }
+        }
+
+    @Test
     fun anObserverThatThrowsNeverChangesTheRead() =
         runTest {
             withChips { c, keys ->

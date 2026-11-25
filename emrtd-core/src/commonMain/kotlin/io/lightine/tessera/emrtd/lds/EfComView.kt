@@ -3,6 +3,7 @@ package io.lightine.tessera.emrtd.lds
 import io.lightine.tessera.emrtd.internal.lds.LdsReader
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.ChipMalformedFile
+import kotlin.jvm.JvmStatic
 
 /**
  * EF.COM: the header file of the chip's LDS (ICAO Doc 9303 Part 10, section 4.6.1). It holds the LDS
@@ -78,6 +79,7 @@ public class EfComView private constructor(
          * Reads the bytes of EF.COM. Fails with a [ChipMalformedFile] result, never an exception,
          * when the bytes are not an EF.COM (no tag list, or bad TLV).
          */
+        @JvmStatic
         public fun parse(bytes: ByteArray): LdsParseResult<EfComView> =
             LdsReader.guard(LdsReader.FILE_ID_EF_COM) {
                 val fileId = LdsReader.FILE_ID_EF_COM

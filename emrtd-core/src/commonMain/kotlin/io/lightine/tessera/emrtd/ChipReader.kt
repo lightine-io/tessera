@@ -61,22 +61,23 @@ public class ChipReader internal constructor(
     ): ChipReadResult = ReadFlow(transport, options, telemetry, cryptoProvider).run()
 
     /**
-     * Reads the chip behind [transport] as [options] say, and tells [observer] where the read is.
+     * Reads the chip behind [transport] as [options] say, and tells [updates] where the read is.
      *
-     * The same read as the two-argument [read], with the same result. [observer] gets
-     * [ChipReadObserver.onUpdate] as the read opens access ([ChipReadState.OpeningAccess]), reads
-     * each file part by part ([ChipReadState.ReadingFile], with the byte counts once the file's
-     * length is known), runs chip or active authentication ([ChipReadState.AuthenticatingChip]) and
-     * runs the checks ([ChipReadState.CheckingFiles]), each with the progress. Every update has
-     * attempt 1 of 1: this call makes one attempt, on a link your app owns. The result is the
-     * ending: [ChipReadObserver.onEnding] is not called.
+     * The same read as the two-argument [read], with the same result. [updates] gets an update as
+     * the read opens access ([ChipReadState.OpeningAccess]), reads each file part by part
+     * ([ChipReadState.ReadingFile], with the byte counts once the file's length is known), runs
+     * chip or active authentication ([ChipReadState.AuthenticatingChip]) and runs the checks
+     * ([ChipReadState.CheckingFiles]), each with the progress. Every update has attempt 1 of 1:
+     * this call makes one attempt, on a link your app owns. The result is the ending, so the
+     * listener has no ending call; a [ChipReadObserver] can be passed, and its
+     * [ChipReadObserver.onEnding] is not called.
      *
-     * The updates come on the calling coroutine, one at a time. An exception the observer throws is
+     * The updates come on the calling coroutine, one at a time. An exception the listener throws is
      * ignored and never changes the read.
      *
      * @param transport The platform's connection to the chip, already open.
      * @param options The key, the data groups, the roots and the check time.
-     * @param observer Where the updates go; `null` for none.
+     * @param updates Where the updates go; `null` for none.
      * @return [ChipReadResult.Complete], [ChipReadResult.Partial] or [ChipReadResult.Failed].
      * @throws CancellationException when the calling coroutine is cancelled.
      * @since 1.0.0
@@ -85,15 +86,15 @@ public class ChipReader internal constructor(
     public suspend fun read(
         transport: ApduTransport,
         options: ChipReadOptions,
-        observer: ChipReadObserver?,
+        updates: ChipReadUpdateListener?,
     ): ChipReadResult {
-        if (observer == null) return read(transport, options)
+        if (updates == null) return read(transport, options)
         val sink =
             FlowSink { state, progress ->
                 try {
-                    observer.onUpdate(ChipReadUpdate(state, progress, 1, 1))
+                    updates.onUpdate(ChipReadUpdate(state, progress, 1, 1))
                 } catch (e: Throwable) {
-                    // Ignored on purpose: the observer is never part of the result.
+                    // Ignored on purpose: the listener is never part of the result.
                 }
             }
         return ReadFlow(transport, options, telemetry, cryptoProvider, FlowReporter(ProgressTracker(), sink)).run()

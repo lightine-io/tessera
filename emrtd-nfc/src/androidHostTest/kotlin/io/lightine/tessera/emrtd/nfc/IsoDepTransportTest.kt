@@ -86,7 +86,7 @@ class IsoDepTransportTest {
 
     private fun TestScope.transport(
         channel: IsoDepChannel,
-        timeoutMillis: Int = 4_000,
+        timeoutMillis: Long = 4_000,
         clock: () -> Long = System::nanoTime,
     ) = IsoDepTransport(channel, timeoutMillis, StandardTestDispatcher(testScheduler), clock)
 
@@ -471,6 +471,6 @@ class IsoDepTransportTest {
 
     @Test
     fun `the default time limit is 5 seconds`() {
-        assertEquals(5_000, IsoDepTransport.DEFAULT_TIMEOUT_MILLIS)
+        assertEquals(5_000L, IsoDepTransport.DEFAULT_TIMEOUT_MILLIS)
     }
 }

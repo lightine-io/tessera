@@ -12,6 +12,7 @@ import io.lightine.tessera.emrtd.internal.x509.X509Exception
 import io.lightine.tessera.emrtd.internal.x509.X509Parser
 import io.lightine.tessera.emrtd.trust.TrustAnchorProblem
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
+import kotlin.jvm.JvmStatic
 
 /**
  * The chip's signed list of checksums (EF.SOD), read but not checked.
@@ -81,6 +82,7 @@ public class SecurityObjectView internal constructor(
          * @return [SecurityObjectParse.Parsed] with the view, or [SecurityObjectParse.Unreadable] with the
          * reason and where in the file it was found. Never throws for bad data.
          */
+        @JvmStatic
         public fun parse(file: ByteArray): SecurityObjectParse =
             try {
                 SecurityObjectParse.Parsed(build(file))

@@ -167,7 +167,7 @@ internal class IosSim(
         val recorder = SimRecorder(now)
         // A sink goes in through the settings, as an app passes it to the easy entry point.
         val withSink = if (telemetry == null) settings else settings.toBuilder().telemetry(telemetry).build()
-        val read = CoreNfcChipRead.start(options, texts, withSink, recorder, env)
+        val read = CoreNfcChipRead.start(options, recorder, texts, withSink, env)
         test.runCurrent()
         return read to recorder
     }

@@ -55,6 +55,7 @@ public object NfcReaderMode {
      *   in milliseconds; a value outside 0 to [Int.MAX_VALUE] is cut to that range, because the
      *   platform takes an `int`.
      */
+    @JvmStatic
     @JvmOverloads
     public fun extras(presenceCheckDelayMillis: Long = DEFAULT_PRESENCE_CHECK_DELAY_MILLIS): Bundle =
         Bundle().apply {
@@ -83,6 +84,7 @@ public object NfcReaderMode {
      *   `IllegalStateException` the platform throws when the Activity has set another discovery
      *   technology. When it is not `null`, cancel the read: it cannot get a document.
      */
+    @JvmStatic
     @JvmOverloads
     public fun enable(
         activity: Activity,
@@ -110,6 +112,7 @@ public object NfcReaderMode {
      * left for good, never during a read. Safe to call when it was never on; a refusal by the
      * platform is swallowed, because there is nothing left to end here.
      */
+    @JvmStatic
     public fun disable(activity: Activity) {
         try {
             NfcAdapter.getDefaultAdapter(activity)?.disableReaderMode(activity)
@@ -126,6 +129,7 @@ public object NfcReaderMode {
      *   return. The same question and the same return type as `CoreNfcChipRead.availability()` on
      *   iPhone, and [NfcChipRead.availability] is the same call from the entry point.
      */
+    @JvmStatic
     public fun availability(context: Context): NfcUnavailable.Reason? {
         val adapter = NfcAdapter.getDefaultAdapter(context)
         return when {

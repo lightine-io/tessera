@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import kotlin.jvm.JvmStatic
 
 // The module's source sets already opt in to the experimental chip API (build.gradle.kts), so no
 // opt-in annotation is needed on this file. Kotlin has no source set shared by the JVM and Android
@@ -12,13 +13,16 @@ import java.io.InputStream
 
 @ExperimentalTesseraChipApi
 public actual object TrustAnchors {
+    @JvmStatic
     public actual fun load(bytes: ByteArray): TrustAnchorLoad = readTrustAnchors(bytes)
 
+    @JvmStatic
     public actual fun load(
         bytes: ByteArray,
         heldRoots: List<TrustAnchor>,
     ): TrustAnchorLoad = readTrustAnchors(bytes, heldRoots)
 
+    @JvmStatic
     public actual fun merge(vararg loads: TrustAnchorLoad): TrustAnchorLoad = mergeTrustAnchorLoads(loads.toList())
 
     /**
@@ -29,9 +33,11 @@ public actual object TrustAnchors {
      * nothing is fetched; a `java.io.File` keeps such a path with its double slash collapsed to
      * one, and that form counts too. Never throws.
      */
+    @JvmStatic
     public fun load(file: File): TrustAnchorLoad = load(file, MAX_BYTES, emptyList())
 
     /** As [load] on a file, with [heldRoots] for a master list's own checks; see the bytes form. */
+    @JvmStatic
     public fun load(
         file: File,
         heldRoots: List<TrustAnchor>,
@@ -43,9 +49,11 @@ public actual object TrustAnchors {
      * [TrustAnchorLoadProblem.TOO_LARGE]. An I/O failure is answered with
      * [TrustAnchorLoadProblem.NOT_READABLE]. Never throws.
      */
+    @JvmStatic
     public fun load(stream: InputStream): TrustAnchorLoad = load(stream, MAX_BYTES, emptyList())
 
     /** As [load] on a stream, with [heldRoots] for a master list's own checks; see the bytes form. */
+    @JvmStatic
     public fun load(
         stream: InputStream,
         heldRoots: List<TrustAnchor>,

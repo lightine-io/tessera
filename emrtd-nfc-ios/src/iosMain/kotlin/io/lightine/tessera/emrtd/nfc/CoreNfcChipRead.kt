@@ -94,7 +94,9 @@ import kotlin.time.TimeSource
  *
  * The app needs the same entitlement and Info.plist entries as [CoreNfcSession] (see there).
  *
- * The observer is held until the ending. Its calls never overlap and come in order, with the one
+ * The read lets go of the observer when it hands over the ending (with [ObserverThread.MAIN], once
+ * the main queue has run that call), even though the read itself lives on until the system closes
+ * its session a moment later. Its calls never overlap and come in order, with the one
  * ending last, and by default ([CoreNfcReadSettings.observerOn] is [ObserverThread.MAIN]) they come
  * on the main queue, handed over in the order the SDK made them; none comes before [start] returns.
  * With [ObserverThread.CALLER] they come from the read's own thread. An exception the observer
@@ -378,18 +380,28 @@ public class CoreNfcChipRead internal constructor(
             CoreNfcDefaultSheetTexts.textFor(update)
         }
 
-    /** Hands the coordinator's calls to the app, after the SDK's own work on each. */
+    /**
+     * Hands the coordinator's calls to the app, after the SDK's own work on each. It lets go of the
+     * app's observer at the ending: the read itself stays alive until the system reports the
+     * session's end (a moment later), and must not keep the app's observer, and what it holds,
+     * alive with it.
+     */
     private inner class Forwarder(
-        private val app: ChipReadObserver,
+        app: ChipReadObserver,
     ) : ChipReadObserver {
+        // Only the coordinator's one drainer calls in, one call at a time.
+        private var app: ChipReadObserver? = app
+
         override fun onUpdate(update: ChipReadUpdate) {
             alerts.show(textFor(update))
-            app.onUpdate(update)
+            app?.onUpdate(update)
         }
 
         override fun onEnding(ending: ChipReadEnding) {
+            val heldApp = app
+            app = null
             finish(ending)
-            app.onEnding(ending)
+            heldApp?.onEnding(ending)
         }
     }
 
@@ -503,48 +515,53 @@ public class CoreNfcChipRead internal constructor(
          * @param options The key, the data groups, the roots and the check time.
          * @param observer Gets every update and exactly one ending.
          * @return The read, to cancel it.
+         * @since 1.0.0
          */
         public fun start(
             options: ChipReadOptions,
             observer: ChipReadObserver,
-        ): ChipReadHandle = start(options, CoreNfcDefaultSheetTexts, CoreNfcReadSettings(), observer)
+        ): ChipReadHandle = start(options, observer, CoreNfcDefaultSheetTexts, CoreNfcReadSettings())
 
         /**
          * Starts a read with your sheet texts and the default settings. Returns at once.
          *
          * @param options The key, the data groups, the roots and the check time.
-         * @param texts The sheet's texts, in your app's language.
          * @param observer Gets every update and exactly one ending.
+         * @param texts The sheet's texts, in your app's language.
          * @return The read, to cancel it.
+         * @since 1.0.0
          */
         public fun start(
             options: ChipReadOptions,
-            texts: CoreNfcSheetTexts,
             observer: ChipReadObserver,
-        ): ChipReadHandle = start(options, texts, CoreNfcReadSettings(), observer)
+            texts: CoreNfcSheetTexts,
+        ): ChipReadHandle = start(options, observer, texts, CoreNfcReadSettings())
 
         /**
-         * Starts a read. Returns at once; the read runs in the background.
+         * Starts a read. Returns at once; the read runs in the background. The parameters come in
+         * the order of the Android start: what to read, then the observer, then the optional
+         * texts and settings, settings last.
          *
          * @param options The key, the data groups, the roots and the check time.
+         * @param observer Gets every update and exactly one ending.
          * @param texts The sheet's texts, in your app's language; [CoreNfcDefaultSheetTexts] for
          *   the built-in English ones.
          * @param settings What to do after a lost link, and the time limits.
-         * @param observer Gets every update and exactly one ending.
          * @return The read, to cancel it.
+         * @since 1.0.0
          */
         public fun start(
             options: ChipReadOptions,
+            observer: ChipReadObserver,
             texts: CoreNfcSheetTexts,
             settings: CoreNfcReadSettings,
-            observer: ChipReadObserver,
-        ): ChipReadHandle = start(options, texts, settings, observer, CoreNfcReadEnvironment.process)
+        ): ChipReadHandle = start(options, observer, texts, settings, CoreNfcReadEnvironment.process)
 
         internal fun start(
             options: ChipReadOptions,
+            observer: ChipReadObserver,
             texts: CoreNfcSheetTexts,
             settings: CoreNfcReadSettings,
-            observer: ChipReadObserver,
             env: CoreNfcReadEnvironment,
         ): CoreNfcChipRead = CoreNfcChipRead(options, texts, settings, observer, env).also { it.begin() }
 

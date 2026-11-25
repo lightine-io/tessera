@@ -18,6 +18,7 @@ import io.lightine.tessera.emrtd.internal.x509.X509Parser
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.vocabulary.CheckOutcome
 import io.lightine.tessera.types.vocabulary.CheckReason
+import kotlin.jvm.JvmStatic
 
 /**
  * Reads a CSCA master list (Doc 9303 Part 12, 9) that the app obtained itself, for example a
@@ -45,6 +46,7 @@ public object MasterListReader {
      * @return [MasterListRead.Read] with the list, or [MasterListRead.Unreadable]. Never throws for
      * bad data.
      */
+    @JvmStatic
     public fun read(
         file: ByteArray,
         roots: List<TrustAnchor> = emptyList(),

@@ -11,7 +11,10 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  *
  * Every time is a `Long` in milliseconds, as in the Android read's settings (`NfcReadSettings`),
  * where [linkLoss], [settleDelayMillis], [commandTimeoutMillis] and [observerOn] mean the same,
- * with the same defaults.
+ * with the same defaults. There is no wait-for-document limit as on Android
+ * (`NfcReadSettings.waitForDocumentMillis`): the system session's own 60-second limit bounds the
+ * wait for a document, and the system ends the read when it passes
+ * ([io.lightine.tessera.emrtd.ChipReadEnding.EndedBySystem]); cancel the read for a shorter limit.
  *
  * Experimental: see [ExperimentalTesseraChipApi]. In Swift, `CoreNfcReadSettings()` gives the
  * defaults; the full initializer takes every value. To change one value without naming the others,
@@ -33,6 +36,10 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  *   passes, the command counts as a lost link: nothing more is sent on that link, a late answer is
  *   dropped, and [linkLoss] decides what follows. Default 5000: ICAO Doc 9303 Part 10, appendix
  *   B.11, lets a chip take up to 5 seconds per block, and Core NFC itself may wait far longer.
+ *   The SDK's own command time limit counts as a lost link, so the chip may still answer the
+ *   command after the limit, and that late answer is dropped unread: when the late answer was a
+ *   refusal of the key, the read does not know it, and [linkLoss] may start again with the same
+ *   key, within its restarts.
  * @property waitAfterSystemEndMillis How long a new read waits before it begins a system session
  *   when the previous one was ended by the system (its time limit, the app leaving the screen) or
  *   refused because the reader was busy. Default 1000. A read ended by the app or the person
