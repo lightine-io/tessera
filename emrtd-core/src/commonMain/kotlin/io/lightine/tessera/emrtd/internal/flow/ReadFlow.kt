@@ -152,9 +152,9 @@ private class Stop(
  * Partial with the checks run over what was read; before it (or for a blank chip) it gives Failed.
  *
  * With a [carry] from an earlier attempt (resume after a lost link), EF.SOD is read again and,
- * only when it equals the earlier one byte for byte, the earlier data groups are kept and a data
- * group cut off by the loss continues from its last byte; a continued data group is kept only when
- * its hash matches EF.SOD at once, else it is read again in full. Everything else is read again. Every session key is wiped when the read ends, however it
+ * only when it equals the earlier one byte for byte, the earlier data groups whose hash in EF.SOD
+ * passes are kept and a data group cut off by the loss continues from its last byte; a continued
+ * data group is kept only when its hash matches EF.SOD at once, else it is read again in full. Everything else is read again. Every session key is wiped when the read ends, however it
  * ends. Telemetry events carry protocol names, status words, file identifiers, byte counts and
  * timings only, and a sink that throws never changes the read.
  */
@@ -807,7 +807,9 @@ internal class ReadFlow(
      * Resume: keeps the earlier data groups, and the cut-off one for continuing, only when EF.SOD
      * read in this attempt is byte for byte the earlier one. EF.SOD is the chip's signed list of
      * data group hashes, so it shows the same document with the same data; the chip's radio
-     * identifier would not (many chips give a random one).
+     * identifier would not (many chips give a random one). Each earlier data group is kept only
+     * when its hash in this EF.SOD passes, the rule the continued file follows too: one that
+     * EF.SOD does not list, or whose bytes do not match, is read again in full in this session.
      */
     private fun compareWithEarlier(
         earlier: ResumeCarry,
@@ -823,6 +825,8 @@ internal class ReadFlow(
         if (resumeOutcome != ChipResumeOutcome.SAME_SECURITY_OBJECT) return
         for (file in earlier.files) {
             if (appFile(file.fileId) != null) continue
+            val number = file.dataGroup ?: continue
+            if (!hashVouches(number, file.raw())) continue
             files += file
             reporter.fileKept(file.fileId)
         }

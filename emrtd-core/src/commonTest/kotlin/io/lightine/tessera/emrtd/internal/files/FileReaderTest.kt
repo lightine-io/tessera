@@ -93,19 +93,6 @@ class FileReaderTest {
         }
 
     @Test
-    fun reads_a_file_by_sfi() =
-        runTest {
-            val bytes = TlvWriter.encode(0x61, byteArrayOf(9, 8, 7))
-            val chip = chip(mapOf(LdsIds.EF_COM to bytes))
-            val reader = FileReader(plain(chip))
-            reader.selectApplication()
-
-            assertContentEquals(bytes, reader.readFileBySfi(LdsIds.sfi(LdsIds.EF_COM)))
-            assertEquals(LdsIds.EF_COM, chip.currentEf)
-            assertEquals(ChipCommands.INS_READ_BINARY, CommandApdu.decode(chip.received[1])!!.ins)
-        }
-
-    @Test
     fun reads_files_over_32_kb_with_b1_and_tag_54_offset() =
         runTest {
             val bytes = TlvWriter.encode(0x61, ByteArray(40_000) { (it % 251).toByte() })
@@ -153,6 +140,56 @@ class FileReaderTest {
                 assertEquals(32_768, b1Offsets.first(), "extended=$extended")
                 assertTrue(b1Offsets.zipWithNext().all { (a, b) -> b > a })
             }
+        }
+
+    // --- Resume (TES-346) ------------------------------------------------------------------------
+
+    @Test
+    fun resume_across_32_767_continues_with_b0_to_the_boundary_then_b1_in_do53() =
+        runTest {
+            for (extended in listOf(false, true)) {
+                val bytes = TlvWriter.encode(0x75, ByteArray(40_000) { (it * 7 % 251).toByte() })
+                val chip =
+                    FakeChip(
+                        FakeFileSystem(applications = mapOf(LdsIds.LDS1_AID.toList() to mapOf(0x0102 to bytes))),
+                        maxCommandLength = if (extended) FakeChip.EXTENDED_MAX_COMMAND else FakeChip.SHORT_MAX_COMMAND,
+                        supportsExtendedLength = extended,
+                        handlers = listOf(FakeFiles),
+                    )
+                val reader = FileReader(plain(chip))
+                reader.selectApplication()
+                // The earlier attempt stopped short of the boundary.
+                val prefix = bytes.copyOfRange(0, 32_000)
+                val sent = chip.received.size
+
+                assertContentEquals(bytes, reader.resumeFile(0x0102, prefix, extended), "extended=$extended")
+                val commands = chip.received.drop(sent).mapNotNull(CommandApdu::decode)
+                val b0 = commands.filter { it.ins == ChipCommands.INS_READ_BINARY }
+                assertEquals(32_000, (b0.first().p1 shl 8) or b0.first().p2, "extended=$extended: continues at the prefix's end")
+                assertTrue(b0.all { ((it.p1 shl 8) or it.p2) + it.ne!! <= 32_768 }, "extended=$extended")
+                val b1Offsets =
+                    commands
+                        .filter { it.ins == ChipCommands.INS_READ_BINARY_ODD }
+                        .map { TlvParser().parseSingle(it.data).value().fold(0) { n, b -> (n shl 8) or (b.toInt() and 0xFF) } }
+                assertEquals(32_768, b1Offsets.first(), "extended=$extended")
+            }
+        }
+
+    @Test
+    fun resume_with_a_prefix_that_already_reaches_the_declared_length_sends_only_the_select() =
+        runTest {
+            val bytes = TlvWriter.encode(0x61, ByteArray(300) { it.toByte() })
+            val chip = chip(mapOf(LdsIds.EF_DG1 to bytes))
+            val reader = FileReader(plain(chip))
+            reader.selectApplication()
+            val sent = chip.received.size
+
+            // Exactly the file, and the file plus trailing bytes: the declared length decides.
+            assertContentEquals(bytes, reader.resumeFile(LdsIds.EF_DG1, bytes))
+            assertContentEquals(bytes, reader.resumeFile(LdsIds.EF_DG1, bytes + ByteArray(5)))
+            val commands = chip.received.drop(sent).mapNotNull(CommandApdu::decode)
+            assertTrue(commands.all { it.ins == ChipCommands.INS_SELECT }, "no READ BINARY: $commands")
+            assertNull(reader.unfinished())
         }
 
     @Test
@@ -265,17 +302,6 @@ class FileReaderTest {
             reader.selectApplication()
 
             assertContentEquals(tlv, reader.readFile(LdsIds.EF_DG1))
-        }
-
-    @Test
-    fun reading_by_sfi_drops_trailing_bytes_past_the_tlv() =
-        runTest {
-            val tlv = TlvWriter.encode(0x61, byteArrayOf(9, 8, 7))
-            val chip = chip(mapOf(LdsIds.EF_COM to tlv + ByteArray(12) { 0x33.toByte() }))
-            val reader = FileReader(plain(chip))
-            reader.selectApplication()
-
-            assertContentEquals(tlv, reader.readFileBySfi(LdsIds.sfi(LdsIds.EF_COM)))
         }
 
     @Test

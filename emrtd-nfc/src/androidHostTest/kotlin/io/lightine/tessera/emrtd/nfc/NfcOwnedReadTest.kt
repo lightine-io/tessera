@@ -166,7 +166,32 @@ class NfcOwnedReadTest {
         activity: Activity,
         observer: ChipReadObserver,
         settings: NfcReadSettings = NfcReadSettings(),
+        options: ChipReadOptions = this@NfcOwnedReadTest.options,
     ) = NfcChipRead.start(activity, options, observer, settings, env)
+
+    @Test
+    fun `the same options for a second read are rejected at once with no reader mode`() =
+        runTest {
+            val rig = rig()
+            val reused = options
+            val first = rig.start(anActivity(), OrderedObserver(rig.events), options = reused)
+            runCurrent()
+            first.cancel()
+            settle()
+            rig.main.idle()
+            rig.events.clear()
+
+            val observer = OrderedObserver(rig.events)
+            rig.start(anActivity(), observer, options = reused)
+            settle()
+            rig.main.idle()
+            val ending = assertIs<ChipReadEnding.KeyRejected>(observer.endings.single())
+            assertEquals(
+                io.lightine.tessera.types.errors.ChipAccessDenied.Reason.KEY_CLEARED,
+                assertIs<io.lightine.tessera.types.errors.ChipAccessDenied>(ending.error).reason,
+            )
+            assertEquals(listOf("update:Starting", "ending"), rig.events.toList(), "no reader mode for a used key")
+        }
 
     @Test
     fun `reader mode goes on once at the start and off once before the ending is heard, on a complete read`() =

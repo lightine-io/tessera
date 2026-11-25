@@ -14,6 +14,7 @@ import io.lightine.tessera.emrtd.internal.crypto.withCrypto
 import io.lightine.tessera.emrtd.internal.pa.TestKeys
 import io.lightine.tessera.emrtd.internal.pa.withKeys
 import io.lightine.tessera.telemetry.NoOpTelemetrySink
+import io.lightine.tessera.types.errors.ChipAccessDenied
 import io.lightine.tessera.types.errors.ChipError
 import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.errors.NfcTimeout
@@ -313,7 +314,7 @@ class ChipReadCoordinatorTest {
             val k = coordinator(keyObserver, options = options(badKey))
             assertFalse(k.start())
             val rejected = assertIs<ChipReadEnding.KeyRejected>(keyObserver.endings.single())
-            assertEquals(setOf(io.lightine.tessera.types.vocabulary.MrzField.DOCUMENT_NUMBER), rejected.error.fields)
+            assertEquals(setOf(io.lightine.tessera.types.vocabulary.MrzField.DOCUMENT_NUMBER), assertIs<io.lightine.tessera.types.errors.ChipKeyCheckDigitMismatch>(rejected.error).fields)
             assertEquals(0, rejected.attempts)
             val transport = HeldTransport()
             assertEquals(ChipReadAttemptOutcome.ENDED, k.read(transport))
@@ -415,6 +416,79 @@ class ChipReadCoordinatorTest {
             assertEquals(NfcTagLost, assertIs<ChipReadEnding.Failed>(quiet.endings.single()).error)
         }
 
+    // --- A link closed under the read, with no app cancel (TES-346) ------------------------------
+
+    @Test
+    fun aClosedLinkWithNoAppCancelAsksThePlatformAndNeverEndsAsAnAppCancel() =
+        runTest {
+            val closed = NfcUnavailable(NfcUnavailable.Reason.CLOSED)
+            // No answer from the platform: ended by the system, with the closed-link error.
+            val quiet = RecordingObserver()
+            val q = coordinator(quiet)
+            q.start()
+            val asked = mutableListOf<io.lightine.tessera.types.errors.NfcError>()
+            assertEquals(ChipReadAttemptOutcome.ENDED, q.read(FailingTransport(closed)) { asked += it; null })
+            assertEquals(listOf<io.lightine.tessera.types.errors.NfcError>(closed), asked)
+            assertEquals(closed, assertIs<ChipReadEnding.EndedBySystem>(quiet.endings.single()).reason)
+
+            // The platform reports the person's Cancel: cancelled by the person.
+            val person = RecordingObserver()
+            val p = coordinator(person)
+            p.start()
+            p.read(FailingTransport(closed)) { NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER) }
+            assertEquals(ChipReadEnding.Cancelled.By.PERSON, assertIs<ChipReadEnding.Cancelled>(person.endings.single()).by)
+
+            // The platform reports its time limit: ended by the system with that reason.
+            val limit = RecordingObserver()
+            val l = coordinator(limit)
+            l.start()
+            l.read(FailingTransport(closed)) { NfcTimeout(null) }
+            assertEquals(NfcTimeout(null), assertIs<ChipReadEnding.EndedBySystem>(limit.endings.single()).reason)
+
+            // The platform ends the read itself while the hook waits: that ending stands.
+            val raced = RecordingObserver()
+            val r = coordinator(raced)
+            r.start()
+            r.read(FailingTransport(closed)) {
+                r.cancel(ChipReadEnding.Cancelled.By.PERSON)
+                null
+            }
+            assertEquals(ChipReadEnding.Cancelled.By.PERSON, assertIs<ChipReadEnding.Cancelled>(raced.endings.single()).by)
+            for (o in listOf(quiet, person, limit, raced)) assertOneEndingLast(o)
+        }
+
+    // --- A key that was already used (TES-346) ------------------------------------------------------
+
+    @Test
+    fun aClearedKeyIsRejectedAtStartBeforeAnyRadio() =
+        runTest {
+            val key = ChipAccessKey.Can("123456")
+            key.clear()
+            val observer = RecordingObserver()
+            val c = coordinator(observer, options = options(key))
+            assertFalse(c.start())
+            val ending = assertIs<ChipReadEnding.KeyRejected>(observer.endings.single())
+            assertEquals(ChipAccessDenied(ChipAccessProtocol.NONE, ChipAccessDenied.Reason.KEY_CLEARED), ending.error)
+            assertEquals(0, ending.attempts)
+            assertEquals(listOf<ChipReadState>(ChipReadState.Starting), observer.updates.map { it.state })
+            val transport = HeldTransport()
+            assertEquals(ChipReadAttemptOutcome.ENDED, c.read(transport))
+            assertEquals(0, transport.commands, "nothing is sent with a used key")
+        }
+
+    @Test
+    fun theSameOptionsForASecondReadAreRejectedAtStart() =
+        runTest {
+            val opts = options()
+            val first = ChipReadCoordinator(opts, LinkLossPolicy.End, RecordingObserver(), ChipReader(NoOpTelemetrySink), clearKeyAtEnding = true)
+            assertTrue(first.start())
+            first.cancel(ChipReadEnding.Cancelled.By.APP)
+            val observer = RecordingObserver()
+            val second = ChipReadCoordinator(opts, LinkLossPolicy.End, observer, ChipReader(NoOpTelemetrySink), clearKeyAtEnding = true)
+            assertFalse(second.start())
+            assertEquals(ChipAccessDenied.Reason.KEY_CLEARED, assertIs<ChipAccessDenied>(assertIs<ChipReadEnding.KeyRejected>(observer.endings.single()).error).reason)
+        }
+
     @Test
     fun aTimeoutCountsAsALinkLossButNoOtherTransportErrorDoes() =
         runTest {
@@ -425,7 +499,8 @@ class ChipReadCoordinatorTest {
 
             for ((reason, expected) in listOf(
                 NfcUnavailable.Reason.CANCELLED_BY_USER to ChipReadEnding.Cancelled::class,
-                NfcUnavailable.Reason.CLOSED to ChipReadEnding.Cancelled::class,
+                // TES-346: a link closed under a read the app did not cancel is the system's doing.
+                NfcUnavailable.Reason.CLOSED to ChipReadEnding.EndedBySystem::class,
                 NfcUnavailable.Reason.ENDED_BY_SYSTEM to ChipReadEnding.EndedBySystem::class,
                 NfcUnavailable.Reason.DISABLED to ChipReadEnding.EndedBySystem::class,
                 NfcUnavailable.Reason.REQUEST_REFUSED to ChipReadEnding.Failed::class,

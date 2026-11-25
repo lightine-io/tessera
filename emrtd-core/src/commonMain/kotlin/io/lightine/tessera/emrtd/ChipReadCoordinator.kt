@@ -110,17 +110,25 @@ public class ChipReadCoordinator(
     public val maxAttempts: Int = 1 + linkLoss.maxRestarts
 
     /**
-     * Starts the read: [ChipReadState.Starting], then the key check. An MRZ key whose check digits
-     * do not match ends the read with [ChipReadEnding.KeyRejected] before any radio activity,
-     * unless [ChipReadOptions.allowCheckDigitMismatch] allows it.
+     * Starts the read: [ChipReadState.Starting], then the key check, before any radio activity or
+     * system sheet. The read ends with [ChipReadEnding.KeyRejected] when the key was already used
+     * (cleared, for example by an earlier read: [ChipAccessDenied] with
+     * [ChipAccessDenied.Reason.KEY_CLEARED]), or when an MRZ key's check digits do not match,
+     * unless [ChipReadOptions.allowCheckDigitMismatch] allows that.
      *
      * @return `false` when the read has ended (the key was refused, or it had ended already).
      */
     public fun start(): Boolean {
         publish(ChipReadState.Starting)
         val key = options.accessKey
-        if (key is ChipAccessKey.Mrz && key.checkDigitFindings.isNotEmpty() && !options.allowCheckDigitMismatch) {
-            end(ChipReadEnding.KeyRejected(ChipKeyCheckDigitMismatch(key.checkDigitFindings), 0, lastProgress.load()))
+        when {
+            key.isCleared -> {
+                end(ChipReadEnding.KeyRejected(ChipAccessDenied(ChipAccessProtocol.NONE, ChipAccessDenied.Reason.KEY_CLEARED), 0, lastProgress.load()))
+            }
+
+            key is ChipAccessKey.Mrz && key.checkDigitFindings.isNotEmpty() && !options.allowCheckDigitMismatch -> {
+                end(ChipReadEnding.KeyRejected(ChipKeyCheckDigitMismatch(key.checkDigitFindings), 0, lastProgress.load()))
+            }
         }
         return !isEnded
     }
@@ -177,18 +185,24 @@ public class ChipReadCoordinator(
      * @param transport The connected link to the chip.
      * @param readAgainAllowed `false` when the platform cannot start again after this attempt (for
      *   example too little session time left); the read then ends at a lost link.
-     * @param systemEnd Asked once, on the read's own context, when the attempt stopped on an
-     *   [NfcError] (a lost link, for example), before the read decides to start again or to end.
-     *   It returns why the system ended the read, such as NFC switched off, or `null` when the
-     *   platform sees no such cause. A non-null answer ends the read with
-     *   [ChipReadEnding.EndedBySystem] and that reason, never a new attempt. It must return
-     *   quickly; an exception it throws counts as `null`.
+     * @param systemEnd Asked once, on the read's own context, when the attempt stopped on a lost
+     *   link ([NfcTagLost], [NfcTimeout]) or on a link that closed while the read had not ended
+     *   ([NfcUnavailable.Reason.CLOSED]: the platform invalidated it, for example), with that
+     *   error, before the read decides to start again or to end. It returns why the system ended
+     *   the read, such as NFC switched off, or `null` when the platform sees no such cause. A
+     *   non-null answer ends the read, never with a new attempt: [ChipReadEnding.Cancelled] by
+     *   [ChipReadEnding.Cancelled.By.PERSON] for [NfcUnavailable.Reason.CANCELLED_BY_USER],
+     *   [ChipReadEnding.EndedBySystem] with that reason otherwise. It may wait briefly for the
+     *   platform's own report (a closed link is often reported before the session's end); an
+     *   exception it throws counts as `null`. A closed link with no answer ends the read as
+     *   [ChipReadEnding.EndedBySystem] with the closed-link error, never as an app cancel: an app
+     *   cancel ends the read before its link closes.
      */
     @Throws(CancellationException::class)
     public suspend fun read(
         transport: ApduTransport,
         readAgainAllowed: Boolean = true,
-        systemEnd: () -> NfcError? = { null },
+        systemEnd: suspend (stoppedBy: NfcError) -> NfcError? = { null },
     ): ChipReadAttemptOutcome {
         if (isEnded) return ChipReadAttemptOutcome.ENDED
         val attempt = attemptsStarted.incrementAndFetch()
@@ -231,17 +245,20 @@ public class ChipReadCoordinator(
                     result.error
                 }
             }
-        // The platform is asked only about a loss of the link: a person's cancel or a closed link
-        // keeps its own meaning whatever the platform says.
-        if (isLinkLoss(error)) {
+        // The platform is asked only about a loss of the link, or a link that closed under a read
+        // that had not ended: a person's cancel or a refusal keeps its own meaning.
+        if (error is NfcError && (isLinkLoss(error) || isClosed(error))) {
             val system =
                 try {
-                    systemEnd()
+                    systemEnd(error)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     null
                 }
+            if (isEnded) return ChipReadAttemptOutcome.ENDED
             if (system != null) {
-                end(ChipReadEnding.EndedBySystem(system, attempt, lastProgress.load()))
+                end(endingForSystem(system, attempt))
                 return ChipReadAttemptOutcome.ENDED
             }
         }
@@ -371,8 +388,10 @@ public class ChipReadCoordinator(
                 ChipReadEnding.Cancelled(ChipReadEnding.Cancelled.By.PERSON, attempts, progress)
             }
 
-            error is NfcUnavailable && error.reason == NfcUnavailable.Reason.CLOSED -> {
-                ChipReadEnding.Cancelled(ChipReadEnding.Cancelled.By.APP, attempts, progress)
+            // Closed while the read had not ended, and the platform named no cause: the system's
+            // doing. Never "cancelled by the app": an app cancel ends the read before the link closes.
+            isClosed(error) -> {
+                ChipReadEnding.EndedBySystem(error as NfcError, attempts, progress)
             }
 
             error is NfcUnavailable && error.reason in SYSTEM_REASONS -> {
@@ -392,6 +411,17 @@ public class ChipReadCoordinator(
             }
         }
     }
+
+    /** The ending for a cause the platform reported after an attempt stopped. */
+    private fun endingForSystem(
+        system: NfcError,
+        attempt: Int,
+    ): ChipReadEnding =
+        if (system is NfcUnavailable && system.reason == NfcUnavailable.Reason.CANCELLED_BY_USER) {
+            ChipReadEnding.Cancelled(ChipReadEnding.Cancelled.By.PERSON, attempt, lastProgress.load())
+        } else {
+            ChipReadEnding.EndedBySystem(system, attempt, lastProgress.load())
+        }
 
     // The attempt an update belongs to (see ChipReadUpdate.attempt): LinkLost belongs to the
     // attempt that lost the link, however often it is published; every state after a loss belongs
@@ -474,6 +504,9 @@ public class ChipReadCoordinator(
 
         /** A loss of the link itself, with no status word: the only kind a read starts again after. */
         fun isLinkLoss(error: ChipError): Boolean = error is NfcTagLost || error is NfcTimeout
+
+        /** The link was closed under the read, by the platform. */
+        fun isClosed(error: ChipError): Boolean = error is NfcUnavailable && error.reason == NfcUnavailable.Reason.CLOSED
     }
 }
 

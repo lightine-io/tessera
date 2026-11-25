@@ -72,7 +72,7 @@ class KeyLifetimeScenarioTest {
         options: ChipReadOptions,
         policy: LinkLossPolicy = LinkLossPolicy.Resume(2),
         hook: (ChipReadCoordinator) -> Unit = {},
-        systemEnd: () -> io.lightine.tessera.types.errors.NfcError? = { null },
+        systemEnd: suspend (io.lightine.tessera.types.errors.NfcError) -> io.lightine.tessera.types.errors.NfcError? = { null },
         afterLoss: (ChipReadCoordinator) -> Boolean = { true },
         linkFor: (Int) -> ApduTransport,
     ): KeyWatch {
@@ -269,7 +269,7 @@ class KeyLifetimeScenarioTest {
         }
 
     @Test
-    fun keyLifetime_aKeyUsedForASecondReadEndsWithKeyClearedAndSendsNothing() =
+    fun keyLifetime_aKeyUsedForASecondReadIsRejectedAtStartWithKeyClearedAndSendsNothing() =
         runTest {
             withChips { c, keys ->
                 val first = bac(c, keys)
@@ -278,7 +278,9 @@ class KeyLifetimeScenarioTest {
                 val second = bac(c, keys)
                 // The key arrives cleared, so the watch's "usable until the ending" does not apply.
                 val watch = run(options(second, key = key)) { FakeAttemptLink(second.chip) }
-                val ending = assertIs<ChipReadEnding.Failed>(watch.endings.single().first)
+                // TES-346: refused in start(), before any radio or sheet, as a rejected key.
+                val ending = assertIs<ChipReadEnding.KeyRejected>(watch.endings.single().first)
+                assertEquals(0, ending.attempts)
                 assertEquals(ChipAccessDenied.Reason.KEY_CLEARED, assertIs<ChipAccessDenied>(ending.error).reason)
                 assertTrue(second.chip.received.isEmpty(), "a cleared key costs the chip nothing")
             }

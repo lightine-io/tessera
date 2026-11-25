@@ -351,6 +351,45 @@ class ChipReadResumeTest {
             }
         }
 
+    // --- Carried data groups pass their hash in the new session's EF.SOD (TES-346) ---------------
+
+    @Test
+    fun aCarriedDataGroupThatEfSodDoesNotListIsReadAgainInFull() =
+        runTest {
+            withChips { c, keys ->
+                val spy = FakeReadSpy()
+                // EF.COM lists DG1 and DG2; EF.SOD holds DG2's hash only.
+                val flow = FakeReadFlowChip.build(c, keys, FlowAccess.BAC, extraHandlers = listOf(spy, midFile(dg2)), sodGroups = listOf(2))
+                val (ending, _) = drive(flow, LinkLossPolicy.Resume(1), spy)
+                val read = complete(ending)
+                assertEquals(ChipResumeOutcome.SAME_SECURITY_OBJECT, read.resume)
+                // DG1 was complete in attempt 1, but no hash vouches for it: read again from 0.
+                assertEquals(2, read.dataGroup(1)!!.attempt)
+                assertEquals(0, spy.offsets(2, dg1).first())
+                // DG2 still continues where it stopped.
+                assertNotNull(read.dataGroup(2)!!.continuedAt)
+            }
+        }
+
+    @Test
+    fun aCarriedDataGroupWhoseBytesNoLongerMatchItsHashIsReadAgainInFullOnce() =
+        runTest {
+            withChips { c, keys ->
+                val spy = FakeReadSpy()
+                // Attempt 1 gets DG1 with one byte flipped, completes it, then loses the link in DG2.
+                val flow = build(c, keys, FlowAccess.BAC, listOf(spy, FakeFlippedByte(dg1), midFile(dg2)))
+                val (ending, _) = drive(flow, LinkLossPolicy.Resume(1), spy)
+                val read = complete(ending)
+                assertEquals(ChipResumeOutcome.SAME_SECURITY_OBJECT, read.resume)
+                val file = read.dataGroup(1)!!
+                assertEquals(2, file.attempt)
+                assertTrue(file.bytes().contentEquals(flow.dataGroups.getValue(1)))
+                assertHashPassed(read, 1)
+                assertEquals(1, spy.offsets(2, dg1).count { it == 0 }, "${spy.offsets(2, dg1)}")
+                assertNotNull(read.dataGroup(2)!!.continuedAt)
+            }
+        }
+
     @Test
     fun aChipWithoutEfSodIsReadAgainInFull() =
         runTest {

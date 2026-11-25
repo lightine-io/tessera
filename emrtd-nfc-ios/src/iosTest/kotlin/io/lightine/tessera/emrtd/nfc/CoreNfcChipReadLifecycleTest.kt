@@ -162,6 +162,72 @@ class CoreNfcChipReadLifecycleTest {
             assertNothingLeft(read)
         }
 
+    // --- Session invalidated before the session's end (TES-346) -------------------------------------
+
+    @Test
+    fun invalidated__the_command_fails_before_the_persons_cancel_is_reported__cancelled_by_the_person() =
+        chipReadTest {
+            val chip = FakeChip().apply { loseAt += 3 }
+            chip.lossError = opError(CoreNfcErrorCode.SESSION_INVALIDATED)
+            val (read, rec) = start()
+            present(FakeChipTag(chip))
+            step(400)
+            assertTrue(rec.endings.isEmpty(), "the read waits for the system's report of the end")
+            step(300)
+            systemEnds(200)
+            assertEquals(ChipReadEnding.Cancelled.By.PERSON, assertIs<ChipReadEnding.Cancelled>(rec.ending).by)
+            assertTrue(port.endings.isEmpty(), "the SDK does not end a session the system ended")
+            assertNothingLeft(read)
+        }
+
+    @Test
+    fun invalidated__the_command_fails_before_the_time_limit_is_reported__ended_by_the_system() =
+        chipReadTest {
+            val chip = FakeChip().apply { loseAt += 3 }
+            chip.lossError = opError(CoreNfcErrorCode.SESSION_INVALIDATED)
+            val (read, rec) = start()
+            present(FakeChipTag(chip))
+            step(400)
+            assertTrue(rec.endings.isEmpty())
+            systemEnds(201)
+            assertEquals(NfcTimeout(null), assertIs<ChipReadEnding.EndedBySystem>(rec.ending).reason)
+            assertNothingLeft(read)
+        }
+
+    @Test
+    fun invalidated__no_report_of_the_end_comes__ended_by_the_system_never_by_the_app() =
+        chipReadTest {
+            val chip = FakeChip().apply { loseAt += 3 }
+            chip.lossError = opError(CoreNfcErrorCode.SESSION_INVALIDATED)
+            val (read, rec) = start()
+            present(FakeChipTag(chip))
+            step(400)
+            step(CoreNfcChipRead.SESSION_END_WAIT_MILLIS - 1)
+            assertTrue(rec.endings.isEmpty())
+            step(1)
+            assertEquals(NfcUnavailable(Reason.CLOSED), assertIs<ChipReadEnding.EndedBySystem>(rec.ending).reason)
+            assertEquals(1, rec.endings.size)
+            // The session is still open: the SDK ends it with the ending's text.
+            assertEquals(1, port.endings.size)
+            assertNothingLeft(read)
+        }
+
+    @Test
+    fun used_key__a_second_read_with_the_same_options_shows_no_sheet() =
+        chipReadTest {
+            val options = ChipReadHarness.canOptions()
+            val (first, _) = start(options = options)
+            first.cancel()
+            step(2_000)
+            val before = ports.size
+            val (read, rec) = start(options = options)
+            val ending = assertIs<ChipReadEnding.KeyRejected>(rec.ending)
+            assertEquals(io.lightine.tessera.types.errors.ChipAccessDenied.Reason.KEY_CLEARED, assertIs<io.lightine.tessera.types.errors.ChipAccessDenied>(ending.error).reason)
+            assertEquals(listOf("Starting"), rec.names)
+            assertEquals(before, ports.size, "no system session for a used key")
+            assertNothingLeft(read)
+        }
+
     @Test
     fun link_lost__every_operation_code_of_a_lost_link_reads_again() =
         chipReadTest {

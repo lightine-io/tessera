@@ -440,6 +440,26 @@ class NfcChipReadTest {
         }
 
     @Test
+    fun `the same options for a second read are rejected at once and nothing is looked at`() =
+        runTest {
+            val rig = rig()
+            val reused = options
+            rig.start(RecordingChipObserver(), options = reused).cancel()
+            advanceUntilIdle()
+            val checks = rig.platform.enabledChecks
+            val observer = RecordingChipObserver()
+            rig.start(observer, options = reused)
+            advanceUntilIdle()
+            val ending = assertIs<ChipReadEnding.KeyRejected>(observer.endings.single())
+            assertEquals(
+                io.lightine.tessera.types.errors.ChipAccessDenied.Reason.KEY_CLEARED,
+                assertIs<io.lightine.tessera.types.errors.ChipAccessDenied>(ending.error).reason,
+            )
+            assertEquals(checks, rig.platform.enabledChecks, "the key check comes before NFC is looked at")
+            assertTrue(rig.platform.connections.isEmpty())
+        }
+
+    @Test
     fun `a second read while one is live ends at once and a read after the ending starts`() =
         runTest {
             val rig = rig()

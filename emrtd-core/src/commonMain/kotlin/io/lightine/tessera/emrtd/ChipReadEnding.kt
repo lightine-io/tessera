@@ -112,14 +112,19 @@ public sealed class ChipReadEnding {
     }
 
     /**
-     * The MRZ key's check digits do not match their fields, so nothing was sent to the chip and no
-     * chip attempt was used. See [ChipReadOptions.allowCheckDigitMismatch].
+     * The key was refused before anything was sent to the chip: no reader was turned on, no system
+     * sheet was shown, and no chip attempt was used. Two causes:
+     * - The MRZ key's check digits do not match their fields: [error] is a
+     *   [ChipKeyCheckDigitMismatch]. See [ChipReadOptions.allowCheckDigitMismatch].
+     * - The key was already used: an earlier read cleared it at its ending, or the app cleared it.
+     *   [error] is a [ChipAccessDenied] with [ChipAccessDenied.Reason.KEY_CLEARED]. A new read
+     *   needs a new key, built from the document's details again.
      *
-     * @property error Which fields, never their values.
+     * @property error Why: which fields, never their values, or the cleared key.
      * @since 1.0.0
      */
     public class KeyRejected internal constructor(
-        public val error: ChipKeyCheckDigitMismatch,
+        public val error: ChipError,
         override val attempts: Int,
         override val progress: ChipReadProgress,
     ) : ChipReadEnding() {

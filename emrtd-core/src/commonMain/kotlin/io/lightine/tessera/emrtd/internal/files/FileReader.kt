@@ -189,21 +189,6 @@ internal class FileReader(
             content.toByteArray()
         }
 
-    /**
-     * Reads a file by its short file identifier. The first READ BINARY selects the EF; later chunks
-     * use the current EF and its absolute offset.
-     */
-    suspend fun readFileBySfi(
-        sfi: Int,
-        extendedLengthAllowed: Boolean = false,
-    ): ByteArray =
-        withTypedFailures {
-            bytesReadSoFar = 0
-            val firstSize = chunkSize(0, 0, extendedLengthAllowed, sfi)
-            val first = sender.send(ChipCommands.readBinaryBySfi(sfi, 0, firstSize), extendedLengthAllowed)
-            readAfterFirst(first, firstSize, extendedLengthAllowed)
-        }
-
     private suspend fun readSelectedFile(
         fid: Int?,
         extendedLengthAllowed: Boolean,
@@ -318,13 +303,10 @@ internal class FileReader(
         offset: Int,
         remaining: Int,
         extendedLengthAllowed: Boolean,
-        sfi: Int? = null,
     ): Int {
         val extendedCommand =
             if (offset > MAX_SHORT_OFFSET) {
                 ChipCommands.readBinaryExtendedOffset(offset, MAX_EXTENDED_CHUNK)
-            } else if (sfi != null && offset == 0) {
-                ChipCommands.readBinaryBySfi(sfi, offset, MAX_EXTENDED_CHUNK)
             } else {
                 ChipCommands.readBinary(offset, MAX_EXTENDED_CHUNK)
             }
@@ -351,8 +333,6 @@ internal class FileReader(
         val shortCommand =
             if (offset > MAX_SHORT_OFFSET) {
                 ChipCommands.readBinaryExtendedOffset(offset, chunk)
-            } else if (sfi != null && offset == 0) {
-                ChipCommands.readBinaryBySfi(sfi, offset, chunk)
             } else {
                 ChipCommands.readBinary(offset, chunk)
             }

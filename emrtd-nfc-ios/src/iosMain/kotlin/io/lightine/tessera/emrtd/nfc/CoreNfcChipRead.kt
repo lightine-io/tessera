@@ -52,8 +52,10 @@ import kotlin.time.TimeSource
  * ([io.lightine.tessera.emrtd.ChipAccessKey.clear]) when the read ends, whatever the ending is,
  * and not earlier, so a restart after a lost link still has it. You do not clear it, and you do not
  * use it for a second read: a new read needs a new key, which also keeps to one authentication
- * attempt per action of the person. Reading with a cleared key ends the read with a
- * [io.lightine.tessera.types.errors.ChipAccessDenied] whose reason is `KEY_CLEARED`. The
+ * attempt per action of the person. A read started with a key that was already used (the same
+ * options again, for example) ends at once, before any reader or sheet, with
+ * [ChipReadEnding.KeyRejected] whose error is a
+ * [io.lightine.tessera.types.errors.ChipAccessDenied] with reason `KEY_CLEARED`. The
  * low-level [io.lightine.tessera.emrtd.ChipReader.read] does not clear the key: there you own it.
  *
  * ## What the SDK does
@@ -136,6 +138,9 @@ public class CoreNfcChipRead internal constructor(
     @Volatile
     private var sessionEndError: NfcError? = null
 
+    // Completed when the system reports the session's end, for a command that saw it first.
+    private val sessionEnd = CompletableDeferred<NfcError>()
+
     /** `true` once the read's ending is decided. */
     override val isEnded: Boolean get() = coordinator.isEnded
 
@@ -196,9 +201,12 @@ public class CoreNfcChipRead internal constructor(
             val link = CoreNfcTransport(channel, keepAlive = session, commandTimeoutMillis = settings.commandTimeoutMillis)
             if (!locked { if (coordinator.isEnded) false else true.also { transport = link } }) return
             val outcome =
-                coordinator.read(link, readAgainAllowed = timeLeft(began) >= MIN_TIME_FOR_A_NEW_START_MILLIS) {
+                coordinator.read(link, readAgainAllowed = timeLeft(began) >= MIN_TIME_FOR_A_NEW_START_MILLIS) { stoppedBy ->
                     // A session end the system reported while the link was lost: that is the ending.
-                    sessionEndError
+                    // Core NFC can fail the command in flight with "session invalidated" (CLOSED)
+                    // before it calls the session's end, after the person's Cancel or the time
+                    // limit: wait a moment for that call, which then ends the read with its cause.
+                    sessionEndError ?: if (stoppedBy == CLOSED) withTimeoutOrNull(SESSION_END_WAIT_MILLIS) { sessionEnd.await() } else null
                 }
             stopTransport(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
             if (outcome == ChipReadAttemptOutcome.ENDED) return
@@ -306,6 +314,7 @@ public class CoreNfcChipRead internal constructor(
     /** The system ended the session: the ending, unless the SDK ended it. */
     private fun systemEnded(error: NfcError) {
         sessionEndError = error
+        sessionEnd.complete(error)
         val session = locked { owned } ?: return
         session.systemEnd()
         if (session.endedBySdk) return
@@ -555,6 +564,15 @@ public class CoreNfcChipRead internal constructor(
 
         /** The shortest time between two texts on the sheet. */
         internal const val ALERT_INTERVAL_MILLIS = 100L
+
+        /**
+         * How long a command that failed with "session invalidated" waits for the system's report of
+         * the session's end, which names the cause (the person's Cancel, the time limit). Without
+         * it, the read ends as [ChipReadEnding.EndedBySystem] with the closed-link error.
+         */
+        internal const val SESSION_END_WAIT_MILLIS = 1_000L
+
+        private val CLOSED = NfcUnavailable(NfcUnavailable.Reason.CLOSED)
 
         /** Failed connects in a row (a lost link, no answer) after which the read ends. */
         private const val MAX_CONNECT_ATTEMPTS = 3

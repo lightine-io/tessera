@@ -5,6 +5,7 @@ import io.lightine.tessera.emrtd.ChipReadProgress
 import io.lightine.tessera.emrtd.ChipReadState
 import io.lightine.tessera.emrtd.ChipReadUpdate
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
+import io.lightine.tessera.types.errors.ChipKeyCheckDigitMismatch
 
 /**
  * The texts a [CoreNfcChipRead] shows on the system NFC sheet. The sheet is the system's, so this
@@ -139,7 +140,7 @@ public object CoreNfcDefaultSheetTexts : CoreNfcSheetTexts {
             is ChipReadEnding.Partial -> "Not everything could be read. Try again."
             is ChipReadEnding.Failed -> "Reading failed. Try again."
             is ChipReadEnding.KeyNotAccepted -> "The chip did not accept the details. Check them and try again."
-            is ChipReadEnding.KeyRejected -> "The document details do not add up. Check them."
+            is ChipReadEnding.KeyRejected -> if (ending.error is ChipKeyCheckDigitMismatch) "The document details do not add up. Check them." else "Start the read again."
             is ChipReadEnding.Cancelled -> "Cancelled"
             is ChipReadEnding.EndedBySystem -> "Reading stopped. Try again."
             is ChipReadEnding.NotStarted -> "NFC reading is not available"
