@@ -302,7 +302,7 @@ when (val result = ChipAccessKey.Mrz.fromTypedFields(fields)) {
 
 To check the chip's signature, pass your own root certificates: `ChipReadOptions.Builder(key).trustAnchors(TrustAnchors.load(file).anchors)`. Every `TrustAnchors.load` form that reads a file, a stream or an address belongs off the main thread. On Android the forms are `load(File)`, `load(InputStream)`, `load(context, uri)` and `load(bytes)`; there is no `load(path)` on Android.
 
-iOS. Chip reading is in the Swift package as the product `TesseraKit`, not in the 0.7.0 package. Add `.product(name: "TesseraKit", package: "tessera-swift")`, and in the app's Info.plist the NFC entries and entitlement (a paid Apple developer team is needed). The shortest use (it needs iOS 15 or later: see Install above for what 0.7.0 needs):
+iOS. Chip reading is in the Swift package's `Tessera` product from the next release, not in the 0.7.0 package: `import Tessera` gives it. The app needs the NFC entries in its Info.plist and the NFC entitlement (a paid Apple developer team is needed). The shortest use (it needs iOS 15 or later: see Install above for what 0.7.0 needs):
 
 ```swift
 let options = try ChipReadOptions.Builder(accessKey: key).build()
