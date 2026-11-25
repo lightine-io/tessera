@@ -406,6 +406,24 @@ public sealed class ChipAccessKey {
                         ),
                     )
                 }
+
+                /**
+                 * A key from the result of [normalizeTypedFields]: the same as
+                 * [fromTypedFields] called with its three values, so you do not unpack them by
+                 * hand. Show the person the values (and [NormalizedMrzFields.changedFields]) and
+                 * let them confirm, then pass the holder here.
+                 *
+                 * The values are checked exactly as in the three-value form; nothing is thrown, and
+                 * a value that cannot be used is [MrzKeyResult.NotBuilt] with the field and the
+                 * problem.
+                 *
+                 * @param fields The values returned by [normalizeTypedFields].
+                 * @return [MrzKeyResult.Built] with the key, or [MrzKeyResult.NotBuilt].
+                 * @since 1.0.0
+                 */
+                @JvmStatic
+                public fun fromTypedFields(fields: NormalizedMrzFields): MrzKeyResult =
+                    fromTypedFields(fields.documentNumber, fields.dateOfBirth, fields.dateOfExpiry)
             }
         }
 

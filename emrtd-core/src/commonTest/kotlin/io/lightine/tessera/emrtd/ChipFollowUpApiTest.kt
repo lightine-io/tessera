@@ -105,6 +105,12 @@ class ChipFollowUpApiTest {
             assertIs<MrzKeyResult.Built>(ChipAccessKey.Mrz.fromTypedFields(n.documentNumber, n.dateOfBirth, n.dateOfExpiry))
         val direct = assertIs<MrzKeyResult.Built>(ChipAccessKey.Mrz.fromTypedFields("T22000129", "900315", "340314"))
         assertEquals(direct.key.checkDigitFindings, fromNormalized.key.checkDigitFindings)
+
+        // The holder can be passed straight in, with the same result.
+        val fromHolder = assertIs<MrzKeyResult.Built>(ChipAccessKey.Mrz.fromTypedFields(n))
+        assertEquals(direct.key.checkDigitFindings, fromHolder.key.checkDigitFindings)
+        val unusable = ChipAccessKey.Mrz.normalizeTypedFields("T22 00", "900315", "340314")
+        assertIs<MrzKeyResult.NotBuilt>(ChipAccessKey.Mrz.fromTypedFields(unusable))
     }
 
     @Test

@@ -72,6 +72,7 @@ public final class io/lightine/tessera/emrtd/ChipAccessKey$Mrz : io/lightine/tes
 	public static final fun from (Lio/lightine/tessera/mrz/model/MrzDocument;)Lio/lightine/tessera/emrtd/MrzKeyResult;
 	public static final fun from (Lio/lightine/tessera/mrz/parsing/ParseResult;)Lio/lightine/tessera/emrtd/MrzKeyResult;
 	public static final fun fromPrintedFields (Ljava/lang/String;CLjava/lang/String;Ljava/lang/String;CLjava/lang/String;C)Lio/lightine/tessera/emrtd/ChipAccessKey$Mrz;
+	public static final fun fromTypedFields (Lio/lightine/tessera/emrtd/NormalizedMrzFields;)Lio/lightine/tessera/emrtd/MrzKeyResult;
 	public static final fun fromTypedFields (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/lightine/tessera/emrtd/MrzKeyResult;
 	public final fun getCheckDigitFindings ()Ljava/util/Set;
 	public static final fun normalizeTypedFields (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/lightine/tessera/emrtd/NormalizedMrzFields;
@@ -82,6 +83,7 @@ public final class io/lightine/tessera/emrtd/ChipAccessKey$Mrz$Companion {
 	public final fun from (Lio/lightine/tessera/mrz/model/MrzDocument;)Lio/lightine/tessera/emrtd/MrzKeyResult;
 	public final fun from (Lio/lightine/tessera/mrz/parsing/ParseResult;)Lio/lightine/tessera/emrtd/MrzKeyResult;
 	public final fun fromPrintedFields (Ljava/lang/String;CLjava/lang/String;Ljava/lang/String;CLjava/lang/String;C)Lio/lightine/tessera/emrtd/ChipAccessKey$Mrz;
+	public final fun fromTypedFields (Lio/lightine/tessera/emrtd/NormalizedMrzFields;)Lio/lightine/tessera/emrtd/MrzKeyResult;
 	public final fun fromTypedFields (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/lightine/tessera/emrtd/MrzKeyResult;
 	public final fun normalizeTypedFields (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/lightine/tessera/emrtd/NormalizedMrzFields;
 }
