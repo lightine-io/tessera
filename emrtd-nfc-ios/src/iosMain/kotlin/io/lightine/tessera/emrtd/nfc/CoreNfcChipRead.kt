@@ -76,12 +76,17 @@ import kotlin.time.TimeSource
  * - When a document is found, waits [CoreNfcReadSettings.settleDelayMillis] before the first
  *   command, connects, and reads. Each command has its own time limit:
  *   [CoreNfcReadSettings.commandTimeoutBeforeAccessMillis] for the commands before the key is
- *   used, [CoreNfcReadSettings.commandTimeoutMillis] from the first command that uses it on (BAC's
- *   EXTERNAL AUTHENTICATE, PACE's first GENERAL AUTHENTICATE).
+ *   used; from the first command that uses it on (BAC's EXTERNAL AUTHENTICATE, PACE's first
+ *   GENERAL AUTHENTICATE), [CoreNfcReadSettings.commandTimeoutMillis] for the commands that make
+ *   the chip do public-key work and [CoreNfcReadSettings.readTimeoutMillis] for the others, such
+ *   as reading a file.
  * - When the chip does not answer before the key is used (found, but with too little power to
  *   answer), reports [io.lightine.tessera.emrtd.ChipReadState.NoAnswerYet], keeps the sheet up and
  *   asks the system to find the document again, with no restart used, while the person moves it;
- *   the same session rule as for a lost link ends these tries (below).
+ *   the same session rule as for a lost link ends these tries (below). When they end and no try
+ *   got past the commands before the key is used, the read ends with [ChipReadEnding.Failed] and
+ *   [io.lightine.tessera.types.errors.NfcNoAnswer], and the default sheet text says "No answer
+ *   from the chip. Try another position."
  * - When the link is lost (the document moved), follows [CoreNfcReadSettings.linkLoss]: by default
  *   it keeps the sheet up, waits for the document again and goes on, at most twice. It does not
  *   start again, or try again after an unanswered try, when less than 10 seconds of the system
@@ -247,7 +252,7 @@ public class CoreNfcChipRead internal constructor(
                         sessionEndError
                             ?: if (stoppedBy == CLOSED) withTimeoutOrNull(SESSION_END_WAIT_MILLIS) { sessionEnd.await() } else null
                     },
-                    accessStage = { link.useTimeLimit(settings.commandTimeoutMillis) },
+                    useTimeLimit = { kind -> link.useTimeLimit(settings.timeoutFor(kind)) },
                 )
             stopTransport(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
             if (outcome == ChipReadAttemptOutcome.ENDED) return

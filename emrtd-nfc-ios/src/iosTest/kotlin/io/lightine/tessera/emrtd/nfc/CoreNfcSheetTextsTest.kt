@@ -4,6 +4,7 @@ import io.lightine.tessera.emrtd.ChipReadEnding
 import io.lightine.tessera.emrtd.ChipReadState
 import io.lightine.tessera.emrtd.ChipReadUpdate
 import io.lightine.tessera.emrtd.LinkLossPolicy
+import io.lightine.tessera.types.errors.NfcNoAnswer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -131,6 +132,9 @@ class CoreNfcSheetTextsTest {
             )
             for (ending in endings) assertTrue(defaults.textForEnding(ending).isNotBlank(), "$ending")
             assertEquals("Done", defaults.textForEnding(endings.first()))
+            // A first command never answered: the chip never answered, so the text says what to do.
+            assertEquals(NfcNoAnswer, assertIs<ChipReadEnding.Failed>(endings[2]).error)
+            assertEquals("No answer from the chip. Try another position.", defaults.textForEnding(endings[2]))
             assertEquals(endings.size, endings.map { defaults.textForEnding(it) }.toSet().size, "one text per kind")
         }
 

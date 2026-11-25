@@ -1,5 +1,6 @@
 package io.lightine.tessera.emrtd.nfc
 
+import io.lightine.tessera.emrtd.ChipCommandTimeLimit
 import io.lightine.tessera.emrtd.ChipReadEnding
 import io.lightine.tessera.emrtd.ChipReadState
 import io.lightine.tessera.emrtd.ChipStartSelection
@@ -139,6 +140,22 @@ class CoreNfcChipReadTest {
         assertEquals(
             2_000,
             CoreNfcReadSettings(commandTimeoutMillis = 2_000, commandTimeoutBeforeAccessMillis = 9_000).effectiveTimeoutBeforeAccessMillis,
+        )
+        // The read limit (TES-346): default, range, builder, and never above the long limit.
+        assertEquals(2_000, defaults.readTimeoutMillis)
+        assertFailsWith<IllegalArgumentException> { CoreNfcReadSettings(readTimeoutMillis = 0) }
+        assertFailsWith<IllegalArgumentException> { CoreNfcReadSettings(readTimeoutMillis = -1) }
+        assertFailsWith<IllegalArgumentException> { CoreNfcReadSettings.Builder().readTimeoutMillis(0).build() }
+        val withRead = CoreNfcReadSettings.Builder().readTimeoutMillis(1_200).build()
+        assertEquals(1_200, withRead.toBuilder().build().readTimeoutMillis, "the builder keeps the value")
+        assertTrue("readTimeoutMillis=1200" in withRead.toString())
+        val three = CoreNfcReadSettings(commandTimeoutMillis = 4_000, readTimeoutMillis = 1_000, commandTimeoutBeforeAccessMillis = 700)
+        assertEquals(700, three.timeoutFor(ChipCommandTimeLimit.BEFORE_ACCESS))
+        assertEquals(1_000, three.timeoutFor(ChipCommandTimeLimit.READ))
+        assertEquals(4_000, three.timeoutFor(ChipCommandTimeLimit.LONG))
+        assertEquals(
+            1_000,
+            CoreNfcReadSettings(commandTimeoutMillis = 1_000, readTimeoutMillis = 9_000).timeoutFor(ChipCommandTimeLimit.READ),
         )
     }
 

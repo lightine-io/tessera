@@ -20,6 +20,7 @@ import io.lightine.tessera.emrtd.nfc.NfcReadSettings
 import io.lightine.tessera.mrz.model.MrzDocument
 import io.lightine.tessera.types.errors.ChipAccessDenied
 import io.lightine.tessera.types.errors.ChipError
+import io.lightine.tessera.types.errors.NfcNoAnswer
 import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.errors.NfcTimeout
 import kotlin.time.Clock
@@ -107,6 +108,7 @@ fun handle(ending: ChipReadEnding) {
 
 fun describe(error: ChipError): String = when (error) {
     is NfcTagLost -> "The document moved. Hold it still against the phone."
+    is NfcNoAnswer -> "No answer from the chip. Try another position."
     is NfcTimeout -> "The chip did not answer in time. Try again."
     is ChipAccessDenied -> "The chip did not accept the MRZ values."
     else -> error.description

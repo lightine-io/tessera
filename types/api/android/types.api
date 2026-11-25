@@ -536,6 +536,15 @@ public abstract class io/lightine/tessera/types/errors/MrzWarning {
 public abstract class io/lightine/tessera/types/errors/NfcError : io/lightine/tessera/types/errors/ChipError {
 }
 
+public final class io/lightine/tessera/types/errors/NfcNoAnswer : io/lightine/tessera/types/errors/NfcError {
+	public static final field INSTANCE Lio/lightine/tessera/types/errors/NfcNoAnswer;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getCode ()Ljava/lang/String;
+	public fun getDescription ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class io/lightine/tessera/types/errors/NfcTagLost : io/lightine/tessera/types/errors/NfcError {
 	public static final field INSTANCE Lio/lightine/tessera/types/errors/NfcTagLost;
 	public fun equals (Ljava/lang/Object;)Z

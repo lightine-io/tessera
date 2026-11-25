@@ -18,6 +18,7 @@ import io.lightine.tessera.emrtd.internal.crypto.chipCrypto
 import io.lightine.tessera.emrtd.internal.pa.TestKeys
 import io.lightine.tessera.telemetry.TelemetryEvent
 import io.lightine.tessera.telemetry.TelemetrySink
+import io.lightine.tessera.types.errors.NfcNoAnswer
 import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.errors.NfcUnavailable
 import io.lightine.tessera.types.vocabulary.CheckOutcome
@@ -334,13 +335,13 @@ class CatalogueGroupKIosTest {
         }
 
     @Test
-    fun k09_everyNewLinkLosesItsFirstCommand_noRestartUsedEndsFailedWhenTheSessionRunsLow() =
+    fun k09_everyNewLinkLosesItsFirstCommand_noRestartUsedEndsFailedWithNoAnswerWhenTheSessionRunsLow() =
         simTest { flow ->
             script.fault(ChipFaultAction.LoseLink(Shapes.LOSS_AFTER_MILLIS), times = 99) { it.indexInLink == 0 }
             val r = read(flow)
 
             val ending = assertIs<ChipReadEnding.Failed>(r.ending)
-            assertEquals(NfcTagLost, ending.error)
+            assertEquals(NfcNoAnswer, ending.error)
             assertEquals(1, ending.attempts)
             assertTrue(r.states.none { it is ChipReadState.LinkLost })
             // One try every 1.66 s (600 to find it again, 400 settle, 20 connect, 640 loss) until less
@@ -356,19 +357,18 @@ class CatalogueGroupKIosTest {
      * tries of 5 s each spent the restart budget (Failed after about 18 s). Now each try waits the
      * 1.5 s limit and costs no restart; the system finds the document again 600 ms after each, so
      * one try every 2.52 s, in the same session, until less than 10 s of it are left: 20 tries, then
-     * Failed with the SDK's time limit as the lost link.
+     * Failed with [NfcNoAnswer], the same error and code as on Android (before: the SDK's time limit
+     * as the lost link, `NfcTimeout(1500)`, where Android said `NfcTagLost`).
      */
     @Test
-    fun noAnswer_a_firstCommandNeverAnswered_shortTriesUntilTheSessionRunsLowThenFailed() =
+    fun noAnswer_a_firstCommandNeverAnswered_shortTriesUntilTheSessionRunsLowThenFailedWithNoAnswer() =
         simTest { flow ->
             script.fault(ChipFaultAction.Silence, times = 99) { it.indexInLink == 0 }
             val r = read(flow)
             val ending = assertIs<ChipReadEnding.Failed>(r.ending)
-            assertEquals(
-                io.lightine.tessera.types.errors
-                    .NfcTimeout(1_500),
-                ending.error,
-            )
+            assertEquals(NfcNoAnswer, ending.error)
+            assertEquals("no-answer", ending.error.code)
+            assertEquals("No answer from the chip. Try another position.", port.invalidatedWith, "the sheet's last text")
             assertEquals(1, ending.attempts)
             assertEquals(0, ending.progress.percent)
             assertEquals(20, script.links)
@@ -448,6 +448,73 @@ class CatalogueGroupKIosTest {
             assertEquals(0x6982, error.statusWord)
             assertEquals(1, script.links)
             assertTrue(r.states.none { it is ChipReadState.NoAnswerYet || it is ChipReadState.LinkLost })
+        }
+
+    // --- Limits by what the command asks of the chip (TES-346) ----------------------------------------
+
+    private val midDg2: (ChipCommand) -> Boolean = { it.secured && it.ins == 0xB0 && it.chip.currentEf == 0x0102 && it.index > 60 }
+
+    /**
+     * (a) The device case: after BAC the chip goes silent in the middle of DG2. The read waits the
+     * 2 s read limit (before: 5 s), then it is a lost link as before: a restart is spent and the
+     * next attempt, in the same session, resumes and completes.
+     */
+    @Test
+    fun limits_a_readBinarySilentMidFile_linkLostAfterTheReadLimit_restartSpentAndResumed() =
+        simTest { flow ->
+            script.fault(ChipFaultAction.Silence, match = midDg2)
+            val r = read(flow)
+            assertDeviceChecksPass(r.ending)
+            assertEquals(2, r.ending.attempts)
+            assertEquals(1, ports.size, "the same system session")
+            val silent = script.exchanges.first { midDg2(it.command) }
+            val lost = r.updates.single { it.value.state is ChipReadState.LinkLost }
+            assertEquals(2, (lost.value.state as ChipReadState.LinkLost).restartsLeft)
+            assertEquals(silent.sentAtMillis + CoreNfcReadSettings.DEFAULT_READ_TIMEOUT_MILLIS, lost.atMillis, "2 s, not 5 s")
+        }
+
+    @Test
+    fun limits_a_theReadLimitFollowsTheSettings_andNeverExceedsTheLongLimit() =
+        simTest { flow ->
+            script.fault(ChipFaultAction.Silence, times = 2, match = midDg2)
+            val r = read(flow, CoreNfcReadSettings(commandTimeoutMillis = 3_000, readTimeoutMillis = 9_000))
+            val silent = script.exchanges.filter { midDg2(it.command) && it.reply !is io.lightine.tessera.emrtd.fakechip.ChipReply.Answer }
+            val losses = r.updates.filter { it.value.state is ChipReadState.LinkLost }.map { it.atMillis }
+            assertEquals(silent.take(2).map { it.sentAtMillis + 3_000 }, losses, "a read limit above the long one gives way to it")
+        }
+
+    /** (b) Slow but legal steps where the chip does public-key work keep the long limit: 3 s each. */
+    @Test
+    fun limits_b_externalAuthenticateAndChipAuthenticationOfThreeSeconds_areNotCut() =
+        simTest { flow ->
+            script.fault(ChipFaultAction.Delay(3_000), match = Shapes.externalAuthenticate)
+            script.fault(ChipFaultAction.Delay(3_000), match = Shapes.mseSetKat)
+            val r = read(flow)
+            assertDeviceChecksPass(r.ending)
+            assertEquals(1, r.ending.attempts)
+            assertEquals(1, script.links)
+            assertTrue(r.states.none { it is ChipReadState.NoAnswerYet || it is ChipReadState.LinkLost }, "${r.stateNames}")
+            assertEquals(2, script.exchanges.count { it.reply.delayMillis == 3_000L })
+        }
+
+    /**
+     * (d) An earlier try got past access and lost the link in DG2; every new link is then silent at
+     * its first command until the session runs low. A try got past the commands before access, so
+     * the read ends with the loss (the SDK's 1.5 s limit before access), not [NfcNoAnswer].
+     */
+    @Test
+    fun limits_d_accessReachedThenSilentBeforeAccess_endsWithTheLossNotNoAnswer() =
+        simTest { flow ->
+            script.fault(ChipFaultAction.Silence, match = midDg2)
+            script.fault(ChipFaultAction.Silence, times = 99) { it.link > 1 && it.indexInLink == 0 }
+            val r = read(flow)
+            val ending = assertIs<ChipReadEnding.Partial>(r.ending, "${r.ending}")
+            assertEquals(
+                io.lightine.tessera.types.errors
+                    .NfcTimeout(1_500),
+                ending.stoppedBy,
+            )
+            assertTrue(r.states.any { it is ChipReadState.NoAnswerYet })
         }
 
     @Test

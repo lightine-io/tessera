@@ -6,6 +6,7 @@ import io.lightine.tessera.emrtd.ChipReadState
 import io.lightine.tessera.emrtd.ChipReadUpdate
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.ChipKeyCheckDigitMismatch
+import io.lightine.tessera.types.errors.NfcNoAnswer
 
 /**
  * The texts a [CoreNfcChipRead] shows on the system NFC sheet. The sheet is the system's, so this
@@ -138,7 +139,11 @@ public object CoreNfcDefaultSheetTexts : CoreNfcSheetTexts {
         }
     }
 
-    /** A short line per ending, for example "Done" or "Reading failed. Try again." */
+    /**
+     * A short line per ending, for example "Done" or "Reading failed. Try again." A read that
+     * failed because the chip never answered ([NfcNoAnswer]) says "No answer from the chip. Try
+     * another position."
+     */
     override fun textForEnding(ending: ChipReadEnding): String =
         when (ending) {
             is ChipReadEnding.Complete -> {
@@ -150,7 +155,11 @@ public object CoreNfcDefaultSheetTexts : CoreNfcSheetTexts {
             }
 
             is ChipReadEnding.Failed -> {
-                "Reading failed. Try again."
+                if (ending.error is NfcNoAnswer) {
+                    "No answer from the chip. Try another position."
+                } else {
+                    "Reading failed. Try again."
+                }
             }
 
             is ChipReadEnding.KeyNotAccepted -> {

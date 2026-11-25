@@ -63,6 +63,10 @@ internal object ChipErrorSamples {
                 listOf(NfcTagLost)
             }
 
+            is NfcNoAnswer -> {
+                listOf(NfcNoAnswer)
+            }
+
             is NfcTimeout -> {
                 listOf(NfcTimeout(1000))
             }
@@ -81,6 +85,7 @@ internal object ChipErrorSamples {
             ChipKeyCheckDigitMismatch(emptySet()),
             NfcUnavailable(NfcUnavailable.Reason.DISABLED),
             NfcTagLost,
+            NfcNoAnswer,
             NfcTimeout(null),
         )
 

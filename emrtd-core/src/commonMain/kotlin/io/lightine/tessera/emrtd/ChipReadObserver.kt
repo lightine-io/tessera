@@ -238,7 +238,9 @@ public sealed class ChipReadState {
      * counted from the first unanswered try; on iPhone the system session's time). When the chip
      * answers all of them, the read goes on and the next state is [OpeningAccess] with the
      * protocol. When the time passes, the read ends as a document that never answered:
-     * [ChipReadEnding.Failed] with the link error. This state lasts until then: the found,
+     * [ChipReadEnding.Failed] with [io.lightine.tessera.types.errors.NfcNoAnswer] (when an earlier
+     * try of the read got past these commands, with the lost link instead). This state lasts until
+     * then: the found,
      * connecting and opening steps of each new try are not reported again.
      *
      * @property tries How many tries in a row got no answer so far, from 1.

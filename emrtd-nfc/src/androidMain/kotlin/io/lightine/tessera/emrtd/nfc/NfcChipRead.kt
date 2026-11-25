@@ -142,16 +142,19 @@ import kotlin.jvm.JvmOverloads
  *   and the read keeps waiting.
  * - When a document is found, waits [NfcReadSettings.settleDelayMillis] before the first command,
  *   connects, and reads. Each command has its own time limit:
- *   [NfcReadSettings.commandTimeoutBeforeAccessMillis] for the commands before the key is used,
- *   [NfcReadSettings.commandTimeoutMillis] from the first command that uses it on (BAC's EXTERNAL
- *   AUTHENTICATE, PACE's first GENERAL AUTHENTICATE). A link that
+ *   [NfcReadSettings.commandTimeoutBeforeAccessMillis] for the commands before the key is used;
+ *   from the first command that uses it on (BAC's EXTERNAL AUTHENTICATE, PACE's first GENERAL
+ *   AUTHENTICATE), [NfcReadSettings.commandTimeoutMillis] for the commands that make the chip do
+ *   public-key work and [NfcReadSettings.readTimeoutMillis] for the others, such as reading a
+ *   file. The platform's time limit is changed only when the next command needs another. A link that
  *   cannot be set up sends the read back to waiting, with no attempt used; after 3 such failures
  *   in a row the read ends.
  * - When the chip does not answer before the key is used (found, but with too little power to
  *   answer), reports [io.lightine.tessera.emrtd.ChipReadState.NoAnswerYet] and tries the same
  *   `Tag` again after a short pause, with no restart used, while the person moves the document:
  *   about one try every 2 seconds, for at most [NfcReadSettings.waitForReturnMillis] from the
- *   first unanswered try; then the read ends with [ChipReadEnding.Failed] and the lost link.
+ *   first unanswered try; then the read ends with [ChipReadEnding.Failed] and, when no try got past
+ *   those commands, [io.lightine.tessera.types.errors.NfcNoAnswer].
  * - When the link is lost, follows [NfcReadSettings.linkLoss]: by default it waits for the
  *   document again and goes on, at most twice. The platform hands over a new `Tag` when the
  *   document comes back; when it does not, because the document never left the field, the SDK
@@ -374,7 +377,7 @@ public class NfcChipRead internal constructor(
                     transport,
                     readAgainAllowed = true,
                     systemEnd = { if (env.platform.isEnabled(adapter)) null else NfcUnavailable(NfcUnavailable.Reason.DISABLED) },
-                    accessStage = { transport.useTimeLimit(settings.commandTimeoutMillis) },
+                    useTimeLimit = { kind -> transport.useTimeLimit(settings.timeoutFor(kind)) },
                 )
             if (outcome == ChipReadAttemptOutcome.ENDED) return
             closeLink()

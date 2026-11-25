@@ -20,6 +20,17 @@ class NfcTagLostTest {
     }
 }
 
+class NfcNoAnswerTest {
+    @Test
+    fun is_an_nfc_error_with_its_own_code() {
+        val error: ChipError = NfcNoAnswer
+        assertIs<NfcError>(error)
+        assertEquals("no-answer", error.code)
+        assertEquals("NfcNoAnswer: ${NfcNoAnswer.description}", NfcNoAnswer.toString())
+        assertTrue(error.code != NfcTagLost.code && error.description != NfcTagLost.description)
+    }
+}
+
 class NfcTimeoutTest {
     @Test
     fun stores_the_time_limit_verbatim_and_names_it() {
@@ -58,7 +69,7 @@ class NfcUnavailableTest {
  */
 class ChipErrorTextTest {
     private val errors: List<ChipError> =
-        listOf(NfcTagLost, NfcTimeout(1234), NfcTimeout(null)) +
+        listOf(NfcTagLost, NfcNoAnswer, NfcTimeout(1234), NfcTimeout(null)) +
             NfcUnavailable.Reason.entries.map { NfcUnavailable(it) } +
             listOf(
                 ChipMalformedFile(null, ChipMalformedFile.Reason.NOT_VALID_TLV),
@@ -93,12 +104,13 @@ class ChipErrorTextTest {
     @Test
     fun sample_list_covers_every_concrete_type() {
         assertEquals(errors.size, errors.count { exhaustive(it) })
-        assertEquals(11, errors.map { it::class }.toSet().size)
+        assertEquals(12, errors.map { it::class }.toSet().size)
     }
 
     private fun exhaustive(e: ChipError): Boolean =
         when (e) {
             is NfcTagLost,
+            is NfcNoAnswer,
             is NfcTimeout,
             is NfcUnavailable,
             is ChipMalformedFile,

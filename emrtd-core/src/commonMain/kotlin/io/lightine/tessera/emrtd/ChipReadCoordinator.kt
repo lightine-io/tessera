@@ -11,6 +11,7 @@ import io.lightine.tessera.types.errors.ChipError
 import io.lightine.tessera.types.errors.ChipKeyCheckDigitMismatch
 import io.lightine.tessera.types.errors.ChipUnexpectedAnswer
 import io.lightine.tessera.types.errors.NfcError
+import io.lightine.tessera.types.errors.NfcNoAnswer
 import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.errors.NfcTimeout
 import io.lightine.tessera.types.errors.NfcUnavailable
@@ -43,6 +44,11 @@ import kotlin.jvm.JvmSynthetic
  *   key) uses no restart and is no new attempt: the read reports [ChipReadState.NoAnswerYet] and
  *   the platform tries the same attempt again ([ChipReadAttemptOutcome.NO_ANSWER_YET]), within its
  *   own time bound.
+ * - A read that ends while no try of it reached the first command that uses the key, because the
+ *   last try was lost before it and no other try may follow, ends with [ChipReadEnding.Failed]
+ *   and [NfcNoAnswer], on every platform alike.
+ * - Each command gets the time limit of its kind ([ChipCommandTimeLimit]), and the platform is
+ *   asked to change the limit only when the kind changes from one command to the next.
  *
  * The calls, in order, for a platform entry point:
  * 1. [start]; when it returns `false` the read has ended (the key was refused), so release nothing
@@ -115,6 +121,48 @@ public class ChipReadCoordinator private constructor(
          */
         public const val DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS: Long = 1_500
 
+        /**
+         * The default time limit for one ordinary command after access
+         * ([ChipCommandTimeLimit.READ]), on both platforms: 2000 milliseconds. These commands
+         * (selecting a file, reading up to 256 bytes of it, under secure messaging or not) need no
+         * public-key work on the chip: on a device a 223-byte protected read took 45 to 65
+         * milliseconds. ISO/IEC 14443-4 lets a chip take up to about 4.95 seconds for one frame, so
+         * a legal chip can be slower than this; none seen so far was for these commands.
+         */
+        public const val DEFAULT_READ_TIMEOUT_MILLIS: Long = 2_000
+
+        /**
+         * The kind of [command] after access: [ChipCommandTimeLimit.LONG] for the commands that make
+         * the chip do public-key or key-agreement work (EXTERNAL, GENERAL and INTERNAL
+         * AUTHENTICATE, MSE:Set KAT, PERFORM SECURITY OPERATION) and for any extended-length
+         * command (its answer can be up to 64 KB), [ChipCommandTimeLimit.READ] for every other one.
+         * The header bytes are plain under secure messaging too (Doc 9303 Part 11, 9.8.1).
+         */
+        @JvmSynthetic
+        internal fun timeLimitFor(command: ByteArray): ChipCommandTimeLimit {
+            if (command.size < 4) return ChipCommandTimeLimit.READ
+            val ins = command[1].toInt() and 0xFF
+            val p2 = command[3].toInt() and 0xFF
+            // Lc or Le of 0 in byte 5, with more bytes after it, marks the extended-length form.
+            val extended = command.size > 5 && command[4] == 0.toByte()
+            return when {
+                extended -> ChipCommandTimeLimit.LONG
+                ins == INS_EXTERNAL_AUTHENTICATE -> ChipCommandTimeLimit.LONG
+                ins == INS_GENERAL_AUTHENTICATE -> ChipCommandTimeLimit.LONG
+                ins == INS_INTERNAL_AUTHENTICATE -> ChipCommandTimeLimit.LONG
+                ins == INS_MSE && p2 == MSE_P2_KAT -> ChipCommandTimeLimit.LONG
+                ins == INS_PSO -> ChipCommandTimeLimit.LONG
+                else -> ChipCommandTimeLimit.READ
+            }
+        }
+
+        private const val INS_EXTERNAL_AUTHENTICATE = 0x82
+        private const val INS_GENERAL_AUTHENTICATE = 0x86
+        private const val INS_INTERNAL_AUTHENTICATE = 0x88
+        private const val INS_MSE = 0x22
+        private const val INS_PSO = 0x2A
+        private const val MSE_P2_KAT = 0xA6
+
         private val SYSTEM_REASONS = setOf(NfcUnavailable.Reason.ENDED_BY_SYSTEM, NfcUnavailable.Reason.DISABLED)
 
         /** The chip answered about the key: never tried again with it. */
@@ -170,6 +218,9 @@ public class ChipReadCoordinator private constructor(
     private val noAnswerTries = AtomicInt(0)
     private val lastNoAnswer = AtomicReference<ChipReadState.NoAnswerYet?>(null)
     private val repeatAttempt = AtomicBoolean(false)
+
+    // Whether any try of the read reached the first command that uses the key.
+    private val accessEverReached = AtomicBoolean(false)
 
     /** `true` while the read shows [ChipReadState.NoAnswerYet]: the steps of each new try are not reported. */
     private val noAnswer: Boolean get() = lastNoAnswer.load() != null
@@ -279,7 +330,8 @@ public class ChipReadCoordinator private constructor(
      * When the attempt ends with a lost link before it sent the first command that uses the key,
      * and the platform allows another try, the read publishes [ChipReadState.NoAnswerYet] and
      * returns [ChipReadAttemptOutcome.NO_ANSWER_YET]: no restart is used, and the next call repeats
-     * this attempt.
+     * this attempt. When the platform allows no other try and no try of the read reached that
+     * command, the read ends with [ChipReadEnding.Failed] and [NfcNoAnswer].
      *
      * Cancelling the calling coroutine ends the read with [ChipReadEnding.Cancelled.By.APP] when it
      * has not ended yet, then rethrows.
@@ -299,13 +351,16 @@ public class ChipReadCoordinator private constructor(
      *   exception it throws counts as `null`. A closed link with no answer ends the read as
      *   [ChipReadEnding.EndedBySystem] with the closed-link error, never as an app cancel: an app
      *   cancel ends the read before its link closes.
-     * @param accessStage Called once per attempt, right before the first command that uses the key:
-     *   BAC's EXTERNAL AUTHENTICATE or PACE's first GENERAL AUTHENTICATE (or, for a plain chip that
-     *   needs no access protocol, once its EF.COM was read). BAC's GET CHALLENGE and PACE's MSE:Set
-     *   AT come before it. The platform sets the general command time limit here, after a shorter
-     *   one for the commands before it. A loss of the link before this call is a
-     *   [ChipReadAttemptOutcome.NO_ANSWER_YET]. An exception it throws stops the attempt like a
-     *   failed command.
+     * @param useTimeLimit Called right before a command whose kind ([ChipCommandTimeLimit]) differs
+     *   from the one before it in this attempt: the platform sets that kind's time limit on
+     *   [transport] here. The attempt starts with [ChipCommandTimeLimit.BEFORE_ACCESS], so the
+     *   platform opens the link with that limit and is not called for it. Up to the first command
+     *   that uses the key (BAC's EXTERNAL AUTHENTICATE, PACE's first GENERAL AUTHENTICATE; for a
+     *   plain chip that needs no access protocol, the first command after EF.COM) every command is
+     *   [ChipCommandTimeLimit.BEFORE_ACCESS]; a loss of the link before that command is a
+     *   [ChipReadAttemptOutcome.NO_ANSWER_YET]. From it on, each command is
+     *   [ChipCommandTimeLimit.LONG] or [ChipCommandTimeLimit.READ]. An exception it throws stops
+     *   the attempt like a failed command.
      */
     @JvmSynthetic
     @Throws(CancellationException::class)
@@ -313,7 +368,7 @@ public class ChipReadCoordinator private constructor(
         transport: ApduTransport,
         readAgainAllowed: Boolean = true,
         systemEnd: suspend (stoppedBy: NfcError) -> NfcError? = { null },
-        accessStage: suspend () -> Unit = {},
+        useTimeLimit: suspend (ChipCommandTimeLimit) -> Unit = {},
     ): ChipReadAttemptOutcome {
         if (isEnded) return ChipReadAttemptOutcome.ENDED
         val attempt = if (repeatAttempt.exchange(false)) attemptsStarted.load() else attemptsStarted.incrementAndFetch()
@@ -338,14 +393,14 @@ public class ChipReadCoordinator private constructor(
         val (result, next) =
             try {
                 reader.readAttempt(
-                    EndedGate(transport),
+                    EndedGate(transport, { accessReached }, useTimeLimit),
                     options,
                     reporter,
                     attempt,
                     if (resume && attempt > 1) carry.load() else null,
                 ) {
-                    accessStage()
                     accessReached = true
+                    accessEverReached.store(true)
                     if (noAnswer) {
                         lastNoAnswer.store(null)
                         heldOpening?.let(::publish)
@@ -406,6 +461,13 @@ public class ChipReadCoordinator private constructor(
             publish(silent)
             return ChipReadAttemptOutcome.NO_ANSWER_YET
         }
+        // Lost before that command with no other try allowed, and no try reached it: the chip never
+        // answered the first commands, which the app can tell from a link lost later.
+        if (isLinkLoss(error) && !accessReached && !accessEverReached.load() && result is ChipReadResult.Failed) {
+            endNoAnswer()
+            end(stoppedBy(NfcNoAnswer, null))
+            return ChipReadAttemptOutcome.ENDED
+        }
         endNoAnswer()
         val usedBefore = if (isLinkLoss(error) && readAgainAllowed) takeRestart() else -1
         if (usedBefore >= 0) {
@@ -452,13 +514,25 @@ public class ChipReadCoordinator private constructor(
     /**
      * The attempt's transport, closed by the read's ending: once the read has ended, from any cause
      * and on any thread, no further command reaches the chip, whatever the platform entry point
-     * does with the running attempt.
+     * does with the running attempt. It also asks the platform for each command's time limit, only
+     * when the kind changes ([accessReached] says whether the attempt is past the commands before
+     * access).
      */
     private inner class EndedGate(
         private val base: ApduTransport,
+        private val accessReached: () -> Boolean,
+        private val useTimeLimit: suspend (ChipCommandTimeLimit) -> Unit,
     ) : ApduTransport by base {
+        // The attempt's commands go one at a time, so this needs no lock.
+        private var limit = ChipCommandTimeLimit.BEFORE_ACCESS
+
         override suspend fun transceive(command: ByteArray): ByteArray {
             if (isEnded) throw ApduTransportException(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
+            val wanted = if (accessReached()) timeLimitFor(command) else ChipCommandTimeLimit.BEFORE_ACCESS
+            if (wanted != limit) {
+                useTimeLimit(wanted)
+                limit = wanted
+            }
             return base.transceive(command)
         }
     }
@@ -467,13 +541,17 @@ public class ChipReadCoordinator private constructor(
      * The document did not come back after a lost link within the platform's wait, or its chip did
      * not answer within the platform's time bound for unanswered tries: the read ends with
      * [ChipReadEnding.Partial] when any attempt was granted access, [ChipReadEnding.Failed]
-     * otherwise, stopped by the last loss.
+     * otherwise, stopped by the last loss. When the read shows [ChipReadState.NoAnswerYet] and no
+     * try of it reached the first command that uses the key, the error is [NfcNoAnswer] instead of
+     * the loss.
      *
      * @return `true` when this call ended the read.
      */
     @JvmSynthetic
     public fun documentNotReturned(): Boolean {
-        val loss = lastLoss.load() ?: NfcTagLost
+        // The time for unanswered tries passed, and no try of the read reached access: the chip
+        // never answered the first commands, which the app can tell from a link lost later.
+        val loss = if (noAnswer && !accessEverReached.load()) NfcNoAnswer else lastLoss.load() ?: NfcTagLost
         return end(stoppedBy(loss, null))
     }
 
@@ -672,4 +750,35 @@ public enum class ChipReadAttemptOutcome {
      * call [ChipReadCoordinator.documentNotReturned].
      */
     NO_ANSWER_YET,
+}
+
+/**
+ * The kind of a command for its time limit, which a platform entry point maps to its settings: see
+ * the `useTimeLimit` hook of [ChipReadCoordinator.read].
+ *
+ * Experimental: see [ExperimentalTesseraChipApi]. Internal: see [InternalTesseraChipApi].
+ *
+ * @since 1.0.0
+ */
+@InternalTesseraChipApi
+@ExperimentalTesseraChipApi
+public enum class ChipCommandTimeLimit {
+    /**
+     * The commands before the key is used: selecting and reading the first files, BAC's GET
+     * CHALLENGE, PACE's MSE:Set AT. They need no public-key work on the chip.
+     */
+    BEFORE_ACCESS,
+
+    /**
+     * An ordinary command after access: selecting and reading files with short APDUs, under secure
+     * messaging or not, and the other commands with no public-key work on the chip.
+     */
+    READ,
+
+    /**
+     * A command that makes the chip do public-key or key-agreement work: the steps of BAC and PACE
+     * from the first that uses the key, chip authentication, active authentication. Also any
+     * extended-length command, whose answer can be up to 64 KB.
+     */
+    LONG,
 }

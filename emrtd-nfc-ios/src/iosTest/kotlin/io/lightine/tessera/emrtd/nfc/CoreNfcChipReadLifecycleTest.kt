@@ -5,6 +5,7 @@ import io.lightine.tessera.emrtd.ChipReadState
 import io.lightine.tessera.emrtd.LinkLossPolicy
 import io.lightine.tessera.types.errors.ChipError
 import io.lightine.tessera.types.errors.NfcError
+import io.lightine.tessera.types.errors.NfcNoAnswer
 import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.errors.NfcTimeout
 import io.lightine.tessera.types.errors.NfcUnavailable
@@ -100,10 +101,11 @@ class CoreNfcChipReadLifecycleTest {
             present(FakeChipTag(chip))
             step(400)
             assertEquals(7, chip.sent.size)
-            step(4_999)
+            // The silent command is a read after access: the read limit, 2 s (TES-346; before, 5 s).
+            step(1_999)
             assertTrue(rec.endings.isEmpty(), "still waiting just before the limit")
             step(1)
-            assertEquals(NfcTimeout(5_000), stoppedBy(rec.ending))
+            assertEquals(NfcTimeout(CoreNfcReadSettings.DEFAULT_READ_TIMEOUT_MILLIS), stoppedBy(rec.ending))
             // Lost after the plain chip was opened: what was read is kept.
             assertEquals(listOf<String?>(PARTIAL), port.endings)
             chip.held.single().invoke(byteArrayOf(0x90.toByte(), 0x00), null)
@@ -290,7 +292,9 @@ class CoreNfcChipReadLifecycleTest {
             step(51_000)
             present(FakeChipTag(chip))
             step(400)
-            assertEquals(NfcTagLost, stoppedBy(rec.ending))
+            // The loss came before access and no try may follow: the chip never got past the first
+            // commands, so the read ends with NfcNoAnswer (TES-346; before, the loss itself).
+            assertEquals(NfcNoAnswer, stoppedBy(rec.ending))
             assertFalse("LinkLost" in rec.names)
             assertEquals(0, port.restarts)
             assertNothingLeft(read)

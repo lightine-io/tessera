@@ -79,7 +79,8 @@ public class CoreNfcTransport internal constructor(
 
     /**
      * Sets the SDK's own time limit for the commands that follow, from the next command on: the
-     * read uses a short one for the commands before the key is used, then the general one. The
+     * read uses a short one for the commands before the key is used, then one per kind of command
+     * (see [CoreNfcReadSettings.readTimeoutMillis]). The
      * limit is the SDK's own wait (Core NFC has no time limit to set), so it can change at any
      * time; it waits for a command that is out, as commands go one at a time.
      */

@@ -92,6 +92,7 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
                                                                                      telemetry:nil
                                                                                     observerOn:TesseraObserverThread.main
                                                               commandTimeoutBeforeAccessMillis:1500
+                                                                             readTimeoutMillis:2000
                                                                                          error:nil];
     TesseraCoreNfcReadSettings *built = [[[[[[TesseraCoreNfcReadSettingsBuilder alloc] init]
         linkLossPolicy:[TesseraLinkLossPolicyCompanion.shared readAgainMaxRestarts:1 error:nil]] telemetrySink:nil]
@@ -99,6 +100,8 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
     TesseraCoreNfcReadSettings *changed = [[settings.toBuilder settleDelayMillisMillis:0] buildAndReturnError:nil];
     TesseraCoreNfcReadSettings *shorter = [[settings.toBuilder commandTimeoutBeforeAccessMillisMillis:900] buildAndReturnError:nil];
     int64_t beforeAccess = settings.commandTimeoutBeforeAccessMillis;
+    TesseraCoreNfcReadSettings *shorterReads = [[settings.toBuilder readTimeoutMillisMillis:1000] buildAndReturnError:nil];
+    int64_t reads = settings.readTimeoutMillis;
     TesseraLinkLossPolicy *noRestart = TesseraLinkLossPolicyCompanion.shared.end;
     TesseraLinkLossPolicy *resumeTwice = [TesseraLinkLossPolicyCompanion.shared resumeMaxRestarts:2 error:nil];
     TesseraNfcUnavailableReason *unavailable = TesseraCoreNfcChipRead.companion.availability;
@@ -106,6 +109,8 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
     (void)changed;
     (void)shorter;
     (void)beforeAccess;
+    (void)shorterReads;
+    (void)reads;
     (void)noRestart;
     (void)resumeTwice;
     (void)unavailable;
@@ -119,10 +124,15 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
     (void)withTexts;
 }
 
-// A state an app's observer tells apart (emrtd-core): found, but no answer yet.
-static void tesseraChipReadStates(TesseraChipReadState *state) {
+// A state an app's observer tells apart (emrtd-core): found, but no answer yet; and the ending
+// error of a chip that never answered (types).
+static void tesseraChipReadStates(TesseraChipReadState *state, TesseraChipReadEndingFailed *failed) {
     if ([state isKindOfClass:TesseraChipReadStateNoAnswerYet.class]) {
         int32_t tries = ((TesseraChipReadStateNoAnswerYet *)state).tries;
         (void)tries;
     }
+    BOOL neverAnswered = [failed.error isKindOfClass:TesseraNfcNoAnswer.class];
+    TesseraNfcError *noAnswer = TesseraNfcNoAnswer.shared;
+    (void)neverAnswered;
+    (void)noAnswer;
 }

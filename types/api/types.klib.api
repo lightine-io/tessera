@@ -920,6 +920,17 @@ final object io.lightine.tessera.types.errors/ChipBlank : io.lightine.tessera.ty
     final fun toString(): kotlin/String // io.lightine.tessera.types.errors/ChipBlank.toString|toString(){}[0]
 }
 
+final object io.lightine.tessera.types.errors/NfcNoAnswer : io.lightine.tessera.types.errors/NfcError { // io.lightine.tessera.types.errors/NfcNoAnswer|null[0]
+    final val code // io.lightine.tessera.types.errors/NfcNoAnswer.code|{}code[0]
+        final fun <get-code>(): kotlin/String // io.lightine.tessera.types.errors/NfcNoAnswer.code.<get-code>|<get-code>(){}[0]
+    final val description // io.lightine.tessera.types.errors/NfcNoAnswer.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.lightine.tessera.types.errors/NfcNoAnswer.description.<get-description>|<get-description>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.types.errors/NfcNoAnswer.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.lightine.tessera.types.errors/NfcNoAnswer.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.lightine.tessera.types.errors/NfcNoAnswer.toString|toString(){}[0]
+}
+
 final object io.lightine.tessera.types.errors/NfcTagLost : io.lightine.tessera.types.errors/NfcError { // io.lightine.tessera.types.errors/NfcTagLost|null[0]
     final val code // io.lightine.tessera.types.errors/NfcTagLost.code|{}code[0]
         final fun <get-code>(): kotlin/String // io.lightine.tessera.types.errors/NfcTagLost.code.<get-code>|<get-code>(){}[0]

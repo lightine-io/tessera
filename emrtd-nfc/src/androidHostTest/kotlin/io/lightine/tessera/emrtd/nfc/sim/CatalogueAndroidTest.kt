@@ -26,6 +26,7 @@ import io.lightine.tessera.telemetry.TelemetryEvent
 import io.lightine.tessera.telemetry.TelemetrySink
 import io.lightine.tessera.types.errors.ChipAccessDenied
 import io.lightine.tessera.types.errors.ChipSecureMessagingLost
+import io.lightine.tessera.types.errors.NfcNoAnswer
 import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.vocabulary.CheckOutcome
 import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
@@ -36,6 +37,7 @@ import org.robolectric.annotation.Config
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -136,14 +138,10 @@ class CatalogueAndroidTest {
             assertTrue("AuthenticatingChip" in r.stateNames)
             assertEquals("CheckingFiles", r.stateNames.last())
             assertTrue(commandSpan(1) in 4_000..5_800, "span ${commandSpan(1)}")
-            assertEquals(
-                listOf(
-                    NfcReadSettings.DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS.toInt(),
-                    NfcReadSettings.DEFAULT_COMMAND_TIMEOUT_MILLIS.toInt(),
-                ),
-                channels.single().timeouts,
-                "1.5 s at connect, then the 5 s limit once, before access",
-            )
+            // (c) The platform's limit changes only when the kind of command does: 1.5 s at connect,
+            // 5 s for EXTERNAL AUTHENTICATE, 2 s for the reads, 5 s for chip authentication's
+            // MSE:Set KAT in the middle of the reads, 2 s for the rest. Never the same value twice.
+            assertEquals(listOf(1_500, 5_000, 2_000, 5_000, 2_000), channels.single().timeouts)
         }
 
     @Test
@@ -239,12 +237,12 @@ class CatalogueAndroidTest {
         }
 
     @Test
-    fun k09_everyNewLinkLosesItsFirstCommand_noRestartUsedEndsFailedWithTheLossAfterTheReturnWait() =
+    fun k09_everyNewLinkLosesItsFirstCommand_noRestartUsedEndsFailedWithNoAnswerAfterTheReturnWait() =
         simTest { flow ->
             script.fault(ChipFaultAction.LoseLink(Shapes.LOSS_AFTER_MILLIS), times = 99) { it.indexInLink == 0 }
             val r = read(deviceOptions(flow))
             val ending = assertIs<ChipReadEnding.Failed>(r.ending)
-            assertEquals(NfcTagLost, ending.error)
+            assertEquals(NfcNoAnswer, ending.error)
             assertEquals(1, ending.attempts, "no try reached access: no attempt, no restart used")
             assertTrue(r.states.none { it is ChipReadState.LinkLost })
             // One try every 1.34 s (300 pause, 400 settle, 640 loss) for 15 s from the first loss.
@@ -275,7 +273,7 @@ class CatalogueAndroidTest {
      * 1500 limit), then Failed with the lost link 17.3 s after the document was found.
      */
     @Test
-    fun noAnswer_a_firstCommandNeverAnswered_eightShortTriesThenFailedAfterTheReturnWait() =
+    fun noAnswer_a_firstCommandNeverAnswered_eightShortTriesThenFailedWithNoAnswerAfterTheReturnWait() =
         simTest { flow ->
             script.fault(ChipFaultAction.Silence, times = 99) { it.indexInLink == 0 }
             val events = java.util.Collections.synchronizedList(mutableListOf<TelemetryEvent>())
@@ -291,7 +289,9 @@ class CatalogueAndroidTest {
             runUntilEnded(r)
             assertNull(r.checkPromises())
             val ending = assertIs<ChipReadEnding.Failed>(r.ending)
-            assertEquals(NfcTagLost, ending.error)
+            // (d) The chip never answered: the same error and code as on iPhone.
+            assertEquals(NfcNoAnswer, ending.error)
+            assertEquals("no-answer", ending.error.code)
             assertEquals(1, ending.attempts)
             assertEquals(0, ending.progress.percent)
             assertEquals(8, script.links, "8 tries")
@@ -398,7 +398,7 @@ class CatalogueAndroidTest {
             assertEquals(1, r.ending.attempts)
             assertEquals(1, script.links)
             assertTrue(r.states.none { it is ChipReadState.NoAnswerYet || it is ChipReadState.LinkLost }, "${r.stateNames}")
-            assertEquals(listOf(1_500, 5_000), channels.single().timeouts)
+            assertEquals(listOf(1_500, 5_000, 2_000), channels.single().timeouts)
             assertEquals(4, script.exchanges.count { it.reply.delayMillis == 3_000L })
             assertEquals(1, script.exchanges.count { it.reply.delayMillis == 1_000L })
         }
@@ -423,8 +423,8 @@ class CatalogueAndroidTest {
             assertTrue(challenge.command.indexInLink > 0, "plain commands were answered first")
             val noAnswer = r.updates.single { it.value.state is ChipReadState.NoAnswerYet }
             assertEquals(challenge.sentAtMillis + 1_500, noAnswer.atMillis, "GET CHALLENGE waits 1.5 s, not 5 s")
-            // The general limit is set only on the link that went past GET CHALLENGE.
-            assertEquals(listOf(listOf(1_500), listOf(1_500, 5_000)), channels.map { it.timeouts })
+            // The limits after access are set only on the link that went past GET CHALLENGE.
+            assertEquals(listOf(listOf(1_500), listOf(1_500, 5_000, 2_000, 5_000, 2_000)), channels.map { it.timeouts })
             assertEquals(
                 listOf(
                     "Starting",
@@ -447,12 +447,14 @@ class CatalogueAndroidTest {
 
     /** GET CHALLENGE never answered: short free tries for the return wait, then Failed, no restart used. */
     @Test
-    fun noAnswer_g_getChallengeNeverAnswered_shortTriesUntilTheReturnWaitThenFailed() =
+    fun noAnswer_g_getChallengeNeverAnswered_shortTriesUntilTheReturnWaitThenFailedWithNoAnswer() =
         simTest { flow ->
             script.fault(ChipFaultAction.Silence, times = 99) { it.ins == 0x84 }
             val r = read(deviceOptions(flow))
             val ending = assertIs<ChipReadEnding.Failed>(r.ending)
-            assertEquals(NfcTagLost, ending.error)
+            // The plain commands of each try were answered, GET CHALLENGE never: no try got past the
+            // commands before access, so the read ends as one whose chip never answered.
+            assertEquals(NfcNoAnswer, ending.error)
             assertEquals(1, ending.attempts)
             assertTrue(r.states.none { it is ChipReadState.LinkLost })
             assertEquals(0, script.exchanges.count { it.command.ins == 0x82 }, "the key was never used")
@@ -501,7 +503,7 @@ class CatalogueAndroidTest {
             assertEquals(listOf(1), r.states.filterIsInstance<ChipReadState.NoAnswerYet>().map { it.tries })
             val setAt = script.exchanges.first { it.command.ins == 0x22 }
             assertEquals(setAt.sentAtMillis + 1_500, r.updates.single { it.value.state is ChipReadState.NoAnswerYet }.atMillis)
-            assertEquals(listOf(listOf(1_500), listOf(1_500, 5_000)), channels.map { it.timeouts })
+            assertEquals(listOf(listOf(1_500), listOf(1_500, 5_000, 2_000)), channels.map { it.timeouts })
         }
 
     /** PACE: the first GENERAL AUTHENTICATE silent is past the boundary: 5 s, and a restart is spent. */
@@ -531,15 +533,82 @@ class CatalogueAndroidTest {
     fun noAnswer_theLimitBeforeAccessFollowsTheSettings() =
         simTest { flow ->
             read(deviceOptions(flow), NfcReadSettings(commandTimeoutBeforeAccessMillis = 900))
-            assertEquals(listOf(900, 5_000), channels.single().timeouts)
+            assertEquals(listOf(900, 5_000, 2_000, 5_000, 2_000), channels.single().timeouts)
         }
 
     @Test
     fun noAnswer_aLimitBeforeAccessAboveTheGeneralLimit_givesWayToIt() =
         simTest { flow ->
             read(deviceOptions(flow), NfcReadSettings(commandTimeoutMillis = 4_000, commandTimeoutBeforeAccessMillis = 9_000))
-            // Equal limits: the transport sets the value at connect and has nothing to change.
-            assertEquals(listOf(4_000), channels.single().timeouts)
+            // Equal limits before access and for EXTERNAL AUTHENTICATE: the transport sets the value
+            // at connect and has nothing to change until the reads.
+            assertEquals(listOf(4_000, 2_000, 4_000, 2_000), channels.single().timeouts)
+        }
+
+    // --- Limits by what the command asks of the chip (TES-346) ----------------------------------------
+
+    /**
+     * (a) The device case: after BAC the chip goes silent in the middle of DG2. Before, the read
+     * waited 5 s each time; now 2 s, the read limit. It is still a lost link: a restart is spent and
+     * the next attempt resumes and completes.
+     */
+    @Test
+    fun limits_a_readBinarySilentMidFile_linkLostAfterTheReadLimit_restartSpentAndResumed() =
+        simTest { flow ->
+            script.fault(ChipFaultAction.Silence, match = Shapes.midDg2)
+            val r = read(deviceOptions(flow))
+            recovered(r)
+            val silent = script.exchanges.first { Shapes.midDg2(it.command) }
+            val lost = r.updates.single { it.value.state is ChipReadState.LinkLost }
+            assertEquals(silent.sentAtMillis + NfcReadSettings.DEFAULT_READ_TIMEOUT_MILLIS, lost.atMillis, "the read waited 2 s, not 5 s")
+            assertNotEquals(ChipResumeOutcome.NOT_RESUMED, assertIs<ChipReadEnding.Complete>(r.ending).read.resume)
+        }
+
+    /** The read limit follows the settings, and is never longer than [NfcReadSettings.commandTimeoutMillis]. */
+    @Test
+    fun limits_a_theReadLimitFollowsTheSettings() =
+        simTest { flow ->
+            script.fault(ChipFaultAction.Silence, match = Shapes.midDg2)
+            val r = read(deviceOptions(flow), NfcReadSettings(readTimeoutMillis = 700))
+            val silent = script.exchanges.first { Shapes.midDg2(it.command) }
+            assertEquals(silent.sentAtMillis + 700, r.updates.single { it.value.state is ChipReadState.LinkLost }.atMillis)
+            assertEquals(listOf(1_500, 5_000, 700, 5_000, 700), channels.first().timeouts)
+        }
+
+    @Test
+    fun limits_a_aReadLimitAboveTheLongLimit_givesWayToIt() =
+        simTest { flow ->
+            read(deviceOptions(flow), NfcReadSettings(commandTimeoutMillis = 3_000, readTimeoutMillis = 9_000))
+            assertEquals(listOf(1_500, 3_000), channels.single().timeouts, "one value after access: nothing more to change")
+        }
+
+    /** (b) Slow but legal steps where the chip does public-key work keep the long limit: 3 s each. */
+    @Test
+    fun limits_b_externalAuthenticateAndChipAuthenticationOfThreeSeconds_areNotCut() =
+        simTest { flow ->
+            script.fault(ChipFaultAction.Delay(3_000), match = Shapes.externalAuthenticate)
+            script.fault(ChipFaultAction.Delay(3_000), match = Shapes.mseSetKat)
+            val r = read(deviceOptions(flow))
+            assertDeviceChecksPass(r.ending)
+            assertEquals(1, r.ending.attempts)
+            assertEquals(1, script.links)
+            assertTrue(r.states.none { it is ChipReadState.NoAnswerYet || it is ChipReadState.LinkLost }, "${r.stateNames}")
+            assertEquals(2, script.exchanges.count { it.reply.delayMillis == 3_000L })
+        }
+
+    /**
+     * (d) The chip answered once: the first attempt got past access and lost the link in DG2, then
+     * every new link is silent at its first command until the return wait passes. A try got past the
+     * commands before access, so the read ends with the loss, as before ([NfcTagLost]).
+     */
+    @Test
+    fun limits_d_accessReachedThenSilentBeforeAccess_endsWithTheLossNotNoAnswer() =
+        simTest { flow ->
+            script.fault(ChipFaultAction.Silence, match = Shapes.midDg2)
+            script.fault(ChipFaultAction.Silence, times = 99) { it.link > 1 && it.indexInLink == 0 }
+            val r = read(deviceOptions(flow))
+            assertEquals(NfcTagLost, assertIs<ChipReadEnding.Partial>(r.ending, "${r.ending}").stoppedBy)
+            assertTrue(r.states.any { it is ChipReadState.NoAnswerYet })
         }
 
     @Test

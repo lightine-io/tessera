@@ -25,12 +25,12 @@ class ChipErrorCommonFactsTest {
     @Test
     fun everySubclassAndEveryReasonIsWalked() {
         val classes = everyError.map { it::class }.toSet()
-        assertEquals(11, classes.size, "one sample list per subclass: $classes")
+        assertEquals(12, classes.size, "one sample list per subclass: $classes")
         val reasons =
             ChipAccessDenied.Reason.entries.size + ChipSecureMessagingLost.Reason.entries.size +
                 ChipUnexpectedAnswer.Reason.entries.size + ChipUnsupportedAlgorithm.Reason.entries.size +
                 ChipMalformedFile.Reason.entries.size + NfcUnavailable.Reason.entries.size
-        assertEquals(reasons + 5, everyError.size)
+        assertEquals(reasons + 6, everyError.size)
     }
 
     @Test
@@ -63,6 +63,7 @@ class ChipErrorCommonFactsTest {
         assertEquals("file-not-found", ChipFileNotFound(1, false).code)
         assertEquals("key-check-digit-mismatch", ChipKeyCheckDigitMismatch(emptySet()).code)
         assertEquals("tag-lost", NfcTagLost.code)
+        assertEquals("no-answer", NfcNoAnswer.code)
         assertEquals("timeout", NfcTimeout(null).code)
     }
 

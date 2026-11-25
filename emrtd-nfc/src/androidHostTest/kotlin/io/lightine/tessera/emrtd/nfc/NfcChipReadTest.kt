@@ -5,6 +5,7 @@ import android.nfc.Tag
 import android.nfc.TagLostException
 import android.os.Bundle
 import io.lightine.tessera.emrtd.ChipAccessKey
+import io.lightine.tessera.emrtd.ChipCommandTimeLimit
 import io.lightine.tessera.emrtd.ChipReadEnding
 import io.lightine.tessera.emrtd.ChipReadObserver
 import io.lightine.tessera.emrtd.ChipReadOptions
@@ -860,13 +861,14 @@ class NfcChipReadTest {
         assertEquals(400L, settings.settleDelayMillis)
         assertEquals(5_000L, settings.commandTimeoutMillis)
         assertEquals(1_500L, settings.commandTimeoutBeforeAccessMillis)
+        assertEquals(2_000L, settings.readTimeoutMillis)
         assertEquals(15_000L, settings.waitForReturnMillis)
         assertEquals(NfcReadSettings.NO_LIMIT, settings.waitForDocumentMillis)
         assertEquals(1_000L, settings.presenceCheckDelayMillis)
         assertTrue(settings.platformSounds)
         assertEquals(ObserverThread.MAIN, settings.observerOn)
         assertEquals(
-            "NfcReadSettings(linkLoss=Resume(2), settleDelayMillis=400, commandTimeoutMillis=5000, " +
+            "NfcReadSettings(linkLoss=Resume(2), settleDelayMillis=400, commandTimeoutMillis=5000, readTimeoutMillis=2000, " +
                 "commandTimeoutBeforeAccessMillis=1500, waitForReturnMillis=15000, waitForDocumentMillis=${Long.MAX_VALUE}, " +
                 "presenceCheckDelayMillis=1000, " +
                 "platformSounds=true, observerOn=MAIN)",
@@ -881,9 +883,10 @@ class NfcChipReadTest {
                 .waitForReturnMillis(8_000)
                 .waitForDocumentMillis(30_000)
                 .commandTimeoutBeforeAccessMillis(800)
+                .readTimeoutMillis(1_200)
                 .build()
         assertEquals(
-            "NfcReadSettings(linkLoss=ReadAgain(1), settleDelayMillis=100, commandTimeoutMillis=3000, " +
+            "NfcReadSettings(linkLoss=ReadAgain(1), settleDelayMillis=100, commandTimeoutMillis=3000, readTimeoutMillis=1200, " +
                 "commandTimeoutBeforeAccessMillis=800, waitForReturnMillis=8000, waitForDocumentMillis=30000, " +
                 "presenceCheckDelayMillis=1000, " +
                 "platformSounds=true, observerOn=MAIN)",
@@ -899,6 +902,7 @@ class NfcChipReadTest {
                 .waitForDocumentMillis,
         )
         assertEquals(800L, built.toBuilder().build().commandTimeoutBeforeAccessMillis, "the builder keeps the value")
+        assertEquals(1_200L, built.toBuilder().build().readTimeoutMillis, "the builder keeps the value")
     }
 
     @Test
@@ -914,6 +918,18 @@ class NfcChipReadTest {
         assertFailsWith<IllegalArgumentException> { NfcReadSettings(commandTimeoutBeforeAccessMillis = -1) }
         assertFailsWith<IllegalArgumentException> { NfcReadSettings(commandTimeoutBeforeAccessMillis = Int.MAX_VALUE + 1L) }
         assertFailsWith<IllegalArgumentException> { NfcReadSettings.Builder().commandTimeoutBeforeAccessMillis(0).build() }
+        assertFailsWith<IllegalArgumentException> { NfcReadSettings(readTimeoutMillis = 0) }
+        assertFailsWith<IllegalArgumentException> { NfcReadSettings(readTimeoutMillis = -1) }
+        assertFailsWith<IllegalArgumentException> { NfcReadSettings(readTimeoutMillis = Int.MAX_VALUE + 1L) }
+        assertFailsWith<IllegalArgumentException> { NfcReadSettings.Builder().readTimeoutMillis(0).build() }
+        // Each kind of command gets its limit; the two shorter ones never exceed the long one.
+        val three = NfcReadSettings(commandTimeoutMillis = 4_000, readTimeoutMillis = 1_000, commandTimeoutBeforeAccessMillis = 700)
+        assertEquals(700L, three.timeoutFor(ChipCommandTimeLimit.BEFORE_ACCESS))
+        assertEquals(1_000L, three.timeoutFor(ChipCommandTimeLimit.READ))
+        assertEquals(4_000L, three.timeoutFor(ChipCommandTimeLimit.LONG))
+        val capped = NfcReadSettings(commandTimeoutMillis = 1_000, readTimeoutMillis = Int.MAX_VALUE.toLong())
+        assertEquals(1_000L, capped.timeoutFor(ChipCommandTimeLimit.READ))
+        assertEquals(1L, NfcReadSettings(readTimeoutMillis = 1).timeoutFor(ChipCommandTimeLimit.READ))
         // The edges are accepted; a value above the general limit gives way to it.
         assertEquals(1L, NfcReadSettings(commandTimeoutBeforeAccessMillis = 1).effectiveTimeoutBeforeAccessMillis)
         assertEquals(

@@ -17,7 +17,9 @@ import io.lightine.tessera.emrtd.sim.SimDrive.options
 import io.lightine.tessera.emrtd.sim.SimDrive.withChips
 import io.lightine.tessera.telemetry.NoOpTelemetrySink
 import io.lightine.tessera.types.errors.ChipAccessDenied
+import io.lightine.tessera.types.errors.NfcNoAnswer
 import io.lightine.tessera.types.errors.NfcTagLost
+import io.lightine.tessera.types.errors.NfcTimeout
 import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -111,7 +113,7 @@ class NoAnswerBeforeAccessTest {
         }
 
     @Test
-    fun whenThePlatformGivesUpTheReadEndsFailedWithTheLoss() =
+    fun whenThePlatformGivesUpTheReadEndsFailedWithNoAnswer() =
         runTest {
             withChips { c, keys ->
                 val flow = FakeReadFlowChip.build(c, keys, FlowAccess.BAC)
@@ -121,7 +123,8 @@ class NoAnswerBeforeAccessTest {
                 repeat(3) { assertEquals(ChipReadAttemptOutcome.NO_ANSWER_YET, co.read(FakeAttemptLink(flow.chip, dropFirst = 1))) }
                 assertTrue(co.documentNotReturned())
                 val ending = assertIs<ChipReadEnding.Failed>(r.ending)
-                assertEquals(NfcTagLost, ending.error)
+                assertEquals(NfcNoAnswer, ending.error)
+                assertEquals("no-answer", ending.error.code)
                 assertEquals(1, ending.attempts)
                 assertEquals(0, ending.progress.percent)
                 assertEquals(0, flow.bac!!.refused)
@@ -137,7 +140,7 @@ class NoAnswerBeforeAccessTest {
                 val co = coordinator(flow, r)
                 co.start()
                 assertEquals(ChipReadAttemptOutcome.ENDED, co.read(FakeAttemptLink(flow.chip, dropFirst = 1), readAgainAllowed = false))
-                assertEquals(NfcTagLost, assertIs<ChipReadEnding.Failed>(r.ending).error)
+                assertEquals(NfcNoAnswer, assertIs<ChipReadEnding.Failed>(r.ending).error)
                 assertTrue(r.states.none { it is ChipReadState.NoAnswerYet })
             }
         }
@@ -150,11 +153,12 @@ class NoAnswerBeforeAccessTest {
                 val log = mutableListOf<String>()
                 val co = coordinator(flow, SimRecorder { 0L })
                 co.start()
-                co.read(Logged(FakeAttemptLink(flow.chip), log), accessStage = { log += "hook" })
-                assertEquals(1, log.count { it == "hook" })
-                assertEquals("ins=82", log[log.indexOf("hook") + 1], "EXTERNAL AUTHENTICATE comes right after: $log")
-                assertEquals("ins=84", log[log.indexOf("hook") - 1], "GET CHALLENGE comes before, under the short limit: $log")
-                assertTrue(log.take(log.indexOf("hook")).none { it == "ins=82" })
+                co.read(Logged(FakeAttemptLink(flow.chip), log), useTimeLimit = { log += "hook=$it" })
+                val first = log.indexOfFirst { it.startsWith("hook") }
+                assertEquals("hook=LONG", log[first])
+                assertEquals("ins=82", log[first + 1], "EXTERNAL AUTHENTICATE comes right after: $log")
+                assertEquals("ins=84", log[first - 1], "GET CHALLENGE comes before, under the short limit: $log")
+                assertTrue(log.take(first).none { it == "ins=82" })
             }
         }
 
@@ -166,11 +170,12 @@ class NoAnswerBeforeAccessTest {
                 val log = mutableListOf<String>()
                 val co = coordinator(flow, SimRecorder { 0L })
                 co.start()
-                co.read(Logged(FakeAttemptLink(flow.chip), log), accessStage = { log += "hook" })
-                assertEquals(1, log.count { it == "hook" })
-                assertEquals("ins=86", log[log.indexOf("hook") + 1], "the first GENERAL AUTHENTICATE comes right after: $log")
-                assertEquals("ins=22", log[log.indexOf("hook") - 1], "MSE:Set AT comes before, under the short limit: $log")
-                assertTrue(log.take(log.indexOf("hook")).none { it == "ins=86" })
+                co.read(Logged(FakeAttemptLink(flow.chip), log), useTimeLimit = { log += "hook=$it" })
+                val first = log.indexOfFirst { it.startsWith("hook") }
+                assertEquals("hook=LONG", log[first])
+                assertEquals("ins=86", log[first + 1], "the first GENERAL AUTHENTICATE comes right after: $log")
+                assertEquals("ins=22", log[first - 1], "MSE:Set AT comes before, under the short limit: $log")
+                assertTrue(log.take(first).none { it == "ins=86" })
             }
         }
 
@@ -216,7 +221,7 @@ class NoAnswerBeforeAccessTest {
                 var link = 0
                 assertEquals(
                     ChipReadAttemptOutcome.NO_ANSWER_YET,
-                    co.read(SilentAt(FakeAttemptLink(flow.chip), 0x84, silent), accessStage = { hooks += link }),
+                    co.read(SilentAt(FakeAttemptLink(flow.chip), 0x84, silent), useTimeLimit = { hooks += link }),
                 )
                 assertEquals(1, assertIs<ChipReadState.NoAnswerYet>(r.states.last()).tries)
                 co.documentFound()
@@ -224,11 +229,11 @@ class NoAnswerBeforeAccessTest {
                 link = 1
                 assertEquals(
                     ChipReadAttemptOutcome.ENDED,
-                    co.read(SilentAt(FakeAttemptLink(flow.chip), 0x84, silent), accessStage = { hooks += link }),
+                    co.read(SilentAt(FakeAttemptLink(flow.chip), 0x84, silent), useTimeLimit = { hooks += link }),
                 )
                 val ending = assertIs<ChipReadEnding.Complete>(r.ending, "${r.ending}")
                 assertEquals(1, ending.attempts)
-                assertEquals(listOf(1), hooks, "the general limit was set only on the try that went past GET CHALLENGE")
+                assertEquals(listOf(1), hooks.distinct(), "a limit after access was set only on the try that went past GET CHALLENGE")
                 assertEquals(0, flow.bac!!.refused)
                 assertTrue(r.states.none { it is ChipReadState.LinkLost })
                 assertTrue(r.updates.all { it.value.attempt == 1 })
@@ -276,7 +281,7 @@ class NoAnswerBeforeAccessTest {
 
     /** GET CHALLENGE silent on every try: the read ends as a document that never answered, no restart used. */
     @Test
-    fun getChallengeSilentUntilThePlatformGivesUp_endsFailedWithTheLoss() =
+    fun getChallengeSilentUntilThePlatformGivesUp_endsFailedWithNoAnswer() =
         runTest {
             withChips { c, keys ->
                 val flow = FakeReadFlowChip.build(c, keys, FlowAccess.BAC)
@@ -289,7 +294,10 @@ class NoAnswerBeforeAccessTest {
                 ) { assertEquals(ChipReadAttemptOutcome.NO_ANSWER_YET, co.read(SilentAt(FakeAttemptLink(flow.chip), 0x84, silent))) }
                 assertTrue(co.documentNotReturned())
                 val ending = assertIs<ChipReadEnding.Failed>(r.ending)
-                assertEquals(NfcTagLost, ending.error)
+                // The chip answered the plain commands of each try, never GET CHALLENGE: no try got
+                // past the commands before access, so the read ends the same as a chip that never
+                // answered at all.
+                assertEquals(NfcNoAnswer, ending.error)
                 assertEquals(1, ending.attempts)
                 assertEquals(listOf(1, 2, 3, 4), r.states.filterIsInstance<ChipReadState.NoAnswerYet>().map { it.tries })
                 assertTrue(r.states.none { it is ChipReadState.LinkLost })
