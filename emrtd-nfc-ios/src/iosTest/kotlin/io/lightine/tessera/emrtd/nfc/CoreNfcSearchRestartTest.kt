@@ -78,7 +78,11 @@ class CoreNfcSearchRestartTest {
             step(20_000)
             assertEquals(listOf(4_000L, 8_000L, 12_000L, 16_000L, 20_000L), port.restartTimes)
             assertEquals((0..10).map { it * 2_000L }, waitedTimes(rec), "a waiting update every 2 seconds, as before")
-            assertEquals(1, port.alerts.distinct().size, "the sheet text does not change")
+            assertEquals(
+                listOf(CoreNfcDefaultSheetTexts.WAITING_TEXT, CoreNfcDefaultSheetTexts.KEEP_HOLDING_TEXT),
+                port.alerts,
+                "the sheet text changes once, at 8 s",
+            )
             read.cancel()
             step()
             assertNothingLeft(read)
@@ -386,7 +390,8 @@ class CoreNfcSearchRestartTest {
                 CoreNfcErrorCode.USER_CANCELED to ChipReadEnding.Cancelled::class,
                 CoreNfcErrorCode.SESSION_TIMEOUT to ChipReadEnding.EndedBySystem::class,
                 CoreNfcErrorCode.SESSION_TERMINATED_UNEXPECTEDLY to ChipReadEnding.EndedBySystem::class,
-                CoreNfcErrorCode.SYSTEM_IS_BUSY to ChipReadEnding.NotStarted::class,
+                // 5 s after the begin, a 203 is a dead session's end, not a refused begin.
+                CoreNfcErrorCode.SYSTEM_IS_BUSY to ChipReadEnding.EndedBySystem::class,
                 CoreNfcErrorCode.RADIO_DISABLED to ChipReadEnding.NotStarted::class,
                 CoreNfcErrorCode.SESSION_INVALIDATED to ChipReadEnding.EndedBySystem::class,
                 CoreNfcErrorCode.FIRST_NDEF_TAG_READ to ChipReadEnding.EndedBySystem::class,

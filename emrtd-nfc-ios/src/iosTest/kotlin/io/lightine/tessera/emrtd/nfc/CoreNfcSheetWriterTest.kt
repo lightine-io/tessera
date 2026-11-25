@@ -191,12 +191,19 @@ class CoreNfcSheetWriterTest {
     // --- (e) The default texts do not change while waiting ----------------------------------------
 
     @Test
-    fun the_default_text_does_not_change_in_20_seconds_of_waiting() =
+    fun the_default_text_changes_once_in_20_seconds_of_waiting() =
         chipReadTest {
             val (read, rec) = start(settings = oneSession())
             step(20_000)
             assertEquals(11, rec.states.count { it is ChipReadState.WaitingForDocument })
-            assertEquals(listOf("Hold the top of your iPhone on the document and move it slowly"), port.alerts)
+            assertEquals(
+                listOf(
+                    "Hold the top of your iPhone on the document and move it slowly",
+                    "Still searching. Keep the phone on the document.",
+                ),
+                port.alerts,
+            )
+            assertEquals(listOf(0L, 8_000L), port.alertTimes)
             present(FakeChipTag(FakeChip()))
             assertEquals("Found. Hold still.", port.alerts.last())
             step(400)

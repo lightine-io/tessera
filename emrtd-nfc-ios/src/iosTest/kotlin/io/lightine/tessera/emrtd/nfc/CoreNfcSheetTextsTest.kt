@@ -68,8 +68,23 @@ class CoreNfcSheetTextsTest {
                 assertTrue(text.isNotBlank(), "${update.state}")
                 assertTrue('\u2014' !in text, "no em-dash")
             }
-            val waitingTexts = updates.filter { it.state is ChipReadState.WaitingForDocument }.map { defaults.textFor(it) }.toSet()
-            assertEquals(setOf("Hold the top of your iPhone on the document and move it slowly"), waitingTexts, "one waiting text")
+            val waiting =
+                updates.mapNotNull { u ->
+                    (u.state as? ChipReadState.WaitingForDocument)?.let {
+                        it.waitedMillis to
+                            defaults.textFor(u)
+                    }
+                }
+            assertEquals(
+                setOf("Hold the top of your iPhone on the document and move it slowly"),
+                waiting.filter { it.first < 8_000 }.map { it.second }.toSet(),
+                "one waiting text before 8 s",
+            )
+            assertEquals(
+                setOf("Still searching. Keep the phone on the document."),
+                waiting.filter { it.first >= 8_000 }.map { it.second }.toSet(),
+                "one keep-holding text from 8 s",
+            )
             assertTrue(updates.any { defaults.textFor(it) == "Found, no answer yet. Move the phone a little." })
 
             var last = 0

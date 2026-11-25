@@ -69,6 +69,9 @@ class CoreNfcSessionRenewalTest {
 
     private val noEarly = CoreNfcReadSettings(sessionRenewMillis = CoreNfcReadSettings.SESSION_RENEW_OFF)
 
+    // The renewal on a timer, off by default since the device run (TES-346): 10 s, two renewals.
+    private val early10 = CoreNfcReadSettings(maxSessionRenewals = 2, sessionRenewMillis = 10_000)
+
     private fun ChipReadHarness.startTimed(settings: CoreNfcReadSettings = CoreNfcReadSettings()) =
         start(settings = settings, recorder = Recorder().also { it.clock = now })
 
@@ -141,9 +144,11 @@ class CoreNfcSessionRenewalTest {
             assertTrue(ports[0].endings.isEmpty(), "the system ended the first session; the SDK sends no ending to it")
             assertEquals(listOf<String?>(null), ports[1].endings, "the second session ends with success")
             assertEquals(
-                CoreNfcDefaultSheetTexts.textFor(rec.updates.first { it.state is ChipReadState.WaitingForDocument }),
+                CoreNfcDefaultSheetTexts.KEEP_HOLDING_TEXT,
                 ports[1].alerts.first(),
+                "the new sheet opens after 23 s of waiting: the keep-holding text from the start",
             )
+            assertTrue(CoreNfcDefaultSheetTexts.WAITING_TEXT !in ports[1].alerts)
             val renew = events.of(ChipReadStep.SESSION_RENEW).single()
             assertEquals(1, renew.renewal)
             assertEquals(202, renew.systemCode)
@@ -179,7 +184,7 @@ class CoreNfcSessionRenewalTest {
         chipReadTest {
             val events = Events()
             documentFoundFromSession(2)
-            val (read, rec) = startTimed(CoreNfcReadSettings(telemetry = events))
+            val (read, rec) = startTimed(early10.toBuilder().telemetry(events).build())
             step(9_999)
             assertEquals(1, ports.size)
             assertTrue(ports[0].endings.isEmpty())
@@ -203,7 +208,7 @@ class CoreNfcSessionRenewalTest {
         chipReadTest {
             reportEnd = false
             documentFoundFromSession(2)
-            val (read, rec) = startTimed()
+            val (read, rec) = startTimed(early10)
             val old = port
             step(10_000)
             assertEquals(1, old.endings.size)
@@ -226,7 +231,7 @@ class CoreNfcSessionRenewalTest {
         chipReadTest {
             reportEnd = false
             documentFoundFromSession(2)
-            val (read, rec) = startTimed()
+            val (read, rec) = startTimed(early10)
             step(10_000 + CoreNfcChipRead.RENEW_END_WAIT_MILLIS - 1)
             assertEquals(1, ports.size)
             step(1 + 1_000)
@@ -246,7 +251,7 @@ class CoreNfcSessionRenewalTest {
         chipReadTest {
             val events = Events()
             everyDeadSessionEndsAt22Seconds()
-            val (read, rec) = startTimed(CoreNfcReadSettings(sessionRenewMillis = 0, telemetry = events))
+            val (read, rec) = startTimed(CoreNfcReadSettings(maxSessionRenewals = 2, telemetry = events))
             step(70_000)
             val ending = assertIs<ChipReadEnding.EndedBySystem>(rec.ending)
             assertEquals(NfcUnavailable(Reason.ENDED_BY_SYSTEM), ending.reason)
@@ -260,16 +265,34 @@ class CoreNfcSessionRenewalTest {
         }
 
     @Test
-    fun c__defaults__two_renewals_on_the_timer_then_the_system_ends_the_third_session() =
+    fun c__renewal_on_a_timer_two_renewals__then_the_system_ends_the_third_session() =
         chipReadTest {
             everyDeadSessionEndsAt22Seconds()
-            val (read, rec) = startTimed()
+            val (read, rec) = startTimed(early10)
             step(50_000)
             assertIs<ChipReadEnding.EndedBySystem>(rec.ending)
             assertEquals(44_000L, rec.endingTimes.single(), "sessions at 0, 11 and 22 s; the third lives until the system ends it")
             assertEquals(listOf<String?>("Searching again"), ports[0].endings)
             assertEquals(listOf<String?>("Searching again"), ports[1].endings)
             assertTrue(ports[2].endings.isEmpty())
+            assertNothingLeft(read)
+        }
+
+    @Test
+    fun c__defaults__no_renewal_on_a_timer__one_renewal_after_the_dead_session__then_the_read_ends() =
+        chipReadTest {
+            everyDeadSessionEndsAt22Seconds()
+            val (read, rec) = startTimed()
+            step(21_999)
+            assertEquals(1, ports.size, "no renewal on a timer by default")
+            assertTrue(ports[0].endings.isEmpty())
+            step(80_000)
+            val ending = assertIs<ChipReadEnding.EndedBySystem>(rec.ending)
+            assertEquals(NfcUnavailable(Reason.ENDED_BY_SYSTEM), ending.reason)
+            assertEquals(0, ending.attempts, "the system never reported the document")
+            assertEquals(45_000L, rec.endingTimes.single(), "22 s, 1 s of rest, 22 s")
+            assertEquals(2, ports.size)
+            assertTrue(ports.all { it.endings.isEmpty() })
             assertNothingLeft(read)
         }
 
@@ -320,7 +343,7 @@ class CoreNfcSessionRenewalTest {
             val worker = SwitchWorker()
             sheetWorker = { worker }
             documentFoundFromSession(2)
-            val (read, rec) = startTimed()
+            val (read, rec) = startTimed(early10)
             step(9_999)
             worker.hold = true
             step(1)
@@ -346,7 +369,7 @@ class CoreNfcSessionRenewalTest {
             sheetWorker = { worker }
             documentFoundFromSession(2)
             val events = Events()
-            val (read, rec) = startTimed(CoreNfcReadSettings(telemetry = events))
+            val (read, rec) = startTimed(early10.toBuilder().telemetry(events).build())
             step(9_999)
             worker.hold = true
             step(1)
@@ -384,7 +407,7 @@ class CoreNfcSessionRenewalTest {
         chipReadTest {
             // The fake reports "user canceled" for the SDK's own end, as Core NFC does: the read
             // cannot tell a Cancel on the closing sheet from that, and opens the new session.
-            val (read, rec) = startTimed()
+            val (read, rec) = startTimed(early10)
             step(10_000)
             assertEquals(listOf<String?>("Searching again"), ports[0].endings)
             assertTrue(rec.endings.isEmpty())
@@ -427,7 +450,7 @@ class CoreNfcSessionRenewalTest {
     fun e__the_app_cancels_while_the_old_session_closes__no_new_session() =
         chipReadTest {
             reportEnd = false
-            val (read, rec) = startTimed()
+            val (read, rec) = startTimed(early10)
             step(10_500)
             read.cancel()
             step()
@@ -575,7 +598,7 @@ class CoreNfcSessionRenewalTest {
     @Test
     fun h__the_60_second_limit_of_a_renewed_session_ends_the_read() =
         chipReadTest {
-            val (read, rec) = startTimed()
+            val (read, rec) = startTimed(early10)
             step(30_000)
             assertEquals(3, ports.size)
             systemEnds(CoreNfcErrorCode.SESSION_TIMEOUT)
@@ -599,7 +622,7 @@ class CoreNfcSessionRenewalTest {
                     }
                 }
             }
-            val (read, rec) = startTimed()
+            val (read, rec) = startTimed(early10)
             step(52_400)
             assertEquals(3, ports.size)
             assertEquals("NoAnswerYet", rec.names.last())
@@ -729,7 +752,7 @@ class CoreNfcSessionRenewalTest {
                 if (ports.size == 1) p.onInvalidate = { stuck.hook(INVALIDATE) }
                 if (ports.size == 2) p.events.onTagsDetected(listOf(FakeChipTag(FakeChip())))
             }
-            val (read, rec) = startTimed()
+            val (read, rec) = startTimed(early10)
             awaitReal { port.began }
             try {
                 step(10_000)
@@ -758,7 +781,7 @@ class CoreNfcSessionRenewalTest {
             sheetWorker = ::newSheetQueueWorker
             val stuck = StuckSetter(blockOn = INVALIDATE)
             onBegin = { p -> if (ports.size == 1) p.onInvalidate = { stuck.hook(INVALIDATE) } }
-            val (read, rec) = startTimed()
+            val (read, rec) = startTimed(early10)
             awaitReal { port.began }
             try {
                 step(10_000)
@@ -777,13 +800,215 @@ class CoreNfcSessionRenewalTest {
             assertNothingLeft(read)
         }
 
+    // --- (l) A dead session ended with 203, and the bound on the whole wait (device run, TES-346) ------
+
+    /** The device case B4: 202 at 22.7 s, a renewal, then the new session ends with 203 after 18 s. */
+    private fun ChipReadHarness.deviceCaseB4(
+        settings: CoreNfcReadSettings,
+        events: Events,
+        reportActive: Boolean,
+    ): Pair<CoreNfcChipRead, Recorder> {
+        onBegin = { p -> p.reportActive = reportActive }
+        val started = startTimed(settings.toBuilder().telemetry(events).build())
+        step(22_700)
+        end202()
+        step(1_000)
+        assertEquals(2, ports.size)
+        step(18_012)
+        busy(ports[1])
+        step()
+        return started
+    }
+
+    private fun b4WithDefaults(reportActive: Boolean) =
+        chipReadTest {
+            val events = Events()
+            val (read, rec) = deviceCaseB4(CoreNfcReadSettings(), events, reportActive)
+            val ending = assertIs<ChipReadEnding.EndedBySystem>(rec.ending)
+            assertEquals(NfcUnavailable(Reason.ENDED_BY_SYSTEM), ending.reason, "a dead session's end, not busy")
+            assertEquals(0, ending.attempts, "the system never reported the document")
+            assertEquals(22_700L + 1_000 + 18_012, rec.endingTimes.single(), "at once: about 42 s")
+            step(60_000)
+            assertEquals(2, ports.size, "no further session, no busy tries")
+            assertEquals(listOf(202, 203), events.of(ChipReadStep.SESSION_END).map { it.systemCode })
+            assertEquals(18_012L, events.of(ChipReadStep.SESSION_END).last().durationMillis)
+            assertEquals(1, rec.states.count { it is ChipReadState.RenewingSession })
+            assertNothingLeft(read)
+        }
+
+    @Test
+    fun l__device_case_b4__the_new_session_ends_with_203_after_18_s__the_read_ends_at_once() = b4WithDefaults(reportActive = true)
+
+    @Test
+    fun l__device_case_b4__the_same_with_no_on_report_from_the_system() = b4WithDefaults(reportActive = false)
+
+    @Test
+    fun l__device_case_b4__with_two_renewals_the_203_after_18_s_opens_one_more_session() =
+        chipReadTest {
+            val events = Events()
+            val (read, rec) = deviceCaseB4(CoreNfcReadSettings(maxSessionRenewals = 2), events, reportActive = false)
+            assertTrue(rec.endings.isEmpty())
+            assertEquals(listOf(1, 2), rec.states.filterIsInstance<ChipReadState.RenewingSession>().map { it.renewal })
+            step(1_000)
+            assertEquals(3, ports.size, "a new session after the rest, no busy try")
+            step(18_000)
+            assertEquals(listOf(202, 203), events.of(ChipReadStep.SESSION_RENEW).map { it.systemCode })
+            busy(ports[2])
+            step(20_000)
+            assertEquals(NfcUnavailable(Reason.ENDED_BY_SYSTEM), assertIs<ChipReadEnding.EndedBySystem>(rec.ending).reason)
+            assertEquals(3, ports.size, "the third dead session ends the read")
+            assertNothingLeft(read)
+        }
+
+    @Test
+    fun l__a_203_at_begin_with_no_on_report__still_a_refusal_tried_again() =
+        chipReadTest {
+            onBegin = { p ->
+                when (ports.size) {
+                    2 -> busy(p)
+                    3 -> p.events.onTagsDetected(listOf(FakeChipTag(FakeChip())))
+                }
+            }
+            val (read, rec) = startTimed()
+            step(22_000)
+            end202()
+            step(1_000)
+            assertEquals(2, ports.size)
+            step(500)
+            assertEquals(3, ports.size, "the refused begin is tried again after 0.5 s")
+            step(400)
+            assertIs<ChipReadEnding.Complete>(rec.ending)
+            assertEquals(1, rec.states.count { it is ChipReadState.RenewingSession }, "a refusal costs no renewal")
+            assertNothingLeft(read)
+        }
+
+    @Test
+    fun l__a_203_just_inside_the_refusal_window_with_no_on_report__a_refusal() =
+        chipReadTest {
+            onBegin = { p ->
+                if (ports.size == 1) {
+                    p.reportActive = false
+                    scope.launch {
+                        delay(CoreNfcChipRead.REFUSAL_WINDOW_MILLIS - 1)
+                        busy(p)
+                    }
+                }
+                if (ports.size == 2) p.events.onTagsDetected(listOf(FakeChipTag(FakeChip())))
+            }
+            val (read, rec) = startTimed()
+            step(CoreNfcChipRead.REFUSAL_WINDOW_MILLIS - 1)
+            assertTrue(rec.states.none { it is ChipReadState.RenewingSession }, "a refusal, not a dead session")
+            step(500)
+            assertEquals(2, ports.size)
+            step(400)
+            assertIs<ChipReadEnding.Complete>(rec.ending)
+            assertNothingLeft(read)
+        }
+
+    @Test
+    fun l__a_203_at_the_refusal_window_with_no_on_report__a_dead_session_renewed() =
+        chipReadTest {
+            onBegin = { p ->
+                if (ports.size == 1) {
+                    p.reportActive = false
+                    scope.launch {
+                        delay(CoreNfcChipRead.REFUSAL_WINDOW_MILLIS)
+                        busy(p)
+                    }
+                }
+                if (ports.size == 2) p.events.onTagsDetected(listOf(FakeChipTag(FakeChip())))
+            }
+            val (read, rec) = startTimed()
+            step(CoreNfcChipRead.REFUSAL_WINDOW_MILLIS)
+            assertEquals(1, assertIs<ChipReadState.RenewingSession>(rec.states.last()).renewal)
+            step(1_400)
+            assertIs<ChipReadEnding.Complete>(rec.ending)
+            assertNothingLeft(read)
+        }
+
+    @Test
+    fun l__a_203_soon_after_the_on_report__still_a_refusal__the_time_decides() =
+        chipReadTest {
+            onBegin = { p -> if (ports.size == 2) p.events.onTagsDetected(listOf(FakeChipTag(FakeChip()))) }
+            val (read, rec) = startTimed()
+            step(300)
+            busy(port)
+            step()
+            assertTrue(rec.states.none { it is ChipReadState.RenewingSession }, "no renewal used")
+            step(500)
+            assertEquals(2, ports.size, "tried again after 0.5 s")
+            step(400)
+            assertIs<ChipReadEnding.Complete>(rec.ending)
+            assertNothingLeft(read)
+        }
+
+    @Test
+    fun l__renewals_off__a_dead_203_ends_the_read_as_ended_by_the_system_not_busy() =
+        chipReadTest {
+            val (read, rec) = startTimed(CoreNfcReadSettings(maxSessionRenewals = CoreNfcReadSettings.SESSION_RENEWALS_OFF))
+            step(18_000)
+            busy(port)
+            step()
+            assertEquals(NfcUnavailable(Reason.ENDED_BY_SYSTEM), assertIs<ChipReadEnding.EndedBySystem>(rec.ending).reason)
+            assertEquals(1, ports.size)
+            assertNothingLeft(read)
+        }
+
+    // --- (m) The keep-holding text ----------------------------------------------------------------------
+
+    @Test
+    fun m__the_keep_holding_text_comes_once_at_8_s__and_a_renewed_sheet_starts_with_it() =
+        chipReadTest {
+            val waiting = CoreNfcDefaultSheetTexts.WAITING_TEXT
+            val keep = CoreNfcDefaultSheetTexts.KEEP_HOLDING_TEXT
+            val (read, rec) = startTimed()
+            step(7_999)
+            assertEquals(listOf(waiting), ports[0].alerts)
+            step(1)
+            assertEquals(listOf(waiting, keep), ports[0].alerts)
+            assertEquals(listOf(0L, 8_000L), ports[0].alertTimes)
+            step(14_000)
+            assertEquals(listOf(waiting, keep), ports[0].alerts, "never again, never back")
+            end202()
+            step(1_000)
+            assertEquals(listOf(keep), ports[1].alerts, "the new sheet starts with the keep-holding text")
+            step(15_000)
+            assertEquals(listOf(keep), ports[1].alerts)
+            read.cancel()
+            step()
+            assertNothingLeft(read)
+            assertTrue(rec.endings.isNotEmpty())
+        }
+
+    // --- (n) The readiness number -----------------------------------------------------------------------
+
+    @Test
+    fun n__readiness__not_yet_counts_the_release_bound_down__ready_as_soon_as_the_system_reports_the_close() =
+        chipReadTest {
+            reportEnd = false
+            val heard = mutableListOf<ChipReadReadiness>()
+            env.readiness.add { heard += it }
+            val (read, _) = startTimed()
+            read.cancel()
+            step()
+            assertEquals(5_000L, assertIs<ChipReadReadiness.NotYet>(env.readiness.current()).remainingMillis, "the bound, an upper limit")
+            step(2_000)
+            assertEquals(3_000L, assertIs<ChipReadReadiness.NotYet>(env.readiness.current()).remainingMillis)
+            step(700)
+            port.events.onInvalidated(NfcUnavailable(Reason.CANCELLED_BY_USER), CoreNfcErrorCode.USER_CANCELED)
+            step()
+            assertEquals(ChipReadReadiness.Ready, env.readiness.current(), "ready at 2.7 s, before the 5 s bound")
+            assertEquals(listOf("ReadInProgress", "NotYet", "Ready"), heard.map { it::class.simpleName })
+            assertNothingLeft(read)
+        }
+
     // --- (k) The settings -------------------------------------------------------------------------------
 
     @Test
     fun k__settings__defaults_off_values_ranges_and_builder() {
         val defaults = CoreNfcReadSettings()
-        assertEquals(2, defaults.maxSessionRenewals)
-        assertEquals(10_000L, defaults.sessionRenewMillis)
+        assertEquals(1, defaults.maxSessionRenewals)
+        assertEquals(0L, defaults.sessionRenewMillis, "no renewal on a timer by default")
         assertEquals(6_000L, defaults.busyRetryMillis)
         assertEquals(CoreNfcReadSettings.DEFAULT_MAX_SESSION_RENEWALS, defaults.maxSessionRenewals)
         assertEquals(CoreNfcReadSettings.DEFAULT_SESSION_RENEW_MILLIS, defaults.sessionRenewMillis)

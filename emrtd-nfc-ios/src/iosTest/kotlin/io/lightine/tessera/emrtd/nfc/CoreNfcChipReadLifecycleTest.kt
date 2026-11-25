@@ -377,9 +377,12 @@ class CoreNfcChipReadLifecycleTest {
             assertEquals(listOf(0L, 2_000L, 4_000L, 6_000L), waited)
             step(14_000)
             assertEquals(
-                listOf("Hold the top of your iPhone on the document and move it slowly"),
+                listOf(
+                    "Hold the top of your iPhone on the document and move it slowly",
+                    "Still searching. Keep the phone on the document.",
+                ),
                 port.alerts,
-                "the default text does not change while waiting",
+                "the default text changes once while waiting, at 8 s",
             )
             read.cancel()
             assertNothingLeft(read)

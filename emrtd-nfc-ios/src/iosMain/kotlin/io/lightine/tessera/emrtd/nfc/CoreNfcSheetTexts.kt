@@ -22,7 +22,8 @@ import io.lightine.tessera.types.errors.NfcNoAnswer
  * The SDK sets the text on a queue of the read's own, so setting it never holds up the read. A text
  * that changes while no document is found yet may still be slow to show on some iOS versions: on
  * a device, such a change took about 12 seconds to return, and the cause is not known. The
- * default texts keep one text from the start until the document is found for that reason.
+ * default texts change at most once while no document is found, after 8 seconds, and that change
+ * may show late on such a system.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -67,11 +68,20 @@ public object CoreNfcDefaultSheetTexts : CoreNfcSheetTexts {
     // The number of characters in the default progressBar; the two-argument form takes any width.
     internal const val BAR_WIDTH: Int = 10
 
+    // From this wait on, the waiting text asks the person to keep holding.
+    internal const val KEEP_HOLDING_AFTER_MILLIS: Long = 8_000
+
+    internal const val WAITING_TEXT = "Hold the top of your iPhone on the document and move it slowly"
+    internal const val KEEP_HOLDING_TEXT = "Still searching. Keep the phone on the document."
+
     /**
      * A line per state:
      * - Starting: "Getting ready".
      * - Waiting for the document: "Hold the top of your iPhone on the document and move it
-     *   slowly", the whole time: the text does not change until the document is found.
+     *   slowly"; from 8 seconds of waiting on ([ChipReadState.WaitingForDocument.waitedMillis],
+     *   counted across new sessions), "Still searching. Keep the phone on the document." The text
+     *   changes once, never back; a new session opened after 8 seconds starts with the second
+     *   text.
      * - Document found: "Found. Hold still."
      * - Connecting: "Connecting. Hold still."
      * - Opening access, reading, checking with the chip, checking the files: a line, then the
@@ -79,8 +89,8 @@ public object CoreNfcDefaultSheetTexts : CoreNfcSheetTexts {
      * - No answer yet: "Found, no answer yet. Move the phone a little."
      * - Link lost: "Connection lost. Hold the document again." with the attempt the read now
      *   waits for, for example "Try 2 of 3".
-     * - Renewing the session: "Searching again", shown as the old sheet closes; the new sheet opens
-     *   with the waiting text.
+     * - Renewing the session: "Searching again", shown as the old sheet closes when the read ends
+     *   it; the new sheet opens with the waiting text for the time waited.
      * - Stopping: "Stopping".
      */
     override fun textFor(update: ChipReadUpdate): String {
@@ -91,9 +101,9 @@ public object CoreNfcDefaultSheetTexts : CoreNfcSheetTexts {
             }
 
             is ChipReadState.WaitingForDocument -> {
-                // One text however long the wait: a change while the session polls with no
-                // document found was slow to return on a device (TES-346).
-                "Hold the top of your iPhone on the document and move it slowly"
+                // At most one change while the session polls with no document found: such a change
+                // was slow to return on a device (TES-346), and is now set off the read's path.
+                if (state.waitedMillis >= KEEP_HOLDING_AFTER_MILLIS) KEEP_HOLDING_TEXT else WAITING_TEXT
             }
 
             ChipReadState.DocumentFound -> {

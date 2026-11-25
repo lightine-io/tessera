@@ -40,7 +40,10 @@ public sealed class ChipReadReadiness {
      * waits at most 5 seconds. Android never reports this value.
      *
      * @property remainingMillis The longest a read started now would wait before it begins a
-     *   session, in milliseconds, as the SDK counts it now: at least 1.
+     *   session, in milliseconds, as the SDK counts it now: at least 1. An upper bound, not a
+     *   forecast: when the wait is for the system's report that the last session closed, the value
+     *   counts the 5-second bound, and turns [Ready] as soon as the report comes, often sooner
+     *   (on an iPhone about 2.7 seconds after a read ended, with 5000 reported).
      * @since 1.0.0
      */
     public class NotYet internal constructor(

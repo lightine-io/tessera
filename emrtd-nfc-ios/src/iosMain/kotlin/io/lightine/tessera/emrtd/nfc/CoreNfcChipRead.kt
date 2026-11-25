@@ -84,19 +84,25 @@ import kotlin.time.TimeSource
  *   an iPhone a first contact in a weak position made the system report no document at all and
  *   end the session about 22 seconds later. The call is made on a queue of the read's own, and
  *   never once a document was reported or the read is ending.
- * - While no document was reported in the read, closes the system session and opens a new one,
- *   with the same key, attempt and restarts, at most [CoreNfcReadSettings.maxSessionRenewals]
- *   times (2 by default): when the system ends the session with Core NFC's code 202, and when
- *   [CoreNfcReadSettings.sessionRenewMillis] (10 seconds by default) passed since the session
- *   began. On an iPhone, a session started before the phone was on the document sometimes never
- *   reported it; a new session with the phone in place found it at once. The observer gets
+ * - While no document was reported in the read, opens a new system session after a dead one, with
+ *   the same key, attempt and restarts, at most [CoreNfcReadSettings.maxSessionRenewals] times
+ *   (once by default). A dead session is one the system ends with Core NFC's code 202, or with
+ *   code 203 ("busy") 2 seconds or more after its begin: on an iPhone a session that ran 18
+ *   seconds with no document ended with 203. Optionally also when
+ *   [CoreNfcReadSettings.sessionRenewMillis] passed since the session began (off by default). On
+ *   an iPhone, a session started before the phone was on the document sometimes never reported
+ *   it, and the system ended it 22 to 36 seconds later; a new session then found the document
+ *   within 3 seconds in 3 cases of 4. When the last allowed session dies too, the read ends at
+ *   once with [ChipReadEnding.EndedBySystem] and [NfcUnavailable.Reason.ENDED_BY_SYSTEM], with 0
+ *   attempts: the system never reported the document. The observer gets
  *   [io.lightine.tessera.emrtd.ChipReadState.RenewingSession], then
  *   [io.lightine.tessera.emrtd.ChipReadState.WaitingForDocument] with the time waited since the
  *   read's first session was on. The sheet closes and opens again with the default texts set
  *   anew. Between the two sessions the read waits for the system's report that the old one ended,
  *   then [CoreNfcReadSettings.waitAfterSystemEndMillis]. The read's telemetry sink gets an
  *   [io.lightine.tessera.emrtd.ChipReadEvent] with step [ChipReadStep.SESSION_RENEW] for each.
- * - When the system refuses to begin a session as busy (Core NFC's code 203), tries again after
+ * - When the system refuses to begin a session as busy (Core NFC's code 203 within 2 seconds of
+ *   the begin), tries again after
  *   0.5, 1, 2, then every 3 seconds, for [CoreNfcReadSettings.busyRetryMillis] (6 seconds by
  *   default): the first session in [io.lightine.tessera.emrtd.ChipReadState.Starting], a renewed
  *   one in [io.lightine.tessera.emrtd.ChipReadState.RenewingSession].
@@ -143,9 +149,12 @@ import kotlin.time.TimeSource
  * - The person taps Cancel: [ChipReadEnding.Cancelled] by [ChipReadEnding.Cancelled.By.PERSON].
  * - The session's time limit passes (60 seconds) or the system ends the session (for example the
  *   app goes to the background): [ChipReadEnding.EndedBySystem]. The 60 seconds count from the
- *   current session's begin. Before any document was reported, a session end with code 202 leads
- *   to a new session while [CoreNfcReadSettings.maxSessionRenewals] allows; the last one ends the
- *   read this way. A renewed session the system keeps refusing as busy ends it this way too, with
+ *   current session's begin. Before any document was reported, a dead session (code 202, or 203
+ *   2 seconds or more after the begin) leads to a new session while
+ *   [CoreNfcReadSettings.maxSessionRenewals] allows; the last one ends the read this way, with
+ *   [NfcUnavailable.Reason.ENDED_BY_SYSTEM] whatever the code, and 0 attempts when no document
+ *   was ever reported. With the defaults such a read ends after two sessions: on a device about 43
+ *   seconds (22.7 + 2 + 18). A renewed session the system keeps refusing as busy ends it this way too, with
  *   [NfcUnavailable.Reason.BUSY]: the read had started.
  * - Before a document was found, and before any new session: NFC missing on the device, the
  *   entitlement or the Info.plist entries missing, the radio off, or the reader busy (after the
@@ -709,33 +718,54 @@ public class CoreNfcChipRead internal constructor(
     private enum class EndKind { ECHO, RENEW, REFUSED, ENDING }
 
     /**
+     * Whether a system end of [session] with Core NFC's code [systemCode] is the end of a dead
+     * session, when no document was reported: code 202 always; code 203 ("busy") when the session
+     * ran [REFUSAL_WINDOW_MILLIS] or more since its begin. On a device a session that ran 18
+     * seconds with no document ended with 203, while a refused begin ended within about 4
+     * milliseconds. The time is what the read can know: the system's "on" report did not tell the
+     * two apart on the device.
+     */
+    private fun isDeadSessionEnd(
+        session: ReaderRun,
+        systemCode: Long?,
+    ): Boolean =
+        when (systemCode) {
+            CoreNfcErrorCode.SESSION_TERMINATED_UNEXPECTEDLY -> true
+            CoreNfcErrorCode.SYSTEM_IS_BUSY -> session.began?.let { env.now() - it >= REFUSAL_WINDOW_MILLIS } == true
+            else -> false
+        }
+
+    /**
      * The system ended [session]: the read's ending, unless the SDK ended it, the read renews it
-     * (code 202 before any tag), or the system refused it as busy and the read tries again.
+     * (a dead session, see [isDeadSessionEnd], before any tag and while a renewal is left), or the
+     * system refused its begin as busy and the read tries again.
      */
     private fun systemEnded(
         session: ReaderRun,
-        error: NfcError,
+        reported: NfcError,
         systemCode: Long?,
     ) {
         session.owned.systemEnd()
         session.ended.complete(Unit)
+        val deadCode = isDeadSessionEnd(session, systemCode)
+        var dead = false
         var number = 0
         val kind =
             locked {
                 val beforeAnyTag = !tagReported && !coordinator.isEnded
+                dead = deadCode && !tagReported
                 when {
                     session !== current || session.renewing || session.owned.endedBySdk -> {
                         EndKind.ECHO
                     }
 
-                    beforeAnyTag && systemCode == CoreNfcErrorCode.SESSION_TERMINATED_UNEXPECTEDLY &&
-                        renewalsUsed < settings.maxSessionRenewals -> {
+                    beforeAnyTag && dead && renewalsUsed < settings.maxSessionRenewals -> {
                         number = ++renewalsUsed
                         EndKind.RENEW
                     }
 
-                    beforeAnyTag && error is NfcUnavailable && error.reason == NfcUnavailable.Reason.BUSY &&
-                        settings.busyRetryMillis > 0 && !session.active.isCompleted -> {
+                    beforeAnyTag && !dead && reported is NfcUnavailable && reported.reason == NfcUnavailable.Reason.BUSY &&
+                        settings.busyRetryMillis > 0 -> {
                         EndKind.REFUSED
                     }
 
@@ -745,6 +775,8 @@ public class CoreNfcChipRead internal constructor(
                 }
             }
         if (kind == EndKind.ECHO) return
+        // A dead session's end is the system's ending, whatever its code: never "busy" or "not started".
+        val error = if (dead) NfcUnavailable(NfcUnavailable.Reason.ENDED_BY_SYSTEM) else reported
         reportSessionEnd(systemCode, session.began)
         // Not the read's ending: its loop renews the session, or tries the begin again.
         if (kind == EndKind.RENEW) {
@@ -1130,7 +1162,11 @@ public class CoreNfcChipRead internal constructor(
          * one as busy, the SDK notes when it saw that end (the system's report of it), and treats
          * the system as ready [CoreNfcReadSettings.waitAfterSystemEndMillis] of the read that saw
          * it later; after a session the SDK ended itself, as soon as the system reported it closed,
-         * and at most 5 seconds after the read ended. It is the SDK's own count, not a promise from
+         * and at most 5 seconds after the read ended. [ChipReadReadiness.NotYet.remainingMillis]
+         * is the longest wait as the SDK counts it then: while it waits for the system's report
+         * that the last session closed, it counts the 5-second bound, and the value turns
+         * [ChipReadReadiness.Ready] as soon as the report comes, often sooner (on a device about
+         * 2.7 seconds after the read ended, with 5000 reported). It is the SDK's own count, not a promise from
          * the system: a start is always allowed, waits the same time in
          * [io.lightine.tessera.emrtd.ChipReadState.Starting], and tries again when the system
          * still refuses ([CoreNfcReadSettings.busyRetryMillis]).
@@ -1269,6 +1305,13 @@ public class CoreNfcChipRead internal constructor(
          * a slow close.
          */
         internal const val RENEW_END_WAIT_MILLIS = 2_000L
+
+        /**
+         * A system end with code 203 ("busy") is a refused begin only this soon after the begin;
+         * later it is a dead session's end. On a device refusals came within about 4
+         * milliseconds, and a dead session ran 7 to 18 seconds before its 203.
+         */
+        internal const val REFUSAL_WINDOW_MILLIS = 2_000L
 
         /** The pauses before each new try to begin a session refused as busy; the last repeats. */
         internal val BUSY_RETRY_PAUSES_MILLIS = listOf(500L, 1_000L, 2_000L, 3_000L)

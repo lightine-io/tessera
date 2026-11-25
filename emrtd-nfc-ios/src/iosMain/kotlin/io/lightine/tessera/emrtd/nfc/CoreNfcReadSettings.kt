@@ -15,8 +15,8 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  * where [linkLoss], [settleDelayMillis], [commandTimeoutMillis], [readTimeoutMillis],
  * [commandTimeoutBeforeAccessMillis] and [observerOn] mean the same,
  * with the same defaults. There is no wait-for-document limit as on Android
- * (`NfcReadSettings.waitForDocumentMillis`): the system session's own 60-second limit bounds the
- * wait for a document, and the system ends the read when it passes
+ * (`NfcReadSettings.waitForDocumentMillis`): the system session's own 60-second limit and
+ * [maxSessionRenewals] bound the wait for a document, and the system ends the read when it passes
  * ([io.lightine.tessera.emrtd.ChipReadEnding.EndedBySystem]); cancel the read for a shorter limit.
  *
  * Experimental: see [ExperimentalTesseraChipApi]. In Swift, `CoreNfcReadSettings()` gives the
@@ -99,30 +99,39 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  *   alone before. [CoreNfcPolling.ISO14443] polls ISO 14443 alone on every version and misses
  *   chips that answer only after PACE polling. There is no such setting on Android, where the
  *   system finds the tag.
- * @property maxSessionRenewals How many times one read may close its system session and open a
- *   new one while no document was reported
- *   ([io.lightine.tessera.emrtd.ChipReadState.RenewingSession]), counting both causes: the system
- *   ended the session with Core NFC's code 202 ("ended unexpectedly") before any document was
- *   reported, or [sessionRenewMillis] passed with no document reported. On an iPhone about one
- *   read in four, with the session started before the phone was on the document, never reported
- *   the document and was ended by the system with code 202 about 22 seconds after the document
- *   came near; a session started with the phone already on the document found it at once. A
- *   renewal keeps the key, the attempt and the restarts after a lost link; the sheet closes and
- *   opens again. Never after a document was reported in the read, after the read's ending began,
- *   or after the person tapped Cancel (code 200) or the session's 60 seconds passed (code 201):
- *   those end the read as before. Default 2. [SESSION_RENEWALS_OFF] (0) turns renewals off: a 202
- *   then ends the read with [io.lightine.tessera.emrtd.ChipReadEnding.EndedBySystem]. When the
- *   renewals are used up, the next 202 ends the read that way too. There is no such setting on
- *   Android, where the system has no such session.
+ * @property maxSessionRenewals How many times one read may open a new system session after a
+ *   dead one while no document was reported
+ *   ([io.lightine.tessera.emrtd.ChipReadState.RenewingSession]). A dead session is one the system
+ *   ends with Core NFC's code 202 ("ended unexpectedly"), or with code 203 ("busy") 2 seconds or
+ *   more after its begin; also one the read ends itself after
+ *   [sessionRenewMillis], when that is on. On an iPhone about one read in four, with the session
+ *   started before the phone was on the document, never reported the document, and the system
+ *   ended the session 22 to 36 seconds after it began, mostly with 202, once with 203 after a
+ *   renewed session ran 18 seconds; a new session with the phone in place found the document
+ *   within 3 seconds in 3 cases of 4. A renewal keeps the key, the attempt and the restarts after
+ *   a lost link; the sheet closes and opens again. Never after a document was reported in the
+ *   read, after the read's ending began, or after the person tapped Cancel (code 200) or the
+ *   session's 60 seconds passed (code 201): those end the read as before. Default 1: one dead
+ *   session and one renewed session; when the renewed one dies too, the read ends at once with
+ *   [io.lightine.tessera.emrtd.ChipReadEnding.EndedBySystem] and
+ *   [io.lightine.tessera.types.errors.NfcUnavailable.Reason.ENDED_BY_SYSTEM], with 0 attempts
+ *   when the system never reported the document. On a device that took about 43 seconds; each
+ *   session lasts as long as the system keeps it, so it can be longer.
+ *   [SESSION_RENEWALS_OFF] (0) turns renewals off: the first dead session then ends the read
+ *   that way. There is no such setting on Android, where the system has no such session.
  * @property sessionRenewMillis How long a system session may go with no document reported before
  *   the read ends it itself and opens a new one, counted from the session's begin, within
- *   [maxSessionRenewals]. Default 10000, well before the system's own end at about 22 seconds,
- *   after two new searches ([searchRestartMillis]). [SESSION_RENEW_OFF] (0) turns it off; the
- *   renewal after the system's code 202 still happens. Any other value must be at least
+ *   [maxSessionRenewals]. Default [SESSION_RENEW_OFF] (0): off. On an iPhone a renewal at 10
+ *   seconds did not shorten the wait and made it longer: the new session was ended by the system
+ *   or refused for about 10 more seconds, and the document was found 24 to 51 seconds after the
+ *   start, as if the system stayed tied to a tag it never reported for its full 20 seconds. The
+ *   renewal after a dead session still happens with it off. Any other value must be at least
  *   [MIN_SESSION_RENEW_MILLIS] (5000): a shorter one would close the sheet before a person had
  *   time to bring the phone to the document.
  * @property busyRetryMillis How long the read keeps trying to begin a system session that the
- *   system refused as busy (Core NFC's code 203), counted from the first refusal: it tries again
+ *   system refused as busy (Core NFC's code 203 within 2 seconds of the begin; a later 203 is a
+ *   dead session, see [maxSessionRenewals]), counted
+ *   from the first refusal: it tries again
  *   after 0.5, 1, 2, then every 3 seconds, the last try at this bound. On an iPhone the system may
  *   refuse a new session for a short time after one ended. It applies to the first session (the
  *   read stays in [io.lightine.tessera.emrtd.ChipReadState.Starting]; when the bound passes the read
@@ -185,8 +194,8 @@ public class CoreNfcReadSettings
     ) {
         /**
          * The defaults: [LinkLossPolicy.Resume] with 2 restarts, 400, 5000, 1000, 1500, 2000 and
-         * 4000 milliseconds, [CoreNfcPolling.AUTOMATIC], 2 session renewals, 10000, 6000 and 18000
-         * milliseconds.
+         * 4000 milliseconds, [CoreNfcPolling.AUTOMATIC], 1 session renewal, no renewal on a timer
+         * (0), 6000 and 18000 milliseconds.
          */
         public constructor() : this(LinkLossPolicy.Resume(DEFAULT_RESTARTS))
 
@@ -374,17 +383,17 @@ public class CoreNfcReadSettings
             /** The shortest [searchRestartMillis] other than [SEARCH_RESTART_OFF]: 2000. */
             public const val MIN_SEARCH_RESTART_MILLIS: Long = 2_000
 
-            /** The default [maxSessionRenewals]: 2. */
-            public const val DEFAULT_MAX_SESSION_RENEWALS: Int = 2
+            /** The default [maxSessionRenewals]: 1. */
+            public const val DEFAULT_MAX_SESSION_RENEWALS: Int = 1
 
             /** The [maxSessionRenewals] that turns renewals off: 0. */
             public const val SESSION_RENEWALS_OFF: Int = 0
 
-            /** The default [sessionRenewMillis]: 10000. */
-            public const val DEFAULT_SESSION_RENEW_MILLIS: Long = 10_000
-
             /** The [sessionRenewMillis] that turns the renewal on a timer off: 0. */
             public const val SESSION_RENEW_OFF: Long = 0
+
+            /** The default [sessionRenewMillis]: [SESSION_RENEW_OFF] (0), off. */
+            public const val DEFAULT_SESSION_RENEW_MILLIS: Long = SESSION_RENEW_OFF
 
             /** The shortest [sessionRenewMillis] other than [SESSION_RENEW_OFF]: 5000. */
             public const val MIN_SESSION_RENEW_MILLIS: Long = 5_000
