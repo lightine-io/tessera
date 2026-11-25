@@ -171,8 +171,18 @@ public sealed class ChipReadEnding {
     }
 
     /**
-     * The system ended the read: the NFC session timed out or was ended, NFC was turned off, or
-     * the app left the screen.
+     * The system ended the read, or the platform closed its link while the app had not cancelled.
+     * What leads here differs by platform:
+     * - iPhone: the system NFC session ended on its own: its time limit passed, the app went to
+     *   the background, or the system ended it for another reason; or NFC became unavailable
+     *   after a document was found.
+     * - Android: NFC was turned off during the read; the read's Activity was destroyed
+     *   ([NfcUnavailable.Reason.ACTIVITY_DESTROYED], the Activity-owning start only); or the app's
+     *   wait for a document passed with none found. An Activity that only pauses (the app goes
+     *   to the background, a dialog, the screen locking) does not end the read: the link drops as
+     *   when the document moves, and the read waits for the document's return.
+     * - Both: a link the platform closed under the read, with no cause it reports, ends here with
+     *   [NfcUnavailable.Reason.CLOSED]; never as [Cancelled] by the app.
      *
      * It carries no files, for the reason given at [Cancelled].
      *

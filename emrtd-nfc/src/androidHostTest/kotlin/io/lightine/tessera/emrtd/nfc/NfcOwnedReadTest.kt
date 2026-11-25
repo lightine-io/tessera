@@ -397,6 +397,73 @@ class NfcOwnedReadTest {
         }
 
     @Test
+    fun `while the screen is paused after a lost link the earlier tag is not retried, and it is once the screen resumes`() =
+        runTest {
+            val rig = rig()
+            val controller = Robolectric.buildActivity(Activity::class.java).create().start().resume()
+            val observer = OrderedObserver(rig.events)
+            rig.platform.next += ScriptedChipChannel(failOnCommand = 7, failure = android.nfc.TagLostException("Tag was lost."))
+            val read = rig.start(controller.get(), observer)
+            runCurrent()
+            val tag = aTag()
+            read.onTagDiscovered(tag)
+            advanceTimeBy(NfcReadSettings.DEFAULT_SETTLE_DELAY_MILLIS)
+            runCurrent()
+            assertEquals(1, rig.platform.tagsConnected.size)
+            controller.pause()
+
+            advanceTimeBy(5_000)
+            runCurrent()
+            assertEquals(1, rig.platform.tagsConnected.size, "no retry of the earlier tag while paused")
+            assertTrue(observer.endings.isEmpty())
+
+            controller.resume()
+            advanceTimeBy(NfcChipRead.SAME_TAG_RETRY_MILLIS)
+            runCurrent()
+            advanceTimeBy(NfcReadSettings.DEFAULT_SETTLE_DELAY_MILLIS)
+            runCurrent()
+            rig.main.idle()
+            assertEquals(listOf(tag, tag), rig.platform.tagsConnected.toList())
+            assertEquals(2, assertIs<ChipReadEnding.Complete>(observer.endings.single()).attempts)
+        }
+
+    @Test
+    fun `the paused screen does not change when a document that does not return ends the read`() =
+        runTest {
+            val rig = rig()
+            val controller = Robolectric.buildActivity(Activity::class.java).create().start().resume()
+            val observer = OrderedObserver(rig.events)
+            rig.platform.next += ScriptedChipChannel(failOnCommand = 7, failure = android.nfc.TagLostException("Tag was lost."))
+            val read = rig.start(controller.get(), observer)
+            runCurrent()
+            read.onTagDiscovered(aTag())
+            advanceTimeBy(NfcReadSettings.DEFAULT_SETTLE_DELAY_MILLIS)
+            runCurrent()
+            controller.pause()
+            settle()
+            rig.main.idle()
+            assertIs<ChipReadEnding.Partial>(observer.endings.single())
+            assertEquals(1, rig.platform.tagsConnected.size)
+        }
+
+    @Test
+    fun `an ending after the screen went away does not turn reader mode off on it`() =
+        runTest {
+            val rig = rig()
+            val observer = OrderedObserver(rig.events)
+            val read = rig.start(anActivity(), observer)
+            runCurrent()
+            // The screen is finishing or destroyed when another thread delivers the ending.
+            rig.activities.usable = false
+            read.cancel()
+            settle()
+            rig.main.idle()
+            assertIs<ChipReadEnding.Cancelled>(observer.endings.single())
+            assertTrue(rig.activities.disabledFor.isEmpty(), "no platform call on a screen that went away")
+            assertNull(read.heldActivity)
+        }
+
+    @Test
     fun `after the ending the read keeps no reference that stops the screen being collected`() =
         runTest {
             val rig = rig()

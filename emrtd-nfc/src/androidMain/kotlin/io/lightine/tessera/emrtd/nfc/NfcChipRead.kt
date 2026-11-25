@@ -147,7 +147,8 @@ import kotlin.jvm.JvmOverloads
  * - When the link is lost, follows [NfcReadSettings.linkLoss]: by default it waits for the
  *   document again and goes on, at most twice. The platform hands over a new `Tag` when the
  *   document comes back; when it does not, because the document never left the field, the SDK
- *   tries the earlier `Tag` again every second.
+ *   tries the earlier `Tag` again every second. The Activity-owning form does not try while its
+ *   Activity is paused (it has no reader mode then); the wait for the return keeps counting.
  * - When NFC is switched off during the read, ends with [ChipReadEnding.EndedBySystem] and
  *   [NfcUnavailable.Reason.DISABLED], instead of waiting for a document that cannot come.
  * - Closes the link on every path, and the observer is never blocked by it: the read starts the
@@ -381,7 +382,7 @@ public class NfcChipRead internal constructor(
     ): Found? {
         val start = env.now()
         var nextReport = since + ((start - since) / WAITING_REPORT_MILLIS + 1) * WAITING_REPORT_MILLIS
-        val retryAt = if (lostTag != null) start + SAME_TAG_RETRY_MILLIS else Long.MAX_VALUE
+        var retryAt = if (lostTag != null) start + SAME_TAG_RETRY_MILLIS else Long.MAX_VALUE
         while (!coordinator.isEnded) {
             val now = env.now()
             if (deadline != null && now >= deadline) {
@@ -402,7 +403,12 @@ public class NfcChipRead internal constructor(
                 coordinator.waiting(after - since)
                 while (nextReport <= after) nextReport += WAITING_REPORT_MILLIS
             }
-            if (lostTag != null && after >= retryAt) return Found(lostTag, earlier = true)
+            if (lostTag != null && after >= retryAt) {
+                // A paused screen has no reader mode, so the earlier Tag cannot answer: no retry
+                // until it resumes. The wait for the document's return goes on counting.
+                if (hold?.paused != true) return Found(lostTag, earlier = true)
+                retryAt = after + SAME_TAG_RETRY_MILLIS
+            }
         }
         return null
     }
@@ -501,6 +507,10 @@ public class NfcChipRead internal constructor(
         /** Whether this read turned reader mode on. Touched on the main thread only. */
         var enabled = false
 
+        /** Whether the Activity is paused (no reader mode until it resumes), as its callbacks report. */
+        @Volatile
+        var paused = false
+
         /** The Activity, or `null` once it is gone or the read let go of it. */
         val activity: Activity? get() = ref.get()
 
@@ -517,9 +527,13 @@ public class NfcChipRead internal constructor(
 
                 override fun onActivityStarted(activity: Activity) = Unit
 
-                override fun onActivityResumed(activity: Activity) = Unit
+                override fun onActivityResumed(activity: Activity) {
+                    if (activity === ref.get()) paused = false
+                }
 
-                override fun onActivityPaused(activity: Activity) = Unit
+                override fun onActivityPaused(activity: Activity) {
+                    if (activity === ref.get()) paused = true
+                }
 
                 override fun onActivityStopped(activity: Activity) = Unit
 
@@ -544,7 +558,10 @@ public class NfcChipRead internal constructor(
                     application?.unregisterActivityLifecycleCallbacks(callbacks)
                 }
                 val held = ref.get()
-                if (enabled && held != null) env.activities.disable(held)
+                // A destroyed or finishing Activity has no reader mode left to turn off, and the
+                // platform's call on it can throw: the ending may come from another thread after
+                // the Activity went away.
+                if (enabled && held != null && env.activities.isUsable(held)) env.activities.disable(held)
                 enabled = false
                 ref.clear()
                 after()
