@@ -10,7 +10,13 @@ import io.lightine.tessera.mrz.model.TD3
 import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.vocabulary.MrzField
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.decrementAndFetch
 import kotlin.jvm.JvmStatic
+
+// ChipAccessKey.state once clear() has begun.
+private const val CLEARED = -1
 
 /**
  * What opens a document's chip: values from its MRZ, or its card access number (CAN).
@@ -38,15 +44,20 @@ import kotlin.jvm.JvmStatic
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
+@OptIn(ExperimentalAtomicApi::class)
 public sealed class ChipAccessKey {
     // The bytes the access protocols derive their keys from. Internal: never part of the API.
     internal abstract val secret: ByteArray
 
-    private var cleared = false
+    // CLEARED once clear() has begun; otherwise the number of secretCopy() calls copying right
+    // now. clear() waits for those copies before it wipes, so no copy is ever half wiped, and no
+    // copy starts once the key is cleared. Atomic: the read thread and the thread that delivers
+    // the ending both touch it.
+    private val state = AtomicInt(0)
 
     /** `true` after [clear]: the key can no longer open a chip. */
     public val isCleared: Boolean
-        get() = cleared
+        get() = state.load() == CLEARED
 
     /**
      * Overwrites the stored values with zeros. A cleared key can no longer open a chip.
@@ -55,14 +66,27 @@ public sealed class ChipAccessKey {
      * them.
      */
     public fun clear() {
+        while (true) {
+            val now = state.load()
+            // A copy in progress takes a few bytes' time: wait for it, then wipe.
+            if (now == CLEARED || (now == 0 && state.compareAndSet(0, CLEARED))) break
+        }
         secret.fill(0)
-        cleared = true
     }
 
-    // A copy of the secret bytes for one protocol run; the caller wipes the copy.
+    // A copy of the secret bytes for one protocol run; the caller wipes the copy. Refused once
+    // clear() has begun; a copy that started before is whole, because clear() waits for it.
     internal fun secretCopy(): ByteArray {
-        check(!cleared) { "The chip access key was cleared" }
-        return secret.copyOf()
+        while (true) {
+            val now = state.load()
+            check(now != CLEARED) { "The chip access key was cleared" }
+            if (state.compareAndSet(now, now + 1)) break
+        }
+        try {
+            return secret.copyOf()
+        } finally {
+            state.decrementAndFetch()
+        }
     }
 
     /**
