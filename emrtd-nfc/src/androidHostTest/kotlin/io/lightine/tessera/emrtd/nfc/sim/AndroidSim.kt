@@ -23,6 +23,7 @@ import kotlinx.coroutines.test.runCurrent
  */
 internal class ScriptedIsoDep(
     private val sim: AndroidSim,
+    private val handle: TagHandle,
 ) : IsoDepChannel {
     override val maxTransceiveLength: Int = 261
     override val isExtendedLengthApduSupported: Boolean = false
@@ -34,6 +35,10 @@ internal class ScriptedIsoDep(
     var closeCalls = 0
 
     override fun connect() {
+        handle.call("connect", sim.now())
+        // The platform's connect on a deactivated tag: "tag already deactivated", ERROR_DISCONNECT,
+        // which BasicTagTechnology.connect throws as a bare IOException.
+        if (handle.dead) throw java.io.IOException()
         if (sim.paused) throw TagLostException("Tag was lost.")
         sim.script.newLink()
         isConnected = true
@@ -46,6 +51,8 @@ internal class ScriptedIsoDep(
     private val limit: Long get() = timeouts.lastOrNull()?.toLong() ?: PLATFORM_DEFAULT_TIMEOUT_MILLIS
 
     override fun transceive(command: ByteArray): ByteArray {
+        handle.call("transceive", sim.now())
+        if (handle.dead) throw TagLostException("Tag was lost.")
         if (!isConnected) throw IllegalStateException("Call connect() first!")
         if (!sim.enabled || sim.paused) throw java.io.IOException("Transceive failed")
         return when (val reply = sim.script.respond(command, sim.now())) {
@@ -73,11 +80,50 @@ internal class ScriptedIsoDep(
     override fun close() {
         closeCalls++
         isConnected = false
+        // The platform's close is a reconnect: deactivate to sleep, then select again. When the
+        // chip does not answer the select, the tag is deactivated for good.
+        handle.call("close", sim.now())
+        if (!handle.dead && sim.reconnectFailures > 0) {
+            sim.reconnectFailures--
+            handle.dead = true
+        }
     }
 
     companion object {
         /** The platform's ISO-DEP default before the transport sets its own (DES a37). */
         const val PLATFORM_DEFAULT_TIMEOUT_MILLIS = 618L
+    }
+}
+
+/**
+ * The platform's state of one discovered tag (its native handle): every call made on it, and
+ * whether the platform deactivated it. Each call on a handle postpones the platform's presence
+ * check by a whole delay (the NFC service's presence-check watchdog pauses for the call and waits a
+ * full delay after it); a deactivated handle fails that check at once (TES-346).
+ */
+internal class TagHandle(
+    createdAt: Long,
+) {
+    @Volatile var dead = false
+
+    /** The calls made on the handle, in order. */
+    val calls: MutableList<String> = java.util.Collections.synchronizedList(mutableListOf())
+
+    /** Calls made after the handle was deactivated (the close that deactivated it excluded). */
+    @Volatile var callsWhenDead = 0
+
+    @Volatile var lastCallAt = createdAt
+
+    /** When the platform's presence check found the handle gone; `null` while it has not. */
+    @Volatile var lostAt: Long? = null
+
+    fun call(
+        name: String,
+        at: Long,
+    ) {
+        calls += name
+        if (dead) callsWhenDead++
+        lastCallAt = at
     }
 }
 
@@ -109,6 +155,14 @@ internal class AndroidSim(
     @Volatile var paused = false
     val channels = mutableListOf<ScriptedIsoDep>()
 
+    private val handleOf = java.util.IdentityHashMap<Tag, TagHandle>()
+
+    /** The platform's handle of each tag the read connected to, in the order of their first use. */
+    val handles: MutableList<TagHandle> = java.util.Collections.synchronizedList(mutableListOf())
+
+    /** How many of the next closes fail their reconnect, which deactivates the tag (TES-346). */
+    @Volatile var reconnectFailures = 0
+
     /** Tags that speak no ISO-DEP. */
     val notIsoDep = mutableSetOf<Tag>()
 
@@ -122,7 +176,8 @@ internal class AndroidSim(
                 onReleased: () -> Unit,
             ): IsoDepConnection? {
                 if (tag in notIsoDep) return null
-                val channel = ScriptedIsoDep(this@AndroidSim).also { channels += it }
+                val handle = synchronized(handleOf) { handleOf.getOrPut(tag) { TagHandle(now()).also { handles += it } } }
+                val channel = ScriptedIsoDep(this@AndroidSim, handle).also { channels += it }
                 return connectionOver(channel, timeoutMillis, dispatcher, onReleased)
             }
         }

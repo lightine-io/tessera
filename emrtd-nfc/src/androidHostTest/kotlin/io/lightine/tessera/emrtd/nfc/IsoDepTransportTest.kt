@@ -76,6 +76,12 @@ private class FakeChannel(
         connected = false
         closed.countDown()
     }
+
+    var forgetCalls = 0
+
+    override fun forget() {
+        forgetCalls++
+    }
 }
 
 // advanceUntilIdle runs the platform close that close() hands to the I/O dispatcher.
@@ -360,6 +366,38 @@ class IsoDepTransportTest {
 
             assertEquals(NfcTagLost, error)
             assertEquals(0, channel.setTimeoutCalls)
+        }
+
+    @Test
+    fun `a connect that threw leaves nothing to close, so open makes no further platform call (TES-346)`() =
+        runTest {
+            // The platform's connect on a tag it deactivated; a close would be one more call on it,
+            // which puts off the platform's check that the tag is gone.
+            val channel = FakeChannel().apply { connectFailure = IOException() }
+            val released =
+                java.util.concurrent.atomic
+                    .AtomicInteger()
+            val signalling = ReleaseSignallingChannel(channel) { released.incrementAndGet() }
+
+            errorOf { IsoDepTransport.open(signalling, 3_000, StandardTestDispatcher(testScheduler)) }
+            advanceUntilIdle()
+
+            assertEquals(listOf("connect"), channel.calls)
+            assertEquals(0, channel.closeCalls)
+            assertEquals(1, channel.forgetCalls)
+            assertEquals(1, released.get(), "the release is still reported, so the next link does not wait for it")
+        }
+
+    @Test
+    fun `a time limit refused after a working connect still closes the link (TES-346)`() =
+        runTest {
+            val channel = FakeChannel().apply { setTimeoutFailure = IllegalArgumentException("bad") }
+
+            errorOf { IsoDepTransport.open(channel, 3_000, StandardTestDispatcher(testScheduler)) }
+            advanceUntilIdle()
+
+            assertEquals(1, channel.closeCalls)
+            assertEquals(0, channel.forgetCalls)
         }
 
     // --- A failed transport stays failed ------------------------------------------------------

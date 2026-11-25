@@ -155,11 +155,17 @@ import kotlin.jvm.JvmOverloads
  *   about one try every 2 seconds, for at most [NfcReadSettings.waitForReturnMillis] from the
  *   first unanswered try; then the read ends with [ChipReadEnding.Failed] and, when no try got past
  *   those commands, [io.lightine.tessera.types.errors.NfcNoAnswer].
+ * - A `Tag` the platform can no longer connect to is let go at once and never called again: each
+ *   call on it would put off the platform's own check that the tag is gone, and with it the search
+ *   for the document. The read then waits for the platform to find the document again, within the
+ *   same time bound, and reports the state it holds (`NoAnswerYet` or `LinkLost`) again every 2
+ *   seconds.
  * - When the link is lost, follows [NfcReadSettings.linkLoss]: by default it waits for the
  *   document again and goes on, at most twice. The platform hands over a new `Tag` when the
  *   document comes back; when it does not, because the document never left the field, the SDK
- *   tries the earlier `Tag` again every second. The Activity-owning form does not try while its
- *   Activity is paused (it has no reader mode then); the wait for the return keeps counting.
+ *   tries the earlier `Tag` again every second, until the platform can no longer connect to it.
+ *   The Activity-owning form does not try while its Activity is paused (it has no reader mode
+ *   then); the wait for the return keeps counting.
  * - When NFC is switched off during the read, ends with [ChipReadEnding.EndedBySystem] and
  *   [NfcUnavailable.Reason.DISABLED], instead of waiting for a document that cannot come.
  * - Closes the link on every path, and the observer is never blocked by it: the read starts the
@@ -335,6 +341,8 @@ public class NfcChipRead internal constructor(
         var failedConnects = 0
         while (!coordinator.isEnded) {
             val found = awaitTag(adapter, waitingSince, deadline, lostTag, linkedOnce, retryMillis) ?: return
+            // A new discovery makes the earlier Tag out of date: only the new one is tried from now on.
+            if (!found.earlier) lostTag = null
             val release = CompletableDeferred<Unit>()
             // The link starts with the short limit for the commands before the key is used.
             val connection = env.platform.connectionOf(found.tag, settings.effectiveTimeoutBeforeAccessMillis) { release.complete(Unit) }
@@ -344,9 +352,18 @@ public class NfcChipRead internal constructor(
             }
             val transport: IsoDepTransport
             if (found.earlier) {
-                // The same Tag after a lost link: try the link quietly; the person sees LinkLost
-                // until it is up.
-                transport = open(connection, release).getOrNull() ?: continue
+                // The same Tag after a lost link or an unanswered try: try the link quietly; the
+                // person sees LinkLost or NoAnswerYet until it is up.
+                val reopened = open(connection, release).getOrNull()
+                if (reopened == null) {
+                    // The platform can no longer connect to this Tag: it has lost it. Let go of it
+                    // at once. Every call on it postpones the platform's presence check, the only
+                    // thing that makes it notice the tag is gone and search again; so nothing more
+                    // is called on it, and the read waits for a new discovery (TES-346).
+                    lostTag = null
+                    continue
+                }
+                transport = reopened
                 if (!holdLink(transport)) return
                 coordinator.documentFound()
                 delay(settings.settleDelayMillis)
@@ -401,7 +418,8 @@ public class NfcChipRead internal constructor(
     /**
      * Waits for a tag: a new discovery, or after a lost link the earlier [lostTag] again, every
      * [retryMillis] while no new one comes. Every [WAITING_REPORT_MILLIS] it reports the
-     * time waited and checks that NFC is still on. `null` when the read ended, here or elsewhere.
+     * time waited (or, after a link with no [lostTag] left to try, the state the read holds again)
+     * and checks that NFC is still on. `null` when the read ended, here or elsewhere.
      */
     private suspend fun awaitTag(
         adapter: NfcAdapter,
@@ -430,8 +448,15 @@ public class NfcChipRead internal constructor(
             val after = env.now()
             if (after >= nextReport) {
                 if (endIfNfcOff(adapter)) return null
-                // While the read waits after a lost link, LinkLost stays: the coordinator drops this.
-                coordinator.waiting(after - since)
+                if (linkedOnce && lostTag == null) {
+                    // The earlier Tag was let go, so no try comes until the platform finds the
+                    // document again: the state the read holds (NoAnswerYet or LinkLost) is
+                    // reported again, so the app is never left without news.
+                    coordinator.connectionFailed()
+                } else {
+                    // While the read waits after a lost link, LinkLost stays: the coordinator drops this.
+                    coordinator.waiting(after - since)
+                }
                 while (nextReport <= after) nextReport += WAITING_REPORT_MILLIS
             }
             if (lostTag != null && after >= retryAt) {

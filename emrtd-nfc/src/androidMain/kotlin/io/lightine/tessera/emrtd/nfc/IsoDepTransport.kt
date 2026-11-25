@@ -165,6 +165,10 @@ public class IsoDepTransport internal constructor(
 
     private val platformClosed = AtomicBoolean(false)
 
+    // Set when the platform's connect threw: nothing is connected, so close makes no platform call.
+    @Volatile
+    private var connectFailed = false
+
     // Guarded by [lock]: whether the one connect was tried, and the failure that ended the transport.
     private var connectTried = false
     private var failure: ApduTransportException? = null
@@ -217,14 +221,16 @@ public class IsoDepTransport internal constructor(
      * `CLOSED`, a command blocked in the platform throws it too when it returns, and nothing more
      * is sent. Safe to call more than once and from any thread, the main thread included: it
      * returns at once and hands the platform's close, which talks to the tag and can wait for a
-     * blocked exchange up to the time limit, to the I/O dispatcher.
+     * blocked exchange up to the time limit, to the I/O dispatcher. When the platform's connect
+     * failed, nothing is connected and the platform is not called: every call on a tag the
+     * platform has lost postpones the platform's own check that the tag is gone.
      */
     override fun close() {
         closed = true
         if (!platformClosed.compareAndSet(false, true)) return
         CoroutineScope(ioDispatcher).launch {
             try {
-                channel.close()
+                if (connectFailed) channel.forget() else channel.close()
             } catch (_: IOException) {
                 // Nothing is left to release.
             } catch (_: RuntimeException) {
@@ -261,7 +267,14 @@ public class IsoDepTransport internal constructor(
     private fun connectOnce() {
         connectTried = true
         call("connect") {
-            if (!channel.isConnected) channel.connect()
+            if (!channel.isConnected) {
+                try {
+                    channel.connect()
+                } catch (e: Exception) {
+                    connectFailed = true
+                    throw e
+                }
+            }
             channel.setTimeout(timeoutMillis.toInt())
         }
     }
@@ -328,8 +341,9 @@ public class IsoDepTransport internal constructor(
          *
          * @param tag The tag from the `NfcAdapter.ReaderCallback`.
          * @param timeoutMillis How long to wait for the chip to answer one command, in milliseconds.
-         * @return A connected transport. When the connect fails or the caller is cancelled during
-         *   it, the tag's connection is closed before this throws.
+         * @return A connected transport. When the caller is cancelled during the connect, or the
+         *   time limit cannot be set after it, the tag's connection is closed before this throws;
+         *   when the connect itself fails, nothing is connected and nothing more is sent to the tag.
          * @throws ApduTransportException with [NfcUnavailable] (`NOT_SUPPORTED`) when the tag does not
          *   speak ISO-DEP, or another error from the list in the class description when it cannot
          *   be connected.
@@ -359,8 +373,9 @@ public class IsoDepTransport internal constructor(
                     withContext(ioDispatcher) { transport.connectOnce() }
                 }
             } catch (e: Throwable) {
-                // A connect that failed, or that finished after the caller was cancelled, may have
-                // left the tag connected: release it, since nobody else holds the transport.
+                // A connect that finished after the caller was cancelled, or a time limit refused
+                // after it, left the tag connected: release it, since nobody else holds the
+                // transport. A connect that threw left nothing connected: close only lets go.
                 transport.close()
                 throw e
             }

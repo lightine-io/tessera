@@ -432,6 +432,80 @@ class NfcOwnedReadTest {
             assertEquals(2, assertIs<ChipReadEnding.Complete>(observer.endings.single()).attempts)
         }
 
+    /** A read that lost its link mid-read and let go of the earlier tag, whose connect failed: it waits for a new one. */
+    private fun TestScope.waitingForANewTag(
+        rig: Rig,
+        activity: Activity,
+        observer: OrderedObserver,
+    ): NfcChipRead {
+        rig.platform.next += ScriptedChipChannel(failOnCommand = 7, failure = android.nfc.TagLostException("Tag was lost."))
+        val read = rig.start(activity, observer)
+        runCurrent()
+        val tag = aTag()
+        read.onTagDiscovered(tag)
+        advanceTimeBy(NfcReadSettings.DEFAULT_SETTLE_DELAY_MILLIS)
+        runCurrent()
+        rig.platform.gone += tag
+        advanceTimeBy(NfcChipRead.SAME_TAG_RETRY_MILLIS + 1)
+        runCurrent()
+        assertEquals(listOf(tag, tag), rig.platform.tagsConnected.toList(), "one try of the earlier tag")
+        return read
+    }
+
+    @Test
+    fun `a pause while the read waits for a new tag makes no call, and a tag found after the resume completes the read`() =
+        runTest {
+            val rig = rig()
+            val controller =
+                Robolectric
+                    .buildActivity(Activity::class.java)
+                    .create()
+                    .start()
+                    .resume()
+            val observer = OrderedObserver(rig.events)
+            val read = waitingForANewTag(rig, controller.get(), observer)
+            controller.pause()
+            advanceTimeBy(5_000)
+            runCurrent()
+            rig.main.idle()
+            assertEquals(2, rig.platform.tagsConnected.size, "nothing is tried while waiting for a new tag")
+            assertEquals(listOf("enable"), rig.events.filter { it == "enable" || it == "disable" }, "reader mode is never switched")
+            assertTrue(observer.endings.isEmpty())
+
+            controller.resume()
+            read.onTagDiscovered(aTag())
+            advanceTimeBy(NfcReadSettings.DEFAULT_SETTLE_DELAY_MILLIS)
+            runCurrent()
+            rig.main.idle()
+            assertEquals(2, assertIs<ChipReadEnding.Complete>(observer.endings.single()).attempts)
+            assertEquals(3, rig.platform.tagsConnected.size)
+            assertEquals(0, (rig.platform.connections[1] as ScriptedChipChannel).closeCalls, "no platform call after the failed connect")
+        }
+
+    @Test
+    fun `a screen destroyed while the read waits for a new tag ends it at once with no further call on the tag`() =
+        runTest {
+            val rig = rig()
+            val controller =
+                Robolectric
+                    .buildActivity(Activity::class.java)
+                    .create()
+                    .start()
+                    .resume()
+            val observer = OrderedObserver(rig.events)
+            val read = waitingForANewTag(rig, controller.get(), observer)
+            controller.pause().stop().destroy()
+            runCurrent()
+            rig.main.idle()
+
+            val ending = assertIs<ChipReadEnding.EndedBySystem>(observer.endings.single())
+            assertEquals(NfcUnavailable(NfcUnavailable.Reason.ACTIVITY_DESTROYED), ending.reason)
+            assertTrue(read.isEnded)
+            settle()
+            assertEquals(2, rig.platform.tagsConnected.size)
+            assertEquals(1, rig.activities.enabledFor.size)
+        }
+
     @Test
     fun `the paused screen does not change when a document that does not return ends the read`() =
         runTest {

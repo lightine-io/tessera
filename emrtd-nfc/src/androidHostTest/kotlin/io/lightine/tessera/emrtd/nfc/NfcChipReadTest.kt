@@ -556,7 +556,8 @@ class NfcChipReadTest {
 
             assertIs<ChipReadEnding.Complete>(observer.endings.single())
             assertEquals(again, rig.platform.tagsConnected.last())
-            assertEquals(1, (rig.platform.connections.first() as ScriptedChipChannel).closeCalls, "the failed link was not closed")
+            // A connect that threw left nothing connected: the link is let go with no platform call.
+            assertEquals(0, (rig.platform.connections.first() as ScriptedChipChannel).closeCalls, "a failed connect was closed")
             assertTrue(observer.updates.all { it.attempt == 1 }, "a failed connect uses no attempt")
         }
 
@@ -578,7 +579,10 @@ class NfcChipReadTest {
             val ending = assertIs<ChipReadEnding.Failed>(observer.endings.single())
             assertEquals(NfcTagLost, ending.error)
             assertEquals(0, ending.attempts)
-            assertTrue(rig.platform.connections.all { (it as ScriptedChipChannel).closeCalls == 1 })
+            assertTrue(
+                rig.platform.connections.all { (it as ScriptedChipChannel).closeCalls == 0 },
+                "no platform call after a failed connect",
+            )
         }
 
     // --- The document waits -----------------------------------------------------------------------
@@ -697,7 +701,7 @@ class NfcChipReadTest {
             advanceTimeBy(NfcReadSettings.DEFAULT_WAIT_FOR_RETURN_MILLIS - 1)
             runCurrent()
             assertTrue(observer.endings.isEmpty(), "ended before the return wait ran out")
-            // The quiet tries of the earlier tag show nothing: LinkLost stays.
+            // LinkLost stays, reported again every 2 seconds once the earlier tag was let go.
             assertTrue(observer.states().last() is ChipReadState.LinkLost)
             advanceTimeBy(1)
             runCurrent()
@@ -705,7 +709,9 @@ class NfcChipReadTest {
             val ending = assertIs<ChipReadEnding.Partial>(observer.endings.single())
             assertEquals(NfcTagLost, ending.stoppedBy)
             assertEquals(lostAt + NfcReadSettings.DEFAULT_WAIT_FOR_RETURN_MILLIS, currentTime)
-            assertTrue(rig.platform.connections.all { (it as ScriptedChipChannel).closeCalls == 1 })
+            // One try of the earlier tag: its connect failed, so it was let go and never called again.
+            assertEquals(2, rig.platform.connections.size)
+            assertEquals(listOf(1, 0), rig.platform.connections.map { (it as ScriptedChipChannel).closeCalls })
         }
 
     @Test

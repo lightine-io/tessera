@@ -750,6 +750,8 @@ class CatalogueAndroidTest {
      * read ends as EndedBySystem; the code treats the platform turning reader mode off as a lost
      * link and goes on when the document is found again within waitForReturnMillis. This pins the
      * CURRENT behaviour: a pause of 10 s mid-read, then the screen back, ends Complete in attempt 2.
+     * The earlier Tag fails its first connect while paused and is let go (TES-346); when the screen
+     * is back, reader mode searches again and the platform hands over a new Tag.
      */
     @Test
     fun g07_openDecision_activityPausedTenSecondsMidRead_currentlyResumesAndCompletes() =
@@ -761,6 +763,7 @@ class CatalogueAndroidTest {
             val pausedUntil = now() + 12_000
             while (now() < pausedUntil) step(50)
             paused = false
+            read.onTagDiscovered(AndroidSim.aTag())
             runUntilEnded(recorder)
             assertNull(recorder.checkPromises())
             assertDeviceChecksPass(recorder.ending)
