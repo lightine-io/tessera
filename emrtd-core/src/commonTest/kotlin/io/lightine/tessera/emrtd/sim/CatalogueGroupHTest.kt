@@ -96,8 +96,9 @@ class CatalogueGroupHTest {
         val reference = driveFlow(clean).complete
         val commands = clean.chip.received.size
         assertTrue(commands > 10, "the reference read sent $commands commands")
-        // The first command of the access protocol: BAC's GET CHALLENGE or PACE's MSE:Set AT.
-        val firstAccess = clean.chip.received.indexOfFirst { (it[1].toInt() and 0xFF) in setOf(0x84, 0x22) }
+        // The first command that uses the key: BAC's EXTERNAL AUTHENTICATE or PACE's first GENERAL
+        // AUTHENTICATE. GET CHALLENGE and MSE:Set AT come before it, with the plain commands.
+        val firstAccess = clean.chip.received.indexOfFirst { (it[1].toInt() and 0xFF) in setOf(0x82, 0x86) }
         assertTrue(firstAccess > 0, "plain commands come before access")
         for (k in 0 until commands) {
             val flow = build(emptyList())

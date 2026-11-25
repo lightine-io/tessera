@@ -54,6 +54,16 @@ private fun assertNoDocumentData(text: String) {
     for (value in values) assertTrue(value !in text, "telemetry carries a document value: $text")
 }
 
+// Virtual time of the GET CHALLENGE scenarios on the device-shaped chip, from the document found:
+// F, silent once then complete: 7.345 s (the silent try ends 1.5 s after GET CHALLENGE, about 1.9 s
+// after found; under the old 5 s limit that try alone took 3.5 s longer and spent a restart). G,
+// never answered:
+// 8 tries of about 2.24 s (300 pause, 400 settle, the plain commands, 1500 limit) within the 15 s
+// return wait counted from the first, ending 17.588 s after found, with no restart used.
+private const val TOTAL_F = 7_345L
+private const val TRIES_G = 8
+private const val END_G = 17_588L
+
 private object Shapes {
     val externalAuthenticate: (ChipCommand) -> Boolean = { it.ins == 0x82 }
     val plainSelectOfTheApplication: (ChipCommand) -> Boolean = { !it.secured && it.ins == 0xA4 && it.apdu?.p1 == 0x04 }
@@ -244,6 +254,17 @@ class CatalogueAndroidTest {
 
     // --- Before access: a short time limit, and tries that cost no restart (TES-346) ----------------
 
+    /** State names with the protocol or the tries, repeats folded. */
+    private fun namesWithValues(r: SimRecorder): List<String> =
+        r.states
+            .map {
+                when (it) {
+                    is ChipReadState.OpeningAccess -> "OpeningAccess(${it.protocol})"
+                    is ChipReadState.NoAnswerYet -> "NoAnswerYet(${it.tries})"
+                    else -> it::class.simpleName ?: "?"
+                }
+            }.fold(mutableListOf<String>()) { acc, name -> acc.also { if (it.lastOrNull() != name) it += name } }
+
     private fun AndroidSim.foundAt(r: SimRecorder): Long = assertNotNull(r.firstAt<ChipReadState.DocumentFound>())
 
     /**
@@ -337,11 +358,11 @@ class CatalogueAndroidTest {
             assertTrue(r.states.drop(8).none { it is ChipReadState.NoAnswerYet })
         }
 
-    /** Silence once BAC started still spends the budget, with the general 5 s limit (regression). */
+    /** Silence once the key is used (EXTERNAL AUTHENTICATE) still spends the budget, with the general 5 s limit (regression). */
     @Test
-    fun noAnswer_c_silenceAfterBacStarted_spendsTheBudgetWithTheFiveSecondLimit() =
+    fun noAnswer_c_silenceAtExternalAuthenticate_spendsTheBudgetWithTheFiveSecondLimit() =
         simTest { flow ->
-            script.fault(ChipFaultAction.Silence, times = 99) { it.ins == 0x84 }
+            script.fault(ChipFaultAction.Silence, times = 99) { it.ins == 0x82 }
             val r = read(deviceOptions(flow))
             val ending = assertIs<ChipReadEnding.Failed>(r.ending)
             assertEquals(NfcTagLost, ending.error)
@@ -349,20 +370,28 @@ class CatalogueAndroidTest {
             assertEquals(3, script.links)
             assertEquals(listOf(2, 1), r.states.filterIsInstance<ChipReadState.LinkLost>().map { it.restartsLeft })
             assertTrue(r.states.none { it is ChipReadState.NoAnswerYet })
-            val challenges = script.exchanges.filter { it.command.ins == 0x84 }
+            val authentications = script.exchanges.filter { it.command.ins == 0x82 }
             val losses = r.updates.filter { it.value.state is ChipReadState.LinkLost }
-            assertEquals(challenges.take(2).map { it.sentAtMillis + 5_000 }, losses.map { it.atMillis }, "GET CHALLENGE waits 5 s")
+            assertEquals(
+                authentications.take(2).map { it.sentAtMillis + 5_000 },
+                losses.map { it.atMillis },
+                "EXTERNAL AUTHENTICATE waits 5 s",
+            )
             assertTrue(channels.all { it.timeouts == listOf(1_500, 5_000) }, "${channels.map { it.timeouts }}")
         }
 
-    /** A slow but legal PACE step (3 s) is never cut by the 1.5 s limit before access. */
+    /**
+     * Slow but legal PACE steps (3 s each, all four GENERAL AUTHENTICATE steps) are never cut by the
+     * 1.5 s limit: the general limit is set right before the first of them. MSE:Set AT, before it,
+     * answers in 1 s, within the short limit.
+     */
     @Test
     fun noAnswer_d_paceStepsOfThreeSeconds_areNotCutByTheLimitBeforeAccess() =
         simTest(build = { keys -> FakeReadFlowChip.build(chipCrypto(), keys, FlowAccess.PACE_ONLY) }) { flow ->
             val setAt: (ChipCommand) -> Boolean = { it.ins == 0x22 && it.apdu?.p2 == 0xA4 }
             val generalAuthenticate: (ChipCommand) -> Boolean = { it.ins == 0x86 }
-            script.fault(ChipFaultAction.Delay(3_000), match = setAt)
-            script.fault(ChipFaultAction.Delay(3_000), match = generalAuthenticate)
+            script.fault(ChipFaultAction.Delay(1_000), match = setAt)
+            script.fault(ChipFaultAction.Delay(3_000), times = 4, match = generalAuthenticate)
             val r = read(ChipReadOptions(FakeReadFlowChip.mrzKey(), setOf(1, 2), listOf(flow.anchor), CHECK_TIME))
             val read = assertIs<ChipReadEnding.Complete>(r.ending, "${r.ending}").read
             assertEquals(ChipAccessProtocol.PACE, read.access.protocol)
@@ -370,7 +399,123 @@ class CatalogueAndroidTest {
             assertEquals(1, script.links)
             assertTrue(r.states.none { it is ChipReadState.NoAnswerYet || it is ChipReadState.LinkLost }, "${r.stateNames}")
             assertEquals(listOf(1_500, 5_000), channels.single().timeouts)
-            assertTrue(script.exchanges.count { it.reply.delayMillis == 3_000L } == 2)
+            assertEquals(4, script.exchanges.count { it.reply.delayMillis == 3_000L })
+            assertEquals(1, script.exchanges.count { it.reply.delayMillis == 1_000L })
+        }
+
+    /**
+     * The device case (TES-346): the chip answers the plain commands (EF.CardAccess not found,
+     * EF.DIR, the application), then has no answer for BAC's GET CHALLENGE. Before, the read waited
+     * 5 s and spent a restart. Now GET CHALLENGE is before the key is used: the try waits 1.5 s,
+     * says NoAnswerYet, costs no restart, and the next try completes.
+     */
+    @Test
+    fun noAnswer_f_getChallengeSilentOnceAfterThePlainCommands_triesAgainFreeAndCompletes() =
+        simTest { flow ->
+            script.fault(ChipFaultAction.Silence) { it.ins == 0x84 }
+            val r = read(deviceOptions(flow))
+            assertDeviceChecksPass(r.ending)
+            assertEquals(1, r.ending.attempts)
+            assertEquals(2, script.links)
+            assertTrue(r.states.none { it is ChipReadState.LinkLost }, "${r.stateNames}")
+            assertEquals(listOf(1), r.states.filterIsInstance<ChipReadState.NoAnswerYet>().map { it.tries })
+            val challenge = script.exchanges.first { it.command.ins == 0x84 }
+            assertTrue(challenge.command.indexInLink > 0, "plain commands were answered first")
+            val noAnswer = r.updates.single { it.value.state is ChipReadState.NoAnswerYet }
+            assertEquals(challenge.sentAtMillis + 1_500, noAnswer.atMillis, "GET CHALLENGE waits 1.5 s, not 5 s")
+            // The general limit is set only on the link that went past GET CHALLENGE.
+            assertEquals(listOf(listOf(1_500), listOf(1_500, 5_000)), channels.map { it.timeouts })
+            assertEquals(
+                listOf(
+                    "Starting",
+                    "WaitingForDocument",
+                    "DocumentFound",
+                    "Connecting",
+                    "OpeningAccess(null)",
+                    "OpeningAccess(BAC)",
+                    "NoAnswerYet(1)",
+                    "OpeningAccess(BAC)",
+                    "ReadingFile",
+                ),
+                namesWithValues(r).take(9),
+            )
+            val fractions = r.updates.map { it.value.progress.fraction }
+            assertEquals(fractions.sorted(), fractions, "progress never goes back")
+            assertEquals(r.ending.attempts, r.updates.maxOf { it.value.attempt })
+            assertEquals(TOTAL_F, r.endings.single().atMillis - foundAt(r), "virtual time from found to complete")
+        }
+
+    /** GET CHALLENGE never answered: short free tries for the return wait, then Failed, no restart used. */
+    @Test
+    fun noAnswer_g_getChallengeNeverAnswered_shortTriesUntilTheReturnWaitThenFailed() =
+        simTest { flow ->
+            script.fault(ChipFaultAction.Silence, times = 99) { it.ins == 0x84 }
+            val r = read(deviceOptions(flow))
+            val ending = assertIs<ChipReadEnding.Failed>(r.ending)
+            assertEquals(NfcTagLost, ending.error)
+            assertEquals(1, ending.attempts)
+            assertTrue(r.states.none { it is ChipReadState.LinkLost })
+            assertEquals(0, script.exchanges.count { it.command.ins == 0x82 }, "the key was never used")
+            assertTrue(channels.all { it.timeouts == listOf(1_500) }, "${channels.map { it.timeouts }}")
+            val tries = r.states.filterIsInstance<ChipReadState.NoAnswerYet>().map { it.tries }
+            assertEquals((1..script.links).toList(), tries)
+            assertEquals(TRIES_G, script.links)
+            val challenges = script.exchanges.filter { it.command.ins == 0x84 }
+            val seen = r.updates.filter { it.value.state is ChipReadState.NoAnswerYet }.map { it.atMillis }
+            assertEquals(challenges.map { it.sentAtMillis + 1_500 }, seen, "each try waits the 1.5 s limit at GET CHALLENGE")
+            // The protocol shows on the first try only; then NoAnswerYet holds until the end, with
+            // no OpeningAccess in between.
+            assertEquals(
+                listOf("Starting", "WaitingForDocument", "DocumentFound", "Connecting", "OpeningAccess(null)", "OpeningAccess(BAC)") +
+                    (1..TRIES_G).map { "NoAnswerYet($it)" },
+                namesWithValues(r),
+            )
+            assertEquals(END_G, r.endings.single().atMillis - foundAt(r), "virtual time from found to the ending")
+        }
+
+    /** A GET CHALLENGE answered with an error status word is an answer, not silence: as before. */
+    @Test
+    fun noAnswer_h_getChallengeAnsweredWithAnErrorStatusWord_isARefusalAsBefore() =
+        simTest { flow ->
+            script.fault(ChipFaultAction.Status(0x6982)) { it.ins == 0x84 }
+            val r = read(deviceOptions(flow))
+            val error = assertIs<ChipReadEnding.KeyNotAccepted>(r.ending, "${r.ending}").error
+            assertEquals(ChipAccessProtocol.BAC, error.protocol)
+            assertEquals(0x6982, error.statusWord)
+            assertEquals(1, script.links)
+            assertTrue(r.states.none { it is ChipReadState.NoAnswerYet || it is ChipReadState.LinkLost })
+            assertEquals(0, script.exchanges.count { it.command.ins == 0x82 })
+        }
+
+    /** PACE: MSE:Set AT silent once is before the key is used: 1.5 s, a free try, then complete. */
+    @Test
+    fun noAnswer_i_mseSetAtSilentOnce_triesAgainFreeAndCompletes() =
+        simTest(build = { keys -> FakeReadFlowChip.build(chipCrypto(), keys, FlowAccess.PACE_ONLY) }) { flow ->
+            script.fault(ChipFaultAction.Silence) { it.ins == 0x22 && it.apdu?.p2 == 0xA4 }
+            val r = read(ChipReadOptions(FakeReadFlowChip.mrzKey(), setOf(1, 2), listOf(flow.anchor), CHECK_TIME))
+            val read = assertIs<ChipReadEnding.Complete>(r.ending, "${r.ending}").read
+            assertEquals(ChipAccessProtocol.PACE, read.access.protocol)
+            assertEquals(1, r.ending.attempts)
+            assertEquals(2, script.links)
+            assertTrue(r.states.none { it is ChipReadState.LinkLost })
+            assertEquals(listOf(1), r.states.filterIsInstance<ChipReadState.NoAnswerYet>().map { it.tries })
+            val setAt = script.exchanges.first { it.command.ins == 0x22 }
+            assertEquals(setAt.sentAtMillis + 1_500, r.updates.single { it.value.state is ChipReadState.NoAnswerYet }.atMillis)
+            assertEquals(listOf(listOf(1_500), listOf(1_500, 5_000)), channels.map { it.timeouts })
+        }
+
+    /** PACE: the first GENERAL AUTHENTICATE silent is past the boundary: 5 s, and a restart is spent. */
+    @Test
+    fun noAnswer_j_firstGeneralAuthenticateSilentOnce_spendsARestartWithTheFiveSecondLimit() =
+        simTest(build = { keys -> FakeReadFlowChip.build(chipCrypto(), keys, FlowAccess.PACE_ONLY) }) { flow ->
+            script.fault(ChipFaultAction.Silence) { it.ins == 0x86 }
+            val r = read(ChipReadOptions(FakeReadFlowChip.mrzKey(), setOf(1, 2), listOf(flow.anchor), CHECK_TIME))
+            assertIs<ChipReadEnding.Complete>(r.ending, "${r.ending}")
+            assertEquals(2, r.ending.attempts)
+            assertEquals(listOf(2), r.states.filterIsInstance<ChipReadState.LinkLost>().map { it.restartsLeft })
+            assertTrue(r.states.none { it is ChipReadState.NoAnswerYet })
+            val first = script.exchanges.first { it.command.ins == 0x86 }
+            assertEquals(first.sentAtMillis + 5_000, r.updates.first { it.value.state is ChipReadState.LinkLost }.atMillis)
         }
 
     /** A plain command slower than the limit before access counts as unanswered; the next try answers. */

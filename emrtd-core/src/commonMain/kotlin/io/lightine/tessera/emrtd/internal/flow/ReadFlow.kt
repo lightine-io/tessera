@@ -166,10 +166,13 @@ internal class ReadFlow(
     private val reporter: FlowReporter = FlowReporter(ProgressTracker()) { _, _ -> },
     private val attempt: Int = 1,
     private val carry: ResumeCarry? = null,
-    // Called once, right before the first command of an access protocol (BAC or PACE), or when a
-    // plain chip was found with no access protocol: the plain commands before it are done. The
-    // coordinator uses it to set the general command time limit and to know that the chip was
-    // asked something about the key in this attempt.
+    // Called once, right before the first command that uses the key: BAC's EXTERNAL AUTHENTICATE
+    // or PACE's first GENERAL AUTHENTICATE, or when a plain chip was found with no access
+    // protocol. The commands before it cost the chip nothing about the key and need no public-key
+    // work on it: the plain SELECTs and READ BINARYs, BAC's GET CHALLENGE (a random number) and
+    // PACE's MSE:Set AT (it selects the protocol and the password; the SDK sends only the MRZ and
+    // CAN references, which have no retry counter). The coordinator uses it to set the general
+    // command time limit and to know that the chip was asked something about the key.
     private val accessStage: suspend () -> Unit = {},
 ) {
     private val plain = PlainApduSender(transport)
@@ -475,7 +478,6 @@ internal class ReadFlow(
                     ChipUnsupportedAlgorithm(ChipAccessProtocol.PACE, ChipUnsupportedAlgorithm.Reason.NO_CRYPTOGRAPHY_ON_PLATFORM),
                 )
         attempting = ChipAccessProtocol.PACE
-        enterAccessStage()
         var refusedSw: Int? = null
         var needsExtended = false
         // One authentication attempt per read: another suite is tried only when nothing of this one
@@ -486,7 +488,15 @@ internal class ReadFlow(
             val start = TimeSource.Monotonic.markNow()
             val name = paceName(suite)
             try {
-                val result = Pace.open(plain, c, key, suite, PaceOptions(sendParameterId, extended))
+                val result =
+                    Pace.open(
+                        plain,
+                        c,
+                        key,
+                        suite,
+                        PaceOptions(sendParameterId, extended),
+                        beforeAuthentication = ::enterAccessStage,
+                    )
                 // The channel is owned here before anything else can fail, so its keys are always wiped.
                 useChannel(result.channel)
                 camEvidence = result.mappingEvidence as? ChipAuthMappingEvidence
@@ -553,10 +563,9 @@ internal class ReadFlow(
         val c = crypto
         if (key is ChipAccessKey.Mrz && c != null) {
             attempting = ChipAccessProtocol.BAC
-            enterAccessStage()
             val start = TimeSource.Monotonic.markNow()
             try {
-                val opened = Bac.open(plain, c, key)
+                val opened = Bac.open(plain, c, key, beforeAuthentication = ::enterAccessStage)
                 useChannel(opened)
                 protocol = ChipAccessProtocol.BAC
                 accessDone = true

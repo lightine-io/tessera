@@ -75,9 +75,10 @@ import kotlin.time.TimeSource
  *   time waited.
  * - When a document is found, waits [CoreNfcReadSettings.settleDelayMillis] before the first
  *   command, connects, and reads. Each command has its own time limit:
- *   [CoreNfcReadSettings.commandTimeoutBeforeAccessMillis] for the plain commands before BAC or
- *   PACE, [CoreNfcReadSettings.commandTimeoutMillis] from the first BAC or PACE command on.
- * - When the chip does not answer before BAC or PACE started (found, but with too little power to
+ *   [CoreNfcReadSettings.commandTimeoutBeforeAccessMillis] for the commands before the key is
+ *   used, [CoreNfcReadSettings.commandTimeoutMillis] from the first command that uses it on (BAC's
+ *   EXTERNAL AUTHENTICATE, PACE's first GENERAL AUTHENTICATE).
+ * - When the chip does not answer before the key is used (found, but with too little power to
  *   answer), reports [io.lightine.tessera.emrtd.ChipReadState.NoAnswerYet], keeps the sheet up and
  *   asks the system to find the document again, with no restart used, while the person moves it;
  *   the same session rule as for a lost link ends these tries (below).
@@ -230,7 +231,7 @@ public class CoreNfcChipRead internal constructor(
                 return
             }
             failedConnects = 0
-            // The link starts with the short limit for the plain commands before access.
+            // The link starts with the short limit for the commands before the key is used.
             val link = CoreNfcTransport(channel, keepAlive = session, commandTimeoutMillis = settings.effectiveTimeoutBeforeAccessMillis)
             if (!locked { if (coordinator.isEnded) false else true.also { transport = link } }) return
             val outcome =

@@ -119,6 +119,9 @@ internal object Bac {
      * ([ApduChannel.sendOnce]: no re-send on 6Cxx); the returned [SecureChannel] decorates the raw [exchange]
      * directly. [random] supplies the reader's nonce and key material (the platform's strong random
      * source; tests pass the values of Appendix D.3). Transport failures pass through unchanged.
+     * [beforeAuthentication] runs once, after the chip answered GET CHALLENGE and right before
+     * EXTERNAL AUTHENTICATE: GET CHALLENGE only asks the chip for a random number, and the
+     * authentication attempt is EXTERNAL AUTHENTICATE (section 4.3.1).
      *
      * @throws BacException when the chip refuses or answers wrongly.
      */
@@ -127,10 +130,11 @@ internal object Bac {
         crypto: ChipCrypto,
         key: ChipAccessKey.Mrz,
         random: (Int) -> ByteArray = crypto::randomBytes,
+        beforeAuthentication: suspend () -> Unit = {},
     ): SecureChannel {
         val keys = documentKeys(crypto, key)
         try {
-            return run(exchange, crypto, keys, random)
+            return run(exchange, crypto, keys, random, beforeAuthentication)
         } finally {
             keys.wipe()
         }
@@ -141,6 +145,7 @@ internal object Bac {
         crypto: ChipCrypto,
         keys: BacKeys,
         random: (Int) -> ByteArray,
+        beforeAuthentication: suspend () -> Unit,
     ): SecureChannel {
         val plain = ApduChannel(exchange)
         val challenge = plain.send(CommandApdu(0x00, INS_GET_CHALLENGE, 0x00, 0x00, ne = NONCE_LENGTH))
@@ -164,6 +169,7 @@ internal object Bac {
             val mIfd = crypto.retailMac(keys.macKey, CryptoBytes.pad(eIfd, NONCE_LENGTH))
             CryptoBytes.wipe(s)
 
+            beforeAuthentication()
             // Sent exactly once: on 6Cxx a second EXTERNAL AUTHENTICATE would be a second attempt.
             val answer =
                 plain.sendOnce(

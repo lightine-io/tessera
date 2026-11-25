@@ -35,7 +35,7 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  *   first command, so the hand can settle: frames are often lost in the first second after
  *   detection. Default 400. Cancelling the read or the end of the system session cuts it short.
  * @property commandTimeoutMillis The longest wait for the chip's answer to one command from the
- *   first BAC or PACE command on (before it, [commandTimeoutBeforeAccessMillis]). When it
+ *   first command that uses the key on (before it, [commandTimeoutBeforeAccessMillis]). When it
  *   passes, the command counts as a lost link: nothing more is sent on that link, a late answer is
  *   dropped, and [linkLoss] decides what follows. Default 5000: ICAO Doc 9303 Part 10, appendix
  *   B.11, lets a chip take up to 5 seconds per block, and Core NFC itself may wait far longer.
@@ -56,10 +56,12 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  *   for the read's own threads. Either way the calls come one at a time, in order, with the ending
  *   last, exactly once, and none comes before `start` returned.
  * @property commandTimeoutBeforeAccessMillis The longest wait for the chip's answer to one
- *   command before access: the plain commands each attempt sends before BAC or PACE starts
- *   (selecting and reading EF.CardAccess, selecting the application). They need no cryptography
- *   on the chip and normally answer in milliseconds, so a chip that is found but gets too little
- *   power is noticed sooner. Default 1500. From the first BAC or PACE command on,
+ *   command before access: the commands each attempt sends before the key is used (selecting
+ *   and reading EF.CardAccess, selecting the application, then BAC's GET CHALLENGE, which only
+ *   asks for a random number, or PACE's MSE:Set AT, which only chooses the protocol and password).
+ *   They need no public-key work on the chip and normally answer in milliseconds, so a chip that
+ *   is found but gets too little power is noticed sooner. Default 1500. From the first command
+ *   that uses the key on (BAC's EXTERNAL AUTHENTICATE, PACE's first GENERAL AUTHENTICATE),
  *   [commandTimeoutMillis] applies, so a slow step of the access protocol, chip authentication or
  *   a protected read is never cut by this value. When it is longer than [commandTimeoutMillis],
  *   [commandTimeoutMillis] applies before access too. A command not answered in time is a try that

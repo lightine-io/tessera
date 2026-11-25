@@ -228,15 +228,18 @@ public sealed class ChipReadState {
      * found but sits where it gets too little power to answer. The moment to say "found, move the
      * document a little", not "hold it again": the document is still there.
      *
-     * Nothing was asked of the chip yet about the key (no access protocol started), so these tries
-     * cost nothing: they never use one of [LinkLossPolicy]'s restarts and never count as a new
-     * attempt. The read keeps trying, about every 2 seconds, while the person moves the document,
-     * for a time the platform sets (on Android `NfcReadSettings.waitForReturnMillis`, counted from
-     * the first unanswered try; on iPhone the system session's time). When the chip answers, the
-     * read goes on and the next state is [OpeningAccess] with the protocol. When the time passes,
-     * the read ends as a document that never answered: [ChipReadEnding.Failed] with the link error.
-     * This state lasts until then: the found and connecting steps of each new try are not reported
-     * again.
+     * The first commands are the ones before the key is used: selecting and reading files, asking
+     * the chip for a random number (BAC's GET CHALLENGE) and choosing the protocol and password
+     * (PACE's MSE:Set AT). Nothing was asked of the chip yet about the key, so these tries cost
+     * nothing: they never use one of [LinkLossPolicy]'s restarts and never count as a new attempt.
+     * A chip can answer some of these commands and then go silent; that is still this state, and
+     * [tries] keeps counting. The read keeps trying, about every 2 seconds, while the person moves
+     * the document, for a time the platform sets (on Android `NfcReadSettings.waitForReturnMillis`,
+     * counted from the first unanswered try; on iPhone the system session's time). When the chip
+     * answers all of them, the read goes on and the next state is [OpeningAccess] with the
+     * protocol. When the time passes, the read ends as a document that never answered:
+     * [ChipReadEnding.Failed] with the link error. This state lasts until then: the found,
+     * connecting and opening steps of each new try are not reported again.
      *
      * @property tries How many tries in a row got no answer so far, from 1.
      * @since 1.0.0

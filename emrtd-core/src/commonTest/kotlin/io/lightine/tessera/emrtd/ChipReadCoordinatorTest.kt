@@ -59,9 +59,10 @@ class ChipReadCoordinatorTest {
     }
 
     /**
-     * A transport that answers the plain selections before access (the application is there, no
-     * master-file file is) and fails every other command with [error]: with an MRZ key the first
-     * failing command is BAC's GET CHALLENGE, after the access stage began. With [beforeAccess]
+     * A transport that answers the commands before access (the application is there, no
+     * master-file file is, GET CHALLENGE gives a nonce) and fails every other command with [error]:
+     * with an MRZ key the first failing command is BAC's EXTERNAL AUTHENTICATE, after the access
+     * stage began. With [beforeAccess]
      * every command fails, the first one included.
      */
     private class FailingTransport(
@@ -75,6 +76,8 @@ class ChipReadCoordinatorTest {
             val ins = command[1].toInt() and 0xFF
             val p1 = command[2].toInt() and 0xFF
             if (!beforeAccess && ins == 0xA4) return if (p1 == 0x04) byteArrayOf(0x90.toByte(), 0x00) else byteArrayOf(0x6A, 0x82.toByte())
+            // GET CHALLENGE is before access too: answer it with a nonce.
+            if (!beforeAccess && ins == 0x84) return ByteArray(8) { it.toByte() } + byteArrayOf(0x90.toByte(), 0x00)
             throw ApduTransportException(error as io.lightine.tessera.types.errors.NfcError)
         }
     }

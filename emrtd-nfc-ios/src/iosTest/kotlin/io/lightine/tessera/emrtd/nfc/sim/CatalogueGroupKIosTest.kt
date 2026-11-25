@@ -414,6 +414,42 @@ class CatalogueGroupKIosTest {
             assertEquals(ChipAccessProtocol.BAC, (r.states[7] as ChipReadState.OpeningAccess).protocol)
         }
 
+    /**
+     * The device case on iPhone: the plain commands are answered, then GET CHALLENGE is not. GET
+     * CHALLENGE is before the key is used: the try waits 1.5 s, costs no restart, and the next try,
+     * in the same session, completes.
+     */
+    @Test
+    fun noAnswer_f_getChallengeSilentOnceAfterThePlainCommands_triesAgainFreeAndCompletes() =
+        simTest { flow ->
+            script.fault(ChipFaultAction.Silence) { it.ins == 0x84 }
+            val r = read(flow)
+            assertDeviceChecksPass(r.ending)
+            assertEquals(1, r.ending.attempts)
+            assertEquals(2, script.links)
+            assertEquals(1, ports.size, "the same system session")
+            assertTrue(r.states.none { it is ChipReadState.LinkLost })
+            assertEquals(listOf(1), r.states.filterIsInstance<ChipReadState.NoAnswerYet>().map { it.tries })
+            val challenge = script.exchanges.first { it.command.ins == 0x84 }
+            assertTrue(challenge.command.indexInLink > 0, "plain commands were answered first")
+            val noAnswer = r.updates.single { it.value.state is ChipReadState.NoAnswerYet }
+            assertEquals(challenge.sentAtMillis + 1_500, noAnswer.atMillis, "GET CHALLENGE waits 1.5 s, not 5 s")
+            val fractions = r.updates.map { it.value.progress.fraction }
+            assertEquals(fractions.sorted(), fractions, "progress never goes back")
+        }
+
+    /** A GET CHALLENGE answered with an error status word is an answer, not silence: as before. */
+    @Test
+    fun noAnswer_h_getChallengeAnsweredWithAnErrorStatusWord_isARefusalAsBefore() =
+        simTest { flow ->
+            script.fault(ChipFaultAction.Status(0x6982)) { it.ins == 0x84 }
+            val r = read(flow)
+            val error = assertIs<ChipReadEnding.KeyNotAccepted>(r.ending, "${r.ending}").error
+            assertEquals(0x6982, error.statusWord)
+            assertEquals(1, script.links)
+            assertTrue(r.states.none { it is ChipReadState.NoAnswerYet || it is ChipReadState.LinkLost })
+        }
+
     @Test
     fun k10_recordedTimings_eachCommandInItsRangeAndTheReadInFourToSixSeconds() =
         simTest { flow ->

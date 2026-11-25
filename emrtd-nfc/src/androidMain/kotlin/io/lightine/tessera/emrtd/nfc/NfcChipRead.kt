@@ -142,11 +142,12 @@ import kotlin.jvm.JvmOverloads
  *   and the read keeps waiting.
  * - When a document is found, waits [NfcReadSettings.settleDelayMillis] before the first command,
  *   connects, and reads. Each command has its own time limit:
- *   [NfcReadSettings.commandTimeoutBeforeAccessMillis] for the plain commands before BAC or PACE,
- *   [NfcReadSettings.commandTimeoutMillis] from the first BAC or PACE command on. A link that
+ *   [NfcReadSettings.commandTimeoutBeforeAccessMillis] for the commands before the key is used,
+ *   [NfcReadSettings.commandTimeoutMillis] from the first command that uses it on (BAC's EXTERNAL
+ *   AUTHENTICATE, PACE's first GENERAL AUTHENTICATE). A link that
  *   cannot be set up sends the read back to waiting, with no attempt used; after 3 such failures
  *   in a row the read ends.
- * - When the chip does not answer before BAC or PACE started (found, but with too little power to
+ * - When the chip does not answer before the key is used (found, but with too little power to
  *   answer), reports [io.lightine.tessera.emrtd.ChipReadState.NoAnswerYet] and tries the same
  *   `Tag` again after a short pause, with no restart used, while the person moves the document:
  *   about one try every 2 seconds, for at most [NfcReadSettings.waitForReturnMillis] from the
@@ -332,7 +333,7 @@ public class NfcChipRead internal constructor(
         while (!coordinator.isEnded) {
             val found = awaitTag(adapter, waitingSince, deadline, lostTag, linkedOnce, retryMillis) ?: return
             val release = CompletableDeferred<Unit>()
-            // The link starts with the short limit for the plain commands before access.
+            // The link starts with the short limit for the commands before the key is used.
             val connection = env.platform.connectionOf(found.tag, settings.effectiveTimeoutBeforeAccessMillis) { release.complete(Unit) }
             if (connection == null) {
                 // Not an ISO 14443-4 chip, so no document this read can use: keep waiting.

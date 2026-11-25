@@ -52,8 +52,9 @@ class ChipReadCoordinatorSafetyTest {
         }
     }
 
-    // Answers the plain selections before access, then fails: the first failing command is BAC's
-    // GET CHALLENGE, after the access stage began, so a loss here spends a restart.
+    // Answers the plain selections and GET CHALLENGE before access, then fails: the first failing
+    // command is BAC's EXTERNAL AUTHENTICATE, after the access stage began, so a loss here spends a
+    // restart.
     private class Failing(
         private val error: NfcError,
     ) : ApduTransport {
@@ -64,6 +65,8 @@ class ChipReadCoordinatorSafetyTest {
             val ins = command[1].toInt() and 0xFF
             val p1 = command[2].toInt() and 0xFF
             if (ins == 0xA4) return if (p1 == 0x04) byteArrayOf(0x90.toByte(), 0x00) else byteArrayOf(0x6A, 0x82.toByte())
+            // GET CHALLENGE is before access too: answer it with a nonce.
+            if (ins == 0x84) return ByteArray(8) { it.toByte() } + byteArrayOf(0x90.toByte(), 0x00)
             throw ApduTransportException(error)
         }
     }

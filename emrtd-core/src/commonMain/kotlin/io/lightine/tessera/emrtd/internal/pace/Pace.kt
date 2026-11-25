@@ -109,6 +109,10 @@ internal object Pace {
      * Runs PACE with [key] over the plain [exchange] and returns the secure channel it opens.
      * [mapping] defaults to the reader's implementation of the suite's mapping. [newPrivateKey] and
      * [randomBytes] are the random sources (tests pass the worked examples' values).
+     * [beforeAuthentication] runs once, after the chip accepted MSE:Set AT and right before the
+     * first GENERAL AUTHENTICATE: MSE:Set AT only selects the protocol and the password (section
+     * 4.4.4.1) and needs no cryptography on the chip; the authentication starts with GENERAL
+     * AUTHENTICATE.
      *
      * @throws PaceException when the suite is not supported, the chip refuses, or an answer is wrong.
      */
@@ -121,13 +125,14 @@ internal object Pace {
         mapping: Mapping? = Mappings.forKind(suite.mapping),
         newPrivateKey: (PaceGroup) -> ByteArray = { it.generatePrivateKey(crypto) },
         randomBytes: (Int) -> ByteArray = crypto::randomBytes,
+        beforeAuthentication: suspend () -> Unit = {},
     ): PaceResult {
         if (mapping == null || mapping.kind != suite.mapping) throw PaceException(PaceFailure.UNSUPPORTED_SUITE)
         val passwordType = PacePasswordType.of(key)
         val context = MappingContext(crypto, suite, newPrivateKey, randomBytes)
         val run = Run(exchange, crypto, suite, options)
         try {
-            return run.execute(key, passwordType, mapping, context)
+            return run.execute(key, passwordType, mapping, context, beforeAuthentication)
         } finally {
             mapping.wipe()
         }
@@ -147,6 +152,7 @@ internal object Pace {
             passwordType: PacePasswordType,
             mapping: Mapping,
             context: MappingContext,
+            beforeAuthentication: suspend () -> Unit,
         ): PaceResult {
             val setAtCommand = setAuthenticationTemplate(suite, passwordType, options.sendParameterId)
             // A size limit that can be known now is checked before anything is sent: once a GENERAL
@@ -166,6 +172,7 @@ internal object Pace {
                 throw PaceException(failure, PaceStep.SET_AUTHENTICATION_TEMPLATE, setAt.sw)
             }
 
+            beforeAuthentication()
             // Step 1: the encrypted nonce.
             val z =
                 generalAuthenticate(

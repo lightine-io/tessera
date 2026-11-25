@@ -27,8 +27,9 @@ import kotlin.jvm.JvmStatic
  * after that limit has its answer dropped unread. When that late answer was a refusal of the key,
  * the next start uses the same key again, within the restarts.
  *
- * A loss before the attempt sent its first BAC or PACE command is outside every policy, [End]
- * included: the chip was asked nothing about the key, so it uses no restart and starts no new
+ * A loss before the attempt sent its first command that uses the key (BAC's EXTERNAL
+ * AUTHENTICATE, PACE's first GENERAL AUTHENTICATE) is outside every policy, [End] included: the
+ * chip was asked nothing about the key, so it uses no restart and starts no new
  * attempt. The read reports [ChipReadState.NoAnswerYet] and tries the same document again, for a
  * time the platform sets.
  *

@@ -36,7 +36,7 @@ import kotlin.jvm.JvmOverloads
  *   command, so the hand can settle: frames are often lost in the first moment after detection.
  *   Default 400. Cancelling the read cuts it short.
  * @property commandTimeoutMillis The longest wait for the chip's answer to one command from the
- *   first BAC or PACE command on (before it, [commandTimeoutBeforeAccessMillis]), set on the
+ *   first command that uses the key on (before it, [commandTimeoutBeforeAccessMillis]), set on the
  *   link as the platform's ISO-DEP time limit. When it passes, the platform reports the tag as lost
  *   (it cannot tell a slow chip from a document that left), so [linkLoss] decides what follows.
  *   Default 5000: ICAO Doc 9303 Part 10, appendix B.11, lets a chip take up to 5 seconds per block.
@@ -72,10 +72,12 @@ import kotlin.jvm.JvmOverloads
  *   `TelemetrySinkRegistry` when the read starts, which is a sink that drops everything when none
  *   is registered. The events never hold document or chip data.
  * @property commandTimeoutBeforeAccessMillis The longest wait for the chip's answer to one
- *   command before access: the plain commands each attempt sends before BAC or PACE starts
- *   (selecting and reading EF.CardAccess, selecting the application). They need no cryptography
- *   on the chip and normally answer in milliseconds, so a chip that is found but gets too little
- *   power is noticed sooner. Default 1500. From the first BAC or PACE command on,
+ *   command before access: the commands each attempt sends before the key is used (selecting
+ *   and reading EF.CardAccess, selecting the application, then BAC's GET CHALLENGE, which only
+ *   asks for a random number, or PACE's MSE:Set AT, which only chooses the protocol and password).
+ *   They need no public-key work on the chip and normally answer in milliseconds, so a chip that
+ *   is found but gets too little power is noticed sooner. Default 1500. From the first command
+ *   that uses the key on (BAC's EXTERNAL AUTHENTICATE, PACE's first GENERAL AUTHENTICATE),
  *   [commandTimeoutMillis] applies, so a slow step of the access protocol, chip authentication or
  *   a protected read is never cut by this value. When it is longer than [commandTimeoutMillis],
  *   [commandTimeoutMillis] applies before access too. A command not answered in time is a try that

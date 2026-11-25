@@ -38,10 +38,11 @@ import kotlin.jvm.JvmSynthetic
  *   transport), within [LinkLossPolicy.maxRestarts], and only when the platform allows it; never
  *   after an answered refusal, a secure-messaging error, a malformed file, or a person, app or
  *   system ending.
- * - A loss of the link before the attempt sent the first command of an access protocol (the chip
- *   was asked nothing about the key) uses no restart and is no new attempt: the read reports
- *   [ChipReadState.NoAnswerYet] and the platform tries the same attempt again
- *   ([ChipReadAttemptOutcome.NO_ANSWER_YET]), within its own time bound.
+ * - A loss of the link before the attempt sent the first command that uses the key (BAC's
+ *   EXTERNAL AUTHENTICATE, PACE's first GENERAL AUTHENTICATE; the chip was asked nothing about the
+ *   key) uses no restart and is no new attempt: the read reports [ChipReadState.NoAnswerYet] and
+ *   the platform tries the same attempt again ([ChipReadAttemptOutcome.NO_ANSWER_YET]), within its
+ *   own time bound.
  *
  * The calls, in order, for a platform entry point:
  * 1. [start]; when it returns `false` the read has ended (the key was refused), so release nothing
@@ -108,8 +109,9 @@ public class ChipReadCoordinator private constructor(
 
         /**
          * The default time limit for one command before access, on both platforms: 1500
-         * milliseconds. These commands (selecting and reading EF.CardAccess, selecting the
-         * application) need no cryptography on the chip and normally answer in milliseconds.
+         * milliseconds. These commands, before the key is used (selecting and reading
+         * EF.CardAccess, selecting the application, BAC's GET CHALLENGE or PACE's MSE:Set AT), need
+         * no public-key work on the chip and normally answer in milliseconds.
          */
         public const val DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS: Long = 1_500
 
@@ -274,7 +276,7 @@ public class ChipReadCoordinator private constructor(
      * wait for the document. Otherwise the ending is delivered (unless another cause ended the read
      * first) and the result is [ChipReadAttemptOutcome.ENDED].
      *
-     * When the attempt ends with a lost link before it sent the first command of an access protocol,
+     * When the attempt ends with a lost link before it sent the first command that uses the key,
      * and the platform allows another try, the read publishes [ChipReadState.NoAnswerYet] and
      * returns [ChipReadAttemptOutcome.NO_ANSWER_YET]: no restart is used, and the next call repeats
      * this attempt.
@@ -297,11 +299,13 @@ public class ChipReadCoordinator private constructor(
      *   exception it throws counts as `null`. A closed link with no answer ends the read as
      *   [ChipReadEnding.EndedBySystem] with the closed-link error, never as an app cancel: an app
      *   cancel ends the read before its link closes.
-     * @param accessStage Called once per attempt, right before the first command of an access
-     *   protocol (or when a plain chip needs none): the platform sets the general command time
-     *   limit here, after a shorter one for the plain commands before it. A loss of the link before
-     *   this call is a [ChipReadAttemptOutcome.NO_ANSWER_YET]. An exception it throws stops the
-     *   attempt like a failed command.
+     * @param accessStage Called once per attempt, right before the first command that uses the key:
+     *   BAC's EXTERNAL AUTHENTICATE or PACE's first GENERAL AUTHENTICATE (or, for a plain chip that
+     *   needs no access protocol, once its EF.COM was read). BAC's GET CHALLENGE and PACE's MSE:Set
+     *   AT come before it. The platform sets the general command time limit here, after a shorter
+     *   one for the commands before it. A loss of the link before this call is a
+     *   [ChipReadAttemptOutcome.NO_ANSWER_YET]. An exception it throws stops the attempt like a
+     *   failed command.
      */
     @JvmSynthetic
     @Throws(CancellationException::class)
@@ -314,14 +318,18 @@ public class ChipReadCoordinator private constructor(
         if (isEnded) return ChipReadAttemptOutcome.ENDED
         val attempt = if (repeatAttempt.exchange(false)) attemptsStarted.load() else attemptsStarted.incrementAndFetch()
         waitingAfterLoss.store(false)
+        // While unanswered tries go on, the opening steps of each try (OpeningAccess, with or
+        // without the protocol) are not news: the chip may answer the plain commands and still go
+        // silent before access. The last one is held back and shown once access is reached.
+        var heldOpening: ChipReadState? = null
         val reporter =
             FlowReporter(tracker) { state, progress ->
                 lastProgress.store(progress)
                 lastReadState.store(state)
-                // While unanswered tries go on, the opening step of each try is not news; anything
-                // past it means the chip answered.
-                if (!(noAnswer && state is ChipReadState.OpeningAccess && state.protocol == null)) {
-                    endNoAnswer()
+                if (noAnswer && state is ChipReadState.OpeningAccess) {
+                    heldOpening = state
+                } else {
+                    lastNoAnswer.store(null)
                     publish(state)
                 }
             }
@@ -338,6 +346,10 @@ public class ChipReadCoordinator private constructor(
                 ) {
                     accessStage()
                     accessReached = true
+                    if (noAnswer) {
+                        lastNoAnswer.store(null)
+                        heldOpening?.let(::publish)
+                    }
                 }
             } catch (e: CancellationException) {
                 end(ChipReadEnding.Cancelled(ChipReadEnding.Cancelled.By.APP, attempt, lastProgress.load()))
@@ -384,8 +396,8 @@ public class ChipReadCoordinator private constructor(
                 return ChipReadAttemptOutcome.ENDED
             }
         }
-        // Lost before any access protocol command: the chip was asked nothing about the key, so the
-        // try costs no restart and repeats this attempt.
+        // Lost before the first command that uses the key: the chip was asked nothing about it, so
+        // the try costs no restart and repeats this attempt.
         if (isLinkLoss(error) && readAgainAllowed && !accessReached && result is ChipReadResult.Failed) {
             lastLoss.store(error)
             repeatAttempt.store(true)
@@ -408,7 +420,10 @@ public class ChipReadCoordinator private constructor(
         return ChipReadAttemptOutcome.ENDED
     }
 
-    /** The chip answered, or the attempt ended otherwise: unanswered tries are over. */
+    /**
+     * The attempt reached access and ended, or ended otherwise: unanswered tries in a row are over.
+     * A chip that answers some plain commands and then goes silent before access keeps counting.
+     */
     private fun endNoAnswer() {
         lastNoAnswer.store(null)
         noAnswerTries.store(0)
@@ -651,10 +666,10 @@ public enum class ChipReadAttemptOutcome {
     LINK_LOST,
 
     /**
-     * The chip did not answer before the attempt sent any access protocol command, and the read goes
-     * on with no restart used ([ChipReadState.NoAnswerYet]): release the link and try the same
-     * document again soon, within the platform's time bound for such tries; when it passes, call
-     * [ChipReadCoordinator.documentNotReturned].
+     * The chip did not answer before the attempt sent the first command that uses the key, and the
+     * read goes on with no restart used ([ChipReadState.NoAnswerYet]): release the link and try the
+     * same document again soon, within the platform's time bound for such tries; when it passes,
+     * call [ChipReadCoordinator.documentNotReturned].
      */
     NO_ANSWER_YET,
 }
