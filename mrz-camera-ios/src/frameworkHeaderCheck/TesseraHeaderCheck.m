@@ -98,6 +98,7 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
                                                                             maxSessionRenewals:2
                                                                             sessionRenewMillis:10000
                                                                                busyRetryMillis:6000
+                                                                            tagTimeLimitMillis:18000
                                                                                          error:nil];
     TesseraCoreNfcReadSettings *built = [[[[[[TesseraCoreNfcReadSettingsBuilder alloc] init]
         linkLossPolicy:[TesseraLinkLossPolicyCompanion.shared readAgainMaxRestarts:1 error:nil]] telemetrySink:nil]
@@ -121,6 +122,10 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
     int32_t renewals = settings.maxSessionRenewals;
     int64_t renewAfter = settings.sessionRenewMillis;
     int64_t busyRetry = settings.busyRetryMillis;
+    TesseraCoreNfcReadSettings *oneConnection =
+        [[settings.toBuilder tagTimeLimitMillisMillis:TesseraCoreNfcReadSettings.companion.TAG_TIME_LIMIT_OFF] buildAndReturnError:nil];
+    int64_t tagTimeLimit = settings.tagTimeLimitMillis;
+    int64_t shortestTagTimeLimit = TesseraCoreNfcReadSettings.companion.MIN_TAG_TIME_LIMIT_MILLIS;
     TesseraLinkLossPolicy *noRestart = TesseraLinkLossPolicyCompanion.shared.end;
     TesseraLinkLossPolicy *resumeTwice = [TesseraLinkLossPolicyCompanion.shared resumeMaxRestarts:2 error:nil];
     TesseraNfcUnavailableReason *unavailable = TesseraCoreNfcChipRead.companion.availability;
@@ -140,6 +145,9 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
     (void)renewals;
     (void)renewAfter;
     (void)busyRetry;
+    (void)oneConnection;
+    (void)tagTimeLimit;
+    (void)shortestTagTimeLimit;
     (void)noRestart;
     (void)resumeTwice;
     (void)unavailable;
@@ -166,9 +174,13 @@ static void tesseraChipReadStates(TesseraChipReadState *state, TesseraChipReadEn
     (void)noAnswer;
 }
 
-// The raw Core NFC code of a session the system ended, and a renewed session, as telemetry facts
-// (emrtd-core).
+// The raw Core NFC code of a session the system ended, a renewed session, and a planned handover
+// of the tag with how long its connection had lasted, as telemetry facts (emrtd-core).
 static void tesseraChipReadEvents(TesseraChipReadEvent *event) {
+    BOOL handedOver = event.step == TesseraChipReadStep.tagHandover;
+    int64_t tagMillis = event.durationMillis;
+    (void)handedOver;
+    (void)tagMillis;
     BOOL sessionEnded = event.step == TesseraChipReadStep.sessionEnd;
     TesseraInt *systemCode = event.systemCode;
     BOOL renewed = event.step == TesseraChipReadStep.sessionRenew;

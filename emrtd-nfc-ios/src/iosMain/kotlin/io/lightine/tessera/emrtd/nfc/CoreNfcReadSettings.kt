@@ -131,12 +131,37 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  *   bound passes the read ends with [io.lightine.tessera.emrtd.ChipReadEnding.EndedBySystem] and
  *   that reason: the read had started). A refusal costs no renewal. Default 6000.
  *   [BUSY_RETRY_OFF] (0) turns it off: the first refusal ends the read.
+ * @property tagTimeLimitMillis How long the read uses one connection to the document before it
+ *   asks the system for a fresh one, counted from the moment the system reported the document.
+ *   Engineers of Core NFC's vendor have stated a limit of 20 seconds per connection to a tag and
+ *   60 per session: stated by the vendor's engineers, not in the API documentation. The fact the
+ *   SDK relies on is what the read does. When this time has passed and the read is not finished,
+ *   the read stops between two commands, never while a command is out; from 2 seconds before, it
+ *   stops at the next file instead; before the access protocol, chip authentication or active
+ *   authentication, it stops already when less than [commandTimeoutMillis] (at most half of this
+ *   time) is left, so such a step is never cut in the middle. Then it asks the system to find the
+ *   document again, opens the chip again with the same key (BAC or PACE runs again), checks that
+ *   EF.SOD is the same byte for byte, and goes on from where it stopped, a cut-off data group from
+ *   its byte offset. This uses no restart of [linkLoss] and is no new attempt; the observer gets
+ *   no new state: the last state stays for the moment it takes, and the progress and the file
+ *   count never go back. The read's telemetry sink gets an
+ *   [io.lightine.tessera.emrtd.ChipReadEvent] with step
+ *   [io.lightine.tessera.emrtd.ChipReadStep.TAG_HANDOVER]. At most 3 times per read, and never
+ *   when less than 10 of the session's 60 seconds are left: the read then keeps the connection,
+ *   as without this setting. When the document is not found again within 2 seconds, the lost-link
+ *   rules of [linkLoss] apply: [io.lightine.tessera.emrtd.ChipReadState.LinkLost] and a restart
+ *   used. Only with [io.lightine.tessera.emrtd.LinkLossPolicy.Resume]: with another policy a new
+ *   connection would read everything again or end the read, so the read keeps one connection.
+ *   Default 18000, 2 seconds before the stated limit. [TAG_TIME_LIMIT_OFF] (0) turns it off; any
+ *   other value must be from [MIN_TAG_TIME_LIMIT_MILLIS] (10000) to 60000. There is no such
+ *   setting on Android: Android documents no time limit on one connection to a tag.
  * @throws IllegalArgumentException when [commandTimeoutMillis], [readTimeoutMillis] or
  *   [commandTimeoutBeforeAccessMillis] is not positive, [settleDelayMillis],
  *   [waitAfterSystemEndMillis], [maxSessionRenewals] or [busyRetryMillis] is negative,
  *   [searchRestartMillis] is neither [SEARCH_RESTART_OFF] nor at least
  *   [MIN_SEARCH_RESTART_MILLIS], or [sessionRenewMillis] is neither [SESSION_RENEW_OFF] nor at
- *   least [MIN_SESSION_RENEW_MILLIS].
+ *   least [MIN_SESSION_RENEW_MILLIS], or [tagTimeLimitMillis] is neither [TAG_TIME_LIMIT_OFF]
+ *   nor from [MIN_TAG_TIME_LIMIT_MILLIS] to 60000.
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
@@ -156,10 +181,11 @@ public class CoreNfcReadSettings
         public val maxSessionRenewals: Int = DEFAULT_MAX_SESSION_RENEWALS,
         public val sessionRenewMillis: Long = DEFAULT_SESSION_RENEW_MILLIS,
         public val busyRetryMillis: Long = DEFAULT_BUSY_RETRY_MILLIS,
+        public val tagTimeLimitMillis: Long = DEFAULT_TAG_TIME_LIMIT_MILLIS,
     ) {
         /**
          * The defaults: [LinkLossPolicy.Resume] with 2 restarts, 400, 5000, 1000, 1500, 2000 and
-         * 4000 milliseconds, [CoreNfcPolling.AUTOMATIC], 2 session renewals, 10000 and 6000
+         * 4000 milliseconds, [CoreNfcPolling.AUTOMATIC], 2 session renewals, 10000, 6000 and 18000
          * milliseconds.
          */
         public constructor() : this(LinkLossPolicy.Resume(DEFAULT_RESTARTS))
@@ -178,6 +204,11 @@ public class CoreNfcReadSettings
                 "sessionRenewMillis must be 0 (off) or at least $MIN_SESSION_RENEW_MILLIS"
             }
             require(busyRetryMillis >= 0) { "busyRetryMillis must not be negative" }
+            require(
+                tagTimeLimitMillis == TAG_TIME_LIMIT_OFF || tagTimeLimitMillis in MIN_TAG_TIME_LIMIT_MILLIS..MAX_TAG_TIME_LIMIT_MILLIS,
+            ) {
+                "tagTimeLimitMillis must be 0 (off) or $MIN_TAG_TIME_LIMIT_MILLIS to $MAX_TAG_TIME_LIMIT_MILLIS"
+            }
         }
 
         /** The values, never document data. */
@@ -187,7 +218,7 @@ public class CoreNfcReadSettings
                 "commandTimeoutBeforeAccessMillis=$commandTimeoutBeforeAccessMillis, " +
                 "waitAfterSystemEndMillis=$waitAfterSystemEndMillis, searchRestartMillis=$searchRestartMillis, " +
                 "observerOn=$observerOn, polling=$polling, maxSessionRenewals=$maxSessionRenewals, " +
-                "sessionRenewMillis=$sessionRenewMillis, busyRetryMillis=$busyRetryMillis)"
+                "sessionRenewMillis=$sessionRenewMillis, busyRetryMillis=$busyRetryMillis, tagTimeLimitMillis=$tagTimeLimitMillis)"
 
         /**
          * A builder that starts from these values, so one value can change without naming the
@@ -210,6 +241,7 @@ public class CoreNfcReadSettings
                 .maxSessionRenewals(maxSessionRenewals)
                 .sessionRenewMillis(sessionRenewMillis)
                 .busyRetryMillis(busyRetryMillis)
+                .tagTimeLimitMillis(tagTimeLimitMillis)
 
         /** The time limit for one command before access: the smaller of the two limits. */
         internal val effectiveTimeoutBeforeAccessMillis: Long
@@ -243,6 +275,7 @@ public class CoreNfcReadSettings
             private var maxSessionRenewals: Int = DEFAULT_MAX_SESSION_RENEWALS
             private var sessionRenewMillis: Long = DEFAULT_SESSION_RENEW_MILLIS
             private var busyRetryMillis: Long = DEFAULT_BUSY_RETRY_MILLIS
+            private var tagTimeLimitMillis: Long = DEFAULT_TAG_TIME_LIMIT_MILLIS
 
             /** What the read does when the link to the chip is lost. */
             public fun linkLoss(policy: LinkLossPolicy): Builder = apply { linkLoss = policy }
@@ -283,6 +316,9 @@ public class CoreNfcReadSettings
             /** How long the read keeps trying to begin a session the system refused as busy; [BUSY_RETRY_OFF] for not at all. */
             public fun busyRetryMillis(millis: Long): Builder = apply { busyRetryMillis = millis }
 
+            /** How long the read uses one connection to the document before it asks for a fresh one; [TAG_TIME_LIMIT_OFF] for never. */
+            public fun tagTimeLimitMillis(millis: Long): Builder = apply { tagTimeLimitMillis = millis }
+
             /**
              * The settings.
              *
@@ -304,6 +340,7 @@ public class CoreNfcReadSettings
                     maxSessionRenewals,
                     sessionRenewMillis,
                     busyRetryMillis,
+                    tagTimeLimitMillis,
                 )
         }
 
@@ -357,5 +394,17 @@ public class CoreNfcReadSettings
 
             /** The [busyRetryMillis] that turns the tries after a busy refusal off: 0. */
             public const val BUSY_RETRY_OFF: Long = 0
+
+            /** The default [tagTimeLimitMillis]: 18000. */
+            public const val DEFAULT_TAG_TIME_LIMIT_MILLIS: Long = 18_000
+
+            /** The [tagTimeLimitMillis] that turns the planned handover off: 0. */
+            public const val TAG_TIME_LIMIT_OFF: Long = 0
+
+            /** The shortest [tagTimeLimitMillis] other than [TAG_TIME_LIMIT_OFF]: 10000. */
+            public const val MIN_TAG_TIME_LIMIT_MILLIS: Long = 10_000
+
+            // The longest: the session's own 60 seconds.
+            private const val MAX_TAG_TIME_LIMIT_MILLIS: Long = 60_000
         }
     }

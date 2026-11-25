@@ -29,12 +29,15 @@ internal const val EMRTD_AID = "A0000002471001"
  * only the SDK's own command limit ends the wait.
  *
  * [connectedLimitMillis], when set, models the platform's limit on one connected tag (DES i33,
- * about 20 s): a command sent after it fails with code 100 (`tagConnectionLost`).
+ * about 20 s): a command sent after it fails with code 100 (`tagConnectionLost`); with
+ * [IosSim.connectedLimitEndsSession], the system also ends the whole session then, with code 202,
+ * as a device did mid-read.
  */
 internal class ScriptedIso7816(
     private val sim: IosSim,
     override val initialSelectedAid: String?,
     override val supportsPace: Boolean? = null,
+    private val port: FakeSessionPort? = null,
 ) : Iso7816Channel {
     var connectedAt: Long = 0
     val held = mutableListOf<(ByteArray?, NfcError?) -> Unit>()
@@ -47,6 +50,15 @@ internal class ScriptedIso7816(
         if (limit != null && sim.now() - connectedAt >= limit) {
             sim.script.respond(command, sim.now())
             sim.later(0) { onDone(null, IosSim.codeError(CoreNfcErrorCode.TAG_CONNECTION_LOST)) }
+            val session = port
+            if (sim.connectedLimitEndsSession && session != null && session.systemEnds == 0 && !session.invalidated) {
+                sim.later(0) {
+                    session.systemEnd(
+                        IosSim.codeError(CoreNfcErrorCode.SESSION_TERMINATED_UNEXPECTEDLY, CoreNfcErrorSource.SESSION_END),
+                        CoreNfcErrorCode.SESSION_TERMINATED_UNEXPECTEDLY,
+                    )
+                }
+            }
             return
         }
         when (val reply = sim.script.respond(command, sim.now())) {
@@ -99,6 +111,9 @@ internal class IosSim(
     var returnAfterMillis = 600L
     var connectMillis = 20L
     var connectedLimitMillis: Long? = null
+
+    /** Whether the system ends the session when [connectedLimitMillis] passes on a tag (code 202). */
+    var connectedLimitEndsSession = false
 
     /** Connect failures for the next connects, in order (a lost link while connecting, for example). */
     val connectFailures = ArrayDeque<NfcError>()
@@ -153,7 +168,7 @@ internal class IosSim(
     ) {
         later(afterMillis) {
             if (documentInField && !port.invalidated && port.systemEnds == 0) {
-                val channel = ScriptedIso7816(this, initialSelectedAid).also { channels += it }
+                val channel = ScriptedIso7816(this, initialSelectedAid, port = port).also { channels += it }
                 val tag = ScriptedTag(this, channel).also { tags += it }
                 port.events.onTagsDetected(listOf(tag))
             }

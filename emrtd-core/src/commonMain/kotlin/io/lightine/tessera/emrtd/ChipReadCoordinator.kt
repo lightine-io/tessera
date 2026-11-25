@@ -61,7 +61,10 @@ import kotlin.jvm.JvmSynthetic
  *    then go to step 3; when the platform gives up waiting, [documentNotReturned].
  *    [ChipReadAttemptOutcome.NO_ANSWER_YET]: the same, but try again soon, since the document is
  *    likely still there; when the platform's time bound for unanswered tries passes,
- *    [documentNotReturned].
+ *    [documentNotReturned]. [ChipReadAttemptOutcome.HANDED_OVER]: the platform stopped the
+ *    attempt on purpose to get a fresh connection to the same document (its `handedOver` hook);
+ *    release the link, ask the platform for the document again, then go to step 3; when it does
+ *    not come back within the platform's short wait, [handoverFailed].
  * 5. At any time: [cancel] with [ChipReadEnding.Cancelled.By.APP] (then release the link in the
  *    background) or [ChipReadEnding.Cancelled.By.PERSON]; [endedBySystem]; [fail] for a platform
  *    problem with no better ending.
@@ -222,6 +225,20 @@ public class ChipReadCoordinator private constructor(
     // Whether any try of the read reached the first command that uses the key.
     private val accessEverReached = AtomicBoolean(false)
 
+    // A planned handover (see HANDED_OVER): the updates held back until the read is past where it
+    // was, and whether the repeats of the current attempt continue from what it read.
+    private val handover = AtomicReference<HandoverMark?>(null)
+    private val resumeAfterHandover = AtomicBoolean(false)
+
+    /** Where the read was when the platform handed over: its progress and the checks it had shown. */
+    private class HandoverMark(
+        val progress: ChipReadProgress,
+        val authShown: Set<ChipAuthMethod>,
+    )
+
+    /** `true` while a planned handover is under way: nothing is published until the read is past it. */
+    private val handingOver: Boolean get() = handover.load() != null
+
     /** `true` while the read shows [ChipReadState.NoAnswerYet]: the steps of each new try are not reported. */
     private val noAnswer: Boolean get() = lastNoAnswer.load() != null
 
@@ -275,7 +292,7 @@ public class ChipReadCoordinator private constructor(
      */
     @JvmSynthetic
     public fun waiting(waitedMillis: Long) {
-        if (waitingAfterLoss.load() || noAnswer) return
+        if (waitingAfterLoss.load() || noAnswer || handingOver) return
         this.waitedMillis.store(waitedMillis)
         publish(ChipReadState.WaitingForDocument(waitedMillis))
     }
@@ -307,21 +324,22 @@ public class ChipReadCoordinator private constructor(
 
     /**
      * A document is found and nothing was sent yet: [ChipReadState.DocumentFound]. While the read
-     * shows [ChipReadState.NoAnswerYet] it does nothing: that state stays.
+     * shows [ChipReadState.NoAnswerYet], or hands over ([ChipReadAttemptOutcome.HANDED_OVER]), it
+     * does nothing: the state before stays.
      */
     @JvmSynthetic
     public fun documentFound() {
-        if (noAnswer) return
+        if (noAnswer || handingOver) return
         publish(ChipReadState.DocumentFound)
     }
 
     /**
      * The link to the chip is being set up: [ChipReadState.Connecting]. While the read shows
-     * [ChipReadState.NoAnswerYet] it does nothing.
+     * [ChipReadState.NoAnswerYet], or hands over, it does nothing.
      */
     @JvmSynthetic
     public fun connecting() {
-        if (noAnswer) return
+        if (noAnswer || handingOver) return
         publish(ChipReadState.Connecting)
     }
 
@@ -358,6 +376,17 @@ public class ChipReadCoordinator private constructor(
      * this attempt. When the platform allows no other try and no try of the read reached that
      * command, the read ends with [ChipReadEnding.Failed] and [NfcNoAnswer].
      *
+     * When the attempt stopped with a lost link that the platform made on purpose ([handedOver]
+     * answers `true`), under [LinkLossPolicy.Resume], the read returns
+     * [ChipReadAttemptOutcome.HANDED_OVER]: no restart is used, no [ChipReadState.LinkLost] is
+     * published, and the next call repeats this attempt and continues from what it read, as a
+     * resume does (EF.SOD compared byte for byte, a cut-off data group continued from its byte
+     * offset, access run again with the same key). Until that next try is past where this one
+     * stopped, the read publishes nothing: no [ChipReadState.DocumentFound],
+     * [ChipReadState.Connecting] or [ChipReadState.OpeningAccess], no file it had already done,
+     * no [ChipReadState.AuthenticatingChip] it had already shown, so the progress and the file
+     * count never go back.
+     *
      * Cancelling the calling coroutine ends the read with [ChipReadEnding.Cancelled.By.APP] when it
      * has not ended yet, then rethrows.
      *
@@ -386,6 +415,12 @@ public class ChipReadCoordinator private constructor(
      *   [ChipReadAttemptOutcome.NO_ANSWER_YET]. From it on, each command is
      *   [ChipCommandTimeLimit.LONG] or [ChipCommandTimeLimit.READ]. An exception it throws stops
      *   the attempt like a failed command.
+     * @param handedOver Asked once, when the attempt stopped with a lost link ([NfcTagLost] or
+     *   [NfcTimeout]) and the platform named no system end: `true` when the platform stopped the
+     *   attempt itself, between two commands, to get a fresh connection to the same document (on
+     *   iPhone, before the system's limit on one tag connection). Honoured only under
+     *   [LinkLossPolicy.Resume]; the platform never hands over under another policy. An exception
+     *   it throws counts as `false`.
      */
     @JvmSynthetic
     @Throws(CancellationException::class)
@@ -394,18 +429,26 @@ public class ChipReadCoordinator private constructor(
         readAgainAllowed: Boolean = true,
         systemEnd: suspend (stoppedBy: NfcError) -> NfcError? = { null },
         useTimeLimit: suspend (ChipCommandTimeLimit) -> Unit = {},
+        handedOver: () -> Boolean = { false },
     ): ChipReadAttemptOutcome {
         if (isEnded) return ChipReadAttemptOutcome.ENDED
-        val attempt = if (repeatAttempt.exchange(false)) attemptsStarted.load() else attemptsStarted.incrementAndFetch()
+        val repeat = repeatAttempt.exchange(false)
+        // A new attempt number starts fresh; the repeats after a handover continue from its carry.
+        if (!repeat) resumeAfterHandover.store(false)
+        val attempt = if (repeat) attemptsStarted.load() else attemptsStarted.incrementAndFetch()
         waitingAfterLoss.store(false)
         // While unanswered tries go on, the opening steps of each try (OpeningAccess, with or
         // without the protocol) are not news: the chip may answer the plain commands and still go
         // silent before access. The last one is held back and shown once access is reached.
         var heldOpening: ChipReadState? = null
+        // The checks this try showed, so a try after a planned handover does not show them again.
+        val authShown = HashSet<ChipAuthMethod>()
         val reporter =
             FlowReporter(tracker) { state, progress ->
-                lastProgress.store(progress)
                 lastReadState.store(state)
+                if (state is ChipReadState.AuthenticatingChip) authShown += state.method
+                if (holdForHandover(state, progress)) return@FlowReporter
+                lastProgress.store(progress)
                 if (noAnswer && state is ChipReadState.OpeningAccess) {
                     heldOpening = state
                 } else {
@@ -422,7 +465,7 @@ public class ChipReadCoordinator private constructor(
                     options,
                     reporter,
                     attempt,
-                    if (resume && attempt > 1) carry.load() else null,
+                    if (resume && (attempt > 1 || resumeAfterHandover.load())) carry.load() else null,
                 ) {
                     accessReached = true
                     accessEverReached.store(true)
@@ -476,6 +519,17 @@ public class ChipReadCoordinator private constructor(
                 return ChipReadAttemptOutcome.ENDED
             }
         }
+        // Stopped by the platform on purpose, to get a fresh connection to the same document: no
+        // restart, no LinkLost; the next try repeats this attempt and continues from its carry.
+        if (isLinkLoss(error) && resume && askHandedOver(handedOver)) {
+            if (accessReached) endNoAnswer()
+            lastLoss.store(error)
+            val before = handover.load()
+            handover.store(HandoverMark(lastProgress.load(), authShown + before?.authShown.orEmpty()))
+            resumeAfterHandover.store(true)
+            repeatAttempt.store(true)
+            return ChipReadAttemptOutcome.HANDED_OVER
+        }
         // Lost before the first command that uses the key: the chip was asked nothing about it, so
         // the try costs no restart and repeats this attempt.
         if (isLinkLoss(error) && readAgainAllowed && !accessReached && result is ChipReadResult.Failed) {
@@ -483,6 +537,7 @@ public class ChipReadCoordinator private constructor(
             repeatAttempt.store(true)
             val silent = ChipReadState.NoAnswerYet(noAnswerTries.incrementAndFetch())
             lastNoAnswer.store(silent)
+            handover.store(null)
             publish(silent)
             return ChipReadAttemptOutcome.NO_ANSWER_YET
         }
@@ -500,11 +555,78 @@ public class ChipReadCoordinator private constructor(
             val lost = ChipReadState.LinkLost(linkLoss.maxRestarts - usedBefore)
             lastLinkLost.store(lost)
             waitingAfterLoss.store(true)
+            handover.store(null)
             publish(lost)
             return ChipReadAttemptOutcome.LINK_LOST
         }
         end(endingFor(result, error))
         return ChipReadAttemptOutcome.ENDED
+    }
+
+    private fun askHandedOver(handedOver: () -> Boolean): Boolean =
+        try {
+            handedOver()
+        } catch (e: Exception) {
+            false
+        }
+
+    /**
+     * Whether [state] is held back during a planned handover: the steps the new try repeats
+     * (opening access, files done before, a check shown before). The first state past them ends
+     * the handover and goes out.
+     */
+    private fun holdForHandover(
+        state: ChipReadState,
+        progress: ChipReadProgress,
+    ): Boolean {
+        val mark = handover.load() ?: return false
+        val hold =
+            when (state) {
+                is ChipReadState.OpeningAccess -> {
+                    true
+                }
+
+                is ChipReadState.ReadingFile -> {
+                    state.file.inMasterFile || state.file.dataGroup == null || progress.filesDone < mark.progress.filesDone
+                }
+
+                is ChipReadState.AuthenticatingChip -> {
+                    state.method in mark.authShown
+                }
+
+                else -> {
+                    false
+                }
+            }
+        if (!hold) handover.compareAndSet(mark, null)
+        return hold
+    }
+
+    /**
+     * The document did not come back within the platform's short wait after a planned handover
+     * ([ChipReadAttemptOutcome.HANDED_OVER]), or its new link could not be set up: from here the
+     * lost-link rules apply, as after any loss. When a restart is left, the read uses it, publishes
+     * [ChipReadState.LinkLost] and waits for the document; the next [read] is a new attempt that
+     * continues from what was read. Otherwise the read ends as [documentNotReturned] does.
+     *
+     * @return `true` when the read goes on and waits for the document.
+     */
+    @JvmSynthetic
+    public fun handoverFailed(): Boolean {
+        if (isEnded) return false
+        handover.store(null)
+        // The next try is a new attempt, as after any lost link.
+        repeatAttempt.store(false)
+        val usedBefore = takeRestart()
+        if (usedBefore < 0) {
+            documentNotReturned()
+            return false
+        }
+        val lost = ChipReadState.LinkLost(linkLoss.maxRestarts - usedBefore)
+        lastLinkLost.store(lost)
+        waitingAfterLoss.store(true)
+        publish(lost)
+        return !isEnded
     }
 
     /**
@@ -777,6 +899,16 @@ public enum class ChipReadAttemptOutcome {
      * call [ChipReadCoordinator.documentNotReturned].
      */
     NO_ANSWER_YET,
+
+    /**
+     * The platform stopped the attempt on purpose, between two commands, to get a fresh connection
+     * to the same document (the `handedOver` hook of [ChipReadCoordinator.read]): no restart is
+     * used and the app sees no new state. Release the link, ask for the document again, and call
+     * [ChipReadCoordinator.read] on the new link: it continues from what was read. When the
+     * document does not come back within the platform's short wait, call
+     * [ChipReadCoordinator.handoverFailed].
+     */
+    HANDED_OVER,
 }
 
 /**

@@ -312,6 +312,7 @@ final enum class io.lightine.tessera.emrtd/ChipReadStep : kotlin/Enum<io.lightin
     enum entry SESSION_END // io.lightine.tessera.emrtd/ChipReadStep.SESSION_END|null[0]
     enum entry SESSION_RENEW // io.lightine.tessera.emrtd/ChipReadStep.SESSION_RENEW|null[0]
     enum entry SHEET_TEXT // io.lightine.tessera.emrtd/ChipReadStep.SHEET_TEXT|null[0]
+    enum entry TAG_HANDOVER // io.lightine.tessera.emrtd/ChipReadStep.TAG_HANDOVER|null[0]
 
     final val entries // io.lightine.tessera.emrtd/ChipReadStep.entries|#static{}entries[0]
         final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd/ChipReadStep> // io.lightine.tessera.emrtd/ChipReadStep.entries.<get-entries>|<get-entries>#static(){}[0]

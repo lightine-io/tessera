@@ -311,7 +311,7 @@ let finish = await reading.ending
 if case .complete(let read) = finish.outcome { /* use read */ }
 ```
 
-On iPhone, while no document was found, the read may close the system NFC sheet and open it again (`ChipReadState.RenewingSession`): a new session finds a document that the first one missed. After a read ends, the system may refuse a new session for a moment; the next read waits for it by itself, and `CoreNfcChipRead.readiness()` with `addReadinessListener` tells a button when a new read can begin at once.
+On iPhone, while no document was found, the read may close the system NFC sheet and open it again (`ChipReadState.RenewingSession`): a new session finds a document that the first one missed. After a read ends, the system may refuse a new session for a moment; the next read waits for it by itself, and `CoreNfcChipRead.readiness()` with `addReadinessListener` tells a button when a new read can begin at once. A read that takes longer than 18 seconds on one connection changes to a fresh connection to the document by itself and goes on where it stopped (`CoreNfcReadSettings.tagTimeLimitMillis`); the app sees a short pause, not a new state.
 
 ## Go further
 

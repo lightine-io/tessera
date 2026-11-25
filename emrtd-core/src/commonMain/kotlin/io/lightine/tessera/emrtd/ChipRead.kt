@@ -153,7 +153,9 @@ public class ChipRead internal constructor(
  *   the read's last attempt only for a data group kept by [LinkLossPolicy.Resume].
  * @property continuedAt For a data group that a lost link cut off and [LinkLossPolicy.Resume]
  *   continued in [attempt], the byte offset where it continued (the bytes before it came from the
- *   attempt before); `null` for a file read whole in one attempt.
+ *   attempt before); also for one the read continued on a fresh connection to the document after
+ *   a planned handover on iPhone (`CoreNfcReadSettings.tagTimeLimitMillis`), within the same
+ *   attempt; `null` for a file read whole on one connection.
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
@@ -314,7 +316,9 @@ public class ChipFileError internal constructor(
 }
 
 /**
- * What a read did with the files of earlier attempts after a lost link ([LinkLossPolicy.Resume]).
+ * What a read did with the files of earlier attempts after a lost link ([LinkLossPolicy.Resume]),
+ * or with the files of the same attempt after a planned handover to a fresh connection on iPhone
+ * (`CoreNfcReadSettings.tagTimeLimitMillis`), which follows the same rule.
  *
  * May gain members in a later release: an exhaustive `when` over it then stops compiling until
  * the new member is handled. An `else` branch keeps it compiling without handling the new member:
@@ -326,7 +330,10 @@ public class ChipFileError internal constructor(
  */
 @ExperimentalTesseraChipApi
 public enum class ChipResumeOutcome {
-    /** No earlier attempt to continue from: the first attempt, or a policy other than [LinkLossPolicy.Resume]. */
+    /**
+     * No earlier attempt or connection to continue from: the first attempt on its first
+     * connection, or a policy other than [LinkLossPolicy.Resume].
+     */
     NOT_RESUMED,
 
     /**

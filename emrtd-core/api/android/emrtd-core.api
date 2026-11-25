@@ -814,6 +814,7 @@ public final class io/lightine/tessera/emrtd/ChipReadStep : java/lang/Enum {
 	public static final field SESSION_END Lio/lightine/tessera/emrtd/ChipReadStep;
 	public static final field SESSION_RENEW Lio/lightine/tessera/emrtd/ChipReadStep;
 	public static final field SHEET_TEXT Lio/lightine/tessera/emrtd/ChipReadStep;
+	public static final field TAG_HANDOVER Lio/lightine/tessera/emrtd/ChipReadStep;
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/ChipReadStep;
 	public static fun values ()[Lio/lightine/tessera/emrtd/ChipReadStep;

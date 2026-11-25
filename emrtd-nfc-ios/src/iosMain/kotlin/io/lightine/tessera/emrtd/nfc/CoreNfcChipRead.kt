@@ -15,6 +15,7 @@ import io.lightine.tessera.emrtd.ChipReadStepOutcome
 import io.lightine.tessera.emrtd.ChipReadUpdate
 import io.lightine.tessera.emrtd.ChipReader
 import io.lightine.tessera.emrtd.HandoffObserver
+import io.lightine.tessera.emrtd.LinkLossPolicy
 import io.lightine.tessera.emrtd.ObserverThread
 import io.lightine.tessera.telemetry.TelemetrySink
 import io.lightine.tessera.telemetry.TelemetrySinkRegistry
@@ -121,6 +122,12 @@ import kotlin.time.TimeSource
  *   it keeps the sheet up, waits for the document again and goes on, at most twice. It does not
  *   start again, or try again after an unanswered try, when less than 10 seconds of the system
  *   session's 60 are left.
+ * - When one connection to the document has lasted [CoreNfcReadSettings.tagTimeLimitMillis] (18
+ *   seconds by default) and the read is not finished, stops between two commands, asks the system
+ *   to find the document again and goes on from where it stopped on the new connection, opening
+ *   the chip again with the same key: the vendor's engineers have stated a limit of 20 seconds per
+ *   tag connection. No restart is used and the observer gets no new state; the read's telemetry
+ *   sink gets an [io.lightine.tessera.emrtd.ChipReadEvent] with step [ChipReadStep.TAG_HANDOVER].
  * - Ends the system session on every path, exactly once: with success only for
  *   [ChipReadEnding.Complete], with the ending's text as the error message otherwise. The ending
  *   is given to the observer at once; the system takes a moment more to close the sheet.
@@ -199,6 +206,9 @@ public class CoreNfcChipRead internal constructor(
     private var tagReported = false
     private var renewalsUsed = 0
 
+    // Planned handovers of the tag in the read (TES-346), under the lock.
+    private var handoversMade = 0
+
     // The system kept refusing a session as busy until the bound: the read ended so.
     @Volatile
     private var refusedOut = false
@@ -254,8 +264,16 @@ public class CoreNfcChipRead internal constructor(
         var session = openSession(renewal = 0, clock, BusyRetry(settings.busyRetryMillis)) ?: return
         var waitingSince = clock.began ?: env.now()
         var failedConnects = 0
+        // After a planned handover: until when the read waits for the document before it counts as lost.
+        var handoverWaitEnds: Long? = null
         while (!coordinator.isEnded) {
-            val next = awaitDocument(session, waitingSince)
+            val next = awaitDocument(session, waitingSince, handoverWaitEnds ?: Long.MAX_VALUE)
+            if (next is Next.HandoverMissed) {
+                handoverWaitEnds = null
+                if (!handoverFailed(session)) return
+                waitingSince = env.now()
+                continue
+            }
             if (next is Next.Renew) {
                 session = renew(session, next, clock) ?: return
                 waitingSince = clock.began ?: env.now()
@@ -279,6 +297,12 @@ public class CoreNfcChipRead internal constructor(
             delay(settings.settleDelayMillis)
             coordinator.connecting()
             val failure = connect(tag)
+            if (failure != null && handoverWaitEnds != null) {
+                // The new link after a planned handover could not be set up: a real loss from here.
+                handoverWaitEnds = null
+                if (!handoverFailed(session)) return
+            }
+            handoverWaitEnds = null
             if (failure != null) {
                 if (failure.retryable && ++failedConnects < MAX_CONNECT_ATTEMPTS) {
                     coordinator.connectionFailed()
@@ -294,9 +318,10 @@ public class CoreNfcChipRead internal constructor(
                 CoreNfcTransport(channel, keepAlive = session.owned, commandTimeoutMillis = settings.effectiveTimeoutBeforeAccessMillis)
             if (!locked { if (coordinator.isEnded) false else true.also { transport = link } }) return
             val began = session.began ?: env.now()
+            val gate = handoverGate(link, next.at, began)
             val outcome =
                 coordinator.read(
-                    link,
+                    gate ?: link,
                     readAgainAllowed = timeLeft(began) >= MIN_TIME_FOR_A_NEW_START_MILLIS,
                     systemEnd = { stoppedBy ->
                         // A session end the system reported while the link was lost: that is the
@@ -308,9 +333,18 @@ public class CoreNfcChipRead internal constructor(
                             ?: if (stoppedBy == CLOSED) withTimeoutOrNull(SESSION_END_WAIT_MILLIS) { sessionEnd.await() } else null
                     },
                     useTimeLimit = { kind -> link.useTimeLimit(settings.timeoutFor(kind)) },
+                    handedOver = { gate?.handedOverAt != null },
                 )
             stopTransport(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
             if (outcome == ChipReadAttemptOutcome.ENDED) return
+            if (outcome == ChipReadAttemptOutcome.HANDED_OVER) {
+                // A fresh connection to the same document, asked for on the read's own terms.
+                record(ChipReadEvent.tagHandover(gate?.handedOverAt ?: 0L))
+                restartPolling(session.owned)
+                waitingSince = env.now()
+                handoverWaitEnds = waitingSince + HANDOVER_WAIT_MILLIS
+                continue
+            }
             // A lost link and a chip that did not answer before access go on the same way: the
             // system is asked to find the document again, while enough of the session is left.
             // The loss was allowed to follow, but too little of the session may be left by now.
@@ -324,6 +358,52 @@ public class CoreNfcChipRead internal constructor(
     }
 
     private fun timeLeft(began: Long): Long = SESSION_LIMIT_MILLIS - (env.now() - began)
+
+    /**
+     * The gate that hands the tag over before [CoreNfcReadSettings.tagTimeLimitMillis] passes on
+     * it ([TagHandoverGate]), or `null` when the setting is off or the policy is not
+     * [LinkLossPolicy.Resume]. The tag's time counts from its report at [tagReportedAt]. A
+     * handover is taken only while fewer than [MAX_TAG_HANDOVERS] were made in the read, the read
+     * has not ended, and at least [MIN_TIME_FOR_A_NEW_START_MILLIS] of the session that began at
+     * [began] is left, the rule for any new start.
+     */
+    private fun handoverGate(
+        link: CoreNfcTransport,
+        tagReportedAt: Long,
+        began: Long,
+    ): TagHandoverGate? {
+        val limit = settings.tagTimeLimitMillis
+        if (limit == CoreNfcReadSettings.TAG_TIME_LIMIT_OFF || settings.linkLoss !is LinkLossPolicy.Resume) return null
+        return TagHandoverGate(
+            link,
+            tagMillis = { env.now() - tagReportedAt },
+            limitMillis = limit,
+            heavyReserveMillis = minOf(settings.commandTimeoutMillis, limit / 2),
+        ) {
+            locked {
+                val allowed =
+                    handoversMade < MAX_TAG_HANDOVERS && !coordinator.isEnded &&
+                        timeLeft(began) >= MIN_TIME_FOR_A_NEW_START_MILLIS
+                if (allowed) handoversMade++
+                allowed
+            }
+        }
+    }
+
+    /**
+     * The document did not come back after a planned handover, or its new link could not be set
+     * up: the lost-link rules from here, unless too little of the session is left for a new start.
+     *
+     * @return `true` when the read goes on and waits for the document.
+     */
+    private fun handoverFailed(session: ReaderRun): Boolean {
+        val began = session.began ?: env.now()
+        if (timeLeft(began) < MIN_TIME_FOR_A_NEW_START_MILLIS) {
+            coordinator.documentNotReturned()
+            return false
+        }
+        return coordinator.handoverFailed()
+    }
 
     /**
      * In the Starting state: the previous read's session must be released (at most
@@ -453,11 +533,13 @@ public class CoreNfcChipRead internal constructor(
      * Waits for one ISO 7816 tag of [session], reporting the time waited every 2 seconds since
      * [since], asking the system to search again every [CoreNfcReadSettings.searchRestartMillis]
      * while no tag was reported, and renewing the session after
-     * [CoreNfcReadSettings.sessionRenewMillis] when no tag was reported in the read.
+     * [CoreNfcReadSettings.sessionRenewMillis] when no tag was reported in the read. After a
+     * planned handover, [giveUpAt] ends the wait with [Next.HandoverMissed].
      */
     private suspend fun awaitDocument(
         session: ReaderRun,
         since: Long,
+        giveUpAt: Long = Long.MAX_VALUE,
     ): Next {
         val period = settings.searchRestartMillis
         var nextReport = since + ((env.now() - since) / WAITING_REPORT_MILLIS + 1) * WAITING_REPORT_MILLIS
@@ -466,10 +548,11 @@ public class CoreNfcChipRead internal constructor(
         val renewOn = settings.sessionRenewMillis > 0 && locked { !tagReported && renewalsUsed < settings.maxSessionRenewals }
         var renewAt = if (renewOn) (session.began ?: env.now()) + settings.sessionRenewMillis else Long.MAX_VALUE
         while (true) {
-            val wakeAt = minOf(nextReport, nextRestart, renewAt)
+            val wakeAt = minOf(nextReport, nextRestart, renewAt, giveUpAt)
             val got = awaitNext(session, (wakeAt - env.now()).coerceAtLeast(0))
             if (got == null) {
                 val now = env.now()
+                if (now >= giveUpAt) return Next.HandoverMissed
                 if (now >= nextReport) {
                     coordinator.waiting(now - since)
                     nextReport += WAITING_REPORT_MILLIS
@@ -500,7 +583,7 @@ public class CoreNfcChipRead internal constructor(
                 if (period > 0) nextRestart = env.now() + period
                 continue
             }
-            return Next.Tag(tag, channel)
+            return Next.Tag(tag, channel, reported.at)
         }
     }
 
@@ -619,7 +702,7 @@ public class CoreNfcChipRead internal constructor(
         if (found.singleOrNull()?.iso7816 != null) documentSeen = true
         // Before the read can take the tag: no periodic restart is run after this point.
         restarts.tagReported()
-        tags.trySend(SessionTags(session, found))
+        tags.trySend(SessionTags(session, found, env.now()))
     }
 
     /** What a session's end means for the read. */
@@ -826,6 +909,8 @@ public class CoreNfcChipRead internal constructor(
     private class SessionTags(
         val session: Any,
         val tags: List<DetectedTag>,
+        // When the system reported them: a tag's connection time counts from here.
+        val at: Long,
     )
 
     /** What a system end that does not end the read asks the read's loop to do. */
@@ -843,6 +928,7 @@ public class CoreNfcChipRead internal constructor(
         class Tag(
             val tag: DetectedTag,
             val channel: Iso7816Channel,
+            val at: Long,
         ) : Next() {
             operator fun component1() = tag
 
@@ -855,6 +941,9 @@ public class CoreNfcChipRead internal constructor(
         ) : Next()
 
         object Refused : Next()
+
+        /** No document within the short wait after a planned handover. */
+        object HandoverMissed : Next()
     }
 
     /** The time waited for a document, from the first session of the read that was on. */
@@ -1125,6 +1214,19 @@ public class CoreNfcChipRead internal constructor(
 
         /** No new start after a lost link when less than this is left of the session. */
         internal const val MIN_TIME_FOR_A_NEW_START_MILLIS = 10_000L
+
+        /**
+         * The most planned handovers of the tag in one read: with 18-second connections, three
+         * cover a read up to the session's 60 seconds, where the rule above stops them anyway.
+         */
+        internal const val MAX_TAG_HANDOVERS = 3
+
+        /**
+         * How long the read waits for the document after a planned handover before the loss rules
+         * apply: one waiting report's period. A document still on the phone is found again well
+         * within it (0.6 seconds in the device-shaped simulation).
+         */
+        internal const val HANDOVER_WAIT_MILLIS = 2_000L
 
         /** How often the waiting state repeats with the time waited. */
         internal const val WAITING_REPORT_MILLIS = ChipReadCoordinator.WAITING_REPORT_MILLIS

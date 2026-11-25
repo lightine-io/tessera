@@ -87,14 +87,33 @@ class CatalogueTimingAndRecoveryIosTest {
 
     /**
      * I-08: a chip 5 times slower than recorded takes 20 to 29 s, past the platform's limit on one
-     * connected tag (DES i33, about 20 s, modelled here): the link is lost there and the read goes
-     * on from where it stopped in a new link, inside the 60 s session.
+     * connected tag (DES i33, about 20 s, modelled here). The read hands the tag over at 18 s on
+     * its own terms ([CoreNfcReadSettings.tagTimeLimitMillis]) and goes on from where it stopped on
+     * a fresh connection, inside the 60 s session: no lost link, no restart, the same attempt.
      */
     @Test
-    fun i08_chipFiveTimesSlower_crossesTheConnectedTagLimitAndResumes() =
+    fun i08_chipFiveTimesSlower_handsTheTagOverBeforeTheConnectedTagLimitAndResumes() =
         simTest(latencyFactor = 5) { flow ->
             connectedLimitMillis = 20_000
             val r = read(deviceOptions(flow))
+            val ending = assertIs<ChipReadEnding.Complete>(r.ending)
+            assertDeviceChecksPass(ending)
+            assertEquals(1, ending.attempts)
+            assertEquals(2, script.links)
+            assertTrue(r.states.none { it is ChipReadState.LinkLost })
+            assertEquals(ChipResumeOutcome.SAME_SECURITY_OBJECT, ending.read.resume)
+            assertTrue(r.endings.single().atMillis < CoreNfcChipRead.SESSION_LIMIT_MILLIS)
+        }
+
+    /**
+     * I-08 with the handover off: the platform's limit cuts the link (code 100 in this model), and
+     * the read goes on from where it stopped after the lost link, inside the 60 s session.
+     */
+    @Test
+    fun i08_handoverOff_crossesTheConnectedTagLimitAndResumesAfterTheLoss() =
+        simTest(latencyFactor = 5) { flow ->
+            connectedLimitMillis = 20_000
+            val r = read(deviceOptions(flow), CoreNfcReadSettings(tagTimeLimitMillis = CoreNfcReadSettings.TAG_TIME_LIMIT_OFF))
             val ending = assertIs<ChipReadEnding.Complete>(r.ending)
             assertDeviceChecksPass(ending)
             assertEquals(2, ending.attempts)

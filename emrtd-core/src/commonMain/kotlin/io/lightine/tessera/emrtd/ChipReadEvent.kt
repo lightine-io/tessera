@@ -19,7 +19,8 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  * @property fileId The file identifier, for a file step.
  * @property byteCount The number of bytes read, for a file step that read the file.
  * @property statusWord The chip's status word, when the step ended on one.
- * @property durationMillis How long the step took, in milliseconds.
+ * @property durationMillis How long the step took, in milliseconds. For
+ *   [ChipReadStep.TAG_HANDOVER]: how long the connection to the tag had lasted.
  * @property systemCode The platform's own code, for a step that ended on one: today only
  *   [ChipReadStep.SESSION_END] on iPhone, with Core NFC's `NFCReaderError` code, and
  *   [ChipReadStep.SESSION_RENEW] when the system's end with that code led to the renewal. `null`
@@ -116,6 +117,21 @@ public class ChipReadEvent internal constructor(
             outcome: ChipReadStepOutcome,
             durationMillis: Long,
         ): ChipReadEvent = ChipReadEvent(ChipReadStep.SESSION_RENEW, outcome, null, null, null, null, durationMillis, systemCode, renewal)
+
+        /**
+         * A [ChipReadStep.TAG_HANDOVER] event: the read stopped using the tag between two commands
+         * and asked the system for a fresh connection to it, [tagMillis] after the system reported
+         * the tag. The outcome is [ChipReadStepOutcome.SUCCEEDED]: the handover was made.
+         *
+         * Internal: see [InternalTesseraChipApi].
+         *
+         * @param tagMillis How long the connection to the tag had lasted, in milliseconds.
+         * @return The event, with no protocol, file, byte count or status word.
+         * @since 1.0.0
+         */
+        @InternalTesseraChipApi
+        public fun tagHandover(tagMillis: Long): ChipReadEvent =
+            ChipReadEvent(ChipReadStep.TAG_HANDOVER, ChipReadStepOutcome.SUCCEEDED, null, null, null, null, tagMillis)
     }
 }
 
@@ -228,6 +244,18 @@ public enum class ChipReadStep {
      * @since 1.0.0
      */
     SESSION_RENEW,
+
+    /**
+     * On iPhone: the read stopped using the tag between two commands and asked the system for a
+     * fresh connection to the same document, before the system's limit on one tag connection
+     * (see `CoreNfcReadSettings.tagTimeLimitMillis`). Reported once per handover, with
+     * [ChipReadStepOutcome.SUCCEEDED] and, in [ChipReadEvent.durationMillis], how long the
+     * connection to the tag had lasted. The read goes on from where it was, with no restart used.
+     * On Android there is no such event.
+     *
+     * @since 1.0.0
+     */
+    TAG_HANDOVER,
 }
 
 /**

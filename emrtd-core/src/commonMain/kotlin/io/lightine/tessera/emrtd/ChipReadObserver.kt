@@ -70,7 +70,9 @@ public fun interface ChipReadUpdateListener {
  * @property state Where the read is.
  * @property progress How far the read got.
  * @property attempt Which attempt the update belongs to, from 1. A read starts again after a lost
- *   link only when its [LinkLossPolicy] allows it; each new start is a new attempt.
+ *   link only when its [LinkLossPolicy] allows it; each new start is a new attempt. A planned
+ *   handover to a fresh connection on iPhone (`CoreNfcReadSettings.tagTimeLimitMillis`) is no
+ *   new attempt.
  *   [ChipReadState.LinkLost] belongs to the attempt that lost the link, each time it is reported;
  *   every update after it belongs to the attempt that starts when the document is back. So
  *   `attempt + 1` is the "try 2 of 3" to show with [ChipReadState.LinkLost].
