@@ -859,6 +859,7 @@ class NfcChipReadTest {
         assertEquals(LinkLossPolicy.Resume(2), settings.linkLoss)
         assertEquals(400L, settings.settleDelayMillis)
         assertEquals(5_000L, settings.commandTimeoutMillis)
+        assertEquals(1_500L, settings.commandTimeoutBeforeAccessMillis)
         assertEquals(15_000L, settings.waitForReturnMillis)
         assertEquals(NfcReadSettings.NO_LIMIT, settings.waitForDocumentMillis)
         assertEquals(1_000L, settings.presenceCheckDelayMillis)
@@ -866,7 +867,8 @@ class NfcChipReadTest {
         assertEquals(ObserverThread.MAIN, settings.observerOn)
         assertEquals(
             "NfcReadSettings(linkLoss=Resume(2), settleDelayMillis=400, commandTimeoutMillis=5000, " +
-                "waitForReturnMillis=15000, waitForDocumentMillis=${Long.MAX_VALUE}, presenceCheckDelayMillis=1000, " +
+                "commandTimeoutBeforeAccessMillis=1500, waitForReturnMillis=15000, waitForDocumentMillis=${Long.MAX_VALUE}, " +
+                "presenceCheckDelayMillis=1000, " +
                 "platformSounds=true, observerOn=MAIN)",
             settings.toString(),
         )
@@ -878,10 +880,12 @@ class NfcChipReadTest {
                 .settleDelayMillis(100)
                 .waitForReturnMillis(8_000)
                 .waitForDocumentMillis(30_000)
+                .commandTimeoutBeforeAccessMillis(800)
                 .build()
         assertEquals(
             "NfcReadSettings(linkLoss=ReadAgain(1), settleDelayMillis=100, commandTimeoutMillis=3000, " +
-                "waitForReturnMillis=8000, waitForDocumentMillis=30000, presenceCheckDelayMillis=1000, " +
+                "commandTimeoutBeforeAccessMillis=800, waitForReturnMillis=8000, waitForDocumentMillis=30000, " +
+                "presenceCheckDelayMillis=1000, " +
                 "platformSounds=true, observerOn=MAIN)",
             built.toString(),
         )
@@ -894,6 +898,7 @@ class NfcChipReadTest {
                 .build()
                 .waitForDocumentMillis,
         )
+        assertEquals(800L, built.toBuilder().build().commandTimeoutBeforeAccessMillis, "the builder keeps the value")
     }
 
     @Test
@@ -905,6 +910,19 @@ class NfcChipReadTest {
         assertFailsWith<IllegalArgumentException> { NfcReadSettings(waitForDocumentMillis = -1) }
         assertFailsWith<IllegalArgumentException> { NfcReadSettings(presenceCheckDelayMillis = -1) }
         assertFailsWith<IllegalArgumentException> { NfcReadSettings(presenceCheckDelayMillis = Int.MAX_VALUE + 1L) }
+        assertFailsWith<IllegalArgumentException> { NfcReadSettings(commandTimeoutBeforeAccessMillis = 0) }
+        assertFailsWith<IllegalArgumentException> { NfcReadSettings(commandTimeoutBeforeAccessMillis = -1) }
+        assertFailsWith<IllegalArgumentException> { NfcReadSettings(commandTimeoutBeforeAccessMillis = Int.MAX_VALUE + 1L) }
+        assertFailsWith<IllegalArgumentException> { NfcReadSettings.Builder().commandTimeoutBeforeAccessMillis(0).build() }
+        // The edges are accepted; a value above the general limit gives way to it.
+        assertEquals(1L, NfcReadSettings(commandTimeoutBeforeAccessMillis = 1).effectiveTimeoutBeforeAccessMillis)
+        assertEquals(
+            1_000L,
+            NfcReadSettings(
+                commandTimeoutMillis = 1_000,
+                commandTimeoutBeforeAccessMillis = Int.MAX_VALUE.toLong(),
+            ).effectiveTimeoutBeforeAccessMillis,
+        )
     }
 
     // --- The polish round: the telemetry sink, the key's lifetime, the settings builder ------------

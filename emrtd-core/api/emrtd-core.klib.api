@@ -1775,6 +1775,13 @@ sealed class io.lightine.tessera.emrtd/ChipReadState { // io.lightine.tessera.em
         final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipReadState.LinkLost.toString|toString(){}[0]
     }
 
+    final class NoAnswerYet : io.lightine.tessera.emrtd/ChipReadState { // io.lightine.tessera.emrtd/ChipReadState.NoAnswerYet|null[0]
+        final val tries // io.lightine.tessera.emrtd/ChipReadState.NoAnswerYet.tries|{}tries[0]
+            final fun <get-tries>(): kotlin/Int // io.lightine.tessera.emrtd/ChipReadState.NoAnswerYet.tries.<get-tries>|<get-tries>(){}[0]
+
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipReadState.NoAnswerYet.toString|toString(){}[0]
+    }
+
     final class OpeningAccess : io.lightine.tessera.emrtd/ChipReadState { // io.lightine.tessera.emrtd/ChipReadState.OpeningAccess|null[0]
         final val protocol // io.lightine.tessera.emrtd/ChipReadState.OpeningAccess.protocol|{}protocol[0]
             final fun <get-protocol>(): io.lightine.tessera.types.vocabulary/ChipAccessProtocol? // io.lightine.tessera.emrtd/ChipReadState.OpeningAccess.protocol.<get-protocol>|<get-protocol>(){}[0]

@@ -141,9 +141,16 @@ import kotlin.jvm.JvmOverloads
  *   time waited. A tag that is not an ISO 14443-4 chip (a transit card, for example) is skipped,
  *   and the read keeps waiting.
  * - When a document is found, waits [NfcReadSettings.settleDelayMillis] before the first command,
- *   connects, and reads. Each command has its own time limit,
- *   [NfcReadSettings.commandTimeoutMillis]. A link that cannot be set up sends the read back to
- *   waiting, with no attempt used; after 3 such failures in a row the read ends.
+ *   connects, and reads. Each command has its own time limit:
+ *   [NfcReadSettings.commandTimeoutBeforeAccessMillis] for the plain commands before BAC or PACE,
+ *   [NfcReadSettings.commandTimeoutMillis] from the first BAC or PACE command on. A link that
+ *   cannot be set up sends the read back to waiting, with no attempt used; after 3 such failures
+ *   in a row the read ends.
+ * - When the chip does not answer before BAC or PACE started (found, but with too little power to
+ *   answer), reports [io.lightine.tessera.emrtd.ChipReadState.NoAnswerYet] and tries the same
+ *   `Tag` again after a short pause, with no restart used, while the person moves the document:
+ *   about one try every 2 seconds, for at most [NfcReadSettings.waitForReturnMillis] from the
+ *   first unanswered try; then the read ends with [ChipReadEnding.Failed] and the lost link.
  * - When the link is lost, follows [NfcReadSettings.linkLoss]: by default it waits for the
  *   document again and goes on, at most twice. The platform hands over a new `Tag` when the
  *   document comes back; when it does not, because the document never left the field, the SDK
@@ -318,11 +325,15 @@ public class NfcChipRead internal constructor(
             if (settings.waitForDocumentMillis != NfcReadSettings.NO_LIMIT) saturatingAdd(began, settings.waitForDocumentMillis) else null
         var linkedOnce = false
         var lostTag: Tag? = null
+        var retryMillis = SAME_TAG_RETRY_MILLIS
+        // When the first of the unanswered tries in a row ended; null while the chip answers.
+        var silentSince: Long? = null
         var failedConnects = 0
         while (!coordinator.isEnded) {
-            val found = awaitTag(adapter, waitingSince, deadline, lostTag, linkedOnce) ?: return
+            val found = awaitTag(adapter, waitingSince, deadline, lostTag, linkedOnce, retryMillis) ?: return
             val release = CompletableDeferred<Unit>()
-            val connection = env.platform.connectionOf(found.tag, settings.commandTimeoutMillis) { release.complete(Unit) }
+            // The link starts with the short limit for the plain commands before access.
+            val connection = env.platform.connectionOf(found.tag, settings.effectiveTimeoutBeforeAccessMillis) { release.complete(Unit) }
             if (connection == null) {
                 // Not an ISO 14443-4 chip, so no document this read can use: keep waiting.
                 continue
@@ -358,21 +369,34 @@ public class NfcChipRead internal constructor(
             failedConnects = 0
             linkedOnce = true
             val outcome =
-                coordinator.read(transport, readAgainAllowed = true) {
-                    if (env.platform.isEnabled(adapter)) null else NfcUnavailable(NfcUnavailable.Reason.DISABLED)
-                }
+                coordinator.read(
+                    transport,
+                    readAgainAllowed = true,
+                    systemEnd = { if (env.platform.isEnabled(adapter)) null else NfcUnavailable(NfcUnavailable.Reason.DISABLED) },
+                    accessStage = { transport.useTimeLimit(settings.commandTimeoutMillis) },
+                )
             if (outcome == ChipReadAttemptOutcome.ENDED) return
             closeLink()
             lostTag = found.tag
             waitingSince = env.now()
-            deadline = saturatingAdd(waitingSince, settings.waitForReturnMillis)
+            if (outcome == ChipReadAttemptOutcome.NO_ANSWER_YET) {
+                // The document is most likely still there: try again soon, bounded from the first
+                // unanswered try, so a person who keeps moving it does not keep the read alive.
+                val since = silentSince ?: waitingSince.also { silentSince = it }
+                deadline = saturatingAdd(since, settings.waitForReturnMillis)
+                retryMillis = NO_ANSWER_RETRY_MILLIS
+            } else {
+                silentSince = null
+                deadline = saturatingAdd(waitingSince, settings.waitForReturnMillis)
+                retryMillis = SAME_TAG_RETRY_MILLIS
+            }
             setIntake(true)
         }
     }
 
     /**
      * Waits for a tag: a new discovery, or after a lost link the earlier [lostTag] again, every
-     * [SAME_TAG_RETRY_MILLIS] while no new one comes. Every [WAITING_REPORT_MILLIS] it reports the
+     * [retryMillis] while no new one comes. Every [WAITING_REPORT_MILLIS] it reports the
      * time waited and checks that NFC is still on. `null` when the read ended, here or elsewhere.
      */
     private suspend fun awaitTag(
@@ -381,10 +405,11 @@ public class NfcChipRead internal constructor(
         deadline: Long?,
         lostTag: Tag?,
         linkedOnce: Boolean,
+        retryMillis: Long,
     ): Found? {
         val start = env.now()
         var nextReport = since + ((start - since) / WAITING_REPORT_MILLIS + 1) * WAITING_REPORT_MILLIS
-        var retryAt = if (lostTag != null) start + SAME_TAG_RETRY_MILLIS else Long.MAX_VALUE
+        var retryAt = if (lostTag != null) start + retryMillis else Long.MAX_VALUE
         while (!coordinator.isEnded) {
             val now = env.now()
             if (deadline != null && now >= deadline) {
@@ -409,7 +434,7 @@ public class NfcChipRead internal constructor(
                 // A paused screen has no reader mode, so the earlier Tag cannot answer: no retry
                 // until it resumes. The wait for the document's return goes on counting.
                 if (hold?.paused != true) return Found(lostTag, earlier = true)
-                retryAt = after + SAME_TAG_RETRY_MILLIS
+                retryAt = after + retryMillis
             }
         }
         return null
@@ -694,6 +719,13 @@ public class NfcChipRead internal constructor(
 
         /** After a lost link with no new discovery, how often the earlier Tag is tried again. */
         internal const val SAME_TAG_RETRY_MILLIS = 1_000L
+
+        /**
+         * After a try the chip did not answer before access, how soon the same Tag is tried again.
+         * With the default settle time (400) and time limit before access (1500), a person moving
+         * the document gets about one try every 2 seconds.
+         */
+        internal const val NO_ANSWER_RETRY_MILLIS = 300L
 
         /** Failed connects in a row after which the read ends: the shared value. */
         internal const val MAX_CONNECT_ATTEMPTS = ChipReadCoordinator.MAX_CONNECT_ATTEMPTS

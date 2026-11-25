@@ -26,6 +26,7 @@ import kotlin.test.assertTrue
 class CoreNfcChipReadLifecycleTest {
     private companion object {
         const val FAILED = "Reading failed. Try again."
+        const val PARTIAL = "Not everything could be read. Try again."
         const val CANCELLED = "Cancelled"
     }
 
@@ -94,26 +95,27 @@ class CoreNfcChipReadLifecycleTest {
     @Test
     fun command_timeout__an_unanswered_command_is_a_lost_link_and_a_late_answer_is_dropped() =
         chipReadTest {
-            val chip = FakeChip().apply { silentFrom = 3 }
+            val chip = FakeChip().apply { silentFrom = 7 }
             val (read, rec) = start(settings = CoreNfcReadSettings(linkLoss = LinkLossPolicy.End))
             present(FakeChipTag(chip))
             step(400)
-            assertEquals(3, chip.sent.size)
+            assertEquals(7, chip.sent.size)
             step(4_999)
             assertTrue(rec.endings.isEmpty(), "still waiting just before the limit")
             step(1)
             assertEquals(NfcTimeout(5_000), stoppedBy(rec.ending))
-            assertEquals(listOf<String?>(FAILED), port.endings)
+            // Lost after the plain chip was opened: what was read is kept.
+            assertEquals(listOf<String?>(PARTIAL), port.endings)
             chip.held.single().invoke(byteArrayOf(0x90.toByte(), 0x00), null)
             step(1_000)
-            assertEquals(3, chip.sent.size, "nothing more is sent on the link")
+            assertEquals(7, chip.sent.size, "nothing more is sent on the link")
             assertNothingLeft(read)
         }
 
     @Test
     fun command_timeout__with_resume_the_read_waits_for_the_document_and_reads_again_on_a_new_link() =
         chipReadTest {
-            val chip = FakeChip().apply { silentFrom = 3 }
+            val chip = FakeChip().apply { silentFrom = 7 }
             val (read, rec) = start()
             present(FakeChipTag(chip))
             step(400 + 5_000)
@@ -135,7 +137,7 @@ class CoreNfcChipReadLifecycleTest {
     @Test
     fun link_lost__the_document_comes_back__a_new_link_and_a_complete_read() =
         chipReadTest {
-            val chip = FakeChip().apply { loseAt += 3 }
+            val chip = FakeChip().apply { loseAt += 7 }
             val (read, rec) = start()
             present(FakeChipTag(chip))
             step(400)
@@ -157,7 +159,7 @@ class CoreNfcChipReadLifecycleTest {
             assertEquals(2, ending.attempts)
             assertEquals(1, again.connectCalls)
             assertEquals(2, chip.powerUps, "each attempt has its own link")
-            assertEquals(0xA4, chip.sent[3][1].toInt() and 0xFF, "the new link starts with a SELECT")
+            assertEquals(0xA4, chip.sent[7][1].toInt() and 0xFF, "the new link starts with a SELECT")
             assertEquals(listOf<String?>(null), port.endings)
             assertNothingLeft(read)
         }
@@ -235,7 +237,7 @@ class CoreNfcChipReadLifecycleTest {
     fun link_lost__every_operation_code_of_a_lost_link_reads_again() =
         chipReadTest {
             for (code in listOf(100L, 101L, 102L, 104L)) {
-                val chip = FakeChip().apply { loseAt += 3 }
+                val chip = FakeChip().apply { loseAt += 7 }
                 chip.lossError = opError(code)
                 val (read, rec) = start()
                 present(FakeChipTag(chip))
@@ -249,7 +251,7 @@ class CoreNfcChipReadLifecycleTest {
     @Test
     fun link_lost__the_document_never_comes_back__the_system_end_is_the_ending() =
         chipReadTest {
-            val chip = FakeChip().apply { loseAt += 3 }
+            val chip = FakeChip().apply { loseAt += 7 }
             val (read, rec) = start()
             present(FakeChipTag(chip))
             step(400)
@@ -266,7 +268,7 @@ class CoreNfcChipReadLifecycleTest {
     @Test
     fun link_lost__the_restart_budget_used_up_ends_the_read_with_the_loss() =
         chipReadTest {
-            val chip = FakeChip().apply { loseAt += setOf(3, 6) }
+            val chip = FakeChip().apply { loseAt += setOf(7, 14) }
             val (read, rec) = start(settings = CoreNfcReadSettings(linkLoss = LinkLossPolicy.Resume(1)))
             present(FakeChipTag(chip))
             step(400)
@@ -275,7 +277,8 @@ class CoreNfcChipReadLifecycleTest {
             step(400)
             assertEquals(NfcTagLost, stoppedBy(rec.ending))
             assertEquals(2, rec.ending.attempts)
-            assertEquals(listOf<String?>(FAILED), port.endings)
+            // Lost after the plain chip was opened: what was read is kept.
+            assertEquals(listOf<String?>(PARTIAL), port.endings)
             assertNothingLeft(read)
         }
 

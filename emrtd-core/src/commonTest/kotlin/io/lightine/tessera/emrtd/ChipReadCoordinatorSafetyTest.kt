@@ -52,13 +52,20 @@ class ChipReadCoordinatorSafetyTest {
         }
     }
 
+    // Answers the plain selections before access, then fails: the first failing command is BAC's
+    // GET CHALLENGE, after the access stage began, so a loss here spends a restart.
     private class Failing(
         private val error: NfcError,
     ) : ApduTransport {
         override val maxCommandLength: Int = 261
         override val supportsExtendedLength: Boolean = false
 
-        override suspend fun transceive(command: ByteArray): ByteArray = throw ApduTransportException(error)
+        override suspend fun transceive(command: ByteArray): ByteArray {
+            val ins = command[1].toInt() and 0xFF
+            val p1 = command[2].toInt() and 0xFF
+            if (ins == 0xA4) return if (p1 == 0x04) byteArrayOf(0x90.toByte(), 0x00) else byteArrayOf(0x6A, 0x82.toByte())
+            throw ApduTransportException(error)
+        }
     }
 
     private fun coordinator(
@@ -103,7 +110,7 @@ class ChipReadCoordinatorSafetyTest {
     fun theRestartBudgetHoldsUnderConcurrentMisuse() =
         runTest {
             val observer = RecordingObserver()
-            val c = coordinator(observer, LinkLossPolicy.Resume(1), ChipAccessKey.Can("123456"))
+            val c = coordinator(observer, LinkLossPolicy.Resume(1), FakeReadFlowChip.mrzKey())
             c.ready()
             val outcomes =
                 withContext(Dispatchers.Default) {
@@ -117,13 +124,13 @@ class ChipReadCoordinatorSafetyTest {
     fun aPersonsCancelKeepsItsMeaningWhateverThePlatformSays() =
         runTest {
             val observer = RecordingObserver()
-            val c = coordinator(observer, key = ChipAccessKey.Can("123456"))
+            val c = coordinator(observer, key = FakeReadFlowChip.mrzKey())
             c.ready()
             var asked = 0
-            c.read(Failing(NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER))) {
+            c.read(Failing(NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER)), systemEnd = {
                 asked++
                 NfcUnavailable(NfcUnavailable.Reason.DISABLED)
-            }
+            })
             assertEquals(ChipReadEnding.Cancelled.By.PERSON, assertIs<ChipReadEnding.Cancelled>(observer.endings.single()).by)
             assertEquals(0, asked, "the platform is asked only about a lost link")
         }
@@ -132,9 +139,9 @@ class ChipReadCoordinatorSafetyTest {
     fun aLostLinkWithNfcOffIsTheSystemsEnding() =
         runTest {
             val observer = RecordingObserver()
-            val c = coordinator(observer, key = ChipAccessKey.Can("123456"))
+            val c = coordinator(observer, key = FakeReadFlowChip.mrzKey())
             c.ready()
-            c.read(Failing(NfcTagLost)) { NfcUnavailable(NfcUnavailable.Reason.DISABLED) }
+            c.read(Failing(NfcTagLost), systemEnd = { NfcUnavailable(NfcUnavailable.Reason.DISABLED) })
             val ending = assertIs<ChipReadEnding.EndedBySystem>(observer.endings.single())
             assertEquals(NfcUnavailable(NfcUnavailable.Reason.DISABLED), ending.reason)
         }
@@ -159,7 +166,7 @@ class ChipReadCoordinatorSafetyTest {
     fun theEndingCountsAttemptsThatRanTheUpdatesNameTheNextOne() =
         runTest {
             val observer = RecordingObserver()
-            val c = coordinator(observer, key = ChipAccessKey.Can("123456"))
+            val c = coordinator(observer, key = FakeReadFlowChip.mrzKey())
             c.ready()
             assertEquals(ChipReadAttemptOutcome.LINK_LOST, c.read(Failing(NfcTagLost)))
             c.documentFound()

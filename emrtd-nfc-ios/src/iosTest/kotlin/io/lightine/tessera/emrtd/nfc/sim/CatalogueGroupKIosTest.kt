@@ -215,17 +215,28 @@ class CatalogueGroupKIosTest {
             assertEquals(1, script.links)
         }
 
+    /** A loss before access: one more try of the same attempt in the same session, no restart used. */
+    private fun IosSim.assertTriedAgainBeforeAccess(r: SimRecorder) {
+        assertDeviceChecksPass(r.ending)
+        assertEquals(1, r.ending.attempts)
+        assertEquals(1, ports.size, "the same system session")
+        assertEquals(1, port.restarts)
+        assertTrue(r.states.none { it is ChipReadState.LinkLost })
+        assertEquals(listOf(1), r.states.filterIsInstance<ChipReadState.NoAnswerYet>().map { it.tries })
+    }
+
     @Test
-    fun k04_plainSelectUnansweredInFirstSecond_resumesAndCompletes() =
+    fun k04_plainSelectUnansweredInFirstSecond_triesAgainWithNoRestartAndCompletes() =
         simTest { flow ->
-            assertRecoveredInTheSameSession(firstSecondLoss(flow, Shapes.plainSelectOfTheApplication))
+            assertTriedAgainBeforeAccess(firstSecondLoss(flow, Shapes.plainSelectOfTheApplication))
         }
 
     @Test
-    fun k04_plainSelectUnansweredInFirstSecond_endPolicyFailsCleanly() =
+    fun k04_plainSelectUnansweredInFirstSecond_endPolicyAlsoTriesAgainBeforeAccess() =
         simTest { flow ->
-            val r = firstSecondLoss(flow, Shapes.plainSelectOfTheApplication, CoreNfcReadSettings(linkLoss = LinkLossPolicy.End))
-            assertEquals(NfcTagLost, assertIs<ChipReadEnding.Failed>(r.ending).error)
+            assertTriedAgainBeforeAccess(
+                firstSecondLoss(flow, Shapes.plainSelectOfTheApplication, CoreNfcReadSettings(linkLoss = LinkLossPolicy.End)),
+            )
         }
 
     @Test
@@ -323,16 +334,84 @@ class CatalogueGroupKIosTest {
         }
 
     @Test
-    fun k09_everyNewLinkLosesItsFirstCommand_budgetUsedUpEndsFailedWithTheLoss() =
+    fun k09_everyNewLinkLosesItsFirstCommand_noRestartUsedEndsFailedWhenTheSessionRunsLow() =
         simTest { flow ->
             script.fault(ChipFaultAction.LoseLink(Shapes.LOSS_AFTER_MILLIS), times = 99) { it.indexInLink == 0 }
             val r = read(flow)
 
             val ending = assertIs<ChipReadEnding.Failed>(r.ending)
             assertEquals(NfcTagLost, ending.error)
-            assertEquals(3, ending.attempts)
-            assertEquals(3, script.links)
+            assertEquals(1, ending.attempts)
+            assertTrue(r.states.none { it is ChipReadState.LinkLost })
+            // One try every 1.66 s (600 to find it again, 400 settle, 20 connect, 640 loss) until less
+            // than 10 s of the 60 s session are left.
+            assertEquals(30, script.links)
+            assertEquals(1, ports.size)
+        }
+
+    // --- Before access: a short time limit, and tries that cost no restart (TES-346) ----------------
+
+    /**
+     * The device case on iPhone: the chip is found but never answers its first command. Before, three
+     * tries of 5 s each spent the restart budget (Failed after about 18 s). Now each try waits the
+     * 1.5 s limit and costs no restart; the system finds the document again 600 ms after each, so
+     * one try every 2.52 s, in the same session, until less than 10 s of it are left: 20 tries, then
+     * Failed with the SDK's time limit as the lost link.
+     */
+    @Test
+    fun noAnswer_a_firstCommandNeverAnswered_shortTriesUntilTheSessionRunsLowThenFailed() =
+        simTest { flow ->
+            script.fault(ChipFaultAction.Silence, times = 99) { it.indexInLink == 0 }
+            val r = read(flow)
+            val ending = assertIs<ChipReadEnding.Failed>(r.ending)
+            assertEquals(
+                io.lightine.tessera.types.errors
+                    .NfcTimeout(1_500),
+                ending.error,
+            )
+            assertEquals(1, ending.attempts)
+            assertEquals(0, ending.progress.percent)
+            assertEquals(20, script.links)
+            assertEquals(1, ports.size, "one system session")
+            assertEquals(50_800, r.endings.single().atMillis)
+            // (e) What the app saw: found once, then "no answer yet" with a growing count.
+            assertEquals(
+                listOf("Starting", "WaitingForDocument", "DocumentFound", "Connecting", "OpeningAccess") + List(20) { "NoAnswerYet" },
+                r.states.map { it::class.simpleName },
+            )
+            assertEquals((1..20).toList(), r.states.filterIsInstance<ChipReadState.NoAnswerYet>().map { it.tries })
+            val sent = script.exchanges.map { it.sentAtMillis }
+            val seen = r.updates.filter { it.value.state is ChipReadState.NoAnswerYet }.map { it.atMillis }
+            assertEquals(sent.map { it + 1_500 }, seen, "each try waits the 1.5 s limit before access")
+            assertTrue("Found, no answer yet. Move the phone a little." in alerts)
+        }
+
+    /** Silent twice, then the chip answers: complete, with both restarts left for two later losses. */
+    @Test
+    fun noAnswer_b_silentTwiceThenAnswers_theFullRestartBudgetIsLeftForLaterLosses() =
+        simTest { flow ->
+            val midDg2: (ChipCommand) -> Boolean = { it.secured && it.ins == 0xB0 && it.chip.currentEf == 0x0102 && it.index > 60 }
+            script.fault(ChipFaultAction.Silence, times = 2) { it.indexInLink == 0 }
+            script.fault(ChipFaultAction.LoseLink(10), times = 2, match = midDg2)
+            val r = read(flow)
+            assertDeviceChecksPass(r.ending)
+            assertEquals(3, r.ending.attempts)
             assertEquals(listOf(2, 1), r.states.filterIsInstance<ChipReadState.LinkLost>().map { it.restartsLeft })
+            assertEquals(5, script.links)
+            assertEquals(
+                listOf(
+                    "Starting",
+                    "WaitingForDocument",
+                    "DocumentFound",
+                    "Connecting",
+                    "OpeningAccess",
+                    "NoAnswerYet",
+                    "NoAnswerYet",
+                    "OpeningAccess",
+                ),
+                r.states.take(8).map { it::class.simpleName },
+            )
+            assertEquals(ChipAccessProtocol.BAC, (r.states[7] as ChipReadState.OpeningAccess).protocol)
         }
 
     @Test

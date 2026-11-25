@@ -125,6 +125,54 @@ class IsoDepTransportTest {
             assertTrue(channel.threadName!!.contains("DefaultDispatcher"), channel.threadName)
         }
 
+    // --- The time limit for the next commands (TES-346) ----------------------------------------
+
+    @Test
+    fun `a new time limit on a connected link is set between two commands and used by the next one`() =
+        runTest {
+            val channel = FakeChannel()
+            val transport = transport(channel, timeoutMillis = 1_500)
+
+            transport.transceive(byteArrayOf(0))
+            transport.useTimeLimit(5_000)
+            transport.transceive(byteArrayOf(0))
+            transport.useTimeLimit(5_000)
+
+            assertEquals(listOf("connect", "setTimeout", "transceive", "setTimeout", "transceive"), channel.calls)
+            assertEquals(5_000, channel.timeoutSet)
+        }
+
+    @Test
+    fun `a new time limit before the first command only changes what the connect sets`() =
+        runTest {
+            val channel = FakeChannel()
+            val transport = transport(channel, timeoutMillis = 1_500)
+
+            transport.useTimeLimit(900)
+            transport.transceive(byteArrayOf(0))
+
+            assertEquals(listOf("connect", "setTimeout", "transceive"), channel.calls)
+            assertEquals(900, channel.timeoutSet)
+        }
+
+    @Test
+    fun `a refused time limit ends the transport and a closed one refuses a new limit`() =
+        runTest {
+            val channel = FakeChannel()
+            val transport = transport(channel, timeoutMillis = 1_500)
+            transport.transceive(byteArrayOf(0))
+            channel.setTimeoutFailure = android.nfc.TagLostException()
+
+            assertEquals(NfcTagLost, errorOf { transport.useTimeLimit(5_000) })
+            assertEquals(NfcTagLost, errorOf { transport.transceive(byteArrayOf(0)) })
+            assertEquals(1, channel.transceiveCalls, "nothing more is sent")
+
+            val closed = transport(FakeChannel())
+            closed.close()
+            assertEquals(NfcUnavailable(NfcUnavailable.Reason.CLOSED), errorOf { closed.useTimeLimit(5_000) })
+            assertFailsWith<IllegalArgumentException> { transport(FakeChannel()).useTimeLimit(0) }
+        }
+
     // --- Connecting once ----------------------------------------------------------------------
 
     @Test

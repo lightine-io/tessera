@@ -74,6 +74,7 @@ public object CoreNfcDefaultSheetTexts : CoreNfcSheetTexts {
      * - Connecting: "Connecting. Hold still."
      * - Opening access, reading, checking with the chip, checking the files: a line, then the
      *   [progressBar] on the next line.
+     * - No answer yet: "Found, no answer yet. Move the phone a little."
      * - Link lost: "Connection lost. Hold the document again." with the attempt the read now
      *   waits for, for example "Try 2 of 3".
      * - Stopping: "Stopping".
@@ -116,6 +117,10 @@ public object CoreNfcDefaultSheetTexts : CoreNfcSheetTexts {
 
             ChipReadState.CheckingFiles -> {
                 "Checking the data\n$bar"
+            }
+
+            is ChipReadState.NoAnswerYet -> {
+                "Found, no answer yet. Move the phone a little."
             }
 
             is ChipReadState.LinkLost -> {

@@ -722,6 +722,11 @@ public final class io/lightine/tessera/emrtd/ChipReadState$LinkLost : io/lightin
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/lightine/tessera/emrtd/ChipReadState$NoAnswerYet : io/lightine/tessera/emrtd/ChipReadState {
+	public final fun getTries ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class io/lightine/tessera/emrtd/ChipReadState$OpeningAccess : io/lightine/tessera/emrtd/ChipReadState {
 	public final fun getProtocol ()Lio/lightine/tessera/types/vocabulary/ChipAccessProtocol;
 	public fun toString ()Ljava/lang/String;

@@ -13,8 +13,8 @@ import kotlin.jvm.JvmOverloads
  * How an [NfcChipRead] behaves around the radio. Every value has a default that suits an ordinary
  * app: create it with no arguments, or do not pass one at all.
  *
- * Every time is a `Long` in milliseconds. [linkLoss], [settleDelayMillis], [commandTimeoutMillis]
- * and [observerOn] mean the same, with the same defaults, as in the iPhone read's settings
+ * Every time is a `Long` in milliseconds. [linkLoss], [settleDelayMillis], [commandTimeoutMillis],
+ * [commandTimeoutBeforeAccessMillis] and [observerOn] mean the same, with the same defaults, as in the iPhone read's settings
  * (`CoreNfcReadSettings`). The two waits are Android's own: on iPhone the system session's
  * 60-second limit bounds every wait. [presenceCheckDelayMillis] and [platformSounds] set reader
  * mode, which only the Activity-owning `NfcChipRead.start(activity, ...)` turns on for you.
@@ -35,7 +35,8 @@ import kotlin.jvm.JvmOverloads
  * @property settleDelayMillis How long the read waits after a document is found before the first
  *   command, so the hand can settle: frames are often lost in the first moment after detection.
  *   Default 400. Cancelling the read cuts it short.
- * @property commandTimeoutMillis The longest wait for the chip's answer to one command, set on the
+ * @property commandTimeoutMillis The longest wait for the chip's answer to one command from the
+ *   first BAC or PACE command on (before it, [commandTimeoutBeforeAccessMillis]), set on the
  *   link as the platform's ISO-DEP time limit. When it passes, the platform reports the tag as lost
  *   (it cannot tell a slow chip from a document that left), so [linkLoss] decides what follows.
  *   Default 5000: ICAO Doc 9303 Part 10, appendix B.11, lets a chip take up to 5 seconds per block.
@@ -45,7 +46,10 @@ import kotlin.jvm.JvmOverloads
  *   key, within its restarts.
  * @property waitForReturnMillis How long the read waits for the document to come back after a lost
  *   link, counted from the loss, before it ends with [ChipReadEnding.Partial] or
- *   [ChipReadEnding.Failed]. Default 15000.
+ *   [ChipReadEnding.Failed]. Default 15000. It also bounds the tries while a found chip does not
+ *   answer its first commands
+ *   ([io.lightine.tessera.emrtd.ChipReadState.NoAnswerYet]), counted from the first unanswered
+ *   try: then the read ends with [ChipReadEnding.Failed] and the lost link.
  * @property waitForDocumentMillis How long the read may take to find a document and set up the
  *   first link to it, counted from the start, across tags whose link could not be set up (on
  *   iPhone the system session's 60-second limit plays this part, so its settings have no such value);
@@ -67,8 +71,18 @@ import kotlin.jvm.JvmOverloads
  *   count, time): the sink you give here. With `null`, the default, the sink registered in
  *   `TelemetrySinkRegistry` when the read starts, which is a sink that drops everything when none
  *   is registered. The events never hold document or chip data.
+ * @property commandTimeoutBeforeAccessMillis The longest wait for the chip's answer to one
+ *   command before access: the plain commands each attempt sends before BAC or PACE starts
+ *   (selecting and reading EF.CardAccess, selecting the application). They need no cryptography
+ *   on the chip and normally answer in milliseconds, so a chip that is found but gets too little
+ *   power is noticed sooner. Default 1500. From the first BAC or PACE command on,
+ *   [commandTimeoutMillis] applies, so a slow step of the access protocol, chip authentication or
+ *   a protected read is never cut by this value. When it is longer than [commandTimeoutMillis],
+ *   [commandTimeoutMillis] applies before access too. A command not answered in time is a try that
+ *   costs no restart ([io.lightine.tessera.emrtd.ChipReadState.NoAnswerYet]).
  * @throws IllegalArgumentException when [settleDelayMillis], [waitForReturnMillis] or
- *   [waitForDocumentMillis] is negative, [commandTimeoutMillis] is not in 1 to [Int.MAX_VALUE], or
+ *   [waitForDocumentMillis] is negative, [commandTimeoutMillis] or
+ *   [commandTimeoutBeforeAccessMillis] is not in 1 to [Int.MAX_VALUE], or
  *   [presenceCheckDelayMillis] is not in 0 to [Int.MAX_VALUE] (the platform takes an `int`).
  * @since 1.0.0
  */
@@ -86,11 +100,15 @@ public class NfcReadSettings
         public val presenceCheckDelayMillis: Long = DEFAULT_PRESENCE_CHECK_DELAY_MILLIS,
         public val platformSounds: Boolean = true,
         public val observerOn: ObserverThread = ObserverThread.MAIN,
+        public val commandTimeoutBeforeAccessMillis: Long = DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS,
     ) {
         init {
             require(settleDelayMillis >= 0) { "settleDelayMillis must not be negative, was $settleDelayMillis" }
             require(commandTimeoutMillis in 1..Int.MAX_VALUE) {
                 "commandTimeoutMillis must be positive and fit an Int, was $commandTimeoutMillis"
+            }
+            require(commandTimeoutBeforeAccessMillis in 1..Int.MAX_VALUE) {
+                "commandTimeoutBeforeAccessMillis must be positive and fit an Int, was $commandTimeoutBeforeAccessMillis"
             }
             require(waitForReturnMillis >= 0) { "waitForReturnMillis must not be negative, was $waitForReturnMillis" }
             require(waitForDocumentMillis >= 0) { "waitForDocumentMillis must not be negative, was $waitForDocumentMillis" }
@@ -102,7 +120,8 @@ public class NfcReadSettings
         /** The values, never document data. */
         override fun toString(): String =
             "NfcReadSettings(linkLoss=$linkLoss, settleDelayMillis=$settleDelayMillis, " +
-                "commandTimeoutMillis=$commandTimeoutMillis, waitForReturnMillis=$waitForReturnMillis, " +
+                "commandTimeoutMillis=$commandTimeoutMillis, commandTimeoutBeforeAccessMillis=$commandTimeoutBeforeAccessMillis, " +
+                "waitForReturnMillis=$waitForReturnMillis, " +
                 "waitForDocumentMillis=$waitForDocumentMillis, presenceCheckDelayMillis=$presenceCheckDelayMillis, " +
                 "platformSounds=$platformSounds, observerOn=$observerOn)"
 
@@ -123,6 +142,11 @@ public class NfcReadSettings
                 .presenceCheckDelayMillis(presenceCheckDelayMillis)
                 .platformSounds(platformSounds)
                 .observerOn(observerOn)
+                .commandTimeoutBeforeAccessMillis(commandTimeoutBeforeAccessMillis)
+
+        /** The time limit for one command before access: the smaller of the two limits. */
+        internal val effectiveTimeoutBeforeAccessMillis: Long
+            get() = minOf(commandTimeoutBeforeAccessMillis, commandTimeoutMillis)
 
         /**
          * Builds [NfcReadSettings] step by step, with the constructor's defaults.
@@ -140,6 +164,7 @@ public class NfcReadSettings
             private var presenceCheckDelayMillis: Long = DEFAULT_PRESENCE_CHECK_DELAY_MILLIS
             private var platformSounds: Boolean = true
             private var observerOn: ObserverThread = ObserverThread.MAIN
+            private var commandTimeoutBeforeAccessMillis: Long = DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS
 
             /** What the read does when the link to the chip is lost. */
             public fun linkLoss(policy: LinkLossPolicy): Builder = apply { linkLoss = policy }
@@ -149,6 +174,9 @@ public class NfcReadSettings
 
             /** The longest wait for the chip's answer to one command. */
             public fun commandTimeoutMillis(millis: Long): Builder = apply { commandTimeoutMillis = millis }
+
+            /** The longest wait for the chip's answer to one command before access. */
+            public fun commandTimeoutBeforeAccessMillis(millis: Long): Builder = apply { commandTimeoutBeforeAccessMillis = millis }
 
             /** How long to wait for the document to come back after a lost link. */
             public fun waitForReturnMillis(millis: Long): Builder = apply { waitForReturnMillis = millis }
@@ -188,6 +216,7 @@ public class NfcReadSettings
                     presenceCheckDelayMillis,
                     platformSounds,
                     observerOn,
+                    commandTimeoutBeforeAccessMillis,
                 )
         }
 
@@ -201,6 +230,10 @@ public class NfcReadSettings
 
             /** The default [commandTimeoutMillis]: 5000, the same as [IsoDepTransport.DEFAULT_TIMEOUT_MILLIS]. */
             public const val DEFAULT_COMMAND_TIMEOUT_MILLIS: Long = IsoDepTransport.DEFAULT_TIMEOUT_MILLIS
+
+            /** The default [commandTimeoutBeforeAccessMillis]: 1500. */
+            public const val DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS: Long =
+                ChipReadCoordinator.DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS
 
             /** The default [waitForReturnMillis]: 15000. */
             public const val DEFAULT_WAIT_FOR_RETURN_MILLIS: Long = 15_000

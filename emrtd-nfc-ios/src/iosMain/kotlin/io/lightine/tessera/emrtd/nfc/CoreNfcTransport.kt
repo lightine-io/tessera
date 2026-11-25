@@ -59,7 +59,7 @@ public class CoreNfcTransport internal constructor(
     keepAlive: Any? = null,
     // A time limit of the SDK's own for one command, in milliseconds; `null` for none. Used by
     // CoreNfcChipRead: Core NFC has been seen to wait far longer than a chip may take.
-    private val commandTimeoutMillis: Long? = null,
+    commandTimeoutMillis: Long? = null,
 ) : ApduTransport {
     /**
      * Wraps a tag your own `NFCTagReaderSession` found and connected with `connect(to:)`.
@@ -72,6 +72,21 @@ public class CoreNfcTransport internal constructor(
 
     // Serializes calls to [transceive]: one command out at a time.
     private val lock = Mutex()
+
+    // The limit for the next commands (see useTimeLimit); read when each command goes out.
+    @Volatile
+    private var commandTimeoutMillis: Long? = commandTimeoutMillis
+
+    /**
+     * Sets the SDK's own time limit for the commands that follow, from the next command on: the
+     * read uses a short one for the plain commands before access, then the general one. The limit
+     * is the SDK's own wait (Core NFC has no time limit to set), so it can change at any time; it
+     * waits for a command that is out, as commands go one at a time.
+     */
+    internal suspend fun useTimeLimit(millis: Long) {
+        require(millis > 0) { "millis must be positive" }
+        lock.withLock { commandTimeoutMillis = millis }
+    }
 
     // Guards [stopReason], [inFlight] and the decision to send, so a stop either comes before a
     // command is handed to Core NFC (and nothing is sent) or finds it in flight (and ends it).

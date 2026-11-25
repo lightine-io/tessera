@@ -129,7 +129,7 @@ import kotlin.coroutines.cancellation.CancellationException
 @ExperimentalTesseraChipApi
 public class IsoDepTransport internal constructor(
     private val channel: IsoDepChannel,
-    private val timeoutMillis: Long,
+    timeoutMillis: Long,
     private val ioDispatcher: CoroutineDispatcher,
     private val nanoTime: () -> Long = System::nanoTime,
 ) : ApduTransport,
@@ -155,6 +155,10 @@ public class IsoDepTransport internal constructor(
     }
 
     private val lock = Mutex()
+
+    // The time limit for the next commands; changed only under [lock] (see useTimeLimit).
+    @Volatile
+    private var timeoutMillis: Long = timeoutMillis
 
     @Volatile
     private var closed = false
@@ -225,6 +229,28 @@ public class IsoDepTransport internal constructor(
                 // Nothing is left to release.
             } catch (_: RuntimeException) {
                 // The tag already left the field (SecurityException), or the platform state is gone.
+            }
+        }
+    }
+
+    /**
+     * Sets the time limit for the commands that follow, on a connected link too: the platform's
+     * `IsoDep.setTimeout` checks no connection and only stores the value in the NFC service, which
+     * applies it to each later exchange (the platform source of `IsoDep.setTimeout`). Before the
+     * first command it only changes the value the connect sets. Commands go one at a time, so no
+     * command is out while it changes. A platform failure ends the transport like a failed
+     * command, and is thrown.
+     */
+    internal suspend fun useTimeLimit(millis: Long) {
+        require(millis in 1..Int.MAX_VALUE) { "millis must be in 1 to ${Int.MAX_VALUE}, was $millis" }
+        lock.withLock {
+            withContext(ioDispatcher) {
+                if (closed) throw ApduTransportException(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
+                failure?.let { throw ApduTransportException(it.error, it.cause) }
+                if (connectTried && millis != timeoutMillis) {
+                    call("setTimeout") { channel.setTimeout(millis.toInt()) }
+                }
+                timeoutMillis = millis
             }
         }
     }

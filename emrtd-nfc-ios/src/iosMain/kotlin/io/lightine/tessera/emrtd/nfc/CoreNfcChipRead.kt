@@ -68,11 +68,17 @@ import kotlin.time.TimeSource
  *   [io.lightine.tessera.emrtd.ChipReadState.WaitingForDocument] again every 2 seconds, with the
  *   time waited.
  * - When a document is found, waits [CoreNfcReadSettings.settleDelayMillis] before the first
- *   command, connects, and reads. Each command has its own time limit,
- *   [CoreNfcReadSettings.commandTimeoutMillis].
+ *   command, connects, and reads. Each command has its own time limit:
+ *   [CoreNfcReadSettings.commandTimeoutBeforeAccessMillis] for the plain commands before BAC or
+ *   PACE, [CoreNfcReadSettings.commandTimeoutMillis] from the first BAC or PACE command on.
+ * - When the chip does not answer before BAC or PACE started (found, but with too little power to
+ *   answer), reports [io.lightine.tessera.emrtd.ChipReadState.NoAnswerYet], keeps the sheet up and
+ *   asks the system to find the document again, with no restart used, while the person moves it;
+ *   the same session rule as for a lost link ends these tries (below).
  * - When the link is lost (the document moved), follows [CoreNfcReadSettings.linkLoss]: by default
  *   it keeps the sheet up, waits for the document again and goes on, at most twice. It does not
- *   start again when less than 10 seconds of the system session's 60 are left.
+ *   start again, or try again after an unanswered try, when less than 10 seconds of the system
+ *   session's 60 are left.
  * - Ends the system session on every path, exactly once: with success only for
  *   [ChipReadEnding.Complete], with the ending's text as the error message otherwise. The ending
  *   is given to the observer at once; the system takes a moment more to close the sheet.
@@ -200,18 +206,28 @@ public class CoreNfcChipRead internal constructor(
                 return
             }
             failedConnects = 0
-            val link = CoreNfcTransport(channel, keepAlive = session, commandTimeoutMillis = settings.commandTimeoutMillis)
+            // The link starts with the short limit for the plain commands before access.
+            val link = CoreNfcTransport(channel, keepAlive = session, commandTimeoutMillis = settings.effectiveTimeoutBeforeAccessMillis)
             if (!locked { if (coordinator.isEnded) false else true.also { transport = link } }) return
             val outcome =
-                coordinator.read(link, readAgainAllowed = timeLeft(began) >= MIN_TIME_FOR_A_NEW_START_MILLIS) { stoppedBy ->
-                    // A session end the system reported while the link was lost: that is the ending.
-                    // Core NFC can fail the command in flight with "session invalidated" (CLOSED)
-                    // before it calls the session's end, after the person's Cancel or the time
-                    // limit: wait a moment for that call, which then ends the read with its cause.
-                    sessionEndError ?: if (stoppedBy == CLOSED) withTimeoutOrNull(SESSION_END_WAIT_MILLIS) { sessionEnd.await() } else null
-                }
+                coordinator.read(
+                    link,
+                    readAgainAllowed = timeLeft(began) >= MIN_TIME_FOR_A_NEW_START_MILLIS,
+                    systemEnd = { stoppedBy ->
+                        // A session end the system reported while the link was lost: that is the
+                        // ending. Core NFC can fail the command in flight with "session
+                        // invalidated" (CLOSED) before it calls the session's end, after the
+                        // person's Cancel or the time limit: wait a moment for that call, which
+                        // then ends the read with its cause.
+                        sessionEndError
+                            ?: if (stoppedBy == CLOSED) withTimeoutOrNull(SESSION_END_WAIT_MILLIS) { sessionEnd.await() } else null
+                    },
+                    accessStage = { link.useTimeLimit(settings.commandTimeoutMillis) },
+                )
             stopTransport(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
             if (outcome == ChipReadAttemptOutcome.ENDED) return
+            // A lost link and a chip that did not answer before access go on the same way: the
+            // system is asked to find the document again, while enough of the session is left.
             // The loss was allowed to follow, but too little of the session may be left by now.
             if (timeLeft(began) < MIN_TIME_FOR_A_NEW_START_MILLIS) {
                 coordinator.documentNotReturned()

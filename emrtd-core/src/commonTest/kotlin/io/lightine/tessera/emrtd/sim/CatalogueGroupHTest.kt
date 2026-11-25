@@ -96,12 +96,19 @@ class CatalogueGroupHTest {
         val reference = driveFlow(clean).complete
         val commands = clean.chip.received.size
         assertTrue(commands > 10, "the reference read sent $commands commands")
+        // The first command of the access protocol: BAC's GET CHALLENGE or PACE's MSE:Set AT.
+        val firstAccess = clean.chip.received.indexOfFirst { (it[1].toInt() and 0xFF) in setOf(0x84, 0x22) }
+        assertTrue(firstAccess > 0, "plain commands come before access")
         for (k in 0 until commands) {
             val flow = build(emptyList())
             flow.chip.loseTagAtCommand = k
             val driven = driveFlow(flow)
             val read = assertIs<ChipReadEnding.Complete>(driven.ending, "loss at command $k: ${driven.ending}").read
-            assertEquals(2, driven.ending.attempts, "loss at command $k")
+            // A loss before access costs no attempt (the same attempt is tried again); after it, a
+            // restart (TES-346).
+            assertEquals(if (k < firstAccess) 1 else 2, driven.ending.attempts, "loss at command $k")
+            assertEquals(k < firstAccess, driven.recorder.states.any { it is ChipReadState.NoAnswerYet }, "loss at command $k")
+            assertEquals(k >= firstAccess, driven.recorder.states.any { it is ChipReadState.LinkLost }, "loss at command $k")
             assertEquals(fileIds(reference), fileIds(read), "loss at command $k: the files differ")
             assertFilesAreTheChips(flow, read, "loss at command $k")
             assertEquals(checkSummary(reference), checkSummary(read), "loss at command $k: the checks differ")
@@ -109,11 +116,11 @@ class CatalogueGroupHTest {
     }
 
     @Test
-    fun h01_lossAtEveryCommandOfABacRead_completesWithTheSameFilesAndChecksInTwoAttempts() =
+    fun h01_lossAtEveryCommandOfABacRead_completesWithTheSameFilesAndChecks() =
         runTest { withChips { c, keys -> sweep { bacChip(c, keys, it) } } }
 
     @Test
-    fun h01_lossAtEveryCommandOfAPaceRead_completesWithTheSameFilesAndChecksInTwoAttempts() =
+    fun h01_lossAtEveryCommandOfAPaceRead_completesWithTheSameFilesAndChecks() =
         runTest { withChips { c, keys -> sweep { paceChip(c, keys, it) } } }
 
     // --- H-05: master-file files are read again in full ----------------------------------------------
@@ -145,7 +152,7 @@ class CatalogueGroupHTest {
         }
 
     @Test
-    fun h05_lossAtTheReadOfEfCardAccess_readsItAgainInTheNextAttempt() =
+    fun h05_lossAtTheReadOfEfCardAccess_readsItAgainInTheSameAttempt() =
         runTest {
             withChips { c, keys ->
                 val loss = FakeLinkLoss { chip, cmd -> SimDrive.readsMasterFile(chip, cmd, LdsIds.EF_CARD_ACCESS) }
@@ -153,10 +160,12 @@ class CatalogueGroupHTest {
                 val driven = driveFlow(flow)
                 val read = driven.complete
                 assertEquals(1, loss.fired)
-                assertEquals(2, read.masterFile(LdsIds.EF_CARD_ACCESS)!!.attempt)
+                // Before access: no restart used, the same attempt tried again (TES-346).
+                assertEquals(1, driven.ending.attempts)
+                assertEquals(1, read.masterFile(LdsIds.EF_CARD_ACCESS)!!.attempt)
                 assertNull(read.masterFile(LdsIds.EF_CARD_ACCESS)!!.continuedAt)
                 assertTrue(read.access.cardAccessRead)
-                assertEquals(ChipResumeOutcome.NOTHING_TO_COMPARE, read.resume, "the loss came before EF.SOD")
+                assertEquals(ChipResumeOutcome.NOT_RESUMED, read.resume, "the loss came before access: no restart, nothing resumed")
             }
         }
 

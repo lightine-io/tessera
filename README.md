@@ -296,7 +296,7 @@ when (val result = ChipAccessKey.Mrz.fromTypedFields(fields)) {
 }
 ```
 
-`ChipReadState` has five members that are objects (`Starting`, `DocumentFound`, `Connecting`, `CheckingFiles`, `Stopping`) and five that are classes with values (`WaitingForDocument`, `OpeningAccess`, `ReadingFile`, `AuthenticatingChip`, `LinkLost`): a `when` needs `is` for the classes. `ChipReadEnding` has eight cases, all classes.
+`ChipReadState` has five members that are objects (`Starting`, `DocumentFound`, `Connecting`, `CheckingFiles`, `Stopping`) and six that are classes with values (`WaitingForDocument`, `OpeningAccess`, `ReadingFile`, `AuthenticatingChip`, `NoAnswerYet`, `LinkLost`): a `when` needs `is` for the classes. `ChipReadEnding` has eight cases, all classes.
 
 To check the chip's signature, pass your own root certificates: `ChipReadOptions.Builder(key).trustAnchors(TrustAnchors.load(file).anchors)`. Every `TrustAnchors.load` form that reads a file, a stream or an address belongs off the main thread. On Android the forms are `load(File)`, `load(InputStream)`, `load(context, uri)` and `load(bytes)`; there is no `load(path)` on Android.
 

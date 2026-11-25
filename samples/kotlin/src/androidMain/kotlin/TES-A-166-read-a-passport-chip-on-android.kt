@@ -74,7 +74,7 @@ object ReadScreen : ChipReadObserver {
     override fun onEnding(ending: ChipReadEnding) = handle(ending) // exactly once, and last
 }
 
-// Five states are objects, matched by name. Five are classes with values, matched with `is`.
+// Five states are objects, matched by name. Six are classes with values, matched with `is`.
 // With no `else`, the compiler tells you when a later release adds a state.
 fun describe(state: ChipReadState): String = when (state) {
     ChipReadState.Starting -> "Starting"
@@ -85,6 +85,7 @@ fun describe(state: ChipReadState): String = when (state) {
     is ChipReadState.ReadingFile -> "Reading a file: ${state.bytesRead} of ${state.bytesTotal} bytes"
     is ChipReadState.AuthenticatingChip -> "Checking the chip with ${state.method}"
     ChipReadState.CheckingFiles -> "Checking the files"
+    is ChipReadState.NoAnswerYet -> "Found, no answer yet: move the document a little"
     is ChipReadState.LinkLost -> "Connection lost, hold the document again (${state.restartsLeft} tries left)"
     ChipReadState.Stopping -> "Stopping"
 }

@@ -107,8 +107,9 @@ public class ChipReader internal constructor(
         reporter: FlowReporter,
         attempt: Int,
         carry: ResumeCarry?,
+        accessStage: suspend () -> Unit = {},
     ): Pair<ChipReadResult, ResumeCarry> {
-        val flow = ReadFlow(transport, options, telemetry, cryptoProvider, reporter, attempt, carry)
+        val flow = ReadFlow(transport, options, telemetry, cryptoProvider, reporter, attempt, carry, accessStage)
         val result = flow.run()
         return result to flow.carryOut()
     }

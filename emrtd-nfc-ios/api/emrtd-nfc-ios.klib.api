@@ -27,8 +27,10 @@ final class io.lightine.tessera.emrtd.nfc/CoreNfcChipRead : io.lightine.tessera.
 
 final class io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings { // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings|null[0]
     constructor <init>() // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.<init>|<init>(){}[0]
-    constructor <init>(io.lightine.tessera.emrtd/LinkLossPolicy = ..., kotlin/Long = ..., kotlin/Long = ..., kotlin/Long = ..., io.lightine.tessera.telemetry/TelemetrySink? = ..., io.lightine.tessera.emrtd/ObserverThread = ...) // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.<init>|<init>(io.lightine.tessera.emrtd.LinkLossPolicy;kotlin.Long;kotlin.Long;kotlin.Long;io.lightine.tessera.telemetry.TelemetrySink?;io.lightine.tessera.emrtd.ObserverThread){}[0]
+    constructor <init>(io.lightine.tessera.emrtd/LinkLossPolicy = ..., kotlin/Long = ..., kotlin/Long = ..., kotlin/Long = ..., io.lightine.tessera.telemetry/TelemetrySink? = ..., io.lightine.tessera.emrtd/ObserverThread = ..., kotlin/Long = ...) // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.<init>|<init>(io.lightine.tessera.emrtd.LinkLossPolicy;kotlin.Long;kotlin.Long;kotlin.Long;io.lightine.tessera.telemetry.TelemetrySink?;io.lightine.tessera.emrtd.ObserverThread;kotlin.Long){}[0]
 
+    final val commandTimeoutBeforeAccessMillis // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.commandTimeoutBeforeAccessMillis|{}commandTimeoutBeforeAccessMillis[0]
+        final fun <get-commandTimeoutBeforeAccessMillis>(): kotlin/Long // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.commandTimeoutBeforeAccessMillis.<get-commandTimeoutBeforeAccessMillis>|<get-commandTimeoutBeforeAccessMillis>(){}[0]
     final val commandTimeoutMillis // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.commandTimeoutMillis|{}commandTimeoutMillis[0]
         final fun <get-commandTimeoutMillis>(): kotlin/Long // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.commandTimeoutMillis.<get-commandTimeoutMillis>|<get-commandTimeoutMillis>(){}[0]
     final val linkLoss // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.linkLoss|{}linkLoss[0]
@@ -49,6 +51,7 @@ final class io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings { // io.lightine.t
         constructor <init>() // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Builder.<init>|<init>(){}[0]
 
         final fun build(): io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Builder.build|build(){}[0]
+        final fun commandTimeoutBeforeAccessMillis(kotlin/Long): io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Builder // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Builder.commandTimeoutBeforeAccessMillis|commandTimeoutBeforeAccessMillis(kotlin.Long){}[0]
         final fun commandTimeoutMillis(kotlin/Long): io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Builder // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Builder.commandTimeoutMillis|commandTimeoutMillis(kotlin.Long){}[0]
         final fun linkLoss(io.lightine.tessera.emrtd/LinkLossPolicy): io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Builder // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Builder.linkLoss|linkLoss(io.lightine.tessera.emrtd.LinkLossPolicy){}[0]
         final fun observerOn(io.lightine.tessera.emrtd/ObserverThread): io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Builder // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Builder.observerOn|observerOn(io.lightine.tessera.emrtd.ObserverThread){}[0]
@@ -58,6 +61,8 @@ final class io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings { // io.lightine.t
     }
 
     final object Companion { // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Companion|null[0]
+        final const val DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Companion.DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS|{}DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS[0]
+            final fun <get-DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS>(): kotlin/Long // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Companion.DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS.<get-DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS>|<get-DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS>(){}[0]
         final const val DEFAULT_COMMAND_TIMEOUT_MILLIS // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Companion.DEFAULT_COMMAND_TIMEOUT_MILLIS|{}DEFAULT_COMMAND_TIMEOUT_MILLIS[0]
             final fun <get-DEFAULT_COMMAND_TIMEOUT_MILLIS>(): kotlin/Long // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Companion.DEFAULT_COMMAND_TIMEOUT_MILLIS.<get-DEFAULT_COMMAND_TIMEOUT_MILLIS>|<get-DEFAULT_COMMAND_TIMEOUT_MILLIS>(){}[0]
         final const val DEFAULT_RESTARTS // io.lightine.tessera.emrtd.nfc/CoreNfcReadSettings.Companion.DEFAULT_RESTARTS|{}DEFAULT_RESTARTS[0]

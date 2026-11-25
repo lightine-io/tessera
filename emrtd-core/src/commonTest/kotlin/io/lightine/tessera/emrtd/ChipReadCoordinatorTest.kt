@@ -58,18 +58,28 @@ class ChipReadCoordinatorTest {
         }
     }
 
-    /** A transport whose every command fails with [error]. */
+    /**
+     * A transport that answers the plain selections before access (the application is there, no
+     * master-file file is) and fails every other command with [error]: with an MRZ key the first
+     * failing command is BAC's GET CHALLENGE, after the access stage began. With [beforeAccess]
+     * every command fails, the first one included.
+     */
     private class FailingTransport(
         private val error: ChipError,
+        private val beforeAccess: Boolean = false,
     ) : ApduTransport {
         override val maxCommandLength: Int = 261
         override val supportsExtendedLength: Boolean = false
 
-        override suspend fun transceive(command: ByteArray): ByteArray =
+        override suspend fun transceive(command: ByteArray): ByteArray {
+            val ins = command[1].toInt() and 0xFF
+            val p1 = command[2].toInt() and 0xFF
+            if (!beforeAccess && ins == 0xA4) return if (p1 == 0x04) byteArrayOf(0x90.toByte(), 0x00) else byteArrayOf(0x6A, 0x82.toByte())
             throw ApduTransportException(error as io.lightine.tessera.types.errors.NfcError)
+        }
     }
 
-    private fun options(key: ChipAccessKey = ChipAccessKey.Can("123456")) = ChipReadOptions(key, setOf(1, 2), checkTime = checkTime)
+    private fun options(key: ChipAccessKey = FakeReadFlowChip.mrzKey()) = ChipReadOptions(key, setOf(1, 2), checkTime = checkTime)
 
     private fun coordinator(
         observer: RecordingObserver,
@@ -93,7 +103,7 @@ class ChipReadCoordinatorTest {
     @Test
     fun anOwningCoordinatorKeepsTheKeyUsableAcrossALostLinkAndClearsItAtTheEnding() =
         runTest {
-            val key = ChipAccessKey.Can("123456")
+            val key = FakeReadFlowChip.mrzKey()
             val observer = RecordingObserver()
             val c = owningCoordinator(observer, key)
             assertTrue(c.start())
@@ -398,10 +408,10 @@ class ChipReadCoordinatorTest {
             c.start()
             var asked = 0
             val outcome =
-                c.read(FailingTransport(NfcTagLost)) {
+                c.read(FailingTransport(NfcTagLost), systemEnd = {
                     asked++
                     NfcUnavailable(NfcUnavailable.Reason.DISABLED)
-                }
+                })
             assertEquals(ChipReadAttemptOutcome.ENDED, outcome)
             assertEquals(1, asked)
             val ending = assertIs<ChipReadEnding.EndedBySystem>(observer.endings.single())
@@ -414,8 +424,8 @@ class ChipReadCoordinatorTest {
             val quiet = RecordingObserver()
             val q = coordinator(quiet, LinkLossPolicy.ReadAgain(1))
             q.start()
-            assertEquals(ChipReadAttemptOutcome.LINK_LOST, q.read(FailingTransport(NfcTagLost)) { error("boom") })
-            assertEquals(ChipReadAttemptOutcome.ENDED, q.read(FailingTransport(NfcTagLost)) { null })
+            assertEquals(ChipReadAttemptOutcome.LINK_LOST, q.read(FailingTransport(NfcTagLost), systemEnd = { error("boom") }))
+            assertEquals(ChipReadAttemptOutcome.ENDED, q.read(FailingTransport(NfcTagLost), systemEnd = { null }))
             assertEquals(NfcTagLost, assertIs<ChipReadEnding.Failed>(quiet.endings.single()).error)
         }
 
@@ -432,10 +442,10 @@ class ChipReadCoordinatorTest {
             val asked = mutableListOf<io.lightine.tessera.types.errors.NfcError>()
             assertEquals(
                 ChipReadAttemptOutcome.ENDED,
-                q.read(FailingTransport(closed)) {
+                q.read(FailingTransport(closed), systemEnd = {
                     asked += it
                     null
-                },
+                }),
             )
             assertEquals(listOf<io.lightine.tessera.types.errors.NfcError>(closed), asked)
             assertEquals(closed, assertIs<ChipReadEnding.EndedBySystem>(quiet.endings.single()).reason)
@@ -444,24 +454,24 @@ class ChipReadCoordinatorTest {
             val person = RecordingObserver()
             val p = coordinator(person)
             p.start()
-            p.read(FailingTransport(closed)) { NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER) }
+            p.read(FailingTransport(closed), systemEnd = { NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER) })
             assertEquals(ChipReadEnding.Cancelled.By.PERSON, assertIs<ChipReadEnding.Cancelled>(person.endings.single()).by)
 
             // The platform reports its time limit: ended by the system with that reason.
             val limit = RecordingObserver()
             val l = coordinator(limit)
             l.start()
-            l.read(FailingTransport(closed)) { NfcTimeout(null) }
+            l.read(FailingTransport(closed), systemEnd = { NfcTimeout(null) })
             assertEquals(NfcTimeout(null), assertIs<ChipReadEnding.EndedBySystem>(limit.endings.single()).reason)
 
             // The platform ends the read itself while the hook waits: that ending stands.
             val raced = RecordingObserver()
             val r = coordinator(raced)
             r.start()
-            r.read(FailingTransport(closed)) {
+            r.read(FailingTransport(closed), systemEnd = {
                 r.cancel(ChipReadEnding.Cancelled.By.PERSON)
                 null
-            }
+            })
             assertEquals(ChipReadEnding.Cancelled.By.PERSON, assertIs<ChipReadEnding.Cancelled>(raced.endings.single()).by)
             for (o in listOf(quiet, person, limit, raced)) assertOneEndingLast(o)
         }

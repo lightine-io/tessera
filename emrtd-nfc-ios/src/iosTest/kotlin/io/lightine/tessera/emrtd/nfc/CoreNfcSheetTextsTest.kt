@@ -23,7 +23,8 @@ class CoreNfcSheetTextsTest {
         chipReadTest {
             val updates = mutableListOf<ChipReadUpdate>()
             // A complete read, slow enough to report the waiting time, with one lost link.
-            val chip = FakeChip(scope = scope, answerDelayMillis = 20).apply { loseAt += 3 }
+            // Command 7 is the first after the plain chip's probe: a loss there spends a restart.
+            val chip = FakeChip(scope = scope, answerDelayMillis = 20).apply { loseAt += 7 }
             val (read, rec) = start()
             step(8_000)
             present(FakeChipTag(chip))
@@ -38,6 +39,12 @@ class CoreNfcSheetTextsTest {
             step(400)
             cancelled.cancel()
             updates += stopped.updates
+            // A chip that does not answer its first command, for NoAnswerYet.
+            val (silent, noAnswer) = start()
+            present(FakeChipTag(FakeChip().apply { loseAt += 1 }))
+            step(400)
+            silent.cancel()
+            updates += noAnswer.updates
 
             val names = updates.map { it.state::class.simpleName }.toSet()
             val expected =
@@ -49,6 +56,7 @@ class CoreNfcSheetTextsTest {
                     "OpeningAccess",
                     "ReadingFile",
                     "CheckingFiles",
+                    "NoAnswerYet",
                     "LinkLost",
                     "Stopping",
                 )
@@ -60,6 +68,7 @@ class CoreNfcSheetTextsTest {
             }
             assertTrue(updates.any { defaults.textFor(it) == "Move the phone slowly along the document" })
             assertTrue(updates.any { defaults.textFor(it) == "Hold your iPhone near the document" })
+            assertTrue(updates.any { defaults.textFor(it) == "Found, no answer yet. Move the phone a little." })
 
             var last = 0
             for (update in rec.updates) {
@@ -89,7 +98,9 @@ class CoreNfcSheetTextsTest {
                 step(400)
                 endings += it.ending
             }
+            // Failed: the first command unanswered with too little of the session left to try again.
             start(settings = CoreNfcReadSettings(linkLoss = LinkLossPolicy.End)).second.also {
+                step(51_000)
                 present(FakeChipTag(FakeChip().apply { loseAt += 1 }))
                 step(400)
                 endings += it.ending
@@ -156,7 +167,8 @@ class CoreNfcSheetTextsTest {
                 }
             val (read, rec) = start(texts = texts, settings = CoreNfcReadSettings(linkLoss = LinkLossPolicy.End))
             assertEquals("app: WaitingForDocument", port.alerts.first())
-            step(100)
+            // Too little of the session left for another try: the unanswered first command ends it.
+            step(51_000)
             present(FakeChipTag(FakeChip().apply { loseAt += 1 }))
             assertEquals("Found. Hold still.", port.alerts.last())
             step(400)

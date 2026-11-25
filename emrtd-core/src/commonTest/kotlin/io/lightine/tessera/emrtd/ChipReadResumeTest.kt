@@ -283,7 +283,9 @@ class ChipReadResumeTest {
                         FakeAttemptLink(flow.chip, dropFirst = if (attempt == 2) 1 else 0)
                     }
                 val read = complete(ending)
-                assertEquals(3, ending.attempts)
+                // The loss before access in the second attempt costs no restart and no attempt:
+                // the third link repeats attempt 2 (TES-346).
+                assertEquals(2, ending.attempts)
                 assertEquals(ChipResumeOutcome.SAME_SECURITY_OBJECT, read.resume)
                 assertEquals(1, read.dataGroup(1)!!.attempt)
                 assertNotNull(read.dataGroup(2)!!.continuedAt)
@@ -466,11 +468,22 @@ class ChipReadResumeTest {
         runTest {
             withChips { c, keys ->
                 val flow = build(c, keys, FlowAccess.BAC, listOf(midFile(dg2)))
-                val (ending, _) =
-                    drive(flow, LinkLossPolicy.ReadAgain(1)) { attempt ->
-                        FakeAttemptLink(flow.chip, dropFirst = if (attempt == 2) 1 else 0)
-                    }
-                val partial = assertIs<ChipReadEnding.Partial>(ending)
+                val observer = RecordingObserver()
+                val coordinator =
+                    ChipReadCoordinator(
+                        options(flow, FakeReadFlowChip.mrzKey()),
+                        LinkLossPolicy.ReadAgain(1),
+                        observer,
+                        ChipReader(NoOpTelemetrySink),
+                    )
+                assertTrue(coordinator.start())
+                assertEquals(ChipReadAttemptOutcome.LINK_LOST, coordinator.read(FakeAttemptLink(flow.chip)))
+                // The document is back but its chip does not answer before access: no restart is
+                // used, and when the platform gives up the read ends with the earlier read.
+                assertEquals(ChipReadAttemptOutcome.NO_ANSWER_YET, coordinator.read(FakeAttemptLink(flow.chip, dropFirst = 1)))
+                assertTrue(coordinator.documentNotReturned())
+                val partial = assertIs<ChipReadEnding.Partial>(observer.endings.single())
+                assertEquals(NfcTagLost, partial.stoppedBy)
                 assertEquals(2, partial.attempts)
                 assertEquals(1, partial.read.dataGroup(1)!!.attempt)
             }

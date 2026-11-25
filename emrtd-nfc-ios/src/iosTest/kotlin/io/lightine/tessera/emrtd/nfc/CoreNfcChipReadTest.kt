@@ -127,6 +127,19 @@ class CoreNfcChipReadTest {
         assertFailsWith<IllegalArgumentException> { CoreNfcReadSettings(commandTimeoutMillis = 0) }
         assertFailsWith<IllegalArgumentException> { CoreNfcReadSettings(settleDelayMillis = -1) }
         assertFailsWith<IllegalArgumentException> { CoreNfcReadSettings(waitAfterSystemEndMillis = -1) }
+        assertEquals(1_500, defaults.commandTimeoutBeforeAccessMillis)
+        assertFailsWith<IllegalArgumentException> { CoreNfcReadSettings(commandTimeoutBeforeAccessMillis = 0) }
+        assertFailsWith<IllegalArgumentException> { CoreNfcReadSettings(commandTimeoutBeforeAccessMillis = -1) }
+        assertFailsWith<IllegalArgumentException> { CoreNfcReadSettings.Builder().commandTimeoutBeforeAccessMillis(0).build() }
+        val built = CoreNfcReadSettings.Builder().commandTimeoutBeforeAccessMillis(800).build()
+        assertEquals(800, built.toBuilder().build().commandTimeoutBeforeAccessMillis, "the builder keeps the value")
+        assertTrue("commandTimeoutBeforeAccessMillis=800" in built.toString())
+        assertEquals(1, CoreNfcReadSettings(commandTimeoutBeforeAccessMillis = 1).effectiveTimeoutBeforeAccessMillis)
+        // A value above the general limit gives way to it.
+        assertEquals(
+            2_000,
+            CoreNfcReadSettings(commandTimeoutMillis = 2_000, commandTimeoutBeforeAccessMillis = 9_000).effectiveTimeoutBeforeAccessMillis,
+        )
     }
 
     private fun ByteArray.toHex(): String = joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0').uppercase() }

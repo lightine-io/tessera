@@ -11,7 +11,8 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  * ordinary app: create it with no arguments, or do not pass one at all.
  *
  * Every time is a `Long` in milliseconds, as in the Android read's settings (`NfcReadSettings`),
- * where [linkLoss], [settleDelayMillis], [commandTimeoutMillis] and [observerOn] mean the same,
+ * where [linkLoss], [settleDelayMillis], [commandTimeoutMillis], [commandTimeoutBeforeAccessMillis]
+ * and [observerOn] mean the same,
  * with the same defaults. There is no wait-for-document limit as on Android
  * (`NfcReadSettings.waitForDocumentMillis`): the system session's own 60-second limit bounds the
  * wait for a document, and the system ends the read when it passes
@@ -33,7 +34,8 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  * @property settleDelayMillis How long the read waits after the system finds a document before the
  *   first command, so the hand can settle: frames are often lost in the first second after
  *   detection. Default 400. Cancelling the read or the end of the system session cuts it short.
- * @property commandTimeoutMillis The longest wait for the chip's answer to one command. When it
+ * @property commandTimeoutMillis The longest wait for the chip's answer to one command from the
+ *   first BAC or PACE command on (before it, [commandTimeoutBeforeAccessMillis]). When it
  *   passes, the command counts as a lost link: nothing more is sent on that link, a late answer is
  *   dropped, and [linkLoss] decides what follows. Default 5000: ICAO Doc 9303 Part 10, appendix
  *   B.11, lets a chip take up to 5 seconds per block, and Core NFC itself may wait far longer.
@@ -53,8 +55,18 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  *   queue, by default, so the updates reach a screen without a hop of your own; [ObserverThread.CALLER]
  *   for the read's own threads. Either way the calls come one at a time, in order, with the ending
  *   last, exactly once, and none comes before `start` returned.
- * @throws IllegalArgumentException when [commandTimeoutMillis] is not positive, or
- *   [settleDelayMillis] or [waitAfterSystemEndMillis] is negative.
+ * @property commandTimeoutBeforeAccessMillis The longest wait for the chip's answer to one
+ *   command before access: the plain commands each attempt sends before BAC or PACE starts
+ *   (selecting and reading EF.CardAccess, selecting the application). They need no cryptography
+ *   on the chip and normally answer in milliseconds, so a chip that is found but gets too little
+ *   power is noticed sooner. Default 1500. From the first BAC or PACE command on,
+ *   [commandTimeoutMillis] applies, so a slow step of the access protocol, chip authentication or
+ *   a protected read is never cut by this value. When it is longer than [commandTimeoutMillis],
+ *   [commandTimeoutMillis] applies before access too. A command not answered in time is a try that
+ *   costs no restart ([io.lightine.tessera.emrtd.ChipReadState.NoAnswerYet]); the tries go on in
+ *   the same system session while at least 10 of its 60 seconds are left.
+ * @throws IllegalArgumentException when [commandTimeoutMillis] or [commandTimeoutBeforeAccessMillis]
+ *   is not positive, or [settleDelayMillis] or [waitAfterSystemEndMillis] is negative.
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
@@ -67,20 +79,23 @@ public class CoreNfcReadSettings
         public val waitAfterSystemEndMillis: Long = DEFAULT_WAIT_AFTER_SYSTEM_END_MILLIS,
         public val telemetry: TelemetrySink? = null,
         public val observerOn: ObserverThread = ObserverThread.MAIN,
+        public val commandTimeoutBeforeAccessMillis: Long = DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS,
     ) {
-        /** The defaults: [LinkLossPolicy.Resume] with 2 restarts, 400, 5000 and 1000 milliseconds. */
+        /** The defaults: [LinkLossPolicy.Resume] with 2 restarts, 400, 5000, 1000 and 1500 milliseconds. */
         public constructor() : this(LinkLossPolicy.Resume(DEFAULT_RESTARTS))
 
         init {
             require(settleDelayMillis >= 0) { "settleDelayMillis must not be negative" }
             require(commandTimeoutMillis > 0) { "commandTimeoutMillis must be positive" }
+            require(commandTimeoutBeforeAccessMillis > 0) { "commandTimeoutBeforeAccessMillis must be positive" }
             require(waitAfterSystemEndMillis >= 0) { "waitAfterSystemEndMillis must not be negative" }
         }
 
         /** The values, never document data. */
         override fun toString(): String =
             "CoreNfcReadSettings(linkLoss=$linkLoss, settleDelayMillis=$settleDelayMillis, " +
-                "commandTimeoutMillis=$commandTimeoutMillis, waitAfterSystemEndMillis=$waitAfterSystemEndMillis, " +
+                "commandTimeoutMillis=$commandTimeoutMillis, commandTimeoutBeforeAccessMillis=$commandTimeoutBeforeAccessMillis, " +
+                "waitAfterSystemEndMillis=$waitAfterSystemEndMillis, " +
                 "observerOn=$observerOn)"
 
         /**
@@ -97,6 +112,11 @@ public class CoreNfcReadSettings
                 .waitAfterSystemEndMillis(waitAfterSystemEndMillis)
                 .telemetry(telemetry)
                 .observerOn(observerOn)
+                .commandTimeoutBeforeAccessMillis(commandTimeoutBeforeAccessMillis)
+
+        /** The time limit for one command before access: the smaller of the two limits. */
+        internal val effectiveTimeoutBeforeAccessMillis: Long
+            get() = minOf(commandTimeoutBeforeAccessMillis, commandTimeoutMillis)
 
         /**
          * Builds [CoreNfcReadSettings] step by step, with the constructor's defaults.
@@ -111,6 +131,7 @@ public class CoreNfcReadSettings
             private var waitAfterSystemEndMillis: Long = DEFAULT_WAIT_AFTER_SYSTEM_END_MILLIS
             private var telemetry: TelemetrySink? = null
             private var observerOn: ObserverThread = ObserverThread.MAIN
+            private var commandTimeoutBeforeAccessMillis: Long = DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS
 
             /** What the read does when the link to the chip is lost. */
             public fun linkLoss(policy: LinkLossPolicy): Builder = apply { linkLoss = policy }
@@ -120,6 +141,9 @@ public class CoreNfcReadSettings
 
             /** The longest wait for the chip's answer to one command. */
             public fun commandTimeoutMillis(millis: Long): Builder = apply { commandTimeoutMillis = millis }
+
+            /** The longest wait for the chip's answer to one command before access. */
+            public fun commandTimeoutBeforeAccessMillis(millis: Long): Builder = apply { commandTimeoutBeforeAccessMillis = millis }
 
             /** How long a new read waits after the system ended the previous session. */
             public fun waitAfterSystemEndMillis(millis: Long): Builder = apply { waitAfterSystemEndMillis = millis }
@@ -137,7 +161,15 @@ public class CoreNfcReadSettings
              */
             @Throws(IllegalArgumentException::class)
             public fun build(): CoreNfcReadSettings =
-                CoreNfcReadSettings(linkLoss, settleDelayMillis, commandTimeoutMillis, waitAfterSystemEndMillis, telemetry, observerOn)
+                CoreNfcReadSettings(
+                    linkLoss,
+                    settleDelayMillis,
+                    commandTimeoutMillis,
+                    waitAfterSystemEndMillis,
+                    telemetry,
+                    observerOn,
+                    commandTimeoutBeforeAccessMillis,
+                )
         }
 
         /** The default values. */
@@ -150,6 +182,10 @@ public class CoreNfcReadSettings
 
             /** The default [commandTimeoutMillis]: 5000. */
             public const val DEFAULT_COMMAND_TIMEOUT_MILLIS: Long = 5_000
+
+            /** The default [commandTimeoutBeforeAccessMillis]: 1500. */
+            public const val DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS: Long =
+                ChipReadCoordinator.DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS
 
             /** The default [waitAfterSystemEndMillis]: 1000. */
             public const val DEFAULT_WAIT_AFTER_SYSTEM_END_MILLIS: Long = 1_000

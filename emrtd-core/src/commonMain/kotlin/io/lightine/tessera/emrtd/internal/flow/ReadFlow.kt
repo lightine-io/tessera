@@ -166,6 +166,11 @@ internal class ReadFlow(
     private val reporter: FlowReporter = FlowReporter(ProgressTracker()) { _, _ -> },
     private val attempt: Int = 1,
     private val carry: ResumeCarry? = null,
+    // Called once, right before the first command of an access protocol (BAC or PACE), or when a
+    // plain chip was found with no access protocol: the plain commands before it are done. The
+    // coordinator uses it to set the general command time limit and to know that the chip was
+    // asked something about the key in this attempt.
+    private val accessStage: suspend () -> Unit = {},
 ) {
     private val plain = PlainApduSender(transport)
     private var channel: SecureChannel? = null
@@ -202,6 +207,7 @@ internal class ReadFlow(
     private var applicationSelectedAfterKeySwitch = false
     private var accessDone = false
     private var cardAccessRead = false
+    private var accessStageEntered = false
     private var offered: List<ChipPaceOffer> = emptyList()
     private var cardAccessInfos: SecurityInfos? = null
     private var paceSuite: PaceSuite? = null
@@ -469,6 +475,7 @@ internal class ReadFlow(
                     ChipUnsupportedAlgorithm(ChipAccessProtocol.PACE, ChipUnsupportedAlgorithm.Reason.NO_CRYPTOGRAPHY_ON_PLATFORM),
                 )
         attempting = ChipAccessProtocol.PACE
+        enterAccessStage()
         var refusedSw: Int? = null
         var needsExtended = false
         // One authentication attempt per read: another suite is tried only when nothing of this one
@@ -546,6 +553,7 @@ internal class ReadFlow(
         val c = crypto
         if (key is ChipAccessKey.Mrz && c != null) {
             attempting = ChipAccessProtocol.BAC
+            enterAccessStage()
             val start = TimeSource.Monotonic.markNow()
             try {
                 val opened = Bac.open(plain, c, key)
@@ -559,7 +567,11 @@ internal class ReadFlow(
                 event(ChipReadStep.BAC, ChipReadStepOutcome.FAILED, start, protocol = "BAC", sw = e.sw)
                 if (e.failure != BacFailure.CHALLENGE_REFUSED) throw Stop(FlowMappings.bac(e))
                 reporter.accessProtocol(ChipAccessProtocol.NONE)
-                if (probePlain()) return
+                if (probePlain()) {
+                    // A plain chip: what follows is read with the general time limit.
+                    enterAccessStage()
+                    return
+                }
                 throw Stop(noWayIn(offersUnusablePace, FlowMappings.bac(e)))
             } catch (e: ChipCryptoException) {
                 event(ChipReadStep.BAC, ChipReadStepOutcome.FAILED, start, protocol = "BAC")
@@ -567,13 +579,24 @@ internal class ReadFlow(
             }
         }
         // No BAC possible here (a card access number, or no cryptography): a plain chip still reads.
-        if (probePlain()) return
+        if (probePlain()) {
+            // A plain chip: what follows is read with the general time limit.
+            enterAccessStage()
+            return
+        }
         val error =
             when {
                 key is ChipAccessKey.Can -> ChipAccessDenied(ChipAccessProtocol.NONE, ChipAccessDenied.Reason.KEY_NEEDS_PACE)
                 else -> ChipUnsupportedAlgorithm(ChipAccessProtocol.BAC, ChipUnsupportedAlgorithm.Reason.NO_CRYPTOGRAPHY_ON_PLATFORM)
             }
         throw Stop(noWayIn(offersUnusablePace, error))
+    }
+
+    /** The plain commands before access are done: see [accessStage]. Once per attempt. */
+    private suspend fun enterAccessStage() {
+        if (accessStageEntered) return
+        accessStageEntered = true
+        accessStage()
     }
 
     private fun noWayIn(

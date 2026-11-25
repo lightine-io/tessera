@@ -91,16 +91,21 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
                                                                       waitAfterSystemEndMillis:1000
                                                                                      telemetry:nil
                                                                                     observerOn:TesseraObserverThread.main
+                                                              commandTimeoutBeforeAccessMillis:1500
                                                                                          error:nil];
     TesseraCoreNfcReadSettings *built = [[[[[[TesseraCoreNfcReadSettingsBuilder alloc] init]
         linkLossPolicy:[TesseraLinkLossPolicyCompanion.shared readAgainMaxRestarts:1 error:nil]] telemetrySink:nil]
         observerOnThread:TesseraObserverThread.caller] buildAndReturnError:nil];
     TesseraCoreNfcReadSettings *changed = [[settings.toBuilder settleDelayMillisMillis:0] buildAndReturnError:nil];
+    TesseraCoreNfcReadSettings *shorter = [[settings.toBuilder commandTimeoutBeforeAccessMillisMillis:900] buildAndReturnError:nil];
+    int64_t beforeAccess = settings.commandTimeoutBeforeAccessMillis;
     TesseraLinkLossPolicy *noRestart = TesseraLinkLossPolicyCompanion.shared.end;
     TesseraLinkLossPolicy *resumeTwice = [TesseraLinkLossPolicyCompanion.shared resumeMaxRestarts:2 error:nil];
     TesseraNfcUnavailableReason *unavailable = TesseraCoreNfcChipRead.companion.availability;
     (void)built;
     (void)changed;
+    (void)shorter;
+    (void)beforeAccess;
     (void)noRestart;
     (void)resumeTwice;
     (void)unavailable;
@@ -112,4 +117,12 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
     (void)ended;
     (void)defaults;
     (void)withTexts;
+}
+
+// A state an app's observer tells apart (emrtd-core): found, but no answer yet.
+static void tesseraChipReadStates(TesseraChipReadState *state) {
+    if ([state isKindOfClass:TesseraChipReadStateNoAnswerYet.class]) {
+        int32_t tries = ((TesseraChipReadStateNoAnswerYet *)state).tries;
+        (void)tries;
+    }
 }

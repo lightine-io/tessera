@@ -38,6 +38,10 @@ import kotlin.jvm.JvmSynthetic
  *   transport), within [LinkLossPolicy.maxRestarts], and only when the platform allows it; never
  *   after an answered refusal, a secure-messaging error, a malformed file, or a person, app or
  *   system ending.
+ * - A loss of the link before the attempt sent the first command of an access protocol (the chip
+ *   was asked nothing about the key) uses no restart and is no new attempt: the read reports
+ *   [ChipReadState.NoAnswerYet] and the platform tries the same attempt again
+ *   ([ChipReadAttemptOutcome.NO_ANSWER_YET]), within its own time bound.
  *
  * The calls, in order, for a platform entry point:
  * 1. [start]; when it returns `false` the read has ended (the key was refused), so release nothing
@@ -48,6 +52,9 @@ import kotlin.jvm.JvmSynthetic
  * 4. [read] on the connected transport. [ChipReadAttemptOutcome.ENDED]: release the link, done.
  *    [ChipReadAttemptOutcome.LINK_LOST]: release the link, wait for the document (restart polling),
  *    then go to step 3; when the platform gives up waiting, [documentNotReturned].
+ *    [ChipReadAttemptOutcome.NO_ANSWER_YET]: the same, but try again soon, since the document is
+ *    likely still there; when the platform's time bound for unanswered tries passes,
+ *    [documentNotReturned].
  * 5. At any time: [cancel] with [ChipReadEnding.Cancelled.By.APP] (then release the link in the
  *    background) or [ChipReadEnding.Cancelled.By.PERSON]; [endedBySystem]; [fail] for a platform
  *    problem with no better ending.
@@ -99,6 +106,13 @@ public class ChipReadCoordinator private constructor(
         /** The default settle time after a document is found, before the first command, on both platforms. */
         public const val DEFAULT_SETTLE_DELAY_MILLIS: Long = 400
 
+        /**
+         * The default time limit for one command before access, on both platforms: 1500
+         * milliseconds. These commands (selecting and reading EF.CardAccess, selecting the
+         * application) need no cryptography on the chip and normally answer in milliseconds.
+         */
+        public const val DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS: Long = 1_500
+
         private val SYSTEM_REASONS = setOf(NfcUnavailable.Reason.ENDED_BY_SYSTEM, NfcUnavailable.Reason.DISABLED)
 
         /** The chip answered about the key: never tried again with it. */
@@ -148,6 +162,15 @@ public class ChipReadCoordinator private constructor(
     private val lastReadState = AtomicReference<ChipReadState?>(null)
     private val waitedMillis = AtomicReference(0L)
     private val carry = AtomicReference<ResumeCarry?>(null)
+
+    // Unanswered tries before access (see NoAnswerYet): the tries in a row, the state to show again,
+    // and whether the next read() repeats the current attempt instead of starting a new one.
+    private val noAnswerTries = AtomicInt(0)
+    private val lastNoAnswer = AtomicReference<ChipReadState.NoAnswerYet?>(null)
+    private val repeatAttempt = AtomicBoolean(false)
+
+    /** `true` while the read shows [ChipReadState.NoAnswerYet]: the steps of each new try are not reported. */
+    private val noAnswer: Boolean get() = lastNoAnswer.load() != null
 
     /** `true` once the ending is decided. */
     @get:JvmSynthetic
@@ -199,31 +222,43 @@ public class ChipReadCoordinator private constructor(
      */
     @JvmSynthetic
     public fun waiting(waitedMillis: Long) {
-        if (waitingAfterLoss.load()) return
+        if (waitingAfterLoss.load() || noAnswer) return
         this.waitedMillis.store(waitedMillis)
         publish(ChipReadState.WaitingForDocument(waitedMillis))
     }
 
-    /** A document is found and nothing was sent yet: [ChipReadState.DocumentFound]. */
+    /**
+     * A document is found and nothing was sent yet: [ChipReadState.DocumentFound]. While the read
+     * shows [ChipReadState.NoAnswerYet] it does nothing: that state stays.
+     */
     @JvmSynthetic
     public fun documentFound() {
+        if (noAnswer) return
         publish(ChipReadState.DocumentFound)
     }
 
-    /** The link to the chip is being set up: [ChipReadState.Connecting]. */
+    /**
+     * The link to the chip is being set up: [ChipReadState.Connecting]. While the read shows
+     * [ChipReadState.NoAnswerYet] it does nothing.
+     */
     @JvmSynthetic
     public fun connecting() {
+        if (noAnswer) return
         publish(ChipReadState.Connecting)
     }
 
     /**
      * The link could not be set up, before any command: back to waiting, with no restart used
-     * ([ChipReadState.WaitingForDocument], or [ChipReadState.LinkLost] again after a lost link).
+     * ([ChipReadState.WaitingForDocument], [ChipReadState.LinkLost] again after a lost link, or
+     * [ChipReadState.NoAnswerYet] again after unanswered tries).
      */
     @JvmSynthetic
     public fun connectionFailed() {
         val lost = lastLinkLost.load()
-        if (waitingAfterLoss.load() && lost != null) {
+        val silent = lastNoAnswer.load()
+        if (silent != null) {
+            publish(silent)
+        } else if (waitingAfterLoss.load() && lost != null) {
             publish(lost)
         } else {
             publish(ChipReadState.WaitingForDocument(waitedMillis.load()))
@@ -238,6 +273,11 @@ public class ChipReadCoordinator private constructor(
      * [ChipReadState.LinkLost] and returns [ChipReadAttemptOutcome.LINK_LOST]: release this link and
      * wait for the document. Otherwise the ending is delivered (unless another cause ended the read
      * first) and the result is [ChipReadAttemptOutcome.ENDED].
+     *
+     * When the attempt ends with a lost link before it sent the first command of an access protocol,
+     * and the platform allows another try, the read publishes [ChipReadState.NoAnswerYet] and
+     * returns [ChipReadAttemptOutcome.NO_ANSWER_YET]: no restart is used, and the next call repeats
+     * this attempt.
      *
      * Cancelling the calling coroutine ends the read with [ChipReadEnding.Cancelled.By.APP] when it
      * has not ended yet, then rethrows.
@@ -257,6 +297,11 @@ public class ChipReadCoordinator private constructor(
      *   exception it throws counts as `null`. A closed link with no answer ends the read as
      *   [ChipReadEnding.EndedBySystem] with the closed-link error, never as an app cancel: an app
      *   cancel ends the read before its link closes.
+     * @param accessStage Called once per attempt, right before the first command of an access
+     *   protocol (or when a plain chip needs none): the platform sets the general command time
+     *   limit here, after a shorter one for the plain commands before it. A loss of the link before
+     *   this call is a [ChipReadAttemptOutcome.NO_ANSWER_YET]. An exception it throws stops the
+     *   attempt like a failed command.
      */
     @JvmSynthetic
     @Throws(CancellationException::class)
@@ -264,20 +309,36 @@ public class ChipReadCoordinator private constructor(
         transport: ApduTransport,
         readAgainAllowed: Boolean = true,
         systemEnd: suspend (stoppedBy: NfcError) -> NfcError? = { null },
+        accessStage: suspend () -> Unit = {},
     ): ChipReadAttemptOutcome {
         if (isEnded) return ChipReadAttemptOutcome.ENDED
-        val attempt = attemptsStarted.incrementAndFetch()
+        val attempt = if (repeatAttempt.exchange(false)) attemptsStarted.load() else attemptsStarted.incrementAndFetch()
         waitingAfterLoss.store(false)
         val reporter =
             FlowReporter(tracker) { state, progress ->
                 lastProgress.store(progress)
                 lastReadState.store(state)
-                publish(state)
+                // While unanswered tries go on, the opening step of each try is not news; anything
+                // past it means the chip answered.
+                if (!(noAnswer && state is ChipReadState.OpeningAccess && state.protocol == null)) {
+                    endNoAnswer()
+                    publish(state)
+                }
             }
         val resume = linkLoss is LinkLossPolicy.Resume
+        var accessReached = false
         val (result, next) =
             try {
-                reader.readAttempt(EndedGate(transport), options, reporter, attempt, if (resume && attempt > 1) carry.load() else null)
+                reader.readAttempt(
+                    EndedGate(transport),
+                    options,
+                    reporter,
+                    attempt,
+                    if (resume && attempt > 1) carry.load() else null,
+                ) {
+                    accessStage()
+                    accessReached = true
+                }
             } catch (e: CancellationException) {
                 end(ChipReadEnding.Cancelled(ChipReadEnding.Cancelled.By.APP, attempt, lastProgress.load()))
                 throw e
@@ -323,6 +384,17 @@ public class ChipReadCoordinator private constructor(
                 return ChipReadAttemptOutcome.ENDED
             }
         }
+        // Lost before any access protocol command: the chip was asked nothing about the key, so the
+        // try costs no restart and repeats this attempt.
+        if (isLinkLoss(error) && readAgainAllowed && !accessReached && result is ChipReadResult.Failed) {
+            lastLoss.store(error)
+            repeatAttempt.store(true)
+            val silent = ChipReadState.NoAnswerYet(noAnswerTries.incrementAndFetch())
+            lastNoAnswer.store(silent)
+            publish(silent)
+            return ChipReadAttemptOutcome.NO_ANSWER_YET
+        }
+        endNoAnswer()
         val usedBefore = if (isLinkLoss(error) && readAgainAllowed) takeRestart() else -1
         if (usedBefore >= 0) {
             lastLoss.store(error)
@@ -334,6 +406,12 @@ public class ChipReadCoordinator private constructor(
         }
         end(endingFor(result, error))
         return ChipReadAttemptOutcome.ENDED
+    }
+
+    /** The chip answered, or the attempt ended otherwise: unanswered tries are over. */
+    private fun endNoAnswer() {
+        lastNoAnswer.store(null)
+        noAnswerTries.store(0)
     }
 
     /**
@@ -371,9 +449,10 @@ public class ChipReadCoordinator private constructor(
     }
 
     /**
-     * The document did not come back after a lost link within the platform's wait: the read ends
-     * with [ChipReadEnding.Partial] when any attempt was granted access, [ChipReadEnding.Failed]
-     * otherwise, stopped by the loss.
+     * The document did not come back after a lost link within the platform's wait, or its chip did
+     * not answer within the platform's time bound for unanswered tries: the read ends with
+     * [ChipReadEnding.Partial] when any attempt was granted access, [ChipReadEnding.Failed]
+     * otherwise, stopped by the last loss.
      *
      * @return `true` when this call ended the read.
      */
@@ -570,4 +649,12 @@ public enum class ChipReadAttemptOutcome {
 
     /** The link was lost and the read goes on: release the link and wait for the document. */
     LINK_LOST,
+
+    /**
+     * The chip did not answer before the attempt sent any access protocol command, and the read goes
+     * on with no restart used ([ChipReadState.NoAnswerYet]): release the link and try the same
+     * document again soon, within the platform's time bound for such tries; when it passes, call
+     * [ChipReadCoordinator.documentNotReturned].
+     */
+    NO_ANSWER_YET,
 }

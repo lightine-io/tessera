@@ -43,6 +43,7 @@ public final class io/lightine/tessera/emrtd/nfc/NfcChipRead$Companion {
 
 public final class io/lightine/tessera/emrtd/nfc/NfcReadSettings {
 	public static final field Companion Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Companion;
+	public static final field DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS J
 	public static final field DEFAULT_COMMAND_TIMEOUT_MILLIS J
 	public static final field DEFAULT_PRESENCE_CHECK_DELAY_MILLIS J
 	public static final field DEFAULT_RESTARTS I
@@ -59,7 +60,9 @@ public final class io/lightine/tessera/emrtd/nfc/NfcReadSettings {
 	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJJLio/lightine/tessera/telemetry/TelemetrySink;J)V
 	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJJLio/lightine/tessera/telemetry/TelemetrySink;JZ)V
 	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJJLio/lightine/tessera/telemetry/TelemetrySink;JZLio/lightine/tessera/emrtd/ObserverThread;)V
-	public synthetic fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJJLio/lightine/tessera/telemetry/TelemetrySink;JZLio/lightine/tessera/emrtd/ObserverThread;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJJLio/lightine/tessera/telemetry/TelemetrySink;JZLio/lightine/tessera/emrtd/ObserverThread;J)V
+	public synthetic fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJJLio/lightine/tessera/telemetry/TelemetrySink;JZLio/lightine/tessera/emrtd/ObserverThread;JILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getCommandTimeoutBeforeAccessMillis ()J
 	public final fun getCommandTimeoutMillis ()J
 	public final fun getLinkLoss ()Lio/lightine/tessera/emrtd/LinkLossPolicy;
 	public final fun getObserverOn ()Lio/lightine/tessera/emrtd/ObserverThread;
@@ -76,6 +79,7 @@ public final class io/lightine/tessera/emrtd/nfc/NfcReadSettings {
 public final class io/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder {
 	public fun <init> ()V
 	public final fun build ()Lio/lightine/tessera/emrtd/nfc/NfcReadSettings;
+	public final fun commandTimeoutBeforeAccessMillis (J)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 	public final fun commandTimeoutMillis (J)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 	public final fun linkLoss (Lio/lightine/tessera/emrtd/LinkLossPolicy;)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 	public final fun noLimitForDocument ()Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;

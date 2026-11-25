@@ -93,8 +93,9 @@ public class ChipReadUpdate internal constructor(
  *
  * A read goes through these states in order: [Starting], [WaitingForDocument], [DocumentFound],
  * [Connecting], [OpeningAccess], then [ReadingFile] and [AuthenticatingChip] in the order the chip
- * needs, then [CheckingFiles]. [LinkLost] and [Stopping] can come at any point after the read
- * starts. Each state holds only identifiers and counts, never document data.
+ * needs, then [CheckingFiles]. [NoAnswerYet] can come after [OpeningAccess] while the chip has not
+ * answered yet. [LinkLost] and [Stopping] can come at any point after the read starts. Each state
+ * holds only identifiers and counts, never document data.
  *
  * May gain members in a later release: an exhaustive `when` over it then stops compiling until
  * the new member is handled. An `else` branch keeps it compiling without handling the new member:
@@ -220,6 +221,31 @@ public sealed class ChipReadState {
     ) : ChipReadState() {
         /** `LinkLost(` the restarts left `)`. */
         override fun toString(): String = "LinkLost(restartsLeft=$restartsLeft)"
+    }
+
+    /**
+     * A document is found, but its chip has not answered the read's first commands: usually it is
+     * found but sits where it gets too little power to answer. The moment to say "found, move the
+     * document a little", not "hold it again": the document is still there.
+     *
+     * Nothing was asked of the chip yet about the key (no access protocol started), so these tries
+     * cost nothing: they never use one of [LinkLossPolicy]'s restarts and never count as a new
+     * attempt. The read keeps trying, about every 2 seconds, while the person moves the document,
+     * for a time the platform sets (on Android `NfcReadSettings.waitForReturnMillis`, counted from
+     * the first unanswered try; on iPhone the system session's time). When the chip answers, the
+     * read goes on and the next state is [OpeningAccess] with the protocol. When the time passes,
+     * the read ends as a document that never answered: [ChipReadEnding.Failed] with the link error.
+     * This state lasts until then: the found and connecting steps of each new try are not reported
+     * again.
+     *
+     * @property tries How many tries in a row got no answer so far, from 1.
+     * @since 1.0.0
+     */
+    public class NoAnswerYet internal constructor(
+        public val tries: Int,
+    ) : ChipReadState() {
+        /** `NoAnswerYet(` the tries `)`. */
+        override fun toString(): String = "NoAnswerYet(tries=$tries)"
     }
 
     /**
