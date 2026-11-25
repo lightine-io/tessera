@@ -94,6 +94,7 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
                                                               commandTimeoutBeforeAccessMillis:1500
                                                                              readTimeoutMillis:2000
                                                                            searchRestartMillis:4000
+                                                                                       polling:TesseraCoreNfcPolling.automatic
                                                                                          error:nil];
     TesseraCoreNfcReadSettings *built = [[[[[[TesseraCoreNfcReadSettingsBuilder alloc] init]
         linkLossPolicy:[TesseraLinkLossPolicyCompanion.shared readAgainMaxRestarts:1 error:nil]] telemetrySink:nil]
@@ -106,6 +107,9 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
     TesseraCoreNfcReadSettings *noSearchRestarts =
         [[settings.toBuilder searchRestartMillisMillis:TesseraCoreNfcReadSettings.companion.SEARCH_RESTART_OFF] buildAndReturnError:nil];
     int64_t searchRestart = settings.searchRestartMillis;
+    TesseraCoreNfcReadSettings *iso14443Only = [[settings.toBuilder pollingChoice:TesseraCoreNfcPolling.iso14443] buildAndReturnError:nil];
+    TesseraCoreNfcPolling *polling = settings.polling;
+    TesseraCoreNfcPolling *combined = TesseraCoreNfcPolling.iso14443AndPace;
     TesseraChipReadStep *sessionEnd = TesseraChipReadStep.sessionEnd;
     TesseraLinkLossPolicy *noRestart = TesseraLinkLossPolicyCompanion.shared.end;
     TesseraLinkLossPolicy *resumeTwice = [TesseraLinkLossPolicyCompanion.shared resumeMaxRestarts:2 error:nil];
@@ -118,6 +122,9 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
     (void)reads;
     (void)noSearchRestarts;
     (void)searchRestart;
+    (void)iso14443Only;
+    (void)polling;
+    (void)combined;
     (void)sessionEnd;
     (void)noRestart;
     (void)resumeTwice;

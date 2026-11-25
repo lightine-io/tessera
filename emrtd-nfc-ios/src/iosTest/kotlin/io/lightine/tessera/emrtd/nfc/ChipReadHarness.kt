@@ -62,6 +62,9 @@ internal class ChipReadHarness(
     /** The scope the read runs on, for a chip that answers late. */
     val scope: CoroutineScope get() = runner
     val ports = mutableListOf<FakeSessionPort>()
+
+    /** What each opened session was asked to poll for, in order. */
+    val pollings = mutableListOf<CoreNfcPolling>()
     var readingAvailable = true
     var reportEnd = true
     var onBegin: (FakeSessionPort) -> Unit = {}
@@ -82,7 +85,8 @@ internal class ChipReadHarness(
     val env =
         CoreNfcReadEnvironment(
             readingAvailable = { readingAvailable },
-            openSession = { events ->
+            openSession = { events, polling ->
+                pollings += polling
                 FakeSessionPort(events).also {
                     it.clock = now
                     it.reportEnd = reportEnd

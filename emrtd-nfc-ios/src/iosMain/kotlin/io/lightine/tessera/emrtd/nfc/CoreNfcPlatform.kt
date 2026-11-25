@@ -223,10 +223,11 @@ private class SessionDelegate(
 /**
  * The real thing: an `NFCTagReaderSession` that looks for ISO 14443 tags.
  *
- * From iOS 26.4 it uses the session Configuration with ISO 14443 and PACE polling together and the
+ * With [CoreNfcPolling.AUTOMATIC] or [CoreNfcPolling.ISO14443_AND_PACE], from iOS 26.4 it uses the session Configuration with ISO 14443 and PACE polling together and the
  * eMRTD application as the only select identifier, so chips that answer only after PACE are found
  * too. Before iOS 26.4, PACE polling cannot be combined with ISO 14443 (it would find PACE chips
- * only), so it polls ISO 14443 alone, with the select identifiers from the app's Info.plist.
+ * only), so it polls ISO 14443 alone, with the select identifiers from the app's Info.plist. With [CoreNfcPolling.ISO14443] it polls ISO 14443 alone on every version, the way
+ * used before iOS 26.4 (see [configurationFor]).
  *
  * Both ways get the session's own serial queue: the delegate calls and the tag completions run on
  * it (`NFCReaderSession.h`, `sessionQueue`), never on the main queue. The Configuration initializer
@@ -236,7 +237,10 @@ internal class PlatformReaderSession internal constructor(
     events: ReaderSessionEvents,
     configuration: NFCTagReaderSessionConfiguration?,
 ) : ReaderSessionPort {
-    constructor(events: ReaderSessionEvents) : this(events, emrtdConfiguration())
+    constructor(events: ReaderSessionEvents) : this(events, CoreNfcPolling.AUTOMATIC)
+
+    constructor(events: ReaderSessionEvents, polling: CoreNfcPolling) :
+        this(events, configurationFor(polling, ::emrtdConfiguration))
 
     private val delegate = SessionDelegate(events)
 
@@ -284,6 +288,22 @@ internal class PlatformReaderSession internal constructor(
         private const val CONFIGURATION_CLASS = "NFCTagReaderSessionConfiguration"
     }
 }
+
+/**
+ * The session Configuration to open the session with for [polling], or `null` to open it with the
+ * ISO 14443 polling option: [CoreNfcPolling.ISO14443] never asks for one, so its session is opened
+ * as before iOS 26.4 (the initializer proven there, with the app's Info.plist select identifiers);
+ * the other choices take [configuration], which is `null` where the system has none. Generic so the
+ * tests can check each choice with and without a Configuration.
+ */
+internal fun <C : Any> configurationFor(
+    polling: CoreNfcPolling,
+    configuration: () -> C?,
+): C? =
+    when (polling) {
+        CoreNfcPolling.ISO14443 -> null
+        CoreNfcPolling.AUTOMATIC, CoreNfcPolling.ISO14443_AND_PACE -> configuration()
+    }
 
 /** A new serial dispatch queue for one reader session (a `null` attribute makes it serial). */
 internal fun newSessionQueue(): NSObject = checkNotNull(dispatch_queue_create(SESSION_QUEUE_LABEL, null))

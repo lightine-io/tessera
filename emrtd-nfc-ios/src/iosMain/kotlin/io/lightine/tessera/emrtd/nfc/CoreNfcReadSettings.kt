@@ -94,6 +94,11 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  *   [MIN_SEARCH_RESTART_MILLIS] (2000). The read still counts the system session's 60 seconds
  *   from its start: Core NFC's header does not say that a new search changes them. There is no such setting on Android, where the system reports a document that
  *   does not answer.
+ * @property polling What the system session polls for: see [CoreNfcPolling]. Default
+ *   [CoreNfcPolling.AUTOMATIC], today ISO 14443 and PACE together from iOS 26.4 and ISO 14443
+ *   alone before. [CoreNfcPolling.ISO14443] polls ISO 14443 alone on every version and misses
+ *   chips that answer only after PACE polling. There is no such setting on Android, where the
+ *   system finds the tag.
  * @throws IllegalArgumentException when [commandTimeoutMillis], [readTimeoutMillis] or
  *   [commandTimeoutBeforeAccessMillis] is not positive, [settleDelayMillis] or
  *   [waitAfterSystemEndMillis] is negative, or [searchRestartMillis] is neither
@@ -113,8 +118,9 @@ public class CoreNfcReadSettings
         public val commandTimeoutBeforeAccessMillis: Long = DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS,
         public val readTimeoutMillis: Long = DEFAULT_READ_TIMEOUT_MILLIS,
         public val searchRestartMillis: Long = DEFAULT_SEARCH_RESTART_MILLIS,
+        public val polling: CoreNfcPolling = CoreNfcPolling.AUTOMATIC,
     ) {
-        /** The defaults: [LinkLossPolicy.Resume] with 2 restarts, 400, 5000, 1000, 1500, 2000 and 4000 milliseconds. */
+        /** The defaults: [LinkLossPolicy.Resume] with 2 restarts, 400, 5000, 1000, 1500, 2000 and 4000 milliseconds, [CoreNfcPolling.AUTOMATIC]. */
         public constructor() : this(LinkLossPolicy.Resume(DEFAULT_RESTARTS))
 
         init {
@@ -134,7 +140,7 @@ public class CoreNfcReadSettings
                 "commandTimeoutMillis=$commandTimeoutMillis, readTimeoutMillis=$readTimeoutMillis, " +
                 "commandTimeoutBeforeAccessMillis=$commandTimeoutBeforeAccessMillis, " +
                 "waitAfterSystemEndMillis=$waitAfterSystemEndMillis, searchRestartMillis=$searchRestartMillis, " +
-                "observerOn=$observerOn)"
+                "observerOn=$observerOn, polling=$polling)"
 
         /**
          * A builder that starts from these values, so one value can change without naming the
@@ -153,6 +159,7 @@ public class CoreNfcReadSettings
                 .commandTimeoutBeforeAccessMillis(commandTimeoutBeforeAccessMillis)
                 .readTimeoutMillis(readTimeoutMillis)
                 .searchRestartMillis(searchRestartMillis)
+                .polling(polling)
 
         /** The time limit for one command before access: the smaller of the two limits. */
         internal val effectiveTimeoutBeforeAccessMillis: Long
@@ -182,6 +189,7 @@ public class CoreNfcReadSettings
             private var commandTimeoutBeforeAccessMillis: Long = DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS
             private var readTimeoutMillis: Long = DEFAULT_READ_TIMEOUT_MILLIS
             private var searchRestartMillis: Long = DEFAULT_SEARCH_RESTART_MILLIS
+            private var polling: CoreNfcPolling = CoreNfcPolling.AUTOMATIC
 
             /** What the read does when the link to the chip is lost. */
             public fun linkLoss(policy: LinkLossPolicy): Builder = apply { linkLoss = policy }
@@ -210,6 +218,9 @@ public class CoreNfcReadSettings
             /** The thread the observer is called on. */
             public fun observerOn(thread: ObserverThread): Builder = apply { observerOn = thread }
 
+            /** What the system session polls for. */
+            public fun polling(choice: CoreNfcPolling): Builder = apply { polling = choice }
+
             /**
              * The settings.
              *
@@ -227,6 +238,7 @@ public class CoreNfcReadSettings
                     commandTimeoutBeforeAccessMillis,
                     readTimeoutMillis,
                     searchRestartMillis,
+                    polling,
                 )
         }
 

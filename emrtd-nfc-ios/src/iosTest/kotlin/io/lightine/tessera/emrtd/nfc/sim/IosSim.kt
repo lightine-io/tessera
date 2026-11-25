@@ -109,7 +109,7 @@ internal class IosSim(
     val env =
         CoreNfcReadEnvironment(
             readingAvailable = { true },
-            openSession = { events ->
+            openSession = { events, _ ->
                 FakeSessionPort(events).also { port ->
                     port.clock = now
                     port.onBegin = { p ->

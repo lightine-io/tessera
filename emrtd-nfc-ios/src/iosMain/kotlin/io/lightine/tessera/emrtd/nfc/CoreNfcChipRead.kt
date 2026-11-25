@@ -212,7 +212,7 @@ public class CoreNfcChipRead internal constructor(
             coordinator.notStarted(NfcUnavailable.Reason.NOT_SUPPORTED)
             return
         }
-        val session = OwnedReaderSession(env.openSession(events), keeper = this) { env.registry.released(this) }
+        val session = OwnedReaderSession(env.openSession(events, settings.polling), keeper = this) { env.registry.released(this) }
         val writer = SheetWriter(session, env.sheetWorker(), env.now, ::reportSlowText)
         val open =
             locked {
@@ -748,7 +748,8 @@ public class CoreNfcChipRead internal constructor(
 /** What a [CoreNfcChipRead] runs on: the platform by default, fakes and a test clock in tests. */
 internal class CoreNfcReadEnvironment(
     val readingAvailable: () -> Boolean,
-    val openSession: (ReaderSessionEvents) -> ReaderSessionPort,
+    // Opens the system session, polling as the read's settings say.
+    val openSession: (ReaderSessionEvents, CoreNfcPolling) -> ReaderSessionPort,
     val scope: CoroutineScope,
     val now: () -> Long,
     val registry: ChipReadRegistry,
