@@ -22,6 +22,9 @@ kotlin {
     // manifest package.
     android {
         namespace = "io.lightine.tessera.logging"
+        // The API-level lint (tessera.android-library) reports "no .class files" as an error on a
+        // module with no source. Off while this module is an empty placeholder; remove with its first source.
+        lint { disable += "LintError" }
     }
 
     // No iOS (Kotlin/Native) targets while this module is an empty placeholder: a module with no

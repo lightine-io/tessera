@@ -38,6 +38,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.lang.ref.WeakReference
+import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.jvm.JvmOverloads
@@ -786,7 +787,9 @@ internal object PlatformActivities : ActivityPlatform {
  */
 internal class NfcReadRegistry {
     private val live = AtomicReference<Any?>(null)
-    private val releasing: MutableSet<CompletableDeferred<Unit>> = ConcurrentHashMap.newKeySet()
+    // Collections.newSetFromMap, not ConcurrentHashMap.newKeySet(): the latter is API 24 and minSdk is 23.
+    private val releasing: MutableSet<CompletableDeferred<Unit>> =
+        Collections.newSetFromMap(ConcurrentHashMap<CompletableDeferred<Unit>, Boolean>())
 
     /** Makes [read] the live read; `false` when another read is live. */
     fun claim(read: Any): Boolean = live.compareAndSet(null, read)

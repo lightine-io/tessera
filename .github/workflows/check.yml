@@ -129,11 +129,14 @@ jobs:
       # verifyMlKitBundledModel asserts ML Kit stays the bundled (offline) text-recognition model - it
       # resolves androidRuntimeClasspath, so it needs the Android SDK this job provides.
       # Still no emulator / instrumented / live-camera tests (those run locally on a device).
+      # lintAndroidMain runs Android lint's NewApi check (and only that, as an error) over every
+      # Android library module (tessera.android-library in build-logic): a call to a platform API
+      # newer than minSdk 23 fails the job (TES-346: ConcurrentHashMap.newKeySet is API 24).
       # The android-only public ABI (mrz-camera, mrz-camera-ui) is gated by the regular
       # `checkKotlinAbi` inside the `check` job: since Kotlin 2.4.20 abiValidation dumps the AGP-KMP
       # android target (api/android/<module>.api), so no separate android ABI step runs here.
-      - name: Compile Android targets, run Android host tests, verify ML Kit bundled model
-        run: ./gradlew compileAndroidMain :mrz-camera:testAndroidHostTest :mrz-camera-ui:testAndroidHostTest :types:testAndroidHostTest :mrz-core:testAndroidHostTest :telemetry:testAndroidHostTest :mrz-ocr-core:testAndroidHostTest :emrtd-core:testAndroidHostTest :emrtd-nfc:testAndroidHostTest :mrz-camera:verifyMlKitBundledModel
+      - name: Compile Android targets, check Android API levels, run Android host tests, verify ML Kit bundled model
+        run: ./gradlew compileAndroidMain lintAndroidMain :mrz-camera:testAndroidHostTest :mrz-camera-ui:testAndroidHostTest :types:testAndroidHostTest :mrz-core:testAndroidHostTest :telemetry:testAndroidHostTest :mrz-ocr-core:testAndroidHostTest :emrtd-core:testAndroidHostTest :emrtd-nfc:testAndroidHostTest :mrz-camera:verifyMlKitBundledModel
 
   # Empty-module release guard (TES-43 pre-0.5.0 item; the v0.2.0 incident class, PR #154):
   # a module that DECLARES a Kotlin/Native target but produces no klib fails its
