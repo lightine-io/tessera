@@ -127,8 +127,8 @@ import kotlin.jvm.JvmOverloads
  * The read takes the access key in `options` over from [start] until its ending: the SDK clears it
  * ([io.lightine.tessera.emrtd.ChipAccessKey.clear]) when the read ends, whatever the ending is,
  * and not earlier, so a restart after a lost link still has it. You do not clear it, and you do not
- * use it for a second read: a new read needs a new key, which also keeps to one authentication
- * attempt per action of the person. A read started with a key that was already used (the same
+ * use it for a second read: a new read needs a new key, which also keeps the authentication
+ * attempts with it to one read per action of the person. A read started with a key that was already used (the same
  * options again, for example) ends at once, before any reader or sheet, with
  * [ChipReadEnding.KeyRejected] whose error is a
  * [io.lightine.tessera.types.errors.ChipAccessDenied] with reason `KEY_CLEARED`. The

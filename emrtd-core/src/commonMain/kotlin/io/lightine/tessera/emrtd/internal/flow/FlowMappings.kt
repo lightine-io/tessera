@@ -257,22 +257,25 @@ internal object FlowMappings {
         )
 
     /**
-     * A BAC failure. EXTERNAL AUTHENTICATE refused: the key's state when the status word names it
-     * ([keyState]: 6983, 6984, 63C0, 63C1), else 6300, 63CX or 6982 means the chip did not match
-     * the key, else (6985, a 6Cxx the reader does not answer with a second attempt, any other) the
-     * chip refusing. The status word is always kept.
+     * A BAC failure. EXTERNAL AUTHENTICATE refused with 6300, 63CX or 6982: the chip refused the
+     * reader's proof of the key ([ChipAccessDenied.Reason.KEY_NOT_MATCHED]); with any other status
+     * word (6983, 6984, 6985, a 6Cxx the reader does not answer with a second command, any other):
+     * the chip refusing ([ChipAccessDenied.Reason.CHIP_REFUSED]). The status word is always kept.
+     *
+     * No status word is read as a state of the key: BAC has no try counter (Doc 9303 Part 11,
+     * 4.3), and the MRZ key cannot be blocked, suspended or deactivated. 63CX as "X tries left"
+     * and 6983 as "blocked" belong to passwords with a counter under PACE (TR-03110-3, B.14).
      */
     fun bac(e: BacException): ChipError =
         when (e.failure) {
             BacFailure.AUTHENTICATION_REFUSED -> {
                 val sw = e.sw
                 val reason =
-                    keyState(sw)
-                        ?: if (sw != null && (sw shr 8 == 0x63 || sw == SW_SECURITY_STATUS_NOT_SATISFIED)) {
-                            ChipAccessDenied.Reason.KEY_NOT_MATCHED
-                        } else {
-                            ChipAccessDenied.Reason.CHIP_REFUSED
-                        }
+                    if (sw != null && (sw shr 8 == 0x63 || sw == SW_SECURITY_STATUS_NOT_SATISFIED)) {
+                        ChipAccessDenied.Reason.KEY_NOT_MATCHED
+                    } else {
+                        ChipAccessDenied.Reason.CHIP_REFUSED
+                    }
                 ChipAccessDenied(ChipAccessProtocol.BAC, reason, sw)
             }
 
@@ -290,43 +293,35 @@ internal object FlowMappings {
         }
 
     /**
-     * A PACE failure that ends the read. The status word is always kept. TR-03110-3 defines the
-     * password status words of GENERAL AUTHENTICATE (B.14.2) and MSE:Set AT (B.14.1):
-     * - GENERAL AUTHENTICATE, any step: 6983 or 63C0 blocked, 63C1 or 6985 suspended, 6984
-     *   deactivated; else 6300 or 63CX at mutual authentication means the chip did not match the
-     *   password (Part 11, section 4.4.4.2); else the chip refusing (6982 included: B.14.2 lets it
-     *   stand for any of the three states, so it names none);
-     * - MSE:Set AT: the same states, 6283 deactivated, and 63C2 to 63CF a try counter reported
-     *   before any try ([ChipAccessDenied.Reason.KEY_TRIES_LIMITED]); other refusals are the chip
-     *   refusing.
-     * A command too long to send after GENERAL AUTHENTICATE started is the extended-length limit.
+     * A PACE failure that ends the read. The status word is always kept.
+     * - GENERAL AUTHENTICATE: 6300 or 63CX at mutual authentication means the chip refused the
+     *   reader's proof of the password (Part 11, section 4.4.4.2; [ChipAccessDenied.Reason.KEY_NOT_MATCHED]);
+     *   any other status word, at any step, is the chip refusing ([ChipAccessDenied.Reason.CHIP_REFUSED]).
+     * - MSE:Set AT answered with a status word about the password ([PaceFailure.PASSWORD_STATE]:
+     *   a warning 62xx or 63xx, or 6982 to 6985): the chip refusing, and the reader stopped before
+     *   the password was used.
+     * - A command too long to send after GENERAL AUTHENTICATE started is the extended-length limit.
+     *
+     * No status word is read as a state of the password. TR-03110-3 (B.14.1, B.14.2) defines 63C0
+     * and 6983 as "blocked", 63C1 and 6985 as "suspended", 6984 and 6283 as "deactivated" and 63CX
+     * as "X tries left" for passwords with a try counter (PIN, PUK). The SDK sends only the MRZ and
+     * the CAN, which have none (TR-03110 Part 1, section 2.3), so for them these words say what the
+     * chip answered and nothing about the key's state.
      */
     fun pace(e: PaceException): ChipError =
         when (e.failure) {
             PaceFailure.STEP_REFUSED -> {
                 val sw = e.sw
                 val reason =
-                    paceKeyState(sw)
-                        ?: if (sw != null && sw shr 8 == 0x63 && e.step == PaceStep.MUTUAL_AUTHENTICATION) {
-                            ChipAccessDenied.Reason.KEY_NOT_MATCHED
-                        } else {
-                            ChipAccessDenied.Reason.CHIP_REFUSED
-                        }
+                    if (sw != null && sw shr 8 == 0x63 && e.step == PaceStep.MUTUAL_AUTHENTICATION) {
+                        ChipAccessDenied.Reason.KEY_NOT_MATCHED
+                    } else {
+                        ChipAccessDenied.Reason.CHIP_REFUSED
+                    }
                 ChipAccessDenied(ChipAccessProtocol.PACE, reason, sw)
             }
 
-            PaceFailure.PASSWORD_STATE -> {
-                val sw = e.sw
-                val reason =
-                    paceKeyState(sw)
-                        ?: when {
-                            sw == SW_PASSWORD_DEACTIVATED_WARNING -> ChipAccessDenied.Reason.KEY_DEACTIVATED
-                            sw != null && sw and 0xFFF0 == 0x63C0 -> ChipAccessDenied.Reason.KEY_TRIES_LIMITED
-                            else -> ChipAccessDenied.Reason.CHIP_REFUSED
-                        }
-                ChipAccessDenied(ChipAccessProtocol.PACE, reason, sw)
-            }
-
+            PaceFailure.PASSWORD_STATE,
             PaceFailure.SET_AUTHENTICATION_TEMPLATE_REFUSED,
             PaceFailure.REFERENCED_DATA_NOT_FOUND,
             PaceFailure.ALGORITHM_NOT_SUPPORTED,
@@ -342,23 +337,6 @@ internal object FlowMappings {
                 ChipAccessDenied(ChipAccessProtocol.PACE, ChipAccessDenied.Reason.UNEXPECTED_CHIP_ANSWER, e.sw)
             }
         }
-
-    /**
-     * The key's state when [sw] names it with its ISO/IEC 7816-4 meaning: 6983 "authentication
-     * method blocked" or 63C0 (no tries left) blocked, 63C1 (one try left) suspended, 6984
-     * "reference data not usable" deactivated (TR-03110-3, B.14.2).
-     */
-    private fun keyState(sw: Int?): ChipAccessDenied.Reason? =
-        when (sw) {
-            SW_AUTHENTICATION_METHOD_BLOCKED, SW_NO_TRIES_LEFT -> ChipAccessDenied.Reason.KEY_BLOCKED
-            SW_ONE_TRY_LEFT -> ChipAccessDenied.Reason.KEY_SUSPENDED
-            SW_REFERENCE_DATA_NOT_USABLE -> ChipAccessDenied.Reason.KEY_DEACTIVATED
-            else -> null
-        }
-
-    /** [keyState], plus 6985 "the password is suspended", which TR-03110-3, B.14.2 defines for PACE only. */
-    private fun paceKeyState(sw: Int?): ChipAccessDenied.Reason? =
-        keyState(sw) ?: if (sw == SW_CONDITIONS_OF_USE_NOT_SATISFIED) ChipAccessDenied.Reason.KEY_SUSPENDED else null
 
     /** EF.SOD's own parse problem, as the one public malformed-file error. */
     fun securityObject(
@@ -377,10 +355,4 @@ internal object FlowMappings {
 
     const val FILE_SOD = 0x011D
     private const val SW_SECURITY_STATUS_NOT_SATISFIED = 0x6982
-    private const val SW_AUTHENTICATION_METHOD_BLOCKED = 0x6983
-    private const val SW_REFERENCE_DATA_NOT_USABLE = 0x6984
-    private const val SW_CONDITIONS_OF_USE_NOT_SATISFIED = 0x6985
-    private const val SW_NO_TRIES_LEFT = 0x63C0
-    private const val SW_ONE_TRY_LEFT = 0x63C1
-    private const val SW_PASSWORD_DEACTIVATED_WARNING = 0x6283
 }

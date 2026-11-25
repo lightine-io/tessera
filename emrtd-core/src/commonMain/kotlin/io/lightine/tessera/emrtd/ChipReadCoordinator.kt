@@ -39,6 +39,11 @@ import kotlin.jvm.JvmSynthetic
  *   transport), within [LinkLossPolicy.maxRestarts], and only when the platform allows it; never
  *   after an answered refusal, a secure-messaging error, a malformed file, or a person, app or
  *   system ending.
+ * - At most one more try of access per read, inside [read] on the same link, after the first
+ *   refusal of the key when no earlier try reached the command that uses the key and the key has
+ *   no try counter and looks right (the rule is in [ChipReadEnding.KeyNotAccepted]). It uses no
+ *   restart and no new attempt number; the second try starts with
+ *   [ChipCommandTimeLimit.BEFORE_ACCESS] again.
  * - A loss of the link before the attempt sent the first command that uses the key (BAC's
  *   EXTERNAL AUTHENTICATE, PACE's first GENERAL AUTHENTICATE; the chip was asked nothing about the
  *   key) uses no restart and is no new attempt: the read reports [ChipReadState.NoAnswerYet] and
@@ -179,6 +184,11 @@ public class ChipReadCoordinator private constructor(
                 ChipAccessDenied.Reason.KEY_TRIES_LIMITED,
             )
 
+        /** The refusals after which the read tries access once more on the same link (see tryAccessAgain). */
+        private val RETRIED_REFUSALS = setOf(ChipAccessDenied.Reason.KEY_NOT_MATCHED, ChipAccessDenied.Reason.CHIP_REFUSED)
+
+        private val RETRIED_PROTOCOLS = setOf(ChipAccessProtocol.BAC, ChipAccessProtocol.PACE)
+
         /** A loss of the link itself, with no status word: the only kind a read starts again after. */
         private fun isLinkLoss(error: ChipError): Boolean = error is NfcTagLost || error is NfcTimeout
 
@@ -224,6 +234,9 @@ public class ChipReadCoordinator private constructor(
 
     // Whether any try of the read reached the first command that uses the key.
     private val accessEverReached = AtomicBoolean(false)
+
+    // Whether the read used its one more try of access after a refusal (see tryAccessAgain).
+    private val accessRetried = AtomicBoolean(false)
 
     // A planned handover (see HANDED_OVER): the updates held back until the read is past where it
     // was, and whether the repeats of the current attempt continue from what it read.
@@ -387,6 +400,13 @@ public class ChipReadCoordinator private constructor(
      * no [ChipReadState.AuthenticatingChip] it had already shown, so the progress and the file
      * count never go back.
      *
+     * When the chip refuses the key ([ChipAccessDenied.Reason.KEY_NOT_MATCHED] or
+     * [ChipAccessDenied.Reason.CHIP_REFUSED]) and this is the first refusal in the read, before any
+     * try reached the command that uses the key, with an MRZ key whose check digits match or a card
+     * access number, the read runs the flow once more on [transport] before it decides: the
+     * application is selected again and the access protocol runs again with fresh random values.
+     * What that second run ends with is what follows.
+     *
      * Cancelling the calling coroutine ends the read with [ChipReadEnding.Cancelled.By.APP] when it
      * has not ended yet, then rethrows.
      *
@@ -458,15 +478,15 @@ public class ChipReadCoordinator private constructor(
             }
         val resume = linkLoss is LinkLossPolicy.Resume
         var accessReached = false
-        val (result, next) =
+        // Whether an earlier try of the read reached the first command that uses the key.
+        val accessBefore = accessEverReached.load()
+        val tryCarry = if (resume && (attempt > 1 || resumeAfterHandover.load())) carry.load() else null
+        var gate = EndedGate(transport, { accessReached }, useTimeLimit, ChipCommandTimeLimit.BEFORE_ACCESS)
+
+        // One run of the flow on this link; `null` when it ended the read with a fault.
+        suspend fun runFlow(): Pair<ChipReadResult, ResumeCarry>? =
             try {
-                reader.readAttempt(
-                    EndedGate(transport, { accessReached }, useTimeLimit),
-                    options,
-                    reporter,
-                    attempt,
-                    if (resume && (attempt > 1 || resumeAfterHandover.load())) carry.load() else null,
-                ) {
+                reader.readAttempt(gate, options, reporter, attempt, tryCarry) {
                     accessReached = true
                     accessEverReached.store(true)
                     if (noAnswer) {
@@ -482,8 +502,19 @@ public class ChipReadCoordinator private constructor(
                 // outside it (an Error, for example): a typed ending that says the chip's answer could
                 // not be used, never "the app cancelled". Not rethrown: the ending is the report.
                 end(stoppedBy(unexpectedFault(), null))
-                return ChipReadAttemptOutcome.ENDED
+                null
             }
+
+        var (result, next) = runFlow() ?: return ChipReadAttemptOutcome.ENDED
+        // The first refusal of access in the read, with a key that has no try counter: one more try
+        // on the same link, from the selection of the application on (see ChipReadEnding.KeyNotAccepted).
+        if (!isEnded && !accessBefore && tryAccessAgain(result)) {
+            accessReached = false
+            gate = EndedGate(transport, { accessReached }, useTimeLimit, gate.limit)
+            val again = runFlow() ?: return ChipReadAttemptOutcome.ENDED
+            result = again.first
+            next = again.second
+        }
         if (resume) carry.store(next)
         if (result is ChipReadResult.Partial) lastAccessResult.store(result)
         if (isEnded) return ChipReadAttemptOutcome.ENDED
@@ -561,6 +592,28 @@ public class ChipReadCoordinator private constructor(
         }
         end(endingFor(result, error))
         return ChipReadAttemptOutcome.ENDED
+    }
+
+    /**
+     * Whether the read tries access once more on the same link after [result]: a refusal of the
+     * key by the chip ([ChipAccessDenied.Reason.KEY_NOT_MATCHED] or
+     * [ChipAccessDenied.Reason.CHIP_REFUSED], during BAC or PACE), with a key that has no try
+     * counter and looks right (an MRZ key whose check digits match, or a card access number), and
+     * only the first time in the read. Takes the one retry of the read when it answers `true`.
+     */
+    private fun tryAccessAgain(result: ChipReadResult): Boolean {
+        val error = (result as? ChipReadResult.Failed)?.error as? ChipAccessDenied ?: return false
+        if (error.reason !in RETRIED_REFUSALS || error.protocol !in RETRIED_PROTOCOLS) return false
+        val key = options.accessKey
+        if (key.isCleared) return false
+        val noCounter =
+            when (key) {
+                // A key the check-digit gate let through only by the app's choice does not look right.
+                is ChipAccessKey.Mrz -> key.checkDigitFindings.isEmpty()
+
+                is ChipAccessKey.Can -> true
+            }
+        return noCounter && accessRetried.compareAndSet(false, true)
     }
 
     private fun askHandedOver(handedOver: () -> Boolean): Boolean =
@@ -669,9 +722,12 @@ public class ChipReadCoordinator private constructor(
         private val base: ApduTransport,
         private val accessReached: () -> Boolean,
         private val useTimeLimit: suspend (ChipCommandTimeLimit) -> Unit,
+        initial: ChipCommandTimeLimit,
     ) : ApduTransport by base {
-        // The attempt's commands go one at a time, so this needs no lock.
-        private var limit = ChipCommandTimeLimit.BEFORE_ACCESS
+        // The kind of limit the link has now. The attempt's commands go one at a time, so this
+        // needs no lock.
+        var limit = initial
+            private set
 
         override suspend fun transceive(command: ByteArray): ByteArray {
             if (isEnded) throw ApduTransportException(NfcUnavailable(NfcUnavailable.Reason.CLOSED))

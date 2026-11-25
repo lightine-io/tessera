@@ -110,13 +110,25 @@ public sealed class ChipReadEnding {
 
     /**
      * The chip refused the access protocol with this key: it refused the reader's proof of the
-     * key ([ChipAccessDenied.Reason.KEY_NOT_MATCHED]), reported the key as blocked, suspended,
-     * deactivated or limited, or refused a step of the protocol with a status word that does not
-     * say why ([ChipAccessDenied.Reason.CHIP_REFUSED]). A [ChipAccessDenied.Reason.CHIP_REFUSED]
-     * is not always about the key: some chips answer a wrong key that way, and a chip also
-     * refuses a protocol step it does not support (for example a PACE setting); [error] keeps the
-     * chip's status word, and the SDK does not guess which. The read was not tried again with
-     * this key.
+     * key ([ChipAccessDenied.Reason.KEY_NOT_MATCHED]), or answered a step of the protocol with a
+     * status word that does not say why ([ChipAccessDenied.Reason.CHIP_REFUSED]). A
+     * [ChipAccessDenied.Reason.CHIP_REFUSED] is not always about the key: some chips answer a
+     * wrong key that way, and a chip also refuses a protocol step it does not support (for
+     * example a PACE setting); [error] keeps the chip's status word, and the SDK does not guess
+     * which. No status word is read as "blocked" or as a count of tries: the MRZ key and the card
+     * access number have no try counter.
+     *
+     * One more try (the platform entry points only): after the first refusal of the read, the
+     * read selects the application again and runs the access protocol once more on the same link,
+     * with the same key; [error] is from the last try. It does so only when nothing earlier in the
+     * read reached the command that uses the key, and only with a key that looks right (an MRZ
+     * key whose check digits match, or a card access number): on a device a chip refused a right
+     * MRZ key once, with `63C0`, right after the phone renewed its NFC session. The extra try
+     * uses no restart and is no new attempt ([attempts] stays the same); the read's telemetry
+     * shows both tries as separate BAC or PACE events. Never a third try, never after the SDK's
+     * own check-digit refusal ([KeyRejected]), and never after a refusal on a later attempt,
+     * which may come from a different document. The low-level `ChipReader.read` makes one try
+     * only.
      *
      * Usually the MRZ values or the card access number do not match the document. When
      * [attempts] is more than 1, the chip that refused may be a different document placed on the

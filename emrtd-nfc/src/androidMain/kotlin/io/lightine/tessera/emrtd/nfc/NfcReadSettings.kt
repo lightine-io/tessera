@@ -31,9 +31,13 @@ import kotlin.jvm.JvmOverloads
  *   document moved: the default, [LinkLossPolicy.Resume] with 2 restarts, waits for the document
  *   to come back and goes on from where it stopped, at most twice. Each new start opens the chip
  *   again with the same key, so a read can make up to 3 authentication attempts with that key,
- *   one per start. It never starts again after the chip answered with a refusal of the key: that
- *   ends the read at once. The MRZ and the card access number are not blocked by tries, so the
- *   worst a chip may do is answer more slowly. Use [LinkLossPolicy.End] for one attempt only.
+ *   one per start. It never starts again after the chip answered with a refusal of the key. The
+ *   first refusal in a read, before any try reached the command that uses the key, gets one more
+ *   try on the same link and no restart; a second refusal ends the read
+ *   ([ChipReadEnding.KeyNotAccepted] gives the rule). So a read makes at most one more
+ *   authentication attempt than its starts. The MRZ and the card access number are not blocked
+ *   by tries, so the worst a chip may do is answer more slowly. Use [LinkLossPolicy.End] for one
+ *   start only.
  * @property settleDelayMillis How long the read waits after a document is found before the first
  *   command, so the hand can settle: frames are often lost in the first moment after detection.
  *   Default 400. Cancelling the read cuts it short.

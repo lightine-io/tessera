@@ -29,9 +29,12 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  *   to come back in the same system session and goes on from where it stopped, at most twice.
  *   Each new start opens the chip again with the same key, so a read can make up to 3
  *   authentication attempts with that key, one per start. It never starts again after the chip
- *   answered with a refusal of the key: that ends the read at once. The MRZ and the card access
- *   number are not blocked by tries, so the worst a chip may do is answer more slowly. Use
- *   [LinkLossPolicy.End] for one attempt only.
+ *   answered with a refusal of the key. The first refusal in a read, before any try reached the
+ *   command that uses the key, gets one more try on the same link and no restart; a second
+ *   refusal ends the read ([io.lightine.tessera.emrtd.ChipReadEnding.KeyNotAccepted] gives the
+ *   rule). So a read makes at most one more authentication attempt than its starts. The MRZ and
+ *   the card access number are not blocked by tries, so the worst a chip may do is answer more
+ *   slowly. Use [LinkLossPolicy.End] for one start only.
  * @property settleDelayMillis How long the read waits after the system finds a document before the
  *   first command, so the hand can settle: frames are often lost in the first second after
  *   detection. Default 400. Cancelling the read or the end of the system session cuts it short.

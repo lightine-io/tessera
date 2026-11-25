@@ -15,7 +15,7 @@ import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
  * @property protocol The access protocol that was running, or [ChipAccessProtocol.NONE] when none was.
  * @property reason Why access was not granted.
  * @property statusWord The status word the chip answered with, when there is one (for example
- *   `0x6300` or `0x6982`).
+ *   `0x6300` or `0x6982`): the fact the reason is based on.
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
@@ -34,10 +34,23 @@ public data class ChipAccessDenied(
      * @since 1.0.0
      */
     public enum class Reason {
-        /** The chip refused the reader's proof of the key: usually the key does not match the chip's. */
+        /**
+         * The chip refused the reader's proof of the key at the authentication step (BAC's
+         * EXTERNAL AUTHENTICATE, PACE's mutual authentication) with `6300`, `63CX` or, for BAC,
+         * `6982`; [statusWord] holds it. Usually the key does not match the chip's; on a device a
+         * chip also refused, with `63C0`, a key that it accepted on the next read. The status word
+         * is the chip's answer, not a count of tries: the MRZ key and the card access number have
+         * no try counter.
+         */
         KEY_NOT_MATCHED,
 
-        /** The chip refused a step of the access protocol with an error status word. */
+        /**
+         * The chip answered a step of the access protocol with a status word other than success, and
+         * the reader stopped; [statusWord] holds it. Also `6983`, `6984` or `6985` at BAC's EXTERNAL
+         * AUTHENTICATE or at any PACE step, and a warning (`62xx`, `63xx`) to PACE's MSE:Set AT:
+         * words that report a password's state only for passwords with a try counter, which the SDK
+         * does not use.
+         */
         CHIP_REFUSED,
 
         /** The chip's answer during the access protocol was not what the protocol defines, so the reader stopped. */
@@ -53,33 +66,44 @@ public data class ChipAccessDenied(
         FILE_PROTECTED,
 
         /**
-         * The chip reports the key as blocked: "authentication method blocked" (`6983`), or no tries
-         * left (`63C0`). Trying again with this key cannot open the chip.
+         * For a password with a try counter: the chip reports it as blocked ("authentication method
+         * blocked" `6983`, or no tries left `63C0`; TR-03110-3, B.14).
+         *
+         * Not reported by this version: the SDK opens chips only with the MRZ key and the card
+         * access number, which have no try counter, so for them these status words come as
+         * [KEY_NOT_MATCHED] or [CHIP_REFUSED] with the status word. Kept for a later password type
+         * with a counter.
          *
          * @since 1.0.0
          */
         KEY_BLOCKED,
 
         /**
-         * The chip reports the key as suspended (`63C1`, or `6985` during PACE): one try is left,
-         * and the chip asks for its card access number first.
+         * For a password with a try counter: the chip reports it as suspended (`63C1`, or `6985`
+         * during PACE): one try is left, and the chip asks for its card access number first.
+         *
+         * Not reported by this version, for the reason given at [KEY_BLOCKED].
          *
          * @since 1.0.0
          */
         KEY_SUSPENDED,
 
         /**
-         * The chip reports the key as deactivated: "reference data not usable" (`6984`), or the
-         * warning `6283` during PACE.
+         * For a password with a try counter: the chip reports it as deactivated ("reference data
+         * not usable" `6984`, or the warning `6283` during PACE).
+         *
+         * Not reported by this version, for the reason given at [KEY_BLOCKED].
          *
          * @since 1.0.0
          */
         KEY_DEACTIVATED,
 
         /**
-         * The chip reports a try counter for the key before any try was made (`63C2` to `63CF`
-         * during PACE: the number of tries left is the last digit of [statusWord]). MRZ values and
-         * card access numbers have no try counter, so the reader stopped without using a try.
+         * For a password with a try counter: the chip reports the tries left before any try was made
+         * (`63C2` to `63CF` to PACE's MSE:Set AT; the number of tries left is the last digit of
+         * [statusWord]).
+         *
+         * Not reported by this version, for the reason given at [KEY_BLOCKED].
          *
          * @since 1.0.0
          */
@@ -91,8 +115,8 @@ public data class ChipAccessDenied(
         get() {
             val what =
                 when (reason) {
-                    Reason.KEY_NOT_MATCHED -> "the chip did not match the access key"
-                    Reason.CHIP_REFUSED -> "the chip refused a step of the access protocol"
+                    Reason.KEY_NOT_MATCHED -> "the chip refused the reader's proof of the access key"
+                    Reason.CHIP_REFUSED -> "the chip answered a step of the access protocol with a status other than success"
                     Reason.UNEXPECTED_CHIP_ANSWER -> "the chip's answer did not follow the access protocol"
                     Reason.KEY_NEEDS_PACE -> "a card access number needs PACE, which the chip does not offer in a usable form"
                     Reason.KEY_CLEARED -> "the access key was cleared"

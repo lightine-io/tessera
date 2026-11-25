@@ -523,7 +523,7 @@ class CoreNfcChipReadLifecycleTest {
         }
 
     @Test
-    fun codes__a_chip_that_refuses_the_key_ends_with_key_not_accepted_and_no_second_attempt() =
+    fun codes__a_chip_that_refuses_the_key_ends_with_key_not_accepted_after_one_more_try_on_the_same_link() =
         chipReadTest {
             val chip = FakeChip(bacRefusesKey = true)
             val (read, rec) = start(options = ChipReadHarness.mrzOptions())
@@ -532,6 +532,8 @@ class CoreNfcChipReadLifecycleTest {
             val ending = assertIs<ChipReadEnding.KeyNotAccepted>(rec.ending)
             assertEquals(1, ending.attempts)
             assertEquals(0, port.restarts)
+            // TES-346: the first refusal gets one more try on the same link, never a third.
+            assertEquals(2, chip.sent.count { (it[1].toInt() and 0xFF) == 0x82 }, "two EXTERNAL AUTHENTICATE")
             assertEquals(listOf<String?>(CoreNfcDefaultSheetTexts.textForEnding(ending)), port.endings)
             assertNothingLeft(read)
         }

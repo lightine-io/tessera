@@ -492,7 +492,7 @@ class ChipReadResumeTest {
     // --- Never after an answer ------------------------------------------------------------------
 
     @Test
-    fun aRefusedKeyIsNeverTriedAgain() =
+    fun aRefusedKeyIsTriedOnceMoreOnTheSameLinkAndNeverStartsAgain() =
         runTest {
             withChips { c, keys ->
                 for (access in listOf(FlowAccess.BAC, FlowAccess.PACE_ONLY)) {
@@ -500,9 +500,10 @@ class ChipReadResumeTest {
                     val (ending, observer) = drive(flow, LinkLossPolicy.Resume(3), key = FakeReadFlowChip.wrongMrzKey())
                     val refused = assertIs<ChipReadEnding.KeyNotAccepted>(ending, "$access")
                     assertEquals(0x6300, refused.error.statusWord, "$access")
+                    // The one more try runs on the same link: no restart, no new attempt.
                     assertEquals(1, refused.attempts)
                     assertTrue(observer.updates.none { it.state is ChipReadState.LinkLost })
-                    if (access == FlowAccess.BAC) assertEquals(1, flow.bac!!.refused) else assertEquals(1, flow.pace!!.refusedTokens)
+                    if (access == FlowAccess.BAC) assertEquals(2, flow.bac!!.refused) else assertEquals(2, flow.pace!!.refusedTokens)
                 }
             }
         }

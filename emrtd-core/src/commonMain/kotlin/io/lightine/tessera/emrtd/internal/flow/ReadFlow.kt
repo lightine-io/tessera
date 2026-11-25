@@ -480,7 +480,7 @@ internal class ReadFlow(
         attempting = ChipAccessProtocol.PACE
         var refusedSw: Int? = null
         var needsExtended = false
-        // One authentication attempt per read: another suite is tried only when nothing of this one
+        // One authentication attempt per run of the flow: another suite is tried only when nothing of this one
         // reached GENERAL AUTHENTICATE (Pace checks every size it can before MSE:Set AT) and the
         // chip's answer to MSE:Set AT was about the suite, not the password. Every other failure
         // ends the read, and BAC is never tried after PACE.

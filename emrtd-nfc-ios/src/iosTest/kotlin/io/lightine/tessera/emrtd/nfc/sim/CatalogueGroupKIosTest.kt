@@ -480,15 +480,33 @@ class CatalogueGroupKIosTest {
             assertEquals(fractions.sorted(), fractions, "progress never goes back")
         }
 
-    /** A GET CHALLENGE answered with an error status word is an answer, not silence: as before. */
+    /**
+     * A GET CHALLENGE answered with an error status word is an answer, not silence: a refusal, as
+     * before. Since TES-346 the first refusal of a read gets one more try on the same link: here
+     * the chip answers it, and the read completes with no restart and no new attempt.
+     */
     @Test
-    fun noAnswer_h_getChallengeAnsweredWithAnErrorStatusWord_isARefusalAsBefore() =
+    fun noAnswer_h_getChallengeAnsweredWithAnErrorStatusWord_isARefusal_andTheOneMoreTryOnTheSameLinkCompletes() =
         simTest { flow ->
             script.fault(ChipFaultAction.Status(0x6982)) { it.ins == 0x84 }
+            val r = read(flow)
+            val complete = assertIs<ChipReadEnding.Complete>(r.ending, "${r.ending}")
+            assertEquals(1, complete.attempts)
+            assertEquals(1, script.links)
+            assertEquals(2, script.exchanges.count { it.command.ins == 0x84 }, "a second GET CHALLENGE on the same link")
+            assertTrue(r.states.none { it is ChipReadState.NoAnswerYet || it is ChipReadState.LinkLost })
+        }
+
+    /** Refused at both tries: `KeyNotAccepted` with the last status word, and never a third try. */
+    @Test
+    fun noAnswer_h_getChallengeRefusedTwice_endsKeyNotAccepted_withNoThirdTry() =
+        simTest { flow ->
+            script.fault(ChipFaultAction.Status(0x6982), times = 3) { it.ins == 0x84 }
             val r = read(flow)
             val error = assertIs<ChipReadEnding.KeyNotAccepted>(r.ending, "${r.ending}").error
             assertEquals(0x6982, error.statusWord)
             assertEquals(1, script.links)
+            assertEquals(2, script.exchanges.count { it.command.ins == 0x84 })
             assertTrue(r.states.none { it is ChipReadState.NoAnswerYet || it is ChipReadState.LinkLost })
         }
 

@@ -194,6 +194,17 @@ class ChipReaderAccessSafetyTest {
         }
 
     // --- Counter and blocked status words -------------------------------------------------------
+    // The MRZ key and the CAN have no try counter (TR-03110 Part 1, 2.3): no status word is read as
+    // a key state (blocked, suspended, deactivated, tries left). The word is kept as the fact.
+
+    /** The reasons a password with a counter would get; none may come from an MRZ or CAN read. */
+    private val counterReasons =
+        setOf(
+            ChipAccessDenied.Reason.KEY_BLOCKED,
+            ChipAccessDenied.Reason.KEY_SUSPENDED,
+            ChipAccessDenied.Reason.KEY_DEACTIVATED,
+            ChipAccessDenied.Reason.KEY_TRIES_LIMITED,
+        )
 
     @Test
     fun aPasswordStatusWordToMseSetAtEndsTheReadWithItsStatusWord() =
@@ -201,15 +212,15 @@ class ChipReaderAccessSafetyTest {
             withChips { c, keys ->
                 val expected =
                     mapOf(
-                        0x63C3 to ChipAccessDenied.Reason.KEY_TRIES_LIMITED,
-                        0x63CF to ChipAccessDenied.Reason.KEY_TRIES_LIMITED,
-                        0x63C1 to ChipAccessDenied.Reason.KEY_SUSPENDED,
-                        0x63C0 to ChipAccessDenied.Reason.KEY_BLOCKED,
-                        0x6283 to ChipAccessDenied.Reason.KEY_DEACTIVATED,
+                        0x63C3 to ChipAccessDenied.Reason.CHIP_REFUSED,
+                        0x63CF to ChipAccessDenied.Reason.CHIP_REFUSED,
+                        0x63C1 to ChipAccessDenied.Reason.CHIP_REFUSED,
+                        0x63C0 to ChipAccessDenied.Reason.CHIP_REFUSED,
+                        0x6283 to ChipAccessDenied.Reason.CHIP_REFUSED,
                         0x6982 to ChipAccessDenied.Reason.CHIP_REFUSED,
-                        0x6983 to ChipAccessDenied.Reason.KEY_BLOCKED,
-                        0x6984 to ChipAccessDenied.Reason.KEY_DEACTIVATED,
-                        0x6985 to ChipAccessDenied.Reason.KEY_SUSPENDED,
+                        0x6983 to ChipAccessDenied.Reason.CHIP_REFUSED,
+                        0x6984 to ChipAccessDenied.Reason.CHIP_REFUSED,
+                        0x6985 to ChipAccessDenied.Reason.CHIP_REFUSED,
                     )
                 for ((sw, reason) in expected) {
                     val flow = FakeReadFlowChip.build(c, keys, FlowAccess.PACE_AND_BAC, paceSuites = twoSuites)
@@ -251,12 +262,12 @@ class ChipReaderAccessSafetyTest {
                     mapOf(
                         0x6300 to ChipAccessDenied.Reason.KEY_NOT_MATCHED,
                         0x63C2 to ChipAccessDenied.Reason.KEY_NOT_MATCHED,
-                        0x63C1 to ChipAccessDenied.Reason.KEY_SUSPENDED,
-                        0x63C0 to ChipAccessDenied.Reason.KEY_BLOCKED,
+                        0x63C1 to ChipAccessDenied.Reason.KEY_NOT_MATCHED,
+                        0x63C0 to ChipAccessDenied.Reason.KEY_NOT_MATCHED,
                         0x6982 to ChipAccessDenied.Reason.CHIP_REFUSED,
-                        0x6983 to ChipAccessDenied.Reason.KEY_BLOCKED,
-                        0x6984 to ChipAccessDenied.Reason.KEY_DEACTIVATED,
-                        0x6985 to ChipAccessDenied.Reason.KEY_SUSPENDED,
+                        0x6983 to ChipAccessDenied.Reason.CHIP_REFUSED,
+                        0x6984 to ChipAccessDenied.Reason.CHIP_REFUSED,
+                        0x6985 to ChipAccessDenied.Reason.CHIP_REFUSED,
                     )
                 for ((sw, reason) in expected) {
                     val flow =
@@ -287,11 +298,11 @@ class ChipReaderAccessSafetyTest {
                     mapOf(
                         0x6300 to ChipAccessDenied.Reason.CHIP_REFUSED,
                         0x63C2 to ChipAccessDenied.Reason.CHIP_REFUSED,
-                        0x63C0 to ChipAccessDenied.Reason.KEY_BLOCKED,
+                        0x63C0 to ChipAccessDenied.Reason.CHIP_REFUSED,
                         0x6982 to ChipAccessDenied.Reason.CHIP_REFUSED,
-                        0x6983 to ChipAccessDenied.Reason.KEY_BLOCKED,
-                        0x6984 to ChipAccessDenied.Reason.KEY_DEACTIVATED,
-                        0x6985 to ChipAccessDenied.Reason.KEY_SUSPENDED,
+                        0x6983 to ChipAccessDenied.Reason.CHIP_REFUSED,
+                        0x6984 to ChipAccessDenied.Reason.CHIP_REFUSED,
+                        0x6985 to ChipAccessDenied.Reason.CHIP_REFUSED,
                     )
                 for ((sw, reason) in expected) {
                     val flow =
@@ -323,11 +334,11 @@ class ChipReaderAccessSafetyTest {
                     mapOf(
                         0x6300 to ChipAccessDenied.Reason.KEY_NOT_MATCHED,
                         0x63C2 to ChipAccessDenied.Reason.KEY_NOT_MATCHED,
-                        0x63C1 to ChipAccessDenied.Reason.KEY_SUSPENDED,
-                        0x63C0 to ChipAccessDenied.Reason.KEY_BLOCKED,
+                        0x63C1 to ChipAccessDenied.Reason.KEY_NOT_MATCHED,
+                        0x63C0 to ChipAccessDenied.Reason.KEY_NOT_MATCHED,
                         0x6982 to ChipAccessDenied.Reason.KEY_NOT_MATCHED,
-                        0x6983 to ChipAccessDenied.Reason.KEY_BLOCKED,
-                        0x6984 to ChipAccessDenied.Reason.KEY_DEACTIVATED,
+                        0x6983 to ChipAccessDenied.Reason.CHIP_REFUSED,
+                        0x6984 to ChipAccessDenied.Reason.CHIP_REFUSED,
                         0x6985 to ChipAccessDenied.Reason.CHIP_REFUSED,
                     )
                 for ((sw, reason) in expected) {
@@ -339,6 +350,56 @@ class ChipReaderAccessSafetyTest {
                             .last()
                             .isCommand(0x00, 0x82),
                     )
+                }
+            }
+        }
+
+    @Test
+    fun the63C0ToExternalAuthenticateSeenOnADeviceSaysWhatTheChipAnsweredAndNothingAboutBlocking() =
+        runTest {
+            withChips { c, keys ->
+                val flow = FakeReadFlowChip.build(c, keys, FlowAccess.BAC, extraHandlers = listOf(answer(0x00, 0x82, 0x63C0)))
+                val error = assertIs<ChipAccessDenied>(failed(read(flow)))
+                assertEquals(ChipAccessDenied.Reason.KEY_NOT_MATCHED, error.reason)
+                assertEquals(0x63C0, error.statusWord)
+                assertEquals("access-denied.key-not-matched", error.code)
+                assertEquals(
+                    "Chip access with protocol BAC was not granted: the chip refused the reader's proof of the access key (status 63C0)",
+                    error.description,
+                )
+            }
+        }
+
+    @Test
+    fun noStatusWordAtAnyAccessStepGivesAKeyStateForAnMrzOrCanKey() =
+        runTest {
+            withChips { c, keys ->
+                val words = listOf(0x6300, 0x6283, 0x6982, 0x6983, 0x6984, 0x6985) + (0x63C0..0x63CF)
+                // BAC's EXTERNAL AUTHENTICATE; PACE's MSE:Set AT, an earlier GENERAL AUTHENTICATE and the mutual one.
+                for (sw in words) {
+                    val errors =
+                        listOf(
+                            FakeReadFlowChip.build(c, keys, FlowAccess.BAC, extraHandlers = listOf(answer(0x00, 0x82, sw))),
+                            FakeReadFlowChip.build(c, keys, FlowAccess.PACE_ONLY).also { it.pace!!.refuseSetAt = sw },
+                            FakeReadFlowChip.build(c, keys, FlowAccess.PACE_ONLY, extraHandlers = listOf(answer(0x10, 0x86, sw))),
+                            FakeReadFlowChip.build(c, keys, FlowAccess.PACE_ONLY, extraHandlers = listOf(answer(0x00, 0x86, sw))),
+                        ).map { assertIs<ChipAccessDenied>(failed(read(it)), sw.toString(16)) } +
+                            listOf(
+                                FakeReadFlowChip.build(
+                                    c,
+                                    keys,
+                                    FlowAccess.PACE_ONLY,
+                                    can = "123456",
+                                    extraHandlers = listOf(answer(0x00, 0x86, sw)),
+                                ),
+                            ).map { assertIs<ChipAccessDenied>(failed(read(it, key = ChipAccessKey.Can("123456"))), sw.toString(16)) }
+                    for (error in errors) {
+                        assertTrue(error.reason !in counterReasons, "${sw.toString(16)}: ${error.reason}")
+                        assertEquals(sw, error.statusWord)
+                        val text = error.description
+                        assertTrue(listOf("blocked", "suspended", "deactivated", "tries").none { it in text }, text)
+                        assertTrue(text.endsWith("(status ${sw.toString(16).uppercase()})"), text)
+                    }
                 }
             }
         }

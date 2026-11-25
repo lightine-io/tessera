@@ -41,8 +41,10 @@ internal enum class PaceFailure {
     /**
      * MSE:Set AT answered with a status word about the password, not the suite: a warning (62xx,
      * 63xx; TR-03110-3, B.14.1: 63CX "the password has been selected", X tries left; 6283 "the
-     * password is deactivated") or 6982 to 6985 (blocked, deactivated, suspended; B.14.2). Another
-     * suite uses the same password, so no other suite is tried.
+     * password is deactivated") or 6982 to 6985 (blocked, deactivated, suspended; B.14.2). Those
+     * meanings are for passwords with a try counter; the MRZ and the CAN have none, so the read
+     * reports only the status word. Another suite uses the same password, so no other suite is
+     * tried.
      */
     PASSWORD_STATE,
 
