@@ -3,8 +3,10 @@ package io.lightine.tessera.emrtd.nfc
 import io.lightine.tessera.emrtd.ChipCheckKind
 import io.lightine.tessera.emrtd.ChipFileContext
 import io.lightine.tessera.emrtd.ChipReadEnding
+import io.lightine.tessera.emrtd.ChipReadEvent
 import io.lightine.tessera.emrtd.ChipReadOptions
 import io.lightine.tessera.emrtd.ChipReadState
+import io.lightine.tessera.emrtd.ChipReadStep
 import io.lightine.tessera.emrtd.ChipResumeOutcome
 import io.lightine.tessera.emrtd.ChipSignedFile
 import io.lightine.tessera.emrtd.LinkLossPolicy
@@ -19,6 +21,8 @@ import io.lightine.tessera.emrtd.fakechip.ScriptedChip
 import io.lightine.tessera.emrtd.fakechip.SimRecorder
 import io.lightine.tessera.emrtd.internal.crypto.chipCrypto
 import io.lightine.tessera.emrtd.internal.pa.TestKeys
+import io.lightine.tessera.telemetry.TelemetryEvent
+import io.lightine.tessera.telemetry.TelemetrySink
 import io.lightine.tessera.types.errors.ChipAccessDenied
 import io.lightine.tessera.types.errors.ChipSecureMessagingLost
 import io.lightine.tessera.types.errors.NfcTagLost
@@ -38,6 +42,15 @@ import kotlin.time.Instant
 private val CHECK_TIME: Instant = Instant.parse("2026-06-01T12:00:00Z")
 
 private fun deviceOptions(flow: FlowChip) = ChipReadOptions(DeviceChipProfile.key(), setOf(1, 2, 14, 15), listOf(flow.anchor), CHECK_TIME)
+
+/** No value of the document reaches the telemetry text: no MRZ line, number, date or name. */
+private fun assertNoDocumentData(text: String) {
+    val (line1, line2) = FakeReadFlowChip.lines
+    val values =
+        listOf(line1, line2, line2.substring(0, 9), line2.substring(13, 19), line2.substring(21, 27)) +
+            line1.substring(5).split('<').filter { it.length >= 3 }
+    for (value in values) assertTrue(value !in text, "telemetry carries a document value: $text")
+}
 
 private object Shapes {
     val externalAuthenticate: (ChipCommand) -> Boolean = { it.ins == 0x82 }
@@ -391,5 +404,37 @@ class CatalogueAndroidTest {
             script.fault(ChipFaultAction.Arm { paused = true }, match = Shapes.firstProtectedSelect)
             val r = read(deviceOptions(flow))
             assertEquals(NfcTagLost, assertIs<ChipReadEnding.Partial>(r.ending).stoppedBy)
+        }
+
+    // --- The telemetry sink through the easy entry point --------------------------------------------
+
+    @Test
+    fun telemetry_aSinkInTheSettingsHearsEveryStepThroughTheEntryPointWithNoDocumentData() =
+        simTest { flow ->
+            val events = java.util.Collections.synchronizedList(mutableListOf<TelemetryEvent>())
+            val sink =
+                object : TelemetrySink {
+                    override fun record(event: TelemetryEvent) {
+                        events += event
+                    }
+                }
+            val (read, recorder) = start(deviceOptions(flow), telemetry = sink)
+            step(1_000)
+            read.onTagDiscovered(AndroidSim.aTag())
+            runUntilEnded(recorder)
+            assertDeviceChecksPass(recorder.ending)
+            val steps = events.map { assertIs<ChipReadEvent>(it, "only the read's step events: $it") }
+            assertTrue(steps.all { it.name == ChipReadEvent.EVENT_NAME })
+            val kinds = steps.map { it.step }.toSet()
+            for (expected in listOf(
+                ChipReadStep.BAC,
+                ChipReadStep.READ_FILE,
+                ChipReadStep.CHIP_AUTHENTICATION,
+                ChipReadStep.PASSIVE_AUTHENTICATION,
+            )) {
+                assertTrue(expected in kinds, "$expected in $kinds")
+            }
+            assertTrue(steps.any { it.fileId == 0x0101 } && steps.any { it.fileId == 0x0102 }, "DG1 and DG2 are named by file id")
+            assertNoDocumentData(steps.joinToString())
         }
 }

@@ -8,6 +8,7 @@ import io.lightine.tessera.emrtd.ChipReadOptions
 import io.lightine.tessera.emrtd.fakechip.ChipReply
 import io.lightine.tessera.emrtd.fakechip.ScriptedChip
 import io.lightine.tessera.emrtd.fakechip.SimRecorder
+import io.lightine.tessera.telemetry.TelemetrySink
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -131,9 +132,12 @@ internal class AndroidSim(
     fun start(
         options: ChipReadOptions,
         settings: NfcReadSettings = NfcReadSettings(),
+        telemetry: TelemetrySink? = null,
     ): Pair<NfcChipRead, SimRecorder> {
         val recorder = SimRecorder(now)
-        val read = NfcChipRead.start(options, adapter(), settings, recorder, env)
+        // A sink goes in through the settings, as an app passes it to the easy entry point.
+        val withSink = if (telemetry == null) settings else settings.toBuilder().telemetry(telemetry).build()
+        val read = NfcChipRead.start(options, adapter(), withSink, recorder, env)
         test.runCurrent()
         return read to recorder
     }

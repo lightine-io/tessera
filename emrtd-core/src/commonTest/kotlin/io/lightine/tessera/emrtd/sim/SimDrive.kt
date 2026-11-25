@@ -24,6 +24,7 @@ import io.lightine.tessera.emrtd.internal.pa.withKeys
 import io.lightine.tessera.telemetry.NoOpTelemetrySink
 import io.lightine.tessera.types.vocabulary.CheckOutcome
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -67,10 +68,12 @@ internal object SimDrive {
         maxLinks: Int = 6,
         coordinatorHook: (ChipReadCoordinator) -> Unit = {},
         afterLoss: (ChipReadCoordinator) -> Boolean = { true },
+        clearKeyAtEnding: Boolean = true,
         linkFor: (Int) -> ApduTransport,
     ): Driven {
         val recorder = SimRecorder { 0L }
-        val coordinator = ChipReadCoordinator(options, policy, recorder, ChipReader(NoOpTelemetrySink))
+        // As the platform entry points do: the read owns the key and clears it at its one ending.
+        val coordinator = ChipReadCoordinator(options, policy, recorder, ChipReader(NoOpTelemetrySink), clearKeyAtEnding)
         coordinatorHook(coordinator)
         if (coordinator.start()) {
             coordinator.waiting(0)
@@ -79,16 +82,31 @@ internal object SimDrive {
                 coordinator.documentFound()
                 coordinator.connecting()
                 if (coordinator.read(linkFor(link)) == ChipReadAttemptOutcome.ENDED) break
+                if (!coordinator.isEnded) {
+                    assertFalse(options.accessKey.isCleared, "the key must stay usable between the attempts of one read")
+                }
                 if (!afterLoss(coordinator)) break
                 link++
                 assertTrue(link <= maxLinks, "more links than the policy allows: $link")
             }
             assertTrue(link <= maxLinks)
             assertNull(recorder.checkPromises())
+            assertKeyLifetime(options, coordinator, clearKeyAtEnding)
             return Driven(recorder.ending, recorder, link)
         }
         assertNull(recorder.checkPromises())
+        assertKeyLifetime(options, coordinator, clearKeyAtEnding)
         return Driven(recorder.ending, recorder, 0)
+    }
+
+    /** Once the read has ended, the key is cleared exactly when the read owns it. */
+    private fun assertKeyLifetime(
+        options: ChipReadOptions,
+        coordinator: ChipReadCoordinator,
+        clearKeyAtEnding: Boolean,
+    ) {
+        if (!coordinator.isEnded) return
+        assertEquals(clearKeyAtEnding, options.accessKey.isCleared, "key cleared at the ending")
     }
 
     /** The same document on every link: [FakeAttemptLink] powers the chip up again each time. */

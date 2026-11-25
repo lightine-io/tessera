@@ -4,7 +4,6 @@ package io.lightine.tessera.types.errors
 
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
-import io.lightine.tessera.types.vocabulary.MrzField
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -14,26 +13,36 @@ import kotlin.test.assertTrue
 class ChipErrorCommonFactsTest {
     private val shape = Regex("[a-z]+(-[a-z]+)*(\\.[a-z]+(-[a-z]+)*)?")
 
-    private val everyError: List<ChipError> =
-        buildList {
-            ChipAccessDenied.Reason.entries.forEach { add(ChipAccessDenied(ChipAccessProtocol.PACE, it, 0x6300)) }
-            ChipSecureMessagingLost.Reason.entries.forEach { add(ChipSecureMessagingLost(it)) }
-            ChipUnexpectedAnswer.Reason.entries.forEach { add(ChipUnexpectedAnswer(it)) }
-            ChipUnsupportedAlgorithm.Reason.entries.forEach { add(ChipUnsupportedAlgorithm(ChipAccessProtocol.PACE, it)) }
-            ChipMalformedFile.Reason.entries.forEach { add(ChipMalformedFile(null, it)) }
-            NfcUnavailable.Reason.entries.forEach { add(NfcUnavailable(it)) }
-            add(ChipBlank)
-            add(ChipFileNotFound(0x0101, true))
-            add(ChipKeyCheckDigitMismatch(setOf(MrzField.DOCUMENT_NUMBER)))
-            add(NfcTagLost)
-            add(NfcTimeout(1000))
-        }
+    private val everyError: List<ChipError> = ChipErrorSamples.every
 
     @Test
     fun everyErrorHasItsOwnStableCodeOfTheDocumentedShape() {
         val codes = everyError.map { it.code }
         assertEquals(codes.size, codes.toSet().size, "codes must be unique: $codes")
         codes.forEach { assertTrue(shape.matches(it), it) }
+    }
+
+    @Test
+    fun everySubclassAndEveryReasonIsWalked() {
+        val classes = everyError.map { it::class }.toSet()
+        assertEquals(11, classes.size, "one sample list per subclass: $classes")
+        val reasons =
+            ChipAccessDenied.Reason.entries.size + ChipSecureMessagingLost.Reason.entries.size +
+                ChipUnexpectedAnswer.Reason.entries.size + ChipUnsupportedAlgorithm.Reason.entries.size +
+                ChipMalformedFile.Reason.entries.size + NfcUnavailable.Reason.entries.size
+        assertEquals(reasons + 5, everyError.size)
+    }
+
+    @Test
+    fun aStatusWordTheErrorCarriesIsReadFromTheRoot() {
+        for (e in everyError) {
+            if (ChipErrorSamples.carriesStatusWord(e)) {
+                assertEquals(0x6A80, e.statusWord, "$e")
+            } else {
+                assertNull(e.statusWord, "$e")
+            }
+            assertTrue(e.code.isNotEmpty(), "$e")
+        }
     }
 
     @Test

@@ -2,17 +2,22 @@ package io.lightine.tessera.emrtd.nfc
 
 import io.lightine.tessera.emrtd.ChipCheckKind
 import io.lightine.tessera.emrtd.ChipReadEnding
+import io.lightine.tessera.emrtd.ChipReadEvent
 import io.lightine.tessera.emrtd.ChipReadOptions
 import io.lightine.tessera.emrtd.ChipReadState
+import io.lightine.tessera.emrtd.ChipReadStep
 import io.lightine.tessera.emrtd.LinkLossPolicy
 import io.lightine.tessera.emrtd.fakechip.ChipCommand
 import io.lightine.tessera.emrtd.fakechip.ChipFaultAction
 import io.lightine.tessera.emrtd.fakechip.DeviceChipProfile
+import io.lightine.tessera.emrtd.fakechip.FakeReadFlowChip
 import io.lightine.tessera.emrtd.fakechip.FlowChip
 import io.lightine.tessera.emrtd.fakechip.ScriptedChip
 import io.lightine.tessera.emrtd.fakechip.SimRecorder
 import io.lightine.tessera.emrtd.internal.crypto.chipCrypto
 import io.lightine.tessera.emrtd.internal.pa.TestKeys
+import io.lightine.tessera.telemetry.TelemetryEvent
+import io.lightine.tessera.telemetry.TelemetrySink
 import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.errors.NfcUnavailable
 import io.lightine.tessera.types.vocabulary.CheckOutcome
@@ -385,5 +390,41 @@ class CatalogueGroupKIosTest {
             val lost = r.updates.single { it.value.state is ChipReadState.LinkLost }
             assertTrue(r.states.contains(lost.value.state))
             assertEquals(2, r.ending.attempts)
+        }
+
+    // --- The telemetry sink through the easy entry point --------------------------------------------
+
+    @Test
+    fun telemetry_aSinkInTheSettingsHearsEveryStepThroughTheEntryPointWithNoDocumentData() =
+        simTest { flow ->
+            val events = mutableListOf<TelemetryEvent>()
+            val sink =
+                object : TelemetrySink {
+                    override fun record(event: TelemetryEvent) {
+                        events += event
+                    }
+                }
+            val (_, recorder) = start(deviceOptions(flow), telemetry = sink)
+            runUntilEnded(recorder)
+            assertNull(recorder.checkPromises())
+            assertDeviceChecksPass(recorder.ending)
+            val steps = events.map { assertIs<ChipReadEvent>(it, "only the read's step events: $it") }
+            assertTrue(steps.all { it.name == ChipReadEvent.EVENT_NAME })
+            val kinds = steps.map { it.step }.toSet()
+            for (expected in listOf(
+                ChipReadStep.BAC,
+                ChipReadStep.READ_FILE,
+                ChipReadStep.CHIP_AUTHENTICATION,
+                ChipReadStep.PASSIVE_AUTHENTICATION,
+            )) {
+                assertTrue(expected in kinds, "$expected in $kinds")
+            }
+            assertTrue(steps.any { it.fileId == 0x0101 } && steps.any { it.fileId == 0x0102 }, "DG1 and DG2 are named by file id")
+            val text = steps.joinToString()
+            val (line1, line2) = FakeReadFlowChip.lines
+            val values =
+                listOf(line1, line2, line2.substring(0, 9), line2.substring(13, 19), line2.substring(21, 27)) +
+                    line1.substring(5).split('<').filter { it.length >= 3 }
+            for (value in values) assertTrue(value !in text, "telemetry carries a document value: $text")
         }
 }

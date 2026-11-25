@@ -5,6 +5,7 @@ import io.lightine.tessera.emrtd.ChipReader
 import io.lightine.tessera.emrtd.fakechip.ChipReply
 import io.lightine.tessera.emrtd.fakechip.ScriptedChip
 import io.lightine.tessera.emrtd.fakechip.SimRecorder
+import io.lightine.tessera.telemetry.TelemetrySink
 import io.lightine.tessera.types.errors.NfcError
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -161,9 +162,12 @@ internal class IosSim(
         options: ChipReadOptions,
         settings: CoreNfcReadSettings = CoreNfcReadSettings(),
         texts: CoreNfcSheetTexts = CoreNfcDefaultSheetTexts,
+        telemetry: TelemetrySink? = null,
     ): Pair<CoreNfcChipRead, SimRecorder> {
         val recorder = SimRecorder(now)
-        val read = CoreNfcChipRead.start(options, texts, settings, recorder, env)
+        // A sink goes in through the settings, as an app passes it to the easy entry point.
+        val withSink = if (telemetry == null) settings else settings.toBuilder().telemetry(telemetry).build()
+        val read = CoreNfcChipRead.start(options, texts, withSink, recorder, env)
         test.runCurrent()
         return read to recorder
     }
