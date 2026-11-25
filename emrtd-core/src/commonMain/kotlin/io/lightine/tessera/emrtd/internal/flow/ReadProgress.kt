@@ -13,7 +13,7 @@ import kotlin.math.nextDown
  * The read's progress as a work estimate that never goes back (the "remaining span" rule).
  *
  * Work is counted in units of about one byte of protected READ BINARY. The plan holds an estimate
- * of the units each item still needs; on each step with `d` units just done and `R` units still
+ * of the units each item still needs; on each step with `d` units done and `R` units still
  * planned, `p <- p + (1 - p) * d / (d + R)`. So `p` never goes back (`d >= 0`), it reaches 1 only
  * when nothing is left, a too-small estimate slows the bar and a too-large one makes it jump
  * forward. A new attempt replaces the plan and keeps `p`. The weights are internal and tunable.
@@ -54,7 +54,7 @@ internal class ProgressTracker {
         plan[key] = units.coerceAtLeast(0)
     }
 
-    /** [done] units of work were just done, and [key] still needs [left]. */
+    /** [done] units of work were done, and [key] still needs [left]. */
     fun work(
         key: String,
         done: Long,

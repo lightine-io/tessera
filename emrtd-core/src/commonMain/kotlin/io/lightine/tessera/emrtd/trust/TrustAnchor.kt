@@ -13,7 +13,7 @@ import kotlin.jvm.JvmStatic
  *
  * The SDK never bundles or downloads root certificates; which roots to use is the app's choice. The
  * SDK only checks, as facts, whether a chip's signer certificate is signed by one of the roots the
- * app passed in. A trust anchor here is just a certificate that was read: nothing about it has been
+ * app passed in. A trust anchor here is only a certificate that was read: nothing about it has been
  * checked, and the SDK never says a root is trustworthy.
  *
  * Make one from a DER certificate with [fromDer], or read many from a master list with

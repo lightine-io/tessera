@@ -18,7 +18,7 @@ import kotlin.time.Instant
  * [Builder].
  *
  * **Who clears the key.** The low-level [ChipReader.read] does not clear [accessKey]: the caller
- * owns it. The easy entry points (`NfcChipRead` on Android, `CoreNfcChipRead` on iOS) take the key
+ * owns it. The high-level entry points (`NfcChipRead` on Android, `CoreNfcChipRead` on iOS) take the key
  * over for the length of the read and clear it at its ending, whatever the ending is; read the
  * entry point's documentation. Either way a key is for one person's action: make a new one for the
  * next read.
@@ -27,7 +27,7 @@ import kotlin.time.Instant
  *
  * @property accessKey The key that opens the chip: MRZ values or the card access number.
  *   [ChipReader.read] does not clear it; call [ChipAccessKey.clear] when your app no longer needs
- *   it. The easy entry points clear it at the ending of the read.
+ *   it. The high-level entry points clear it at the ending of the read.
  * @property dataGroups The data groups to read, by number (1 to 16), at least one. EF.COM, EF.SOD,
  *   and DG14 and DG15 when the chip lists them, are always read: the checks need them. An empty
  *   selection is refused, because a read that asks for no data group is nearly always a mistake;

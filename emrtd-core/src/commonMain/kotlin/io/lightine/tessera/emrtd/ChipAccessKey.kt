@@ -21,7 +21,7 @@ import kotlin.jvm.JvmStatic
  * The key holds its values as bytes, which [clear] overwrites with zeros once the read is done. Its
  * `toString()` never shows them. Two keys are equal only when they are the same object.
  *
- * **Who clears it.** A key is for one person's action: one read, then it is cleared. The easy
+ * **Who clears it.** A key is for one person's action: one read, then it is cleared. The high-level
  * entry points (`NfcChipRead`, `CoreNfcChipRead`) take the key in the options over from the start
  * and clear it at the ending of the read, whatever the ending is; a restart after a lost link
  * still has it until then. When you call [ChipReader.read] yourself, you own the key and clear it.

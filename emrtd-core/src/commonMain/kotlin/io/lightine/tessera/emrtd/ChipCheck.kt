@@ -56,12 +56,20 @@ public class ChipCheck internal constructor(
  */
 @ExperimentalTesseraChipApi
 public sealed class ChipCheckDetail {
-    /** For [ChipCheckKind.SignatureVerifies]: where the signer certificate came from. */
+    /**
+     * For [ChipCheckKind.SignatureVerifies]: where the signer certificate came from.
+     *
+     * @property origin Where the certificate came from: the signed file or your app.
+     */
     public data class SignerCertificate(
         public val origin: ChipSignerOrigin,
     ) : ChipCheckDetail()
 
-    /** For [ChipCheckKind.SignerChainsToSuppliedRoot]: how the signer's issuer name matched the root's subject name. */
+    /**
+     * For [ChipCheckKind.SignerChainsToSuppliedRoot]: how the signer's issuer name matched the root's subject name.
+     *
+     * @property comparison How the two names were compared.
+     */
     public data class IssuerNameComparison(
         public val comparison: ChipNameComparison,
     ) : ChipCheckDetail()
@@ -69,6 +77,9 @@ public sealed class ChipCheckDetail {
     /**
      * For [ChipCheckKind.SignerCountryMatchesRootCountry]: where each country was read from, or
      * `null` on a side with no country.
+     *
+     * @property signer Where the signer certificate's country was read from, or `null` when it has none.
+     * @property root Where the matched root's country was read from, or `null` when it has none.
      */
     public data class CountrySources(
         public val signer: ChipCountrySource?,
@@ -264,7 +275,11 @@ public sealed class ChipCheckKind {
      */
     public abstract val code: String
 
-    /** The hash of data group [dataGroup] as read equals the one EF.SOD stores (Part 11, 5.1.1 step 5). */
+    /**
+     * The hash of data group [dataGroup] as read equals the one EF.SOD stores (Part 11, 5.1.1 step 5).
+     *
+     * @property dataGroup The number of the data group (1 to 16).
+     */
     public data class DataGroupHashMatches(
         public val dataGroup: Int,
     ) : ChipCheckKind() {
@@ -272,7 +287,11 @@ public sealed class ChipCheckKind {
             get() = "data-group-hash-matches.dg$dataGroup"
     }
 
-    /** The signature of [file] verifies under its signer certificate, and its signed attributes agree with the content. */
+    /**
+     * The signature of [file] verifies under its signer certificate, and its signed attributes agree with the content.
+     *
+     * @property file Which signed chip file the check is about.
+     */
     public data class SignatureVerifies(
         public val file: ChipSignedFile,
     ) : ChipCheckKind() {
@@ -280,7 +299,11 @@ public sealed class ChipCheckKind {
             get() = "signature-verifies." + checkCodeWord(file.name)
     }
 
-    /** The signer certificate of [file] is signed by one of the roots your app supplied (Part 12, App D.1.1). */
+    /**
+     * The signer certificate of [file] is signed by one of the roots your app supplied (Part 12, App D.1.1).
+     *
+     * @property file Which signed chip file the check is about.
+     */
     public data class SignerChainsToSuppliedRoot(
         public val file: ChipSignedFile,
     ) : ChipCheckKind() {
@@ -288,7 +311,11 @@ public sealed class ChipCheckKind {
             get() = "signer-chains-to-supplied-root." + checkCodeWord(file.name)
     }
 
-    /** The signer certificate of [file] is inside its validity period at the check time your app gave. */
+    /**
+     * The signer certificate of [file] is inside its validity period at the check time your app gave.
+     *
+     * @property file Which signed chip file the check is about.
+     */
     public data class SignerWithinValidityPeriod(
         public val file: ChipSignedFile,
     ) : ChipCheckKind() {
@@ -296,7 +323,11 @@ public sealed class ChipCheckKind {
             get() = "signer-within-validity-period." + checkCodeWord(file.name)
     }
 
-    /** The signer certificate of [file] has no critical extension the SDK does not know (Part 12, App D.1.1.3). */
+    /**
+     * The signer certificate of [file] has no critical extension the SDK does not know (Part 12, App D.1.1.3).
+     *
+     * @property file Which signed chip file the check is about.
+     */
     public data class SignerCriticalExtensionsRecognized(
         public val file: ChipSignedFile,
     ) : ChipCheckKind() {
@@ -304,7 +335,11 @@ public sealed class ChipCheckKind {
             get() = "signer-critical-extensions-recognized." + checkCodeWord(file.name)
     }
 
-    /** Every entry of EF.CardAccess appears, byte for byte, in the signed copy in [copy] (Part 11, 4.2 step 3). */
+    /**
+     * Every entry of EF.CardAccess appears, byte for byte, in the signed copy in [copy] (Part 11, 4.2 step 3).
+     *
+     * @property copy Which signed copy is compared against, or `null` when there is no signed copy or no EF.CardAccess.
+     */
     public data class CardAccessMatchesSignedCopy(
         public val copy: ChipSignedCopy?,
     ) : ChipCheckKind() {
@@ -361,6 +396,8 @@ public sealed class ChipCheckKind {
      * not signed, so a chip or a reader in between can strip PACE from it and push the read down to
      * BAC; this fact compares in that direction, beside [CardAccessMatchesSignedCopy], which compares
      * EF.CardAccess's entries against the copy.
+     *
+     * @property copy Which signed copy the PACE entries come from, or `null` when there is no signed copy.
      */
     public data class PaceOfferMatchesSignedCopy(
         public val copy: ChipSignedCopy?,
@@ -373,6 +410,8 @@ public sealed class ChipCheckKind {
      * Chip authentication (Part 11, section 6.2) in [context]: the chip agreed new session keys from
      * its static key, and its next answer verified under them. [CheckOutcome.Passed] also needs the
      * file that holds the key to pass its hash, signature and root checks (Part 11, Appendix J).
+     *
+     * @property context Which file holds the chip's key, or `null` when the read stopped before any chip authentication was tried.
      */
     public data class ChipAuthentication(
         public val context: ChipFileContext?,

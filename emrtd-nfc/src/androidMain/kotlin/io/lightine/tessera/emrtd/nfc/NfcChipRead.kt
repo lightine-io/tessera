@@ -67,7 +67,7 @@ import kotlin.jvm.JvmOverloads
  * Activity that shows the read; the observer is called on the main thread by default
  * ([NfcReadSettings.observerOn]). The SDK cannot ask an Activity whether it is resumed (the platform
  * has no public call for it): the platform keeps the reader-mode request and applies it when the
- * Activity resumes, so a read started from `onCreate` simply waits for that.
+ * Activity resumes, so a read started from `onCreate` waits for that.
  *
  * **Configuration change.** The read is for one Activity. The platform turns reader mode off and
  * on with that Activity's pause and resume, and a pause in the middle of a read drops the link the
@@ -152,7 +152,7 @@ import kotlin.jvm.JvmOverloads
  * - When NFC is switched off during the read, ends with [ChipReadEnding.EndedBySystem] and
  *   [NfcUnavailable.Reason.DISABLED], instead of waiting for a document that cannot come.
  * - Closes the link on every path, and the observer is never blocked by it: the read starts the
- *   close just before it hands the ending to the observer, and the platform's close, which talks
+ *   close right before it hands the ending to the observer, and the platform's close, which talks
  *   to the tag and can take up to the command time limit, runs in the background. The next
  *   link, of this read or a later one, waits for that close (at most the command time limit), so
  *   the two never race on the tag.
@@ -628,7 +628,7 @@ public class NfcChipRead internal constructor(
         ): NfcChipRead = NfcChipRead(options, adapter, settings, observer, env).also { it.begin() }
 
         /**
-         * Starts a read that owns reader mode: the easy way to read a chip on Android. Returns at
+         * Starts a read that owns reader mode: the high-level way to read a chip on Android. Returns at
          * once. It checks that NFC can be used, turns reader mode on for [activity] with the SDK's
          * flags and [NfcReadSettings.presenceCheckDelayMillis], runs the read, and turns reader
          * mode off at the ending, on every ending and before the observer hears it. Reader mode is

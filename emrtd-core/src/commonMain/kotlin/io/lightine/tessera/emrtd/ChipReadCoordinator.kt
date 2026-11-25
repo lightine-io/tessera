@@ -503,7 +503,7 @@ public class ChipReadCoordinator private constructor(
         post(listOf(Item.Update(ChipReadUpdate(state, lastProgress.load(), attemptOf(state), maxAttempts))))
     }
 
-    /** The gate: only the first ending passes; [before] goes out just ahead of it. */
+    /** The gate: only the first ending passes; [before] goes out right before of it. */
     private fun end(
         ending: ChipReadEnding,
         before: ChipReadState? = null,

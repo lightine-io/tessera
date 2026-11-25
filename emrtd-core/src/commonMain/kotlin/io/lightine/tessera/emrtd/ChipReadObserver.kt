@@ -12,7 +12,7 @@ import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
  * them, none before `start` returned), so an observer can update a screen directly. With
  * [ObserverThread.CALLER] most calls come from the read's own thread, but the first update and the
  * updates and ending that a start or a cancel causes may come on the thread that called it. Return
- * quickly in either case.
+ * fast in either case.
  *
  * Updates and endings never carry document data: no file content, no key, no value read from the
  * document. An exception thrown by the observer is ignored and never changes the read.
