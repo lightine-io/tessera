@@ -10,41 +10,40 @@ import io.lightine.tessera.emrtd.ChipSignedFile
 import io.lightine.tessera.emrtd.trust.DocumentSignerCertificate
 import io.lightine.tessera.emrtd.trust.DocumentSignerCertificateParse
 import io.lightine.tessera.emrtd.trust.MasterListCheckKind
-import io.lightine.tessera.emrtd.trust.MasterListRead
-import io.lightine.tessera.emrtd.trust.MasterListReader
 import io.lightine.tessera.emrtd.trust.TrustAnchor
-import io.lightine.tessera.emrtd.trust.TrustAnchorParse
+import io.lightine.tessera.emrtd.trust.TrustAnchors
 import io.lightine.tessera.types.vocabulary.CheckOutcome
+import java.io.File
 import kotlin.time.Clock
 // endregion
 
 // region TES-A-165 block 3
-fun rootFromDer(der: ByteArray): TrustAnchor? =
-    when (val parsed = TrustAnchor.fromDer(der)) {
-        is TrustAnchorParse.Parsed -> parsed.anchor
-        is TrustAnchorParse.Unreadable -> null // parsed.problem and parsed.offset say why
+fun loadRoots(file: File): List<TrustAnchor> {
+    val loaded = TrustAnchors.load(file)
+    if (loaded.problem != null) return emptyList() // loaded.problem says why nothing was loaded
+    for (item in loaded.unreadable) {
+        println("Skipped item ${item.position}: ${item.problem}")
     }
+    return loaded.anchors
+}
 // endregion
 
 // region TES-A-165 block 4
-fun rootsFromMasterList(file: ByteArray, myRoots: List<TrustAnchor>): List<TrustAnchor> =
-    when (val read = MasterListReader.read(file, myRoots)) {
-        is MasterListRead.Read -> {
-            // Your policy: use the list only when its signer chains to a root you already trust.
-            val chains = read.masterList.outcomeOf(MasterListCheckKind.SIGNER_CHAINS_TO_SUPPLIED_ROOT)
-            if (chains == CheckOutcome.Passed) read.masterList.anchors else emptyList()
-        }
-        is MasterListRead.Unreadable -> emptyList() // read.problem says why
-    }
+fun rootsFromMasterList(file: File, myRoots: List<TrustAnchor>): List<TrustAnchor> {
+    val loaded = TrustAnchors.load(file, myRoots) // myRoots are used only for the list's own check
+    val list = loaded.masterList ?: return emptyList() // not a master list, or nothing loaded
+    // Your policy: use the list only when its signer chains to a root you already trust.
+    val chains = list.outcomeOf(MasterListCheckKind.SIGNER_CHAINS_TO_SUPPLIED_ROOT)
+    return if (chains == CheckOutcome.Passed) loaded.anchors else emptyList()
+}
 // endregion
 
 // region TES-A-165 block 5
 fun optionsWithRoots(key: ChipAccessKey, roots: List<TrustAnchor>): ChipReadOptions =
-    ChipReadOptions(
-        accessKey = key,
-        trustAnchors = roots,
-        checkTime = Clock.System.now(),
-    )
+    ChipReadOptions.Builder(key)
+        .trustAnchors(roots)
+        .checkTime(Clock.System.now())
+        .build()
 // endregion
 
 // region TES-A-165 block 6
@@ -84,4 +83,14 @@ fun optionsWithSigner(key: ChipAccessKey, roots: List<TrustAnchor>, signerDer: B
         )
         is DocumentSignerCertificateParse.Unreadable -> null
     }
+// endregion
+
+// region TES-A-165 block 9
+fun allRoots(first: File, second: File): List<TrustAnchor> =
+    TrustAnchors.merge(TrustAnchors.load(first), TrustAnchors.load(second)).anchors
+// endregion
+
+// region TES-A-165 block 10
+fun allRootsWithPlus(first: File, second: File): List<TrustAnchor> =
+    (TrustAnchors.load(first) + TrustAnchors.load(second)).anchors
 // endregion
