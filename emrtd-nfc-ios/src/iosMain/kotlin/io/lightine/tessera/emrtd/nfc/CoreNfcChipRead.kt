@@ -290,7 +290,8 @@ public class CoreNfcChipRead internal constructor(
             }
             failedConnects = 0
             // The link starts with the short limit for the commands before the key is used.
-            val link = CoreNfcTransport(channel, keepAlive = session.owned, commandTimeoutMillis = settings.effectiveTimeoutBeforeAccessMillis)
+            val link =
+                CoreNfcTransport(channel, keepAlive = session.owned, commandTimeoutMillis = settings.effectiveTimeoutBeforeAccessMillis)
             if (!locked { if (coordinator.isEnded) false else true.also { transport = link } }) return
             val began = session.began ?: env.now()
             val outcome =
@@ -1305,7 +1306,10 @@ internal class ChipReadRegistry {
     fun lastSystemEnd(): Long? = locked { lastSystemEnd }
 
     /** What the readiness is made of, read under one lock. */
-    fun snapshot(): Snapshot = locked { Snapshot(live != null, releasing.values.maxOrNull()?.plus(CoreNfcChipRead.RELEASE_WAIT_LIMIT_MILLIS), readyAt) }
+    fun snapshot(): Snapshot =
+        locked {
+            Snapshot(live != null, releasing.values.maxOrNull()?.plus(CoreNfcChipRead.RELEASE_WAIT_LIMIT_MILLIS), readyAt)
+        }
 
     class Snapshot(
         val readInProgress: Boolean,

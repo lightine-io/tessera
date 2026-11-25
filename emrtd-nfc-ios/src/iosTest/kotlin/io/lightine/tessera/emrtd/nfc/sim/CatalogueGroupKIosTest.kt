@@ -336,6 +336,46 @@ class CatalogueGroupKIosTest {
             assertDeviceChecksPass(second.ending)
         }
 
+    // --- K-07b: the device case with the renewal (TES-346) ----------------------------------------------
+
+    @Test
+    fun k07b_noTagReportedThenSystemEnds202_theReadRenewsItsSessionAndTheNewOneReadsTheChip() =
+        simTest { flow ->
+            documentInField = false
+            val (_, r) = start(deviceOptions(flow), CoreNfcReadSettings(sessionRenewMillis = CoreNfcReadSettings.SESSION_RENEW_OFF))
+            step(22_000)
+            // The person now holds the phone on the document; the system ends the dead session.
+            documentInField = true
+            systemEnds(CoreNfcErrorCode.SESSION_TERMINATED_UNEXPECTEDLY)
+            runUntilEnded(r)
+            assertNull(r.checkPromises())
+            assertDeviceChecksPass(r.ending)
+            assertEquals(2, ports.size)
+            assertEquals(1, r.states.count { it is ChipReadState.RenewingSession })
+            val renewedAt = r.firstAt<ChipReadState.RenewingSession>()!!
+            assertEquals(22_000L, renewedAt)
+            // The new session begins after the rest, then finds the document 1 s later.
+            val found = r.firstAt<ChipReadState.DocumentFound>()!!
+            assertEquals(22_000L + CoreNfcReadSettings.DEFAULT_WAIT_AFTER_SYSTEM_END_MILLIS + arriveAfterMillis, found)
+            assertEquals(1, (r.ending as ChipReadEnding.Complete).attempts)
+        }
+
+    // --- K-08b: a start refused as busy, then accepted (TES-346) ------------------------------------------
+
+    @Test
+    fun k08b_newSessionRefusedBusy203_theReadTriesAgainInStartingAndReadsTheChip() =
+        simTest { flow ->
+            refuseBeginWith = IosSim.codeError(CoreNfcErrorCode.SYSTEM_IS_BUSY, CoreNfcErrorSource.SESSION_END)
+            val (_, r) = start(deviceOptions(flow))
+            step(499)
+            assertEquals(listOf("Starting"), r.stateNames)
+            runUntilEnded(r)
+            assertNull(r.checkPromises())
+            assertDeviceChecksPass(r.ending)
+            assertEquals(2, ports.size)
+            assertEquals(500L, r.firstAt<ChipReadState.WaitingForDocument>())
+        }
+
     @Test
     fun k09_everyNewLinkLosesItsFirstCommand_noRestartUsedEndsFailedWithNoAnswerWhenTheSessionRunsLow() =
         simTest { flow ->

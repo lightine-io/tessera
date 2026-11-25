@@ -5,8 +5,11 @@ import io.lightine.tessera.types.errors.NfcUnavailable
 
 /**
  * Whether a new chip read started now is expected to be accepted at once: for an app that enables
- * its "read the chip" button only when a read can begin. Ask the platform read's `readiness()`, and
- * register a listener to hear when it changes.
+ * its "read the chip" button only when a read can begin. On iPhone, ask
+ * `CoreNfcChipRead.readiness()` and register a listener with
+ * `CoreNfcChipRead.addReadinessListener` to hear when it changes. Android has no such query yet:
+ * there the system has no wait between reads, and `NfcChipRead.availability(context)` tells whether
+ * NFC can be used.
  *
  * It is the SDK's own bookkeeping, stated as facts, not a promise from the system: a start is
  * always allowed, and a start made while the value is [NotYet] waits in
@@ -56,8 +59,8 @@ public sealed class ChipReadReadiness {
     public data object ReadInProgress : ChipReadReadiness()
 
     /**
-     * Chips cannot be read on this device now, for [reason], as the platform read's
-     * `availability()` reports it.
+     * Chips cannot be read on this device, for [reason], as the platform read's `availability()`
+     * reports it.
      *
      * @property reason Why.
      * @since 1.0.0

@@ -194,9 +194,9 @@ internal class IosSim(
         test.runCurrent()
     }
 
-    /** The system ends the current session with Core NFC code [code]. */
+    /** The system ends the current session with Core NFC code [code], and reports the code as a device does. */
     fun systemEnds(code: Long) {
-        port.systemEnd(codeError(code, CoreNfcErrorSource.SESSION_END))
+        port.systemEnd(codeError(code, CoreNfcErrorSource.SESSION_END), code)
         test.runCurrent()
     }
 

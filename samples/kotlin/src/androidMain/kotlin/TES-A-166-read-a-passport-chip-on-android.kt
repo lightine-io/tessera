@@ -88,6 +88,7 @@ fun describe(state: ChipReadState): String = when (state) {
     ChipReadState.CheckingFiles -> "Checking the files"
     is ChipReadState.NoAnswerYet -> "Found, no answer yet: move the document a little"
     is ChipReadState.LinkLost -> "Connection lost, hold the document again (${state.restartsLeft} tries left)"
+    is ChipReadState.RenewingSession -> "Searching again" // iPhone only: Android never reports it
     ChipReadState.Stopping -> "Stopping"
 }
 // endregion

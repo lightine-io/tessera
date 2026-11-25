@@ -140,7 +140,10 @@ class CoreNfcSessionRenewalTest {
             assertEquals(23_000L, waited(rec).last())
             assertTrue(ports[0].endings.isEmpty(), "the system ended the first session; the SDK sends no ending to it")
             assertEquals(listOf<String?>(null), ports[1].endings, "the second session ends with success")
-            assertEquals(CoreNfcDefaultSheetTexts.textFor(rec.updates.first { it.state is ChipReadState.WaitingForDocument }), ports[1].alerts.first())
+            assertEquals(
+                CoreNfcDefaultSheetTexts.textFor(rec.updates.first { it.state is ChipReadState.WaitingForDocument }),
+                ports[1].alerts.first(),
+            )
             val renew = events.of(ChipReadStep.SESSION_RENEW).single()
             assertEquals(1, renew.renewal)
             assertEquals(202, renew.systemCode)
@@ -161,7 +164,8 @@ class CoreNfcSessionRenewalTest {
             end202()
             step(1_400)
             assertEquals(
-                listOf("Starting") + List(3) { "WaitingForDocument" } + listOf("RenewingSession", "WaitingForDocument", "DocumentFound", "Connecting"),
+                listOf("Starting") + List(3) { "WaitingForDocument" } +
+                    listOf("RenewingSession", "WaitingForDocument", "DocumentFound", "Connecting"),
                 rec.names.take(8),
             )
             assertIs<ChipReadEnding.Complete>(rec.ending)

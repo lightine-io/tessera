@@ -298,7 +298,7 @@ when (val result = ChipAccessKey.Mrz.fromTypedFields(fields)) {
 }
 ```
 
-`ChipReadState` has five members that are objects (`Starting`, `DocumentFound`, `Connecting`, `CheckingFiles`, `Stopping`) and six that are classes with values (`WaitingForDocument`, `OpeningAccess`, `ReadingFile`, `AuthenticatingChip`, `NoAnswerYet`, `LinkLost`): a `when` needs `is` for the classes. `ChipReadEnding` has eight cases, all classes.
+`ChipReadState` has five members that are objects (`Starting`, `DocumentFound`, `Connecting`, `CheckingFiles`, `Stopping`) and seven that are classes with values (`WaitingForDocument`, `OpeningAccess`, `ReadingFile`, `AuthenticatingChip`, `NoAnswerYet`, `LinkLost`, `RenewingSession`): a `when` needs `is` for the classes. `RenewingSession` comes only on iPhone. `ChipReadEnding` has eight cases, all classes.
 
 To check the chip's signature, pass your own root certificates: `ChipReadOptions.Builder(key).trustAnchors(TrustAnchors.load(file).anchors)`. Every `TrustAnchors.load` form that reads a file, a stream or an address belongs off the main thread. On Android the forms are `load(File)`, `load(InputStream)`, `load(context, uri)` and `load(bytes)`; there is no `load(path)` on Android.
 
@@ -310,6 +310,8 @@ let reading = ChipReading.start(options: options)
 let finish = await reading.ending
 if case .complete(let read) = finish.outcome { /* use read */ }
 ```
+
+On iPhone, while no document was found, the read may close the system NFC sheet and open it again (`ChipReadState.RenewingSession`): a new session finds a document that the first one missed. After a read ends, the system may refuse a new session for a moment; the next read waits for it by itself, and `CoreNfcChipRead.readiness()` with `addReadinessListener` tells a button when a new read can begin at once.
 
 ## Go further
 

@@ -599,6 +599,7 @@ public final class io/lightine/tessera/emrtd/ChipReadEvent : io/lightine/tessera
 	public fun getName ()Ljava/lang/String;
 	public final fun getOutcome ()Lio/lightine/tessera/emrtd/ChipReadStepOutcome;
 	public final fun getProtocol ()Ljava/lang/String;
+	public final fun getRenewal ()Ljava/lang/Integer;
 	public final fun getStatusWord ()Ljava/lang/Integer;
 	public final fun getStep ()Lio/lightine/tessera/emrtd/ChipReadStep;
 	public final fun getSystemCode ()Ljava/lang/Integer;
@@ -667,6 +668,43 @@ public final class io/lightine/tessera/emrtd/ChipReadProgress {
 	public final fun getFraction ()D
 	public final fun getPercent ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class io/lightine/tessera/emrtd/ChipReadReadiness {
+}
+
+public final class io/lightine/tessera/emrtd/ChipReadReadiness$NotYet : io/lightine/tessera/emrtd/ChipReadReadiness {
+	public final fun getRemainingMillis ()J
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/ChipReadReadiness$ReadInProgress : io/lightine/tessera/emrtd/ChipReadReadiness {
+	public static final field INSTANCE Lio/lightine/tessera/emrtd/ChipReadReadiness$ReadInProgress;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/ChipReadReadiness$Ready : io/lightine/tessera/emrtd/ChipReadReadiness {
+	public static final field INSTANCE Lio/lightine/tessera/emrtd/ChipReadReadiness$Ready;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/lightine/tessera/emrtd/ChipReadReadiness$Unavailable : io/lightine/tessera/emrtd/ChipReadReadiness {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class io/lightine/tessera/emrtd/ChipReadReadinessListener {
+	public abstract fun onReadinessChanged (Lio/lightine/tessera/emrtd/ChipReadReadiness;)V
+}
+
+public abstract interface class io/lightine/tessera/emrtd/ChipReadReadinessRegistration {
+	public abstract fun remove ()V
 }
 
 public abstract class io/lightine/tessera/emrtd/ChipReadResult {
@@ -740,6 +778,11 @@ public final class io/lightine/tessera/emrtd/ChipReadState$ReadingFile : io/ligh
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/lightine/tessera/emrtd/ChipReadState$RenewingSession : io/lightine/tessera/emrtd/ChipReadState {
+	public final fun getRenewal ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class io/lightine/tessera/emrtd/ChipReadState$Starting : io/lightine/tessera/emrtd/ChipReadState {
 	public static final field INSTANCE Lio/lightine/tessera/emrtd/ChipReadState$Starting;
 	public fun equals (Ljava/lang/Object;)Z
@@ -769,6 +812,7 @@ public final class io/lightine/tessera/emrtd/ChipReadStep : java/lang/Enum {
 	public static final field READ_FILE Lio/lightine/tessera/emrtd/ChipReadStep;
 	public static final field SELECT_APPLICATION Lio/lightine/tessera/emrtd/ChipReadStep;
 	public static final field SESSION_END Lio/lightine/tessera/emrtd/ChipReadStep;
+	public static final field SESSION_RENEW Lio/lightine/tessera/emrtd/ChipReadStep;
 	public static final field SHEET_TEXT Lio/lightine/tessera/emrtd/ChipReadStep;
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/ChipReadStep;

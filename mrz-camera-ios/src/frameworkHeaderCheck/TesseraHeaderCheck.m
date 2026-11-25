@@ -95,6 +95,9 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
                                                                              readTimeoutMillis:2000
                                                                            searchRestartMillis:4000
                                                                                        polling:TesseraCoreNfcPolling.automatic
+                                                                            maxSessionRenewals:2
+                                                                            sessionRenewMillis:10000
+                                                                               busyRetryMillis:6000
                                                                                          error:nil];
     TesseraCoreNfcReadSettings *built = [[[[[[TesseraCoreNfcReadSettingsBuilder alloc] init]
         linkLossPolicy:[TesseraLinkLossPolicyCompanion.shared readAgainMaxRestarts:1 error:nil]] telemetrySink:nil]
@@ -111,6 +114,13 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
     TesseraCoreNfcPolling *polling = settings.polling;
     TesseraCoreNfcPolling *combined = TesseraCoreNfcPolling.iso14443AndPace;
     TesseraChipReadStep *sessionEnd = TesseraChipReadStep.sessionEnd;
+    TesseraCoreNfcReadSettings *noRenewals =
+        [[[[settings.toBuilder maxSessionRenewalsCount:TesseraCoreNfcReadSettings.companion.SESSION_RENEWALS_OFF]
+            sessionRenewMillisMillis:TesseraCoreNfcReadSettings.companion.SESSION_RENEW_OFF]
+            busyRetryMillisMillis:TesseraCoreNfcReadSettings.companion.BUSY_RETRY_OFF] buildAndReturnError:nil];
+    int32_t renewals = settings.maxSessionRenewals;
+    int64_t renewAfter = settings.sessionRenewMillis;
+    int64_t busyRetry = settings.busyRetryMillis;
     TesseraLinkLossPolicy *noRestart = TesseraLinkLossPolicyCompanion.shared.end;
     TesseraLinkLossPolicy *resumeTwice = [TesseraLinkLossPolicyCompanion.shared resumeMaxRestarts:2 error:nil];
     TesseraNfcUnavailableReason *unavailable = TesseraCoreNfcChipRead.companion.availability;
@@ -126,6 +136,10 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
     (void)polling;
     (void)combined;
     (void)sessionEnd;
+    (void)noRenewals;
+    (void)renewals;
+    (void)renewAfter;
+    (void)busyRetry;
     (void)noRestart;
     (void)resumeTwice;
     (void)unavailable;
@@ -152,10 +166,38 @@ static void tesseraChipReadStates(TesseraChipReadState *state, TesseraChipReadEn
     (void)noAnswer;
 }
 
-// The raw Core NFC code of a session the system ended, as a telemetry fact (emrtd-core).
+// The raw Core NFC code of a session the system ended, and a renewed session, as telemetry facts
+// (emrtd-core).
 static void tesseraChipReadEvents(TesseraChipReadEvent *event) {
     BOOL sessionEnded = event.step == TesseraChipReadStep.sessionEnd;
     TesseraInt *systemCode = event.systemCode;
+    BOOL renewed = event.step == TesseraChipReadStep.sessionRenew;
+    TesseraInt *renewal = event.renewal;
     (void)sessionEnded;
     (void)systemCode;
+    (void)renewed;
+    (void)renewal;
+}
+
+// A read that renews its session, and whether a new read can begin now (emrtd-core, emrtd-nfc-ios).
+static void tesseraChipReadRenewalAndReadiness(TesseraChipReadState *state, id<TesseraChipReadReadinessListener> listener) {
+    if ([state isKindOfClass:TesseraChipReadStateRenewingSession.class]) {
+        int32_t renewal = ((TesseraChipReadStateRenewingSession *)state).renewal;
+        (void)renewal;
+    }
+    TesseraChipReadReadiness *now = [TesseraCoreNfcChipRead.companion readiness];
+    BOOL ready = now == TesseraChipReadReadinessReady.shared;
+    BOOL busyReader = now == TesseraChipReadReadinessReadInProgress.shared;
+    if ([now isKindOfClass:TesseraChipReadReadinessNotYet.class]) {
+        int64_t remaining = ((TesseraChipReadReadinessNotYet *)now).remainingMillis;
+        (void)remaining;
+    }
+    if ([now isKindOfClass:TesseraChipReadReadinessUnavailable.class]) {
+        TesseraNfcUnavailableReason *reason = ((TesseraChipReadReadinessUnavailable *)now).reason;
+        (void)reason;
+    }
+    id<TesseraChipReadReadinessRegistration> registration = [TesseraCoreNfcChipRead.companion addReadinessListenerListener:listener];
+    [registration remove];
+    (void)ready;
+    (void)busyReader;
 }

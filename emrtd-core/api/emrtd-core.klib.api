@@ -310,6 +310,7 @@ final enum class io.lightine.tessera.emrtd/ChipReadStep : kotlin/Enum<io.lightin
     enum entry READ_FILE // io.lightine.tessera.emrtd/ChipReadStep.READ_FILE|null[0]
     enum entry SELECT_APPLICATION // io.lightine.tessera.emrtd/ChipReadStep.SELECT_APPLICATION|null[0]
     enum entry SESSION_END // io.lightine.tessera.emrtd/ChipReadStep.SESSION_END|null[0]
+    enum entry SESSION_RENEW // io.lightine.tessera.emrtd/ChipReadStep.SESSION_RENEW|null[0]
     enum entry SHEET_TEXT // io.lightine.tessera.emrtd/ChipReadStep.SHEET_TEXT|null[0]
 
     final val entries // io.lightine.tessera.emrtd/ChipReadStep.entries|#static{}entries[0]
@@ -419,6 +420,10 @@ abstract fun interface io.lightine.tessera.emrtd/ChipReadEventSink : io.lightine
     open fun record(io.lightine.tessera.telemetry/TelemetryEvent) // io.lightine.tessera.emrtd/ChipReadEventSink.record|record(io.lightine.tessera.telemetry.TelemetryEvent){}[0]
 }
 
+abstract fun interface io.lightine.tessera.emrtd/ChipReadReadinessListener { // io.lightine.tessera.emrtd/ChipReadReadinessListener|null[0]
+    abstract fun onReadinessChanged(io.lightine.tessera.emrtd/ChipReadReadiness) // io.lightine.tessera.emrtd/ChipReadReadinessListener.onReadinessChanged|onReadinessChanged(io.lightine.tessera.emrtd.ChipReadReadiness){}[0]
+}
+
 abstract fun interface io.lightine.tessera.emrtd/ChipReadUpdateListener { // io.lightine.tessera.emrtd/ChipReadUpdateListener|null[0]
     abstract fun onUpdate(io.lightine.tessera.emrtd/ChipReadUpdate) // io.lightine.tessera.emrtd/ChipReadUpdateListener.onUpdate|onUpdate(io.lightine.tessera.emrtd.ChipReadUpdate){}[0]
 }
@@ -444,6 +449,10 @@ abstract interface io.lightine.tessera.emrtd/ChipReadHandle { // io.lightine.tes
 abstract interface io.lightine.tessera.emrtd/ChipReadObserver : io.lightine.tessera.emrtd/ChipReadUpdateListener { // io.lightine.tessera.emrtd/ChipReadObserver|null[0]
     abstract fun onEnding(io.lightine.tessera.emrtd/ChipReadEnding) // io.lightine.tessera.emrtd/ChipReadObserver.onEnding|onEnding(io.lightine.tessera.emrtd.ChipReadEnding){}[0]
     abstract fun onUpdate(io.lightine.tessera.emrtd/ChipReadUpdate) // io.lightine.tessera.emrtd/ChipReadObserver.onUpdate|onUpdate(io.lightine.tessera.emrtd.ChipReadUpdate){}[0]
+}
+
+abstract interface io.lightine.tessera.emrtd/ChipReadReadinessRegistration { // io.lightine.tessera.emrtd/ChipReadReadinessRegistration|null[0]
+    abstract fun remove() // io.lightine.tessera.emrtd/ChipReadReadinessRegistration.remove|remove(){}[0]
 }
 
 final class io.lightine.tessera.emrtd.lds/BiometricDataBlock { // io.lightine.tessera.emrtd.lds/BiometricDataBlock|null[0]
@@ -1100,6 +1109,8 @@ final class io.lightine.tessera.emrtd/ChipReadEvent : io.lightine.tessera.teleme
         final fun <get-outcome>(): io.lightine.tessera.emrtd/ChipReadStepOutcome // io.lightine.tessera.emrtd/ChipReadEvent.outcome.<get-outcome>|<get-outcome>(){}[0]
     final val protocol // io.lightine.tessera.emrtd/ChipReadEvent.protocol|{}protocol[0]
         final fun <get-protocol>(): kotlin/String? // io.lightine.tessera.emrtd/ChipReadEvent.protocol.<get-protocol>|<get-protocol>(){}[0]
+    final val renewal // io.lightine.tessera.emrtd/ChipReadEvent.renewal|{}renewal[0]
+        final fun <get-renewal>(): kotlin/Int? // io.lightine.tessera.emrtd/ChipReadEvent.renewal.<get-renewal>|<get-renewal>(){}[0]
     final val statusWord // io.lightine.tessera.emrtd/ChipReadEvent.statusWord|{}statusWord[0]
         final fun <get-statusWord>(): kotlin/Int? // io.lightine.tessera.emrtd/ChipReadEvent.statusWord.<get-statusWord>|<get-statusWord>(){}[0]
     final val step // io.lightine.tessera.emrtd/ChipReadEvent.step|{}step[0]
@@ -1737,6 +1748,36 @@ sealed class io.lightine.tessera.emrtd/ChipReadEnding { // io.lightine.tessera.e
     }
 }
 
+sealed class io.lightine.tessera.emrtd/ChipReadReadiness { // io.lightine.tessera.emrtd/ChipReadReadiness|null[0]
+    final class NotYet : io.lightine.tessera.emrtd/ChipReadReadiness { // io.lightine.tessera.emrtd/ChipReadReadiness.NotYet|null[0]
+        final val remainingMillis // io.lightine.tessera.emrtd/ChipReadReadiness.NotYet.remainingMillis|{}remainingMillis[0]
+            final fun <get-remainingMillis>(): kotlin/Long // io.lightine.tessera.emrtd/ChipReadReadiness.NotYet.remainingMillis.<get-remainingMillis>|<get-remainingMillis>(){}[0]
+
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipReadReadiness.NotYet.toString|toString(){}[0]
+    }
+
+    final class Unavailable : io.lightine.tessera.emrtd/ChipReadReadiness { // io.lightine.tessera.emrtd/ChipReadReadiness.Unavailable|null[0]
+        final val reason // io.lightine.tessera.emrtd/ChipReadReadiness.Unavailable.reason|{}reason[0]
+            final fun <get-reason>(): io.lightine.tessera.types.errors/NfcUnavailable.Reason // io.lightine.tessera.emrtd/ChipReadReadiness.Unavailable.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipReadReadiness.Unavailable.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipReadReadiness.Unavailable.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipReadReadiness.Unavailable.toString|toString(){}[0]
+    }
+
+    final object ReadInProgress : io.lightine.tessera.emrtd/ChipReadReadiness { // io.lightine.tessera.emrtd/ChipReadReadiness.ReadInProgress|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipReadReadiness.ReadInProgress.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipReadReadiness.ReadInProgress.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipReadReadiness.ReadInProgress.toString|toString(){}[0]
+    }
+
+    final object Ready : io.lightine.tessera.emrtd/ChipReadReadiness { // io.lightine.tessera.emrtd/ChipReadReadiness.Ready|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.emrtd/ChipReadReadiness.Ready.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.lightine.tessera.emrtd/ChipReadReadiness.Ready.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipReadReadiness.Ready.toString|toString(){}[0]
+    }
+}
+
 sealed class io.lightine.tessera.emrtd/ChipReadResult { // io.lightine.tessera.emrtd/ChipReadResult|null[0]
     final class Complete : io.lightine.tessera.emrtd/ChipReadResult { // io.lightine.tessera.emrtd/ChipReadResult.Complete|null[0]
         final val read // io.lightine.tessera.emrtd/ChipReadResult.Complete.read|{}read[0]
@@ -1802,6 +1843,13 @@ sealed class io.lightine.tessera.emrtd/ChipReadState { // io.lightine.tessera.em
             final fun <get-file>(): io.lightine.tessera.emrtd/ChipFileRef // io.lightine.tessera.emrtd/ChipReadState.ReadingFile.file.<get-file>|<get-file>(){}[0]
 
         final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipReadState.ReadingFile.toString|toString(){}[0]
+    }
+
+    final class RenewingSession : io.lightine.tessera.emrtd/ChipReadState { // io.lightine.tessera.emrtd/ChipReadState.RenewingSession|null[0]
+        final val renewal // io.lightine.tessera.emrtd/ChipReadState.RenewingSession.renewal|{}renewal[0]
+            final fun <get-renewal>(): kotlin/Int // io.lightine.tessera.emrtd/ChipReadState.RenewingSession.renewal.<get-renewal>|<get-renewal>(){}[0]
+
+        final fun toString(): kotlin/String // io.lightine.tessera.emrtd/ChipReadState.RenewingSession.toString|toString(){}[0]
     }
 
     final class WaitingForDocument : io.lightine.tessera.emrtd/ChipReadState { // io.lightine.tessera.emrtd/ChipReadState.WaitingForDocument|null[0]
