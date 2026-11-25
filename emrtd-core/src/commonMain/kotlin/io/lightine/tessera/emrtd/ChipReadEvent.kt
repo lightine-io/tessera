@@ -46,6 +46,25 @@ public class ChipReadEvent internal constructor(
     public companion object {
         /** The event name: `emrtd.chip.step`. */
         public const val EVENT_NAME: String = "emrtd.chip.step"
+
+        /**
+         * An event for a step that a platform module times itself, such as [ChipReadStep.SHEET_TEXT]
+         * on iPhone: only the step, how it ended and how long it took.
+         *
+         * Internal: see [InternalTesseraChipApi].
+         *
+         * @param step Which step this is.
+         * @param outcome How the step ended.
+         * @param durationMillis How long the step took, in milliseconds.
+         * @return The event, with no protocol, file, byte count or status word.
+         * @since 1.0.0
+         */
+        @InternalTesseraChipApi
+        public fun platformStep(
+            step: ChipReadStep,
+            outcome: ChipReadStepOutcome,
+            durationMillis: Long,
+        ): ChipReadEvent = ChipReadEvent(step, outcome, null, null, null, null, durationMillis)
     }
 }
 
@@ -118,6 +137,17 @@ public enum class ChipReadStep {
 
     /** The whole read. */
     READ,
+
+    /**
+     * Setting the text of the system NFC sheet on iPhone. Reported only when one setting took
+     * longer than 500 milliseconds: [ChipReadStepOutcome.SUCCEEDED] when it returned, with the time
+     * it took, or [ChipReadStepOutcome.FAILED] when it had not returned a second after the read's
+     * ending, with the time so far. Each slow setting is reported once; the event never holds the
+     * text.
+     *
+     * @since 1.0.0
+     */
+    SHEET_TEXT,
 }
 
 /**

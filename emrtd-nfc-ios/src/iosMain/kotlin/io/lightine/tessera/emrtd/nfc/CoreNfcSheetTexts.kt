@@ -18,6 +18,11 @@ import io.lightine.tessera.types.errors.ChipKeyCheckDigitMismatch
  * Both functions are called on the read's own thread: return at once, and never block. A function
  * that throws gets the default text instead.
  *
+ * The SDK sets the text on a queue of the read's own, so setting it never holds up the read. A text
+ * that changes while no document is found yet may still be slow to show on some iOS versions: on
+ * a device, such a change took about 12 seconds to return, and the cause is not known. The
+ * default texts keep one text from the start until the document is found for that reason.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
  * @since 1.0.0
@@ -58,18 +63,14 @@ public interface CoreNfcSheetTexts {
  */
 @ExperimentalTesseraChipApi
 public object CoreNfcDefaultSheetTexts : CoreNfcSheetTexts {
-    // How long the reader waits before the waiting text changes to a hint to move the phone.
-    // Internal: an app that wants another time writes its own texts (TES-346).
-    internal const val MOVE_HINT_AFTER_MILLIS: Long = 8_000
-
     // The number of characters in the default progressBar; the two-argument form takes any width.
     internal const val BAR_WIDTH: Int = 10
 
     /**
      * A line per state:
      * - Starting: "Getting ready".
-     * - Waiting for the document: "Hold your iPhone near the document"; after
-     *   8 seconds, "Move the phone slowly along the document".
+     * - Waiting for the document: "Hold the top of your iPhone on the document and move it
+     *   slowly", the whole time: the text does not change until the document is found.
      * - Document found: "Found. Hold still."
      * - Connecting: "Connecting. Hold still."
      * - Opening access, reading, checking with the chip, checking the files: a line, then the
@@ -87,11 +88,9 @@ public object CoreNfcDefaultSheetTexts : CoreNfcSheetTexts {
             }
 
             is ChipReadState.WaitingForDocument -> {
-                if (state.waitedMillis >= MOVE_HINT_AFTER_MILLIS) {
-                    "Move the phone slowly along the document"
-                } else {
-                    "Hold your iPhone near the document"
-                }
+                // One text however long the wait: a change while the session polls with no
+                // document found was slow to return on a device (TES-346).
+                "Hold the top of your iPhone on the document and move it slowly"
             }
 
             ChipReadState.DocumentFound -> {

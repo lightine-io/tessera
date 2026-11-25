@@ -1,6 +1,7 @@
 package io.lightine.tessera.emrtd.nfc
 
 import io.lightine.tessera.emrtd.ChipReadEnding
+import io.lightine.tessera.emrtd.ChipReadState
 import io.lightine.tessera.emrtd.ChipReadUpdate
 import io.lightine.tessera.emrtd.LinkLossPolicy
 import kotlin.test.Test
@@ -66,8 +67,8 @@ class CoreNfcSheetTextsTest {
                 assertTrue(text.isNotBlank(), "${update.state}")
                 assertTrue('\u2014' !in text, "no em-dash")
             }
-            assertTrue(updates.any { defaults.textFor(it) == "Move the phone slowly along the document" })
-            assertTrue(updates.any { defaults.textFor(it) == "Hold your iPhone near the document" })
+            val waitingTexts = updates.filter { it.state is ChipReadState.WaitingForDocument }.map { defaults.textFor(it) }.toSet()
+            assertEquals(setOf("Hold the top of your iPhone on the document and move it slowly"), waitingTexts, "one waiting text")
             assertTrue(updates.any { defaults.textFor(it) == "Found, no answer yet. Move the phone a little." })
 
             var last = 0

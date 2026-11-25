@@ -367,8 +367,12 @@ class CoreNfcChipReadLifecycleTest {
             step(6_000)
             val waited = rec.states.filterIsInstance<ChipReadState.WaitingForDocument>().map { it.waitedMillis }
             assertEquals(listOf(0L, 2_000L, 4_000L, 6_000L), waited)
-            step(2_000)
-            assertEquals("Move the phone slowly along the document", port.alerts.last())
+            step(14_000)
+            assertEquals(
+                listOf("Hold the top of your iPhone on the document and move it slowly"),
+                port.alerts,
+                "the default text does not change while waiting",
+            )
             read.cancel()
             assertNothingLeft(read)
         }

@@ -24,6 +24,13 @@ internal class Recorder : ChipReadObserver {
     val updates = mutableListOf<ChipReadUpdate>()
     val endings = mutableListOf<ChipReadEnding>()
 
+    /** The clock the times below are read from; the harness's virtual clock when a test sets it. */
+    var clock: () -> Long = { 0L }
+
+    /** When each update and the ending came, by [clock]. */
+    val updateTimes = mutableListOf<Long>()
+    val endingTimes = mutableListOf<Long>()
+
     val states: List<ChipReadState> get() = updates.map { it.state }
 
     /** The states by name, for example `WaitingForDocument`. */
@@ -33,10 +40,12 @@ internal class Recorder : ChipReadObserver {
 
     override fun onUpdate(update: ChipReadUpdate) {
         updates += update
+        updateTimes += clock()
     }
 
     override fun onEnding(ending: ChipReadEnding) {
         endings += ending
+        endingTimes += clock()
     }
 }
 
@@ -57,8 +66,14 @@ internal class ChipReadHarness(
     var reportEnd = true
     var onBegin: (FakeSessionPort) -> Unit = {}
 
+    /** Put inside each new port's text setter, before the read sets its first text. */
+    var onSetAlert: (String) -> Unit = {}
+
     /** What the read's main queue does with a posted block: at once by default, or queued by a test. */
     var mainQueue: (() -> Unit) -> Unit = { it() }
+
+    /** The worker each read's sheet calls run on: at once, in the caller, by default. */
+    var sheetWorker: () -> SerialWorker = { InlineWorker }
     val now: () -> Long = { test.testScheduler.currentTime }
 
     val env =
@@ -69,6 +84,7 @@ internal class ChipReadHarness(
                     it.clock = now
                     it.reportEnd = reportEnd
                     it.onBegin = onBegin
+                    it.onSetAlert = onSetAlert
                     ports += it
                 }
             },
@@ -77,6 +93,7 @@ internal class ChipReadHarness(
             registry = registry,
             reader = ChipReader(),
             mainQueue = { block -> mainQueue(block) },
+            sheetWorker = { sheetWorker() },
         )
 
     val port: FakeSessionPort get() = ports.last()

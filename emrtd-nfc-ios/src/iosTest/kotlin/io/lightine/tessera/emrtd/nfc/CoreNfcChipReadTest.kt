@@ -23,7 +23,7 @@ import kotlin.test.assertTrue
 class CoreNfcChipReadTest {
     private companion object {
         const val FOUND = "Found. Hold still."
-        const val HOLD = "Hold your iPhone near the document"
+        const val HOLD = "Hold the top of your iPhone on the document and move it slowly"
     }
 
     // --- The happy path -------------------------------------------------------------------------

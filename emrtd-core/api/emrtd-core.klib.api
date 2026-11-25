@@ -309,6 +309,7 @@ final enum class io.lightine.tessera.emrtd/ChipReadStep : kotlin/Enum<io.lightin
     enum entry READ // io.lightine.tessera.emrtd/ChipReadStep.READ|null[0]
     enum entry READ_FILE // io.lightine.tessera.emrtd/ChipReadStep.READ_FILE|null[0]
     enum entry SELECT_APPLICATION // io.lightine.tessera.emrtd/ChipReadStep.SELECT_APPLICATION|null[0]
+    enum entry SHEET_TEXT // io.lightine.tessera.emrtd/ChipReadStep.SHEET_TEXT|null[0]
 
     final val entries // io.lightine.tessera.emrtd/ChipReadStep.entries|#static{}entries[0]
         final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.emrtd/ChipReadStep> // io.lightine.tessera.emrtd/ChipReadStep.entries.<get-entries>|<get-entries>#static(){}[0]

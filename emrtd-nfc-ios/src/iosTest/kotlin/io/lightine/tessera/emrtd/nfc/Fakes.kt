@@ -3,6 +3,7 @@ package io.lightine.tessera.emrtd.nfc
 import io.lightine.tessera.types.errors.NfcError
 import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.errors.NfcUnavailable
+import platform.Foundation.NSLock
 
 /** A scripted ISO 7816 tag: no device, no radio. Answers at once unless [holdAnswers] is set. */
 internal class FakeChannel(
@@ -87,7 +88,29 @@ internal class FakeSessionPort(
         events.onInvalidated(error)
     }
 
+    /** Runs inside setAlertMessage before it records the text: a test can block here, as Core NFC did on a device. */
+    var onSetAlert: (String) -> Unit = {}
+
+    private val callLock = NSLock()
+    private val callLog = mutableListOf<String>()
+
+    /** Every text set and invalidate call, in order, from any thread: `alert:<text>`, `invalidate`, `invalidate:<message>`. */
+    val calls: List<String> get() = logged { callLog.toList() }
+
+    private fun log(call: String) = logged { callLog += call }
+
+    private inline fun <T> logged(block: () -> T): T {
+        callLock.lock()
+        try {
+            return block()
+        } finally {
+            callLock.unlock()
+        }
+    }
+
     override fun setAlertMessage(text: String) {
+        onSetAlert(text)
+        log("alert:$text")
         alerts += text
         alertTimes += clock()
     }
@@ -106,11 +129,13 @@ internal class FakeSessionPort(
     }
 
     override fun invalidate() {
+        log("invalidate")
         endings += null
         if (reportEnd) events.onInvalidated(NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER))
     }
 
     override fun invalidate(errorMessage: String) {
+        log("invalidate:$errorMessage")
         endings += errorMessage
         if (reportEnd) events.onInvalidated(NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER))
     }

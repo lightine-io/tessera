@@ -3,13 +3,18 @@ package io.lightine.tessera.emrtd.nfc
 import io.lightine.tessera.emrtd.ChipReadAttemptOutcome
 import io.lightine.tessera.emrtd.ChipReadCoordinator
 import io.lightine.tessera.emrtd.ChipReadEnding
+import io.lightine.tessera.emrtd.ChipReadEvent
 import io.lightine.tessera.emrtd.ChipReadHandle
 import io.lightine.tessera.emrtd.ChipReadObserver
 import io.lightine.tessera.emrtd.ChipReadOptions
+import io.lightine.tessera.emrtd.ChipReadStep
+import io.lightine.tessera.emrtd.ChipReadStepOutcome
 import io.lightine.tessera.emrtd.ChipReadUpdate
 import io.lightine.tessera.emrtd.ChipReader
 import io.lightine.tessera.emrtd.HandoffObserver
 import io.lightine.tessera.emrtd.ObserverThread
+import io.lightine.tessera.telemetry.TelemetrySink
+import io.lightine.tessera.telemetry.TelemetrySinkRegistry
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.NfcError
 import io.lightine.tessera.types.errors.NfcTimeout
@@ -64,7 +69,8 @@ import kotlin.time.TimeSource
  *   [ChipReadEnding.KeyRejected] and no sheet is shown (see
  *   [io.lightine.tessera.emrtd.ChipReadOptions.allowCheckDigitMismatch]).
  * - Shows the system sheet and keeps its text current from [CoreNfcSheetTexts] (English by
- *   default). While no document is found, the observer gets
+ *   default). The sheet's text is set on a queue of the read's own, so a slow text change never
+ *   holds up the updates, the ending or a cancel. While no document is found, the observer gets
  *   [io.lightine.tessera.emrtd.ChipReadState.WaitingForDocument] again every 2 seconds, with the
  *   time waited.
  * - When a document is found, waits [CoreNfcReadSettings.settleDelayMillis] before the first
@@ -131,9 +137,13 @@ public class CoreNfcChipRead internal constructor(
     private val tags = Channel<List<DetectedTag>>(Channel.UNLIMITED)
     private val alerts = AlertWriter()
 
+    // Where a slow sheet text setting is reported: the read's telemetry sink.
+    private val sink: TelemetrySink = settings.telemetry ?: TelemetrySinkRegistry.current
+
     // Guards [owned] and [transport] against the ending, which may come from any thread.
     private val lock = NSLock()
     private var owned: OwnedReaderSession? = null
+    private var sheet: SheetWriter? = null
     private var transport: CoreNfcTransport? = null
 
     @Volatile
@@ -183,8 +193,22 @@ public class CoreNfcChipRead internal constructor(
             return
         }
         val session = OwnedReaderSession(env.openSession(events), keeper = this) { env.registry.released(this) }
-        if (!locked { if (coordinator.isEnded) false else true.also { owned = session } }) return
+        val writer = SheetWriter(session, env.sheetWorker(), env.now, ::reportSlowText)
+        val open =
+            locked {
+                if (coordinator.isEnded) {
+                    false
+                } else {
+                    owned = session
+                    sheet = writer
+                    true
+                }
+            }
+        if (!open) return
         coordinator.waiting(0)
+        // The first text goes on the sheet before the session begins, as Core NFC allows; a text
+        // change while the session polls is the call that did not return on a device (TES-346).
+        writer.awaitIdle(FIRST_TEXT_WAIT_MILLIS)
         if (!session.begin()) return
         val began = env.now()
         var waitingSince = began
@@ -364,22 +388,36 @@ public class CoreNfcChipRead internal constructor(
         job?.cancel()
     }
 
-    /** What happens when the ending is decided, before the app hears of it. */
+    /**
+     * What happens when the ending is decided, before the app hears of it. The sheet's last text and
+     * the session's end go to the sheet's queue, after the texts before them; when they are not done
+     * [ENDING_WAIT_MILLIS] later (a call stuck), the session is ended from here anyway.
+     */
     private fun finish(ending: ChipReadEnding) {
         alerts.stop()
-        val session = locked { owned }
+        val (session, writer) = locked { owned to sheet }
         env.registry.ended(this, session)
         stopTransport(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
-        if (session != null && session.isOpen) {
+        if (session != null && writer != null && session.isOpen) {
             val text = textForEnding(ending)
-            if (ending is ChipReadEnding.Complete) {
-                session.setAlert(text)
-                session.end(null)
-            } else {
-                session.end(text)
+            if (ending is ChipReadEnding.Complete) writer.end(finalText = text, errorMessage = null) else writer.end(null, text)
+            if (!writer.isEndingDone) {
+                env.scope.launch {
+                    delay(ENDING_WAIT_MILLIS)
+                    writer.endNow()
+                }
             }
         }
         job?.cancel()
+    }
+
+    /** A sheet text setting took longer than [SheetWriter.SLOW_SET_MILLIS]: a fact for diagnosis. */
+    private fun reportSlowText(
+        durationMillis: Long,
+        returned: Boolean,
+    ) {
+        val outcome = if (returned) ChipReadStepOutcome.SUCCEEDED else ChipReadStepOutcome.FAILED
+        sink.record(ChipReadEvent.platformStep(ChipReadStep.SHEET_TEXT, outcome, durationMillis))
     }
 
     private fun textForEnding(ending: ChipReadEnding): String =
@@ -422,8 +460,9 @@ public class CoreNfcChipRead internal constructor(
     }
 
     /**
-     * Sets the sheet's text only when it changes, and at most every [ALERT_INTERVAL_MILLIS]; a text
-     * held back is set when the interval has passed, unless a newer one replaced it.
+     * Asks for the sheet's text only when it changes, and at most every [ALERT_INTERVAL_MILLIS]; a
+     * text held back is asked for when the interval has passed, unless a newer one replaced it. The
+     * [SheetWriter] then sets it on its own queue.
      */
     private inner class AlertWriter {
         private val alertLock = NSLock()
@@ -434,7 +473,7 @@ public class CoreNfcChipRead internal constructor(
         private var stopped = false
 
         fun show(text: String) {
-            val session = locked { owned } ?: return
+            val session = locked { sheet } ?: return
             alertLock.lock()
             try {
                 if (stopped || text == pending) return
@@ -462,7 +501,7 @@ public class CoreNfcChipRead internal constructor(
             }
         }
 
-        private fun flushPending(session: OwnedReaderSession) {
+        private fun flushPending(session: SheetWriter) {
             alertLock.lock()
             try {
                 flush = null
@@ -475,14 +514,14 @@ public class CoreNfcChipRead internal constructor(
 
         // Under [alertLock], so two writes never cross.
         private fun write(
-            session: OwnedReaderSession,
+            session: SheetWriter,
             text: String,
             now: Long,
         ) {
             pending = null
             shown = text
             shownAt = now
-            session.setAlert(text)
+            session.show(text)
         }
 
         fun stop() {
@@ -605,6 +644,16 @@ public class CoreNfcChipRead internal constructor(
          */
         internal const val SESSION_END_WAIT_MILLIS = 1_000L
 
+        /**
+         * How long the ending waits for the sheet's queue to set the last text and end the session;
+         * then it ends the session itself, with the ending's error message, or with success and
+         * whatever text the sheet shows.
+         */
+        internal const val ENDING_WAIT_MILLIS = 1_000L
+
+        /** How long the start waits for the first text to be set before the session begins. */
+        internal const val FIRST_TEXT_WAIT_MILLIS = 1_000L
+
         private val CLOSED = NfcUnavailable(NfcUnavailable.Reason.CLOSED)
 
         /** Failed connects in a row (a lost link, no answer) after which the read ends. */
@@ -643,6 +692,8 @@ internal class CoreNfcReadEnvironment(
     val reader: ChipReader,
     // Runs a block later on the main queue, first in, first out; tests run it at once or queue it.
     val mainQueue: (() -> Unit) -> Unit = { it() },
+    // A new worker for one read's sheet calls; tests run them at once or on a queue of their own.
+    val sheetWorker: () -> SerialWorker = { InlineWorker },
 ) {
     companion object {
         private val clock = TimeSource.Monotonic.markNow()
@@ -657,6 +708,7 @@ internal class CoreNfcReadEnvironment(
                 registry = ChipReadRegistry(),
                 reader = ChipReader(),
                 mainQueue = { block -> dispatch_async(dispatch_get_main_queue()) { block() } },
+                sheetWorker = ::newSheetQueueWorker,
             )
         }
     }
