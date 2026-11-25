@@ -109,6 +109,12 @@ class ChipReadCoordinatorSafetyTest {
             assertEquals(ChipAccessProtocol.BAC, ending.read.access.protocol)
         }
 
+    /**
+     * Concurrent attempts race for the one restart; any of them may also end the read first (its
+     * own refusal of the restart, or a fault from the shared progress), and then no LinkLost may
+     * follow. So whatever the interleaving: at most one restart is taken and shown, a LINK_LOST
+     * answer always had its LinkLost delivered before the ending, and the read ends exactly once.
+     */
     @Test
     fun theRestartBudgetHoldsUnderConcurrentMisuse() =
         runTest {
@@ -119,8 +125,34 @@ class ChipReadCoordinatorSafetyTest {
                 withContext(Dispatchers.Default) {
                     (1..16).map { async { c.read(Failing(NfcTagLost)) } }.awaitAll()
                 }
-            assertTrue(outcomes.count { it == ChipReadAttemptOutcome.LINK_LOST } <= 1, "$outcomes")
-            assertEquals(1, observer.updates.count { it.state is ChipReadState.LinkLost })
+            val linkLostAnswers = outcomes.count { it == ChipReadAttemptOutcome.LINK_LOST }
+            val linkLostUpdates = observer.updates.count { it.state is ChipReadState.LinkLost }
+            assertTrue(linkLostAnswers <= 1, "$outcomes")
+            assertTrue(linkLostUpdates <= 1, "${observer.updates}")
+            assertTrue(linkLostAnswers <= linkLostUpdates, "a LINK_LOST answer with no LinkLost: $outcomes")
+            assertEquals(1, observer.endings.size)
+            assertIs<ChipReadEnding>(observer.calls.last(), "nothing after the ending")
+        }
+
+    /**
+     * Another cause ends the read after the attempt's last check and before its LinkLost: the
+     * LinkLost is not published (nothing after the ending), so the answer is ENDED, never a
+     * LINK_LOST that sends the platform waiting on an ended read.
+     */
+    @Test
+    fun anEndingJustBeforeTheLinkLost_answersEnded() =
+        runTest {
+            val observer = RecordingObserver()
+            val c = coordinator(observer, LinkLossPolicy.Resume(1), FakeReadFlowChip.mrzKey())
+            c.ready()
+            val outcome =
+                c.read(Failing(NfcTagLost), handedOver = {
+                    c.cancel(ChipReadEnding.Cancelled.By.APP)
+                    false
+                })
+            assertEquals(ChipReadAttemptOutcome.ENDED, outcome)
+            assertEquals(0, observer.updates.count { it.state is ChipReadState.LinkLost })
+            assertEquals(ChipReadEnding.Cancelled.By.APP, assertIs<ChipReadEnding.Cancelled>(observer.endings.single()).by)
         }
 
     @Test

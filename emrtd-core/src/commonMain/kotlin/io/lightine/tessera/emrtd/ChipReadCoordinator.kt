@@ -588,7 +588,9 @@ public class ChipReadCoordinator private constructor(
             waitingAfterLoss.store(true)
             handover.store(null)
             publish(lost)
-            return ChipReadAttemptOutcome.LINK_LOST
+            // Another cause may have ended the read since the last check (a cancel, or another
+            // thread's attempt): then LinkLost was not published, and the platform must not wait.
+            return if (isEnded) ChipReadAttemptOutcome.ENDED else ChipReadAttemptOutcome.LINK_LOST
         }
         end(endingFor(result, error))
         return ChipReadAttemptOutcome.ENDED
