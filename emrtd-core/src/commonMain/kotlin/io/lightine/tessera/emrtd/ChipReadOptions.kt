@@ -1,9 +1,13 @@
+// Swift labels for the two dataGroups overloads (TES-346). ObjCName is still experimental in Kotlin.
+@file:OptIn(kotlin.experimental.ExperimentalObjCName::class)
+
 package io.lightine.tessera.emrtd
 
 import io.lightine.tessera.emrtd.trust.DocumentSignerCertificate
 import io.lightine.tessera.emrtd.trust.TrustAnchor
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import kotlin.jvm.JvmOverloads
+import kotlin.native.ObjCName
 import kotlin.time.Instant
 
 /**
@@ -86,11 +90,17 @@ public class ChipReadOptions
             private var signerCertificate: DocumentSignerCertificate? = null
             private var allowCheckDigitMismatch: Boolean = false
 
-            /** The data groups to read, by number (1 to 16). */
+            /** The data groups to read, by number (1 to 16). In Swift: `dataGroups(numbers: [1, 2, 11])`. */
             public fun dataGroups(numbers: Set<Int>): Builder = apply { dataGroups = numbers.toSet() }
 
-            /** The data groups to read, by number (1 to 16): `dataGroups(1, 2, 11)`. */
-            public fun dataGroups(vararg numbers: Int): Builder = apply { dataGroups = numbers.toSet() }
+            /**
+             * The data groups to read, by number (1 to 16): `dataGroups(1, 2, 11)`. In Swift, where a
+             * Kotlin `vararg` is an array object, use `dataGroups(numbers:)` with a set instead;
+             * this form is `dataGroups(numberArray:)` there.
+             */
+            public fun dataGroups(
+                @ObjCName("numberArray") vararg numbers: Int,
+            ): Builder = apply { dataGroups = numbers.toSet() }
 
             /** The root certificates for the signer checks. */
             public fun trustAnchors(anchors: List<TrustAnchor>): Builder = apply { trustAnchors = anchors.toList() }
