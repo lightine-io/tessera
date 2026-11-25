@@ -34,7 +34,7 @@ class NfcNoAnswerTest {
 class NfcTimeoutTest {
     @Test
     fun stores_the_time_limit_verbatim_and_names_it() {
-        val error = NfcTimeout(timeoutMillis = 5000)
+        val error = NfcTimeout(timeoutMillis = 5000, limit = NfcTimeout.Limit.COMMAND)
         assertEquals(5000L, error.timeoutMillis)
         assertTrue("5000" in error.description, error.description)
         assertIs<NfcError>(error)
@@ -42,9 +42,20 @@ class NfcTimeoutTest {
 
     @Test
     fun unknown_time_limit_has_its_own_text() {
-        val error = NfcTimeout(timeoutMillis = null)
+        val error = NfcTimeout(timeoutMillis = null, limit = NfcTimeout.Limit.SESSION)
         assertEquals(null, error.timeoutMillis)
         assertFalse("null" in error.description, error.description)
+    }
+
+    @Test
+    fun each_limit_says_which_limit_passed_and_only_a_command_limit_blames_the_chip() {
+        val texts = NfcTimeout.Limit.entries.associateWith { NfcTimeout(1000, it).description }
+        assertEquals(texts.size, texts.values.toSet().size)
+        assertTrue("chip did not answer" in texts.getValue(NfcTimeout.Limit.COMMAND))
+        assertFalse("chip" in texts.getValue(NfcTimeout.Limit.WAIT_FOR_DOCUMENT), texts.toString())
+        assertFalse("chip" in texts.getValue(NfcTimeout.Limit.SESSION), texts.toString())
+        assertTrue("app" in texts.getValue(NfcTimeout.Limit.WAIT_FOR_DOCUMENT))
+        assertTrue("session" in texts.getValue(NfcTimeout.Limit.SESSION))
     }
 }
 
@@ -59,6 +70,13 @@ class NfcUnavailableTest {
             assertIs<NfcError>(error)
         }
     }
+
+    @Test
+    fun no_reason_text_blames_the_app_or_claims_a_missing_reader_for_a_refused_command() {
+        assertFalse("by the app" in NfcUnavailable(NfcUnavailable.Reason.CLOSED).description)
+        assertFalse("no NFC reader" in NfcUnavailable(NfcUnavailable.Reason.COMMAND_TOO_LONG).description)
+        assertTrue("too long" in NfcUnavailable(NfcUnavailable.Reason.COMMAND_TOO_LONG).description)
+    }
 }
 
 /**
@@ -69,7 +87,8 @@ class NfcUnavailableTest {
  */
 class ChipErrorTextTest {
     private val errors: List<ChipError> =
-        listOf(NfcTagLost, NfcNoAnswer, NfcTimeout(1234), NfcTimeout(null)) +
+        listOf(NfcTagLost, NfcNoAnswer, NfcTimeout(null, NfcTimeout.Limit.COMMAND)) +
+            NfcTimeout.Limit.entries.map { NfcTimeout(1234, it) } +
             NfcUnavailable.Reason.entries.map { NfcUnavailable(it) } +
             listOf(
                 ChipMalformedFile(null, ChipMalformedFile.Reason.NOT_VALID_TLV),

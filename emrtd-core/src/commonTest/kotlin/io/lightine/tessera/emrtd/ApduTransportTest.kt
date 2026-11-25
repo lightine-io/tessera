@@ -38,11 +38,11 @@ class ApduTransportTest {
     fun transport_failure_carries_its_typed_error_and_its_text() =
         runTest {
             val cause = RuntimeException("platform")
-            val e = ApduTransportException(NfcTimeout(3000), cause)
+            val e = ApduTransportException(NfcTimeout(3000, NfcTimeout.Limit.COMMAND), cause)
             val thrown = assertFailsWith<ApduTransportException> { Failing(e).transceive(byteArrayOf(0)) }
             assertSame(e, thrown)
-            assertEquals(NfcTimeout(3000), thrown.error)
-            assertEquals(NfcTimeout(3000).description, thrown.message)
+            assertEquals(NfcTimeout(3000, NfcTimeout.Limit.COMMAND), thrown.error)
+            assertEquals(NfcTimeout(3000, NfcTimeout.Limit.COMMAND).description, thrown.message)
             assertSame(cause, thrown.cause)
         }
 

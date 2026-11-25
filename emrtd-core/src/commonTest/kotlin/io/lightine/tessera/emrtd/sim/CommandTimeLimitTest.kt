@@ -208,7 +208,7 @@ class CommandTimeLimitTest {
     fun neverAnswered_endsWithNoAnswer_whateverTheTransportReported() =
         runTest {
             withChips { c, keys ->
-                for (error in listOf<NfcError>(NfcTagLost, NfcTimeout(1_500))) {
+                for (error in listOf<NfcError>(NfcTagLost, NfcTimeout(1_500, NfcTimeout.Limit.COMMAND))) {
                     val flow = FakeReadFlowChip.build(c, keys, FlowAccess.BAC)
                     val r = SimRecorder { 0L }
                     val co = coordinator(flow, r)

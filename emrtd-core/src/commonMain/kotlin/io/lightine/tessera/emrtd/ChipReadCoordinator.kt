@@ -719,42 +719,71 @@ public class ChipReadCoordinator private constructor(
      * The system ended the read: [ChipReadEnding.EndedBySystem].
      *
      * @param reason What the platform reported.
+     * @param systemCode The platform's own code for it, when it gave one: [ChipReadEnding.systemCode].
      * @return `true` when this call ended the read.
      */
     @JvmSynthetic
-    public fun endedBySystem(reason: NfcError): Boolean =
-        end(ChipReadEnding.EndedBySystem(reason, attemptsStarted.load(), lastProgress.load()))
+    public fun endedBySystem(
+        reason: NfcError,
+        systemCode: Int? = null,
+    ): Boolean = end(ChipReadEnding.EndedBySystem(reason, attemptsStarted.load(), lastProgress.load(), systemCode))
 
     /**
      * The read could not start: [ChipReadEnding.NotStarted].
      *
      * @param reason Why.
+     * @param systemCode The platform's own code for it, when it gave one: [ChipReadEnding.systemCode].
      * @return `true` when this call ended the read.
      */
     @JvmSynthetic
-    public fun notStarted(reason: NfcUnavailable.Reason): Boolean = end(ChipReadEnding.NotStarted(reason, lastProgress.load()))
+    public fun notStarted(
+        reason: NfcUnavailable.Reason,
+        systemCode: Int? = null,
+    ): Boolean = end(ChipReadEnding.NotStarted(reason, lastProgress.load(), systemCode))
 
     /**
      * A platform problem with no better ending (for example a tag that is not an ISO 14443-4 chip):
      * [ChipReadEnding.Partial] when an attempt was granted access, else [ChipReadEnding.Failed].
      *
      * @param error What happened.
+     * @param systemCode The platform's own code for it, when it gave one: [ChipReadEnding.systemCode].
      * @return `true` when this call ended the read.
      */
     @JvmSynthetic
-    public fun fail(error: ChipError): Boolean = end(stoppedBy(error, null))
+    public fun fail(
+        error: ChipError,
+        systemCode: Int? = null,
+    ): Boolean = end(stoppedBy(error, null, systemCode))
+
+    /**
+     * The link to a found document could not be set up [MAX_CONNECT_ATTEMPTS] times in a row, each
+     * time with a loss of the link itself ([last]): the read ends. When no try of the read got past
+     * the first commands, the chip never answered, and the error is [NfcNoAnswer], the same on
+     * every platform; otherwise it is [last]. [ChipReadEnding.Partial] when an attempt was granted
+     * access, else [ChipReadEnding.Failed].
+     *
+     * @param last The error of the last failed connect.
+     * @param systemCode The platform's own code of that failure, when it gave one.
+     * @return `true` when this call ended the read.
+     */
+    @JvmSynthetic
+    public fun connectsFailed(
+        last: NfcError,
+        systemCode: Int? = null,
+    ): Boolean = end(stoppedBy(if (accessEverReached.load()) last else NfcNoAnswer, null, systemCode))
 
     private fun stoppedBy(
         error: ChipError,
         failed: ChipReadResult.Failed?,
+        systemCode: Int? = null,
     ): ChipReadEnding {
         val attempts = attemptsStarted.load()
         val progress = lastProgress.load()
         val accessed = lastAccessResult.load()
         return if (accessed != null) {
-            ChipReadEnding.Partial(accessed.read, error, lastReadState.load(), attempts, progress)
+            ChipReadEnding.Partial(accessed.read, error, lastReadState.load(), attempts, progress, systemCode)
         } else {
-            ChipReadEnding.Failed(error, failed?.access, attempts, progress)
+            ChipReadEnding.Failed(error, failed?.access, attempts, progress, systemCode)
         }
     }
 

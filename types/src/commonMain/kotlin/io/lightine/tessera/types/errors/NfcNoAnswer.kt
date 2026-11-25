@@ -12,6 +12,11 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  * cause is a position where the chip gets too little power to answer; another position of the
  * document on the device often helps.
  *
+ * It is also the error when the document was found but the link to it could not be set up three
+ * times in a row (the platform's connect failed with a lost link each time) and no try of the read
+ * had got past the first commands: the chip did not answer the platform's connect, the same on
+ * Android and iPhone.
+ *
  * A chip read reports it, never a transport. When a try of the read got past those first commands
  * and the link was lost later, the read reports the loss itself ([NfcTagLost] or [NfcTimeout]).
  *

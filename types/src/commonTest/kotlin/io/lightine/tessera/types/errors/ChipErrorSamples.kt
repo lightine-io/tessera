@@ -68,7 +68,7 @@ internal object ChipErrorSamples {
             }
 
             is NfcTimeout -> {
-                listOf(NfcTimeout(1000))
+                NfcTimeout.Limit.entries.map { NfcTimeout(1000, it) }
             }
         }
 
@@ -86,7 +86,7 @@ internal object ChipErrorSamples {
             NfcUnavailable(NfcUnavailable.Reason.DISABLED),
             NfcTagLost,
             NfcNoAnswer,
-            NfcTimeout(null),
+            NfcTimeout(null, NfcTimeout.Limit.COMMAND),
         )
 
     val every: List<ChipError> = oneOfEach.flatMap(::all)

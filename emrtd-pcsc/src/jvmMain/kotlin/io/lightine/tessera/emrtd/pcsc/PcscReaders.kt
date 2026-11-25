@@ -52,8 +52,9 @@ public object PcscReaders {
      * basic channel.
      *
      * The default wait is 30 seconds. A value of zero waits indefinitely, as specified by
-     * `CardTerminal.waitForCardPresent`. A timeout is reported as [NfcTimeout]. Extended-length
-     * support is disabled by default because PC/SC reader and driver support varies.
+     * `CardTerminal.waitForCardPresent`. A timeout is reported as [NfcTimeout] with limit
+     * `WAIT_FOR_DOCUMENT`: the wait is the app's own. Extended-length support is disabled by
+     * default because PC/SC reader and driver support varies.
      *
      * @param readerName The exact name returned by [listReaders].
      * @param waitTimeoutMillis Maximum wait in milliseconds; zero waits indefinitely.
@@ -116,7 +117,7 @@ public object PcscReaders {
 
         try {
             if (!terminal.waitForCardPresent(waitTimeoutMillis)) {
-                throw ApduTransportException(NfcTimeout(waitTimeoutMillis))
+                throw ApduTransportException(NfcTimeout(waitTimeoutMillis, NfcTimeout.Limit.WAIT_FOR_DOCUMENT))
             }
             val card = terminal.connect(ANY_PROTOCOL)
             return SmartCardTransport(card.basicChannel, supportsExtendedLength)

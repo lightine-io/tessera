@@ -16,6 +16,7 @@ import io.lightine.tessera.emrtd.internal.pa.withKeys
 import io.lightine.tessera.telemetry.NoOpTelemetrySink
 import io.lightine.tessera.types.errors.ChipAccessDenied
 import io.lightine.tessera.types.errors.ChipError
+import io.lightine.tessera.types.errors.NfcNoAnswer
 import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.errors.NfcTimeout
 import io.lightine.tessera.types.errors.NfcUnavailable
@@ -32,6 +33,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Instant
 
@@ -307,9 +309,50 @@ class ChipReadCoordinatorTest {
             val c = coordinator(observer)
             c.start()
             c.waiting(0)
-            assertTrue(c.endedBySystem(NfcTimeout(null)))
+            assertTrue(c.endedBySystem(NfcTimeout(null, NfcTimeout.Limit.SESSION)))
             val ending = assertIs<ChipReadEnding.EndedBySystem>(observer.endings.single())
-            assertEquals(NfcTimeout(null), ending.reason)
+            assertEquals(NfcTimeout(null, NfcTimeout.Limit.SESSION), ending.reason)
+            assertEquals(0, ending.attempts)
+            assertNull(ending.systemCode, "no code given, none reported")
+        }
+
+    @Test
+    fun thePlatformsRawCodeReachesTheEndingAsAFact() =
+        runTest {
+            val notStarted = RecordingObserver()
+            coordinator(notStarted).run {
+                start()
+                notStarted(NfcUnavailable.Reason.NOT_ELIGIBLE, systemCode = 7)
+            }
+            val first = assertIs<ChipReadEnding.NotStarted>(notStarted.endings.single())
+            assertEquals(NfcUnavailable.Reason.NOT_ELIGIBLE, first.reason)
+            assertEquals(7, first.systemCode)
+
+            val ended = RecordingObserver()
+            coordinator(ended).run {
+                start()
+                endedBySystem(NfcTimeout(null, NfcTimeout.Limit.SESSION), systemCode = 201)
+            }
+            assertEquals(201, assertIs<ChipReadEnding.EndedBySystem>(ended.endings.single()).systemCode)
+
+            val failed = RecordingObserver()
+            coordinator(failed).run {
+                start()
+                fail(NfcUnavailable(NfcUnavailable.Reason.COMMAND_TOO_LONG), systemCode = 105)
+            }
+            assertEquals(105, assertIs<ChipReadEnding.Failed>(failed.endings.single()).systemCode)
+        }
+
+    @Test
+    fun connectsThatFailedForGoodBeforeAnyAnswerEndAsNoAnswer() =
+        runTest {
+            val observer = RecordingObserver()
+            val c = coordinator(observer)
+            c.start()
+            c.waiting(0)
+            assertTrue(c.connectsFailed(NfcTagLost))
+            val ending = assertIs<ChipReadEnding.Failed>(observer.endings.single())
+            assertEquals(NfcNoAnswer, ending.error)
             assertEquals(0, ending.attempts)
         }
 
@@ -464,8 +507,8 @@ class ChipReadCoordinatorTest {
             val limit = RecordingObserver()
             val l = coordinator(limit)
             l.start()
-            l.read(FailingTransport(closed), systemEnd = { NfcTimeout(null) })
-            assertEquals(NfcTimeout(null), assertIs<ChipReadEnding.EndedBySystem>(limit.endings.single()).reason)
+            l.read(FailingTransport(closed), systemEnd = { NfcTimeout(null, NfcTimeout.Limit.SESSION) })
+            assertEquals(NfcTimeout(null, NfcTimeout.Limit.SESSION), assertIs<ChipReadEnding.EndedBySystem>(limit.endings.single()).reason)
 
             // The platform ends the read itself while the hook waits: that ending stands.
             val raced = RecordingObserver()
@@ -521,7 +564,7 @@ class ChipReadCoordinatorTest {
             val timeout = RecordingObserver()
             val t = coordinator(timeout, LinkLossPolicy.ReadAgain(1))
             t.start()
-            assertEquals(ChipReadAttemptOutcome.LINK_LOST, t.read(FailingTransport(NfcTimeout(5000))))
+            assertEquals(ChipReadAttemptOutcome.LINK_LOST, t.read(FailingTransport(NfcTimeout(5000, NfcTimeout.Limit.COMMAND))))
 
             for ((reason, expected) in listOf(
                 NfcUnavailable.Reason.CANCELLED_BY_USER to ChipReadEnding.Cancelled::class,

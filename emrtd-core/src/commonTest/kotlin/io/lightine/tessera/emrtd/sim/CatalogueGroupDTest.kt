@@ -157,7 +157,7 @@ class CatalogueGroupDTest {
                             val start = currentTime
                             return withTimeoutOrNull(5_000) { link.transceive(command) } ?: run {
                                 silentAt = start
-                                throw ApduTransportException(NfcTimeout(5_000))
+                                throw ApduTransportException(NfcTimeout(5_000, NfcTimeout.Limit.COMMAND))
                             }
                         }
                     }

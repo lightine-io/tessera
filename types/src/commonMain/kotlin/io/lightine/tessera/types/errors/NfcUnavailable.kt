@@ -24,16 +24,29 @@ public data class NfcUnavailable(
      * @since 1.0.0
      */
     public enum class Reason {
-        /** The device has no NFC reader. */
+        /**
+         * The device has no NFC reader, or its NFC reader cannot do what a chip read needs: on
+         * Android, the tag cannot be reached as an ISO 14443-4 (ISO-DEP) chip on this device.
+         */
         NOT_SUPPORTED,
 
         /** The device has an NFC reader, but it is turned off. */
         DISABLED,
 
-        /** The app may not use NFC, for example because a permission or an entitlement is missing. */
+        /**
+         * The app may not use NFC. On iPhone (Core NFC's code 2, "security violation"): the app
+         * lacks the NFC tag reading entitlement, or its Info.plist lacks
+         * `NFCReaderUsageDescription` or the ISO 7816 select identifiers the read needs; fix the
+         * app's setup. On Android: the platform refused reader mode with a `SecurityException`.
+         */
         NOT_PERMITTED,
 
-        /** The transport was closed by the app, so it cannot send any more commands. */
+        /**
+         * The link to the chip was closed, so no more commands can be sent: by the read's own
+         * ending, by the app closing a transport it owns, or by the platform (a link it closed with
+         * no cause it reports). A chip read that sees the platform close its link ends with
+         * `ChipReadEnding.EndedBySystem`.
+         */
         CLOSED,
 
         /**
@@ -89,22 +102,72 @@ public data class NfcUnavailable(
          * @since 1.0.0
          */
         ACTIVITY_DESTROYED,
+
+        /**
+         * Android only: NFC is on, but the device's option for reading tags is turned off, so
+         * reader mode finds no document. The person can turn it on in the system's NFC settings.
+         * The platform tells this from Android 15 (API level 35) on; on earlier versions the SDK
+         * cannot know it and never reports it.
+         *
+         * @since 1.0.0
+         */
+        TAG_READING_DISABLED,
+
+        /**
+         * A command was longer than the device's NFC link accepts (Android's "transceive length
+         * exceeds" refusal, Core NFC's code 105 on iPhone), so it was not sent.
+         *
+         * @since 1.0.0
+         */
+        COMMAND_TOO_LONG,
+
+        /**
+         * iPhone only (Core NFC's code 7): the system setting or the hardware is not eligible for
+         * reading tags, as the system decides, for example in some regions. The app cannot fix it
+         * itself; tell the person that chip reading is not available on this device now.
+         *
+         * @since 1.0.0
+         */
+        NOT_ELIGIBLE,
+
+        /**
+         * iPhone only (Core NFC's code 8): the person has not yet accepted or declined the app's
+         * request to use the NFC reader. The person answers the system's request, then the app
+         * starts a new read.
+         *
+         * @since 1.0.0
+         */
+        ACCESS_NOT_ANSWERED,
+
+        /**
+         * Something the SDK did not expect went wrong in the platform's NFC code or in the SDK
+         * itself, so the read stopped. Not about the document or the person: report it as a bug,
+         * with the read's telemetry.
+         *
+         * @since 1.0.0
+         */
+        UNEXPECTED_FAULT,
     }
 
     /** English text for logs: the reason. */
     override val description: String
         get() =
             when (reason) {
-                Reason.NOT_SUPPORTED -> "This device has no NFC reader"
+                Reason.NOT_SUPPORTED -> "This device cannot read chips over NFC"
                 Reason.DISABLED -> "NFC is turned off on this device"
                 Reason.NOT_PERMITTED -> "The app may not use NFC on this device"
-                Reason.CLOSED -> "The connection to the chip was closed by the app"
+                Reason.CLOSED -> "The connection to the chip was closed"
                 Reason.CANCELLED_BY_USER -> "The person ended the NFC reading"
                 Reason.BUSY -> "The NFC reader is busy with another task"
                 Reason.ENDED_BY_SYSTEM -> "The system ended the NFC session"
                 Reason.REQUEST_REFUSED -> "The NFC reader refused the request"
                 Reason.READ_IN_PROGRESS -> "Another chip read is already running in this app"
                 Reason.ACTIVITY_DESTROYED -> "The screen of the chip read is finishing or was destroyed"
+                Reason.TAG_READING_DISABLED -> "NFC is on, but reading tags is turned off on this device"
+                Reason.COMMAND_TOO_LONG -> "A command was too long for this device's NFC link"
+                Reason.NOT_ELIGIBLE -> "This device is not eligible to read tags now"
+                Reason.ACCESS_NOT_ANSWERED -> "The person has not yet answered the app's request to use NFC"
+                Reason.UNEXPECTED_FAULT -> "An unexpected fault stopped the chip read"
             }
 
     /** A stable name of this error: see [ChipError.code]. */

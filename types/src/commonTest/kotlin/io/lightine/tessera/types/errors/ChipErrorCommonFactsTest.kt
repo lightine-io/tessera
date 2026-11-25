@@ -29,8 +29,8 @@ class ChipErrorCommonFactsTest {
         val reasons =
             ChipAccessDenied.Reason.entries.size + ChipSecureMessagingLost.Reason.entries.size +
                 ChipUnexpectedAnswer.Reason.entries.size + ChipUnsupportedAlgorithm.Reason.entries.size +
-                ChipMalformedFile.Reason.entries.size + NfcUnavailable.Reason.entries.size
-        assertEquals(reasons + 6, everyError.size)
+                ChipMalformedFile.Reason.entries.size + NfcUnavailable.Reason.entries.size + NfcTimeout.Limit.entries.size
+        assertEquals(reasons + 5, everyError.size)
     }
 
     @Test
@@ -64,7 +64,14 @@ class ChipErrorCommonFactsTest {
         assertEquals("key-check-digit-mismatch", ChipKeyCheckDigitMismatch(emptySet()).code)
         assertEquals("tag-lost", NfcTagLost.code)
         assertEquals("no-answer", NfcNoAnswer.code)
-        assertEquals("timeout", NfcTimeout(null).code)
+        assertEquals("timeout.command", NfcTimeout(null, NfcTimeout.Limit.COMMAND).code)
+        assertEquals("timeout.wait-for-document", NfcTimeout(5_000, NfcTimeout.Limit.WAIT_FOR_DOCUMENT).code)
+        assertEquals("timeout.session", NfcTimeout(null, NfcTimeout.Limit.SESSION).code)
+        assertEquals("unavailable.tag-reading-disabled", NfcUnavailable(NfcUnavailable.Reason.TAG_READING_DISABLED).code)
+        assertEquals("unavailable.command-too-long", NfcUnavailable(NfcUnavailable.Reason.COMMAND_TOO_LONG).code)
+        assertEquals("unavailable.not-eligible", NfcUnavailable(NfcUnavailable.Reason.NOT_ELIGIBLE).code)
+        assertEquals("unavailable.access-not-answered", NfcUnavailable(NfcUnavailable.Reason.ACCESS_NOT_ANSWERED).code)
+        assertEquals("unavailable.unexpected-fault", NfcUnavailable(NfcUnavailable.Reason.UNEXPECTED_FAULT).code)
     }
 
     @Test
