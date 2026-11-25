@@ -35,7 +35,7 @@ Tessera's own code makes no network calls and logs nothing. On Android, the text
 
 ## Install
 
-Release 0.7.0. Minimums: minSdk 23. Java 17 and iOS 15 from the next release; 0.7.0 needs Java 21 and iOS 18. Modules: [Choose your pieces](https://lightine.youtrack.cloud/articles/TES-A-140).
+Release 0.7.0. Minimums: minSdk 23. From the next release: Java 17 and iOS 15. The released 0.7.0 itself needs Java 21 and iOS 18. Modules: [Choose your pieces](https://lightine.youtrack.cloud/articles/TES-A-140).
 
 `build.gradle.kts` (the JVM needs only the first two lines):
 
@@ -213,7 +213,7 @@ kotlin {
 <uses-feature android:name="android.hardware.nfc" android:required="false" />
 ```
 
-`NfcChipRead.start` owns the link to the chip: it turns NFC reader mode on for your screen, reads, checks, turns reader mode off at the ending, and clears the key. Your observer gets updates and exactly one ending, on the main thread. Make a new key for every read, and never retry automatically after a refused key: ask the person to check the values.
+`NfcChipRead.start` owns the link to the chip: it turns NFC reader mode on for your screen, reads, checks, turns reader mode off at the ending, and clears the key. Start it from a person's action, such as a button, and not from `onCreate`. Your observer gets updates and exactly one ending, on the main thread. A rotation destroys the Activity and ends the read (`ChipReadEnding.EndedBySystem`, reason `ACTIVITY_DESTROYED`), and a new read spends another authentication with the chip: declare `android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"` for the read screen, or lock the orientation while it reads. Make a new key for every read, and never retry automatically after a refused key: ask the person to check the values.
 
 ```kotlin
 import android.app.Activity
@@ -284,14 +284,29 @@ fun showFacts(read: ChipRead) {
 }
 ```
 
-To leave the screen, call `read.cancel()` on the handle. To check the chip's signature, pass your own root certificates: `ChipReadOptions.Builder(key).trustAnchors(TrustAnchors.load(file).anchors)`.
+To leave the screen, call `read.cancel()` on the handle.
 
-iOS. Chip reading is in the Swift package as the product `TesseraKit`, not in the 0.7.0 package. Add `.product(name: "TesseraKit", package: "tessera-swift")`, and in the app's Info.plist the NFC entries and entitlement (a paid Apple developer team is needed). The shortest use:
+If the person types the values instead, pass three strings: the document number, and the dates of birth and expiry as `YYMMDD`. Normalise first, show the person the three values and `changedFields` so they can confirm, then build the key and handle both results:
+
+```kotlin
+val fields = ChipAccessKey.Mrz.normalizeTypedFields(documentNumber, dateOfBirth, dateOfExpiry)
+when (val result = ChipAccessKey.Mrz.fromTypedFields(fields)) {
+    is MrzKeyResult.Built -> result.key
+    is MrzKeyResult.NotBuilt -> null // result.field and result.problem say what to fix
+}
+```
+
+`ChipReadState` has five members that are objects (`Starting`, `DocumentFound`, `Connecting`, `CheckingFiles`, `Stopping`) and five that are classes with values (`WaitingForDocument`, `OpeningAccess`, `ReadingFile`, `AuthenticatingChip`, `LinkLost`): a `when` needs `is` for the classes. `ChipReadEnding` has eight cases, all classes.
+
+To check the chip's signature, pass your own root certificates: `ChipReadOptions.Builder(key).trustAnchors(TrustAnchors.load(file).anchors)`. Every `TrustAnchors.load` form that reads a file, a stream or an address belongs off the main thread. On Android the forms are `load(File)`, `load(InputStream)`, `load(context, uri)` and `load(bytes)`; there is no `load(path)` on Android.
+
+iOS. Chip reading is in the Swift package as the product `TesseraKit`, not in the 0.7.0 package. Add `.product(name: "TesseraKit", package: "tessera-swift")`, and in the app's Info.plist the NFC entries and entitlement (a paid Apple developer team is needed). The shortest use (it needs iOS 15 or later: see Install above for what 0.7.0 needs):
 
 ```swift
 let options = try ChipReadOptions.Builder(accessKey: key).build()
 let reading = ChipReading.start(options: options)
-if case .complete(let read) = await reading.ending.outcome { /* use read */ }
+let finish = await reading.ending
+if case .complete(let read) = finish.outcome { /* use read */ }
 ```
 
 ## Go further

@@ -635,16 +635,25 @@ public class NfcChipRead internal constructor(
          * never switched while a document may be on the phone: once on at the start, once off at the
          * end.
          *
-         * Call it on the main thread, with the Activity that shows the read (for example from a
-         * button, or `onResume`). When the read cannot start it ends at once as
-         * [ChipReadEnding.NotStarted] with a typed reason: [NfcUnavailable.Reason.ACTIVITY_DESTROYED]
+         * Call it on the main thread, with the Activity that shows the read, from a person's
+         * action (for example a button), not from `onCreate`.
+         *
+         * **A rotation ends the read.** The read is for this one Activity. When the Activity is
+         * destroyed and made again (a rotation or any other configuration change), the read ends at
+         * once as [ChipReadEnding.EndedBySystem] with [NfcUnavailable.Reason.ACTIVITY_DESTROYED] and
+         * the key is cleared. Starting it again needs a new key and spends another authentication
+         * attempt with the chip. Two ways to avoid it: declare `android:configChanges` for the
+         * orientation and size of the read screen, so the Activity is not destroyed, or lock the
+         * orientation while the read runs. A read that was not started from a person's action but
+         * from `onCreate` also starts again after every rotation, so start it from a button.
+         *
+         * When the read cannot start it ends at once as [ChipReadEnding.NotStarted] with a typed reason: [NfcUnavailable.Reason.ACTIVITY_DESTROYED]
          * for an Activity that is finishing or destroyed, `NOT_SUPPORTED`, `DISABLED`,
          * `NOT_PERMITTED` or `REQUEST_REFUSED` as [NfcReaderMode.enable] reports them, and
          * `READ_IN_PROGRESS` for a second read at once. The SDK does not ask whether [activity] is
-         * resumed: the platform applies reader mode when it resumes. When [activity] is destroyed
-         * during the read (a rotation, for example) the read ends as [ChipReadEnding.EndedBySystem]
-         * with [NfcUnavailable.Reason.ACTIVITY_DESTROYED]; see the class documentation. The read
-         * holds [activity] weakly and lets it go at the ending.
+         * resumed: the platform applies reader mode when it resumes. See the class documentation
+         * for a pause in the middle of a read. The read holds [activity] weakly and lets it go at
+         * the ending.
          *
          * The observer is called on the main thread unless [NfcReadSettings.observerOn] says
          * otherwise; it never hears anything before this call returns.

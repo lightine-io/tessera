@@ -11,6 +11,7 @@ import io.lightine.tessera.emrtd.ChipReadEnding
 import io.lightine.tessera.emrtd.ChipReadHandle
 import io.lightine.tessera.emrtd.ChipReadObserver
 import io.lightine.tessera.emrtd.ChipReadOptions
+import io.lightine.tessera.emrtd.ChipReadState
 import io.lightine.tessera.emrtd.ChipReadUpdate
 import io.lightine.tessera.emrtd.ChipSignedFile
 import io.lightine.tessera.emrtd.MrzKeyResult
@@ -38,10 +39,27 @@ fun accessKeyFrom(document: MrzDocument): ChipAccessKey.Mrz? =
             null
         }
     }
+
+// For values a person typed: three strings, with the dates as YYMMDD.
+fun accessKeyFromTyped(documentNumber: String, dateOfBirth: String, dateOfExpiry: String): ChipAccessKey.Mrz? {
+    // First normalise: it trims spaces at both ends and turns a-z into A-Z, and changes nothing else.
+    val fields = ChipAccessKey.Mrz.normalizeTypedFields(documentNumber, dateOfBirth, dateOfExpiry)
+    // Show the person the three values and fields.changedFields, and let them confirm before you go on.
+    show("Check: ${fields.documentNumber} ${fields.dateOfBirth} ${fields.dateOfExpiry}, changed: ${fields.changedFields}")
+    // Then build the key from the normalised values. A typing mistake still builds a key.
+    return when (val result = ChipAccessKey.Mrz.fromTypedFields(fields)) {
+        is MrzKeyResult.Built -> result.key
+        is MrzKeyResult.NotBuilt -> {
+            show("The values cannot be used: ${result.field} ${result.problem}") // names the field, never the value
+            null
+        }
+    }
+}
 // endregion
 
 // region TES-A-166 block 4
 fun startRead(activity: Activity, key: ChipAccessKey): ChipReadHandle {
+    // Call this from the person's action, such as a button, and not from onCreate.
     val options = ChipReadOptions(accessKey = key, checkTime = Clock.System.now())
     // Turns reader mode on for this screen, runs the read, turns it off at the ending.
     return NfcChipRead.start(activity, options, ReadScreen)
@@ -51,9 +69,24 @@ fun startRead(activity: Activity, key: ChipAccessKey): ChipReadHandle {
 // region TES-A-166 block 5
 object ReadScreen : ChipReadObserver {
     // Both calls come on the main thread, in order, and nothing comes before start returns.
-    override fun onUpdate(update: ChipReadUpdate) = show("${update.state} ${update.progress.percent}%")
+    override fun onUpdate(update: ChipReadUpdate) = show("${describe(update.state)} ${update.progress.percent}%")
 
     override fun onEnding(ending: ChipReadEnding) = handle(ending) // exactly once, and last
+}
+
+// Five states are objects, matched by name. Five are classes with values, matched with `is`.
+// With no `else`, the compiler tells you when a later release adds a state.
+fun describe(state: ChipReadState): String = when (state) {
+    ChipReadState.Starting -> "Starting"
+    is ChipReadState.WaitingForDocument -> "Hold the document against the phone (${state.waitedMillis} ms)"
+    ChipReadState.DocumentFound -> "Found, hold still"
+    ChipReadState.Connecting -> "Connecting"
+    is ChipReadState.OpeningAccess -> "Opening access with ${state.protocol}" // protocol can be null
+    is ChipReadState.ReadingFile -> "Reading a file: ${state.bytesRead} of ${state.bytesTotal} bytes"
+    is ChipReadState.AuthenticatingChip -> "Checking the chip with ${state.method}"
+    ChipReadState.CheckingFiles -> "Checking the files"
+    is ChipReadState.LinkLost -> "Connection lost, hold the document again (${state.restartsLeft} tries left)"
+    ChipReadState.Stopping -> "Stopping"
 }
 // endregion
 
@@ -107,6 +140,23 @@ fun showComparison(read: ChipRead) {
 // region TES-A-166 block 8
 fun leaveScreen(read: ChipReadHandle) {
     read.cancel() // safe at any time; reader mode is switched off and the key is cleared by the SDK
+}
+
+// The manifest entry of this screen has
+// android:configChanges="orientation|screenSize|screenLayout|keyboardHidden",
+// so a rotation does not destroy it and does not end the read.
+class ReadActivity : Activity() {
+    private var read: ChipReadHandle? = null
+
+    // Called by the person's button. A key is for one read.
+    fun onReadButton(key: ChipAccessKey) {
+        if (read == null) read = startRead(this, key)
+    }
+
+    override fun onDestroy() {
+        read?.let(::leaveScreen)
+        super.onDestroy()
+    }
 }
 // endregion
 
