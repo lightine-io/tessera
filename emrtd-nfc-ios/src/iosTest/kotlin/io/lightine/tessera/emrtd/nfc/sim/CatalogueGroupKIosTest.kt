@@ -553,7 +553,7 @@ class CatalogueGroupKIosTest {
             val ending = assertIs<ChipReadEnding.Partial>(r.ending, "${r.ending}")
             assertEquals(
                 io.lightine.tessera.types.errors
-                    .NfcTimeout(1_500),
+                    .NfcTimeout(1_500, io.lightine.tessera.types.errors.NfcTimeout.Limit.COMMAND),
                 ending.stoppedBy,
             )
             assertTrue(r.states.any { it is ChipReadState.NoAnswerYet })

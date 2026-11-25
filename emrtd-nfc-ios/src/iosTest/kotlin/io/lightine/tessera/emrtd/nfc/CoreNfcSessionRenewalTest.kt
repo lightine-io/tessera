@@ -590,7 +590,7 @@ class CoreNfcSessionRenewalTest {
             val (read, rec) = startTimed(noEarly)
             step(60_000)
             systemEnds(CoreNfcErrorCode.SESSION_TIMEOUT)
-            assertEquals(NfcTimeout(null), assertIs<ChipReadEnding.EndedBySystem>(rec.ending).reason)
+            assertEquals(NfcTimeout(null, NfcTimeout.Limit.SESSION), assertIs<ChipReadEnding.EndedBySystem>(rec.ending).reason)
             assertEquals(1, ports.size)
             assertNothingLeft(read)
         }
@@ -669,6 +669,27 @@ class CoreNfcSessionRenewalTest {
             main.toList().forEach { it() }
             assertEquals(3, heard.size, "a removed listener is not called")
             assertNothingLeft(read)
+        }
+
+    @Test
+    fun i__readiness__the_rest_is_the_one_set_by_the_read_that_saw_the_end__a_later_read_waits_that_long() =
+        chipReadTest {
+            val caller = CoreNfcReadSettings(observerOn = ObserverThread.CALLER, waitAfterSystemEndMillis = 600)
+            val (first, rec) = startTimed(oneSession(caller))
+            step(1_000)
+            end202()
+            assertIs<ChipReadEnding.EndedBySystem>(rec.ending)
+            assertEquals(600L, assertIs<ChipReadReadiness.NotYet>(env.readiness.current()).remainingMillis)
+            // A later read with a longer rest of its own waits the time readiness said, not its own.
+            val (second, _) = startTimed(oneSession(caller.toBuilder().waitAfterSystemEndMillis(5_000).build()))
+            step(599)
+            assertEquals(1, ports.size, "still resting")
+            step(1)
+            assertEquals(2, ports.size, "the session begins when readiness said Ready")
+            assertEquals(ChipReadReadiness.ReadInProgress, env.readiness.current())
+            second.cancel()
+            step()
+            assertNothingLeft(first)
         }
 
     @Test

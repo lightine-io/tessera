@@ -60,9 +60,12 @@ internal enum class CoreNfcErrorSource {
  *
  * - The device cannot read tags (`unsupportedFeature`): [NfcUnavailable] `NOT_SUPPORTED`.
  * - The entitlement is missing, the Info.plist select identifiers hold no valid entry, or a
- *   command selects an application the list does not hold (`securityViolation`); the system
- *   setting or hardware is not eligible (`ineligible`); or the person has not yet answered the
- *   app's request to use the reader (`accessNotAccepted`): [NfcUnavailable] `NOT_PERMITTED`.
+ *   command selects an application the list does not hold (`securityViolation`):
+ *   [NfcUnavailable] `NOT_PERMITTED`.
+ * - The system setting or hardware is not eligible (`ineligible`): [NfcUnavailable]
+ *   `NOT_ELIGIBLE`.
+ * - The person has not yet accepted or declined the app's request to use the reader
+ *   (`accessNotAccepted`): [NfcUnavailable] `ACCESS_NOT_ANSWERED`.
  * - The radio is off (`radioDisabled`): [NfcUnavailable] `DISABLED`.
  * - The session was ended by the Cancel button (`userCanceled`): [NfcUnavailable]
  *   `CANCELLED_BY_USER`. Core NFC reports the same code when the app ends the session itself;
@@ -74,11 +77,12 @@ internal enum class CoreNfcErrorSource {
  * - The session was already ended (`sessionInvalidated`): [NfcUnavailable] `CLOSED`.
  * - A parameter, its length or its value was refused (`invalidParameter`,
  *   `invalidParameterLength`, `parameterOutOfBound`, `invalidParameters` of a tag command
- *   configuration) or a command was too long (`packetTooLong`): [NfcUnavailable]
- *   `REQUEST_REFUSED`. The request was not carried out; the link to the tag was not lost.
- * - The session's own time limit passed (`sessionTimeout`) or the chip did not answer after the
- *   reader's retries (`retryExceeded`): [NfcTimeout], with no time limit because Core NFC does
- *   not say one.
+ *   configuration): [NfcUnavailable] `REQUEST_REFUSED`. A command was too long
+ *   (`packetTooLong`): [NfcUnavailable] `COMMAND_TOO_LONG`, as on Android. The request was not
+ *   carried out; the link to the tag was not lost.
+ * - The session's own time limit passed (`sessionTimeout`): [NfcTimeout] with limit `SESSION`;
+ *   the chip did not answer after the reader's retries (`retryExceeded`): [NfcTimeout] with limit
+ *   `COMMAND`. Both with no time, because Core NFC does not say one.
  * - A lost or broken link to the tag (`tagConnectionLost`, `tagNotConnected`,
  *   `tagResponseError`): [NfcTagLost].
  * - Anything else: a code of another kind of session (NDEF, payment), a code this list does not
@@ -100,10 +104,11 @@ internal fun nfcErrorFor(
     return when (code) {
         CoreNfcErrorCode.UNSUPPORTED_FEATURE -> NfcUnavailable(NfcUnavailable.Reason.NOT_SUPPORTED)
 
-        CoreNfcErrorCode.SECURITY_VIOLATION,
-        CoreNfcErrorCode.INELIGIBLE,
-        CoreNfcErrorCode.ACCESS_NOT_ACCEPTED,
-        -> NfcUnavailable(NfcUnavailable.Reason.NOT_PERMITTED)
+        CoreNfcErrorCode.SECURITY_VIOLATION -> NfcUnavailable(NfcUnavailable.Reason.NOT_PERMITTED)
+
+        CoreNfcErrorCode.INELIGIBLE -> NfcUnavailable(NfcUnavailable.Reason.NOT_ELIGIBLE)
+
+        CoreNfcErrorCode.ACCESS_NOT_ACCEPTED -> NfcUnavailable(NfcUnavailable.Reason.ACCESS_NOT_ANSWERED)
 
         CoreNfcErrorCode.RADIO_DISABLED -> NfcUnavailable(NfcUnavailable.Reason.DISABLED)
 
@@ -118,13 +123,14 @@ internal fun nfcErrorFor(
         CoreNfcErrorCode.INVALID_PARAMETER,
         CoreNfcErrorCode.INVALID_PARAMETER_LENGTH,
         CoreNfcErrorCode.PARAMETER_OUT_OF_BOUND,
-        CoreNfcErrorCode.PACKET_TOO_LONG,
         CoreNfcErrorCode.TAG_COMMAND_CONFIGURATION_INVALID_PARAMETERS,
         -> NfcUnavailable(NfcUnavailable.Reason.REQUEST_REFUSED)
 
-        CoreNfcErrorCode.SESSION_TIMEOUT,
-        CoreNfcErrorCode.RETRY_EXCEEDED,
-        -> NfcTimeout(null)
+        CoreNfcErrorCode.PACKET_TOO_LONG -> NfcUnavailable(NfcUnavailable.Reason.COMMAND_TOO_LONG)
+
+        CoreNfcErrorCode.SESSION_TIMEOUT -> NfcTimeout(null, NfcTimeout.Limit.SESSION)
+
+        CoreNfcErrorCode.RETRY_EXCEEDED -> NfcTimeout(null, NfcTimeout.Limit.COMMAND)
 
         CoreNfcErrorCode.TAG_CONNECTION_LOST,
         CoreNfcErrorCode.TAG_NOT_CONNECTED,
@@ -145,8 +151,8 @@ internal fun nfcErrorFor(
  * Whether a failed `connect(to:)` with this Core NFC error may be tried again after
  * `restartPolling`: the link to the tag was lost (`tagConnectionLost`, `tagNotConnected`,
  * `tagResponseError`) or the chip did not answer after the reader's retries (`retryExceeded`).
- * Never the session's time limit (`sessionTimeout`), which the mapping also reports as
- * [io.lightine.tessera.types.errors.NfcTimeout]: that session is ending, and restarting its
+ * Never the session's time limit (`sessionTimeout`, an
+ * [io.lightine.tessera.types.errors.NfcTimeout] with limit `SESSION`): that session is ending, and restarting its
  * polling would have no effect (`NFCTagReaderSession.h`, `restartPolling`).
  */
 internal fun connectRetryable(

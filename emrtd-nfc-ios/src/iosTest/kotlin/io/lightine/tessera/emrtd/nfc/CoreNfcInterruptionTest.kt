@@ -138,7 +138,7 @@ class CoreNfcInterruptionTest {
     fun before_a_tag__the_session_time_limit__timeout_and_no_ending_sent() =
         runTest {
             onBegin = { it.events.onInvalidated(sessionEnd(CoreNfcErrorCode.SESSION_TIMEOUT)) }
-            assertEquals(NfcTimeout(null), errorOf { session().connect() })
+            assertEquals(NfcTimeout(null, NfcTimeout.Limit.SESSION), errorOf { session().connect() })
             assertTrue(port.endings.isEmpty())
             aNewSessionReadsLikeAFirstOne()
         }
@@ -214,8 +214,8 @@ class CoreNfcInterruptionTest {
     @Test
     fun connecting__the_session_time_limit_passes__timeout_without_restarting_polling() =
         runTest {
-            onBegin = { it.events.onTagsDetected(listOf(FakeTag(FakeChannel(), connectError = NfcTimeout(null), retryable = false))) }
-            assertEquals(NfcTimeout(null), errorOf { session().connect() })
+            onBegin = { it.events.onTagsDetected(listOf(FakeTag(FakeChannel(), connectError = NfcTimeout(null, NfcTimeout.Limit.SESSION), retryable = false))) }
+            assertEquals(NfcTimeout(null, NfcTimeout.Limit.SESSION), errorOf { session().connect() })
             assertEquals(0, port.restarts)
             assertEquals(listOf<String?>(FAILURE), port.endings)
         }
@@ -373,7 +373,7 @@ class CoreNfcInterruptionTest {
 
             port.events.onInvalidated(sessionEnd(CoreNfcErrorCode.SESSION_TIMEOUT))
 
-            assertEquals(NfcTimeout(null), (call.await() as ApduTransportException).error)
+            assertEquals(NfcTimeout(null, NfcTimeout.Limit.SESSION), (call.await() as ApduTransportException).error)
             assertEquals(1, channel.sent.size)
             aNewSessionReadsLikeAFirstOne()
         }
@@ -381,9 +381,9 @@ class CoreNfcInterruptionTest {
     @Test
     fun during_a_command__the_connected_tag_time_limit__the_chip_error_and_nothing_more_is_sent() =
         runTest {
-            val channel = FakeChannel().apply { error = NfcTimeout(null) }
+            val channel = FakeChannel().apply { error = NfcTimeout(null, NfcTimeout.Limit.COMMAND) }
             val (session, transport) = connected(channel)
-            assertEquals(NfcTimeout(null), errorOf { transport.transceive(READ) })
+            assertEquals(NfcTimeout(null, NfcTimeout.Limit.COMMAND), errorOf { transport.transceive(READ) })
             session.end(FAILURE)
             assertEquals(1, channel.sent.size)
             assertEquals(listOf<String?>(FAILURE), port.endings)

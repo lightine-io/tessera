@@ -23,6 +23,7 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.NfcError
 import io.lightine.tessera.types.errors.NfcTimeout
 import io.lightine.tessera.types.errors.NfcUnavailable
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -157,10 +158,20 @@ import kotlin.time.TimeSource
  *   seconds (22.7 + 2 + 18). A renewed session the system keeps refusing as busy ends it this way too, with
  *   [NfcUnavailable.Reason.BUSY]: the read had started.
  * - Before a document was found, and before any new session: NFC missing on the device, the
- *   entitlement or the Info.plist entries missing, the radio off, or the reader busy (after the
- *   tries of [CoreNfcReadSettings.busyRetryMillis]): [ChipReadEnding.NotStarted] with the reason.
- *   After a document was found, or after a new session, the radio off or a busy reader is
- *   [ChipReadEnding.EndedBySystem].
+ *   entitlement or the Info.plist entries missing (`NOT_PERMITTED`, Core NFC's code 2), the device
+ *   not eligible (`NOT_ELIGIBLE`, code 7), the person's answer to the app's request to use the
+ *   reader still missing (`ACCESS_NOT_ANSWERED`, code 8), the radio off, or the reader busy (after
+ *   the tries of [CoreNfcReadSettings.busyRetryMillis]): [ChipReadEnding.NotStarted] with the
+ *   reason, and Core NFC's code in [ChipReadEnding.systemCode]. After a document was found, or
+ *   after a new session, the radio off or a busy reader is [ChipReadEnding.EndedBySystem].
+ * - A document found whose link cannot be set up 3 times in a row (Core NFC's connect fails with
+ *   a lost tag or no answer each time): [ChipReadEnding.Failed] with
+ *   [io.lightine.tessera.types.errors.NfcNoAnswer] when no try got past the first commands, the
+ *   same ending as on Android.
+ * - The time limit of the system session passes: [ChipReadEnding.EndedBySystem] with an
+ *   [io.lightine.tessera.types.errors.NfcTimeout] whose limit is `SESSION`.
+ * - A fault the SDK does not expect ends the read once with [ChipReadEnding.Failed] and
+ *   [NfcUnavailable.Reason.UNEXPECTED_FAULT]; it never leaves the read as an exception.
  *
  * The app needs the same entitlement and Info.plist entries as [CoreNfcSession] (see there).
  *
@@ -252,10 +263,16 @@ public class CoreNfcChipRead internal constructor(
             env.scope.launch {
                 try {
                     run()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
+                    // A fault the read does not expect ends it once, named as such, and never
+                    // leaves the read's coroutine: on Kotlin/Native an uncaught one ends the process.
+                    coordinator.fail(UNEXPECTED_FAULT)
                 } finally {
                     stopTransport(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
                     // Every path above ends the read; this only guards against a path that did not.
-                    if (!coordinator.isEnded) coordinator.fail(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
+                    if (!coordinator.isEnded) coordinator.fail(UNEXPECTED_FAULT)
                 }
             }
         if (coordinator.isEnded) job?.cancel()
@@ -313,12 +330,17 @@ public class CoreNfcChipRead internal constructor(
             }
             handoverWaitEnds = null
             if (failure != null) {
-                if (failure.retryable && ++failedConnects < MAX_CONNECT_ATTEMPTS) {
-                    coordinator.connectionFailed()
-                    restartPolling(session.owned)
-                    continue
+                if (failure.retryable) {
+                    if (++failedConnects < MAX_CONNECT_ATTEMPTS) {
+                        coordinator.connectionFailed()
+                        restartPolling(session.owned)
+                        continue
+                    }
+                    // The found chip never let the link be set up: no answer, as on Android.
+                    coordinator.connectsFailed(failure.error, failure.systemCode?.toInt())
+                    return
                 }
-                endAfterConnect(failure.error)
+                endAfterConnect(failure.error, failure.systemCode)
                 return
             }
             failedConnects = 0
@@ -416,13 +438,16 @@ public class CoreNfcChipRead internal constructor(
 
     /**
      * In the Starting state: the previous read's session must be released (at most
-     * [RELEASE_WAIT_LIMIT_MILLIS] after that read ended), and the system rested.
+     * [RELEASE_WAIT_LIMIT_MILLIS] after that read ended), and the system rested until the time
+     * the registry holds: set by the read that saw the system's last end, with its own
+     * [CoreNfcReadSettings.waitAfterSystemEndMillis]. The same time [readiness] counts, so a
+     * [ChipReadReadiness.NotYet] is the wait a read started now takes.
      */
     private suspend fun waitForThePreviousSession() {
         val deadline = minOf(env.now() + RELEASE_WAIT_LIMIT_MILLIS, env.registry.releaseDeadline() ?: Long.MAX_VALUE)
         while (env.registry.isReleasing() && env.now() < deadline && !coordinator.isEnded) delay(RELEASE_POLL_MILLIS)
-        val systemEnd = env.registry.lastSystemEnd() ?: return
-        val wait = systemEnd + settings.waitAfterSystemEndMillis - env.now()
+        val readyAt = env.registry.readyAt() ?: return
+        val wait = readyAt - env.now()
         if (wait > 0) delay(wait)
     }
 
@@ -496,7 +521,9 @@ public class CoreNfcChipRead internal constructor(
         refusedOut = true
         env.registry.systemEnded(env.now(), settings.waitAfterSystemEndMillis)
         val busy = NfcUnavailable(NfcUnavailable.Reason.BUSY)
-        if (renewal == 0) coordinator.notStarted(NfcUnavailable.Reason.BUSY) else coordinator.endedBySystem(busy)
+        // Only Core NFC's code 203 ("system is busy") leads here.
+        val code = CoreNfcErrorCode.SYSTEM_IS_BUSY.toInt()
+        if (renewal == 0) coordinator.notStarted(NfcUnavailable.Reason.BUSY, code) else coordinator.endedBySystem(busy, code)
     }
 
     /**
@@ -663,18 +690,25 @@ public class CoreNfcChipRead internal constructor(
      * connect before it calls the session's end, so those causes get the same ending the session
      * end would give, whichever of the two comes first.
      */
-    private fun endAfterConnect(error: NfcError) {
+    private fun endAfterConnect(
+        error: NfcError,
+        systemCode: Long?,
+    ) {
+        val code = systemCode?.toInt()
         when {
             error is NfcUnavailable && error.reason == NfcUnavailable.Reason.CANCELLED_BY_USER -> {
                 coordinator.cancel(ChipReadEnding.Cancelled.By.PERSON)
             }
 
-            error is NfcTimeout || (error is NfcUnavailable && error.reason in SYSTEM_REASONS) -> {
-                coordinator.endedBySystem(error)
+            // The session's time limit: the system's ending. A chip that did not answer the
+            // connect (code 101, limit COMMAND) is retryable and never comes here.
+            (error is NfcTimeout && error.limit == NfcTimeout.Limit.SESSION) ||
+                (error is NfcUnavailable && error.reason in SYSTEM_REASONS) -> {
+                coordinator.endedBySystem(error, code)
             }
 
             else -> {
-                coordinator.fail(error)
+                coordinator.fail(error, code)
             }
         }
     }
@@ -794,30 +828,31 @@ public class CoreNfcChipRead internal constructor(
             env.registry.systemEnded(env.now(), settings.waitAfterSystemEndMillis)
         }
         val renewed = locked { renewalsUsed > 0 }
+        val code = systemCode?.toInt()
         when {
             error is NfcUnavailable && error.reason == NfcUnavailable.Reason.CANCELLED_BY_USER -> {
                 coordinator.cancel(ChipReadEnding.Cancelled.By.PERSON)
             }
 
             error is NfcUnavailable && error.reason in NOT_STARTED_REASONS && !documentSeen && !renewed -> {
-                coordinator.notStarted(error.reason)
+                coordinator.notStarted(error.reason, code)
             }
 
             error is NfcUnavailable && error.reason in SYSTEM_REASONS -> {
-                coordinator.endedBySystem(error)
+                coordinator.endedBySystem(error, code)
             }
 
             error is NfcTimeout -> {
-                coordinator.endedBySystem(error)
+                coordinator.endedBySystem(error, code)
             }
 
             // After a renewal the read had started: the system's ending, not "not started".
             error is NfcUnavailable && error.reason in NOT_STARTED_REASONS && !documentSeen -> {
-                coordinator.endedBySystem(error)
+                coordinator.endedBySystem(error, code)
             }
 
             else -> {
-                coordinator.fail(error)
+                coordinator.fail(error, code)
             }
         }
         stopTransport(error)
@@ -1141,9 +1176,15 @@ public class CoreNfcChipRead internal constructor(
          * with the same name and return type, as `NfcChipRead.availability(context)` and
          * `NfcReaderMode.availability(context)` on Android.
          *
+         * It covers what Core NFC can tell before a session: whether the device can read tags at
+         * all (`NFCReaderSession.readingAvailable`). Core NFC has no call for whether the radio is
+         * switched off, whether the app's entitlement and Info.plist entries are right, whether
+         * the device is eligible, or whether the person has answered the app's request to use the
+         * reader: each of these shows only when a read starts, as [ChipReadEnding.NotStarted] with
+         * its reason.
+         *
          * @return `null` when reading is available; otherwise [NfcUnavailable.Reason.NOT_SUPPORTED]:
-         *   this device cannot read chips. A missing entitlement or Info.plist entry, or a reader
-         *   that is busy, shows only when a read starts, as [ChipReadEnding.NotStarted].
+         *   this device cannot read chips.
          * @since 1.0.0
          */
         public fun availability(): NfcUnavailable.Reason? = availability(::platformReadingAvailable)
@@ -1171,14 +1212,28 @@ public class CoreNfcChipRead internal constructor(
          * [io.lightine.tessera.emrtd.ChipReadState.Starting], and tries again when the system
          * still refuses ([CoreNfcReadSettings.busyRetryMillis]).
          *
+         * The rest after a system end is the one set by the read that saw that end, with its own
+         * [CoreNfcReadSettings.waitAfterSystemEndMillis]; a later read waits until the same time
+         * whatever its own setting, so [ChipReadReadiness.NotYet.remainingMillis] is the wait a
+         * read started now takes.
+         *
+         * [ChipReadReadiness.Unavailable] covers only what [availability] covers. Core NFC gives
+         * no signal while the app runs that the radio was switched off system-wide: each call
+         * asks [availability] afresh, and a radio that is off shows when a read starts, as
+         * [ChipReadEnding.NotStarted] with [NfcUnavailable.Reason.DISABLED].
+         *
          * @return The readiness now.
          * @since 1.0.0
          */
         public fun readiness(): ChipReadReadiness = CoreNfcReadEnvironment.process.readiness.current()
 
         /**
-         * Registers [listener] to hear when [readiness] changes kind, on the main queue. Not called
-         * at registration: register, then ask [readiness]. The SDK holds the listener until
+         * Registers [listener] to hear when [readiness] changes kind, on the main queue: a read of
+         * this app starting ([ChipReadReadiness.ReadInProgress]), ending (then
+         * [ChipReadReadiness.NotYet] while a new read would wait), and the wait running out
+         * ([ChipReadReadiness.Ready], told with no other event). Not called at registration:
+         * register, then ask [readiness]. Core NFC has no signal for the radio being switched on
+         * or off, so no call comes for that. The SDK holds the listener until
          * [ChipReadReadinessRegistration.remove].
          *
          * @param listener Called with each new value.
@@ -1245,7 +1300,11 @@ public class CoreNfcChipRead internal constructor(
             env: CoreNfcReadEnvironment,
         ): CoreNfcChipRead = CoreNfcChipRead(options, texts, settings, observer, env).also { it.begin() }
 
-        /** The system session's time limit as Core NFC's headers state it: 60 seconds. */
+        /**
+         * The system session's time limit: 60 seconds. Core NFC's headers state it only for NDEF
+         * and VAS reader sessions (`NFCNDEFReaderSession.h`, `NFCVASReaderSession.h`); for tag
+         * reader sessions the figure comes from the vendor's engineers, and devices behave so.
+         */
         internal const val SESSION_LIMIT_MILLIS = 60_000L
 
         /** No new start after a lost link when less than this is left of the session. */
@@ -1318,6 +1377,9 @@ public class CoreNfcChipRead internal constructor(
 
         private val CLOSED = NfcUnavailable(NfcUnavailable.Reason.CLOSED)
 
+        /** The ending's error for a fault the read did not expect. */
+        private val UNEXPECTED_FAULT = NfcUnavailable(NfcUnavailable.Reason.UNEXPECTED_FAULT)
+
         /** Failed connects in a row (a lost link, no answer) after which the read ends. */
         private const val MAX_CONNECT_ATTEMPTS = ChipReadCoordinator.MAX_CONNECT_ATTEMPTS
 
@@ -1329,6 +1391,8 @@ public class CoreNfcChipRead internal constructor(
             setOf(
                 NfcUnavailable.Reason.NOT_SUPPORTED,
                 NfcUnavailable.Reason.NOT_PERMITTED,
+                NfcUnavailable.Reason.NOT_ELIGIBLE,
+                NfcUnavailable.Reason.ACCESS_NOT_ANSWERED,
                 NfcUnavailable.Reason.DISABLED,
                 NfcUnavailable.Reason.BUSY,
             )
@@ -1449,6 +1513,9 @@ internal class ChipReadRegistry {
     }
 
     fun lastSystemEnd(): Long? = locked { lastSystemEnd }
+
+    /** When a new read may begin a session after the system's last end, as the read that saw it set it; `null` before any. */
+    fun readyAt(): Long? = locked { readyAt }
 
     /** What the readiness is made of, read under one lock. */
     fun snapshot(): Snapshot =

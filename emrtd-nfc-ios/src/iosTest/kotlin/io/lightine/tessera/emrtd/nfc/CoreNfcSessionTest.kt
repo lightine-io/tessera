@@ -88,7 +88,7 @@ class CoreNfcSessionTest {
             val chip = FakeTag(FakeChannel())
             onBegin = {
                 it.events.onTagsDetected(listOf(FakeTag(FakeChannel(), connectError = NfcTagLost)))
-                it.events.onTagsDetected(listOf(FakeTag(FakeChannel(), connectError = NfcTimeout(null), retryable = true)))
+                it.events.onTagsDetected(listOf(FakeTag(FakeChannel(), connectError = NfcTimeout(null, NfcTimeout.Limit.COMMAND), retryable = true)))
                 assertEquals(2, it.restarts)
                 assertFalse(it.invalidated)
                 it.events.onTagsDetected(listOf(chip))
@@ -198,7 +198,7 @@ class CoreNfcSessionTest {
 
     // The system's time limit ends the session the app forgot. A separate function, as isAlive.
     private fun reportSystemEnd(weak: WeakReference<FakeSessionPort>) {
-        weak.value!!.events.onInvalidated(NfcTimeout(null))
+        weak.value!!.events.onInvalidated(NfcTimeout(null, NfcTimeout.Limit.SESSION))
     }
 
     @Test
@@ -211,8 +211,8 @@ class CoreNfcSessionTest {
     @Test
     fun the_session_time_limit_is_a_timeout() =
         runTest {
-            onBegin = { it.events.onInvalidated(NfcTimeout(null)) }
-            assertEquals(NfcTimeout(null), errorOf { session().connect() })
+            onBegin = { it.events.onInvalidated(NfcTimeout(null, NfcTimeout.Limit.SESSION)) }
+            assertEquals(NfcTimeout(null, NfcTimeout.Limit.SESSION), errorOf { session().connect() })
         }
 
     @Test

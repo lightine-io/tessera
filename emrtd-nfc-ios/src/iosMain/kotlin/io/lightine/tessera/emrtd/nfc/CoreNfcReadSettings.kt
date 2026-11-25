@@ -51,7 +51,9 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  * @property waitAfterSystemEndMillis How long a new read waits before it begins a system session
  *   when the previous one was ended by the system (its time limit, the app leaving the screen) or
  *   refused because the reader was busy. Default 1000. A read ended by the app or the person
- *   needs no wait.
+ *   needs no wait. The read that sees the system's end sets the rest with its own value; a later
+ *   read waits until that time, whatever its own value, and
+ *   [io.lightine.tessera.emrtd.ChipReadReadiness.NotYet] counts the same time.
  * @property telemetry Where the read's step events go (step, protocol, status word, file id, byte
  *   count, time): the sink you give here. With `null`, the default, the sink registered in
  *   `TelemetrySinkRegistry` when the read starts, which is a sink that drops everything when none

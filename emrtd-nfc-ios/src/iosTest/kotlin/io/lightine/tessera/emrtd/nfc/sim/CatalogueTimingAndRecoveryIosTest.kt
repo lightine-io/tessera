@@ -139,6 +139,17 @@ class CatalogueTimingAndRecoveryIosTest {
             assertEquals(3, ending.attempts)
         }
 
+    /** G8 (TES-346): a found chip that never answers the connect ends as no answer, the same as on Android. */
+    @Test
+    fun i04_threeConnectsTheChipDoesNotAnswer_failedWithNoAnswer() =
+        simTest { flow ->
+            repeat(3) { connectFailures += NfcTimeout(null, NfcTimeout.Limit.COMMAND) }
+            val r = read(deviceOptions(flow))
+            val ending = assertIs<ChipReadEnding.Failed>(r.ending)
+            assertEquals(io.lightine.tessera.types.errors.NfcNoAnswer, ending.error)
+            assertEquals(0, ending.attempts)
+        }
+
     @Test
     fun h12_backAfterALossWithAnotherDocumentAndKey_keyNotAcceptedAndNothingFromEarlier() =
         simTest { flow ->

@@ -161,7 +161,7 @@ public class CoreNfcTransport internal constructor(
                     // Waits without holding any thread. On expiry the command counts as lost: the
                     // transport stops, so nothing more is sent on it and a late answer is dropped.
                     withTimeoutOrNull(limit) { result.await() } ?: run {
-                        val timeout = NfcTimeout(limit)
+                        val timeout = NfcTimeout(limit, NfcTimeout.Limit.COMMAND)
                         stop(timeout)
                         throw ApduTransportException(timeout)
                     }

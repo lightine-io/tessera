@@ -421,8 +421,8 @@ class CoreNfcSearchRestartTest {
                 CoreNfcErrorCode.UNSUPPORTED_FEATURE to Reason.NOT_SUPPORTED,
                 CoreNfcErrorCode.SECURITY_VIOLATION to Reason.NOT_PERMITTED,
                 CoreNfcErrorCode.RADIO_DISABLED to Reason.DISABLED,
-                CoreNfcErrorCode.INELIGIBLE to Reason.NOT_PERMITTED,
-                CoreNfcErrorCode.ACCESS_NOT_ACCEPTED to Reason.NOT_PERMITTED,
+                CoreNfcErrorCode.INELIGIBLE to Reason.NOT_ELIGIBLE,
+                CoreNfcErrorCode.ACCESS_NOT_ACCEPTED to Reason.ACCESS_NOT_ANSWERED,
                 CoreNfcErrorCode.SYSTEM_IS_BUSY to Reason.BUSY,
             )
         for ((code, reason) in codes) {
@@ -432,6 +432,8 @@ class CoreNfcSearchRestartTest {
                 val (read, rec) = startTimed(oneSession(CoreNfcReadSettings(telemetry = ends)))
                 val ending = assertIs<ChipReadEnding.NotStarted>(rec.ending, "code $code")
                 assertEquals(reason, ending.reason)
+                // The raw code also reaches the app, on the ending, not only the telemetry sink.
+                assertEquals(code.toInt(), ending.systemCode)
                 val end = ends.events.single()
                 assertEquals(code.toInt(), end.systemCode)
                 assertEquals(0L, end.durationMillis)
@@ -448,7 +450,7 @@ class CoreNfcSearchRestartTest {
             val ends = SessionEnds()
             val (read, _) = startTimed(CoreNfcReadSettings(telemetry = ends))
             step(1_000)
-            port.systemEnd(NfcTimeout(null), systemCodeOf("SomeOtherDomain", 5))
+            port.systemEnd(NfcTimeout(null, NfcTimeout.Limit.SESSION), systemCodeOf("SomeOtherDomain", 5))
             step()
             assertNull(ends.events.single().systemCode)
             assertNothingLeft(read)

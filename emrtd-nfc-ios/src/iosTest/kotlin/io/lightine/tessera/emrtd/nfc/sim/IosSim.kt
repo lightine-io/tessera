@@ -7,6 +7,7 @@ import io.lightine.tessera.emrtd.fakechip.ScriptedChip
 import io.lightine.tessera.emrtd.fakechip.SimRecorder
 import io.lightine.tessera.telemetry.TelemetrySink
 import io.lightine.tessera.types.errors.NfcError
+import io.lightine.tessera.types.errors.NfcTimeout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -79,7 +80,11 @@ internal class ScriptedTag(
     override fun connect(onDone: (failure: ConnectFailure?) -> Unit) {
         val failure = sim.connectFailures.removeFirstOrNull()
         if (failure != null) {
-            sim.later(sim.connectMillis) { onDone(ConnectFailure(failure, failure is io.lightine.tessera.types.errors.NfcTagLost)) }
+            // As Core NFC: a lost tag (100) and a chip that did not answer (101) may be tried again.
+            val retryable =
+                failure is io.lightine.tessera.types.errors.NfcTagLost ||
+                    (failure is NfcTimeout && failure.limit == NfcTimeout.Limit.COMMAND)
+            sim.later(sim.connectMillis) { onDone(ConnectFailure(failure, retryable)) }
             return
         }
         sim.script.newLink()

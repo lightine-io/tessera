@@ -66,6 +66,9 @@ internal class ChipReadHarness(
     /** What each opened session was asked to poll for, in order. */
     val pollings = mutableListOf<CoreNfcPolling>()
     var readingAvailable = true
+
+    /** When set, asking whether reading is available throws it: a fault the read does not expect. */
+    var readingFault: Throwable? = null
     var reportEnd = true
     var onBegin: (FakeSessionPort) -> Unit = {}
 
@@ -84,7 +87,10 @@ internal class ChipReadHarness(
 
     val env =
         CoreNfcReadEnvironment(
-            readingAvailable = { readingAvailable },
+            readingAvailable = {
+                readingFault?.let { throw it }
+                readingAvailable
+            },
             openSession = { events, polling ->
                 pollings += polling
                 FakeSessionPort(events).also {

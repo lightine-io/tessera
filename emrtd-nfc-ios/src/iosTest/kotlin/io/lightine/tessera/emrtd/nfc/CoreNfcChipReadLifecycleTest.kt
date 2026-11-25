@@ -105,7 +105,7 @@ class CoreNfcChipReadLifecycleTest {
             step(1_999)
             assertTrue(rec.endings.isEmpty(), "still waiting just before the limit")
             step(1)
-            assertEquals(NfcTimeout(CoreNfcReadSettings.DEFAULT_READ_TIMEOUT_MILLIS), stoppedBy(rec.ending))
+            assertEquals(NfcTimeout(CoreNfcReadSettings.DEFAULT_READ_TIMEOUT_MILLIS, NfcTimeout.Limit.COMMAND), stoppedBy(rec.ending))
             // Lost after the plain chip was opened: what was read is kept.
             assertEquals(listOf<String?>(PARTIAL), port.endings)
             chip.held.single().invoke(byteArrayOf(0x90.toByte(), 0x00), null)
@@ -194,7 +194,7 @@ class CoreNfcChipReadLifecycleTest {
             step(400)
             assertTrue(rec.endings.isEmpty())
             systemEnds(201)
-            assertEquals(NfcTimeout(null), assertIs<ChipReadEnding.EndedBySystem>(rec.ending).reason)
+            assertEquals(NfcTimeout(null, NfcTimeout.Limit.SESSION), assertIs<ChipReadEnding.EndedBySystem>(rec.ending).reason)
             assertNothingLeft(read)
         }
 
@@ -262,7 +262,7 @@ class CoreNfcChipReadLifecycleTest {
             assertTrue(rec.endings.isEmpty())
             systemEnds(CoreNfcErrorCode.SESSION_TIMEOUT)
             val ending = assertIs<ChipReadEnding.EndedBySystem>(rec.ending)
-            assertEquals(NfcTimeout(null), ending.reason)
+            assertEquals(NfcTimeout(null, NfcTimeout.Limit.SESSION), ending.reason)
             assertTrue(port.endings.isEmpty())
             assertNothingLeft(read)
         }
@@ -333,9 +333,57 @@ class CoreNfcChipReadLifecycleTest {
             assertEquals(2, port.restarts)
             present(FakeChipTag(chip, ConnectFailure(NfcTagLost, retryable = true)))
             step(400)
-            assertEquals(NfcTagLost, stoppedBy(rec.ending))
+            // The found chip never let the link be set up: no answer, the same ending as on Android.
+            assertEquals(NfcNoAnswer, stoppedBy(rec.ending))
             assertEquals(0, rec.ending.attempts, "no command was sent")
-            assertEquals(listOf<String?>(FAILED), port.endings)
+            assertEquals(listOf<String?>("No answer from the chip. Try another position."), port.endings)
+            assertNothingLeft(read)
+        }
+
+    @Test
+    fun connect__a_chip_that_does_not_answer_three_connects__code_101__fails_with_no_answer_not_a_system_ending() =
+        chipReadTest {
+            val chip = FakeChip()
+            val (read, rec) = start()
+            val noAnswer = ConnectFailure(NfcTimeout(null, NfcTimeout.Limit.COMMAND), retryable = true, systemCode = CoreNfcErrorCode.RETRY_EXCEEDED)
+            repeat(3) {
+                present(FakeChipTag(chip, noAnswer))
+                step(400)
+            }
+            val ending = assertIs<ChipReadEnding.Failed>(rec.ending)
+            assertEquals(NfcNoAnswer, ending.error)
+            assertEquals(0, ending.attempts)
+            assertEquals(101, ending.systemCode)
+            assertNothingLeft(read)
+        }
+
+    @Test
+    fun fault__an_exception_the_read_does_not_expect_ends_it_once_and_never_leaves_it() =
+        chipReadTest {
+            val (read, rec) = start()
+            val throwing =
+                object : DetectedTag {
+                    override val iso7816: Iso7816Channel = FakeChip()
+
+                    override fun connect(onDone: (failure: ConnectFailure?) -> Unit): Unit = throw IllegalStateException("a platform fault")
+                }
+            present(throwing)
+            step(400)
+            val ending = assertIs<ChipReadEnding.Failed>(rec.ending)
+            assertEquals(NfcUnavailable(Reason.UNEXPECTED_FAULT), ending.error)
+            assertEquals(1, rec.endings.size)
+            assertNothingLeft(read)
+        }
+
+    @Test
+    fun fault__an_exception_before_any_session_ends_the_read_once_as_an_unexpected_fault() =
+        chipReadTest {
+            readingFault = IllegalStateException("a platform fault")
+            val (read, rec) = start()
+            step(100)
+            assertEquals(NfcUnavailable(Reason.UNEXPECTED_FAULT), assertIs<ChipReadEnding.Failed>(rec.ending).error)
+            assertEquals(1, rec.endings.size)
+            assertTrue(ports.isEmpty())
             assertNothingLeft(read)
         }
 
@@ -393,13 +441,17 @@ class CoreNfcChipReadLifecycleTest {
     private fun expectedBeforeDocument(code: Long): (ChipReadEnding) -> Boolean =
         when (code) {
             1L -> { e -> e is ChipReadEnding.NotStarted && e.reason == Reason.NOT_SUPPORTED }
-            2L, 7L, 8L -> { e -> e is ChipReadEnding.NotStarted && e.reason == Reason.NOT_PERMITTED }
+            2L -> { e -> e is ChipReadEnding.NotStarted && e.reason == Reason.NOT_PERMITTED }
+            7L -> { e -> e is ChipReadEnding.NotStarted && e.reason == Reason.NOT_ELIGIBLE }
+            8L -> { e -> e is ChipReadEnding.NotStarted && e.reason == Reason.ACCESS_NOT_ANSWERED }
             6L -> { e -> e is ChipReadEnding.NotStarted && e.reason == Reason.DISABLED }
             203L -> { e -> e is ChipReadEnding.NotStarted && e.reason == Reason.BUSY }
             200L -> { e -> e is ChipReadEnding.Cancelled && e.by == ChipReadEnding.Cancelled.By.PERSON }
-            201L, 101L -> { e -> e is ChipReadEnding.EndedBySystem && e.reason == NfcTimeout(null) }
+            201L -> { e -> e is ChipReadEnding.EndedBySystem && e.reason == NfcTimeout(null, NfcTimeout.Limit.SESSION) }
+            101L -> { e -> e is ChipReadEnding.EndedBySystem && e.reason == NfcTimeout(null, NfcTimeout.Limit.COMMAND) }
             103L -> { e -> e is ChipReadEnding.EndedBySystem && e.reason == NfcUnavailable(Reason.CLOSED) }
-            3L, 4L, 5L, 105L, 300L -> { e -> e is ChipReadEnding.Failed && e.error == NfcUnavailable(Reason.REQUEST_REFUSED) }
+            3L, 4L, 5L, 300L -> { e -> e is ChipReadEnding.Failed && e.error == NfcUnavailable(Reason.REQUEST_REFUSED) }
+            105L -> { e -> e is ChipReadEnding.Failed && e.error == NfcUnavailable(Reason.COMMAND_TOO_LONG) }
             100L, 102L, 104L -> { e -> e is ChipReadEnding.Failed && e.error == NfcTagLost }
             else -> { e -> e is ChipReadEnding.EndedBySystem && e.reason == NfcUnavailable(Reason.ENDED_BY_SYSTEM) }
         }
@@ -415,6 +467,8 @@ class CoreNfcChipReadLifecycleTest {
                 val (read, rec) = start(settings = oneSession())
                 systemEnds(code)
                 assertTrue(expectedBeforeDocument(code)(rec.ending), "code $code gave ${rec.ending}")
+                // Core NFC's raw code reaches the ending as a fact (the person's Cancel has no field for it).
+                if (rec.ending !is ChipReadEnding.Cancelled) assertEquals(code.toInt(), rec.ending.systemCode, "code $code")
                 assertTrue(port.endings.isEmpty(), "code $code")
                 assertNothingLeft(read)
                 step(2_000) // past the wait after a system end
@@ -430,7 +484,7 @@ class CoreNfcChipReadLifecycleTest {
                     203L to { e -> e is ChipReadEnding.EndedBySystem && e.reason == NfcUnavailable(Reason.BUSY) },
                     2L to { e -> e is ChipReadEnding.Failed && e.error == NfcUnavailable(Reason.NOT_PERMITTED) },
                     200L to { e -> e is ChipReadEnding.Cancelled && e.by == ChipReadEnding.Cancelled.By.PERSON },
-                    201L to { e -> e is ChipReadEnding.EndedBySystem && e.reason == NfcTimeout(null) },
+                    201L to { e -> e is ChipReadEnding.EndedBySystem && e.reason == NfcTimeout(null, NfcTimeout.Limit.SESSION) },
                     202L to { e -> e is ChipReadEnding.EndedBySystem && e.reason == NfcUnavailable(Reason.ENDED_BY_SYSTEM) },
                 )
             for ((code, expected) in cases) {

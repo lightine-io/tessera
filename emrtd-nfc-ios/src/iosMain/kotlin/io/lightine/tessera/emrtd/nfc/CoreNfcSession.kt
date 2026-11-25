@@ -69,9 +69,11 @@ import kotlin.coroutines.cancellation.CancellationException
  *
  * ## Time limits
  *
- * - Core NFC's headers state a limit of 60 seconds after a reader session begins (in
- *   `NFCNDEFReaderSession.h`; `NFCTagReaderSession.h` does not repeat it). When the limit passes,
- *   the session ends with [io.lightine.tessera.types.errors.NfcTimeout].
+ * - Core NFC's headers state a limit of 60 seconds after a reader session begins only for NDEF
+ *   and VAS sessions (`NFCNDEFReaderSession.h`, `NFCVASReaderSession.h`; `NFCTagReaderSession.h`
+ *   does not repeat it); the vendor's engineers state the same for tag sessions. When the limit
+ *   passes, the session ends with an [io.lightine.tessera.types.errors.NfcTimeout] whose limit is
+ *   `SESSION`.
  * - An engineer of the vendor has stated, outside the headers, two more limits: a connected tag
  *   gets about 20 seconds, and a new session started right after one ends may be refused for a
  *   short time. The headers do not state either; plan the read to be short, and let the person
@@ -96,15 +98,17 @@ import kotlin.coroutines.cancellation.CancellationException
  *
  * [connect] throws [ApduTransportException], whose `error` is:
  * - [NfcUnavailable] `NOT_SUPPORTED` when the device cannot read NFC tags; `NOT_PERMITTED` when
- *   the entitlement is missing, the select identifiers in Info.plist hold no valid entry, or the
- *   system does not allow the app to read; `DISABLED` when the radio is off; `BUSY` when Core NFC
+ *   the entitlement is missing or the select identifiers in Info.plist hold no valid entry;
+ *   `NOT_ELIGIBLE` when the system setting or hardware is not eligible; `ACCESS_NOT_ANSWERED`
+ *   when the person has not yet answered the app's request to use the reader; `DISABLED` when
+ *   the radio is off; `BUSY` when Core NFC
  *   is busy for now (Core NFC calls this temporary: wait, then try again); `CANCELLED_BY_USER`
  *   when the person ended the sheet; `CLOSED` when the app called [end]; `ENDED_BY_SYSTEM` when
  *   the system ended the session on its own, for a reason the SDK is not told (the headers name
  *   one case: the app went to the background); `REQUEST_REFUSED` when Core NFC refused a request,
  *   such as a session setting or a command it does not accept;
- * - [io.lightine.tessera.types.errors.NfcTimeout] when the session's own time limit passed
- *   before a chip was connected.
+ * - [io.lightine.tessera.types.errors.NfcTimeout] with limit `SESSION` when the session's own
+ *   time limit passed before a chip was connected.
  *
  * Once the session ends, the transport's [CoreNfcTransport.transceive] throws the same error. The
  * transport keeps the system session alive while it runs, so a read goes on even when your app

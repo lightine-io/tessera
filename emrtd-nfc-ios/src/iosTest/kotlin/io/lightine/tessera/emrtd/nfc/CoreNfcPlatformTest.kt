@@ -74,7 +74,7 @@ class CoreNfcPlatformTest {
                 completion(null, 0.toUByte(), 0.toUByte(), NSError.errorWithDomain(NFCErrorDomain, code, null))
             }.error
 
-        assertEquals(NfcUnavailable(Reason.REQUEST_REFUSED), errorFor(CoreNfcErrorCode.PACKET_TOO_LONG))
+        assertEquals(NfcUnavailable(Reason.COMMAND_TOO_LONG), errorFor(CoreNfcErrorCode.PACKET_TOO_LONG))
         assertEquals(NfcTagLost, errorFor(CoreNfcErrorCode.TAG_CONNECTION_LOST))
         assertEquals(NfcTagLost, errorFor(9_999))
     }

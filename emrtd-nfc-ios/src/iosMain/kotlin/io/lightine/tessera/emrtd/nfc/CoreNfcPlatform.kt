@@ -64,6 +64,8 @@ internal interface DetectedTag {
 internal class ConnectFailure(
     val error: NfcError,
     val retryable: Boolean,
+    // Core NFC's raw code, a fact for the ending; `null` for an error of another domain.
+    val systemCode: Long? = null,
 )
 
 /** What the reader session reports. Called on the session's own serial queue, never the main queue. */
@@ -187,7 +189,11 @@ private class PlatformDetectedTag(
         session.connectToTag(tag) { error: NSError? ->
             onDone(
                 error?.let {
-                    ConnectFailure(nfcErrorFor(it, CoreNfcErrorSource.TAG_OPERATION), connectRetryable(it.domain, it.code))
+                    ConnectFailure(
+                        nfcErrorFor(it, CoreNfcErrorSource.TAG_OPERATION),
+                        connectRetryable(it.domain, it.code),
+                        systemCodeOf(it.domain, it.code),
+                    )
                 },
             )
         }
