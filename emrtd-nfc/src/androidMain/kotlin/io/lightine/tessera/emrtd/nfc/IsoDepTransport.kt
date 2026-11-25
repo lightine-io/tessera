@@ -74,8 +74,11 @@ import kotlin.coroutines.cancellation.CancellationException
  * - [NfcUnavailable] with reason `BUSY` when Android refuses to connect because another
  *   technology of the same tag is connected.
  * - [NfcUnavailable] with reason `NOT_SUPPORTED` when Android cannot connect to ISO-DEP on this
- *   tag (`UnsupportedOperationException`), refuses the time limit, or refuses a command as longer
- *   than its limit.
+ *   tag (`UnsupportedOperationException`).
+ * - [NfcUnavailable] with reason `REQUEST_REFUSED` when Android refuses the time limit
+ *   (`IllegalArgumentException` from `setTimeout`).
+ * - [NfcUnavailable] with reason `COMMAND_TOO_LONG` when Android refuses a command as longer than
+ *   its limit ("Transceive length exceeds supported maximum"), the same reason as on iPhone.
  * - [NfcUnavailable] with reason `CLOSED` when the transport was closed with [close].
  *
  * After the first failure the transport is done: every later [transceive] throws the same error
@@ -394,13 +397,13 @@ public class IsoDepTransport internal constructor(
 
                 // Only setTimeout throws it: the platform refused the time limit.
                 is IllegalArgumentException -> {
-                    NfcUnavailable(NfcUnavailable.Reason.NOT_SUPPORTED)
+                    NfcUnavailable(NfcUnavailable.Reason.REQUEST_REFUSED)
                 }
 
                 is IOException -> {
                     when (e.message) {
                         ONE_TECHNOLOGY_AT_A_TIME -> NfcUnavailable(NfcUnavailable.Reason.BUSY)
-                        LENGTH_EXCEEDED -> NfcUnavailable(NfcUnavailable.Reason.NOT_SUPPORTED)
+                        LENGTH_EXCEEDED -> NfcUnavailable(NfcUnavailable.Reason.COMMAND_TOO_LONG)
                         else -> NfcTagLost
                     }
                 }

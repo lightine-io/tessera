@@ -1,5 +1,6 @@
 package io.lightine.tessera.emrtd.nfc
 
+import android.app.Activity
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.TagLostException
@@ -13,6 +14,7 @@ import io.lightine.tessera.emrtd.ChipReadState
 import io.lightine.tessera.emrtd.ChipReadUpdate
 import io.lightine.tessera.emrtd.LinkLossPolicy
 import io.lightine.tessera.emrtd.ObserverThread
+import io.lightine.tessera.types.errors.NfcNoAnswer
 import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.errors.NfcTimeout
 import io.lightine.tessera.types.errors.NfcUnavailable
@@ -28,6 +30,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.util.Collections
@@ -197,11 +200,20 @@ internal class FakeNfcPlatform(
         return enabled
     }
 
+    /** NFC on, but its option for reading tags off (Android 15 on). */
+    @Volatile var tagReadingOff = false
+
+    override fun isTagReadingOff(adapter: NfcAdapter): Boolean = tagReadingOff
+
+    /** When set, handing out a connection throws it: a platform fault the read does not expect. */
+    @Volatile var connectionFault: RuntimeException? = null
+
     override fun connectionOf(
         tag: Tag,
         timeoutMillis: Long,
         onReleased: () -> Unit,
     ): IsoDepConnection? {
+        connectionFault?.let { throw it }
         if (tag in notIsoDep) return null
         val channel =
             if (tag in gone) {
@@ -424,6 +436,77 @@ class NfcChipReadTest {
         }
 
     @Test
+    fun `NFC on with its option for reading tags off ends the read as not started`() =
+        runTest {
+            val rig = rig()
+            rig.platform.tagReadingOff = true
+            val observer = RecordingChipObserver()
+            rig.start(observer)
+            advanceUntilIdle()
+
+            assertEquals(
+                NfcUnavailable.Reason.TAG_READING_DISABLED,
+                assertIs<ChipReadEnding.NotStarted>(observer.endings.single()).reason,
+            )
+            assertTrue(rig.platform.connections.isEmpty())
+        }
+
+    @Test
+    fun `the option for reading tags switched off while waiting ends the read at the next tick`() =
+        runTest {
+            val rig = rig()
+            val observer = RecordingChipObserver()
+            rig.start(observer)
+            runCurrent()
+            advanceTimeBy(500)
+            rig.platform.tagReadingOff = true
+            advanceTimeBy(1_500)
+            runCurrent()
+
+            val ending = assertIs<ChipReadEnding.EndedBySystem>(observer.endings.single())
+            assertEquals(NfcUnavailable(NfcUnavailable.Reason.TAG_READING_DISABLED), ending.reason)
+        }
+
+    @Test
+    fun `a platform fault the read does not expect ends once as an unexpected fault`() =
+        runTest {
+            val rig = rig()
+            rig.platform.connectionFault = IllegalStateException("a platform fault")
+            val observer = RecordingChipObserver()
+            val read = rig.start(observer)
+            runCurrent()
+            read.onTagDiscovered(aTag())
+            advanceTimeBy(1_000)
+            runCurrent()
+
+            val ending = assertIs<ChipReadEnding.Failed>(observer.endings.single())
+            assertEquals(NfcUnavailable(NfcUnavailable.Reason.UNEXPECTED_FAULT), ending.error)
+            assertTrue(read.isEnded)
+        }
+
+    @Test
+    fun `the callback form ends as not started when the app's reader mode is refused`() =
+        runTest {
+            val rig = rig()
+            val observer = RecordingChipObserver()
+            val read = rig.start(observer)
+            runCurrent()
+            // No NFC feature on the test device: the platform has no adapter for the Activity.
+            val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+
+            val refused = NfcReaderMode.enable(activity, read)
+            advanceTimeBy(1_000)
+            runCurrent()
+
+            assertEquals(NfcUnavailable.Reason.NOT_SUPPORTED, refused)
+            val ending = assertIs<ChipReadEnding.NotStarted>(observer.endings.single())
+            assertEquals(refused, ending.reason)
+            read.cancel()
+            assertOneEnding(observer)
+            assertTrue(rig.env.registry.isLive().not(), "a refused read frees the slot")
+        }
+
+    @Test
     fun `a key whose check digits do not add up ends before anything else and holds no slot`() =
         runTest {
             val rig = rig()
@@ -562,7 +645,7 @@ class NfcChipReadTest {
         }
 
     @Test
-    fun `three failed connects in a row end the read`() =
+    fun `three failed connects in a row end the read with no answer, as on iPhone`() =
         runTest {
             val rig = rig()
             val observer = RecordingChipObserver()
@@ -577,8 +660,9 @@ class NfcChipReadTest {
                 runCurrent()
             }
             val ending = assertIs<ChipReadEnding.Failed>(observer.endings.single())
-            assertEquals(NfcTagLost, ending.error)
+            assertEquals(NfcNoAnswer, ending.error)
             assertEquals(0, ending.attempts)
+            assertNull(ending.systemCode, "Android reports no codes")
             assertTrue(
                 rig.platform.connections.all { (it as ScriptedChipChannel).closeCalls == 0 },
                 "no platform call after a failed connect",
@@ -604,8 +688,10 @@ class NfcChipReadTest {
             advanceTimeBy(1_001)
             runCurrent()
 
-            val ending = assertIs<ChipReadEnding.EndedBySystem>(observer.endings.single())
-            assertEquals(NfcTimeout(5_000), ending.reason)
+            // The app's own limit: neither the system nor the person ended the read.
+            val ending = assertIs<ChipReadEnding.Failed>(observer.endings.single())
+            assertEquals(NfcTimeout(5_000, NfcTimeout.Limit.WAIT_FOR_DOCUMENT), ending.error)
+            assertEquals(0, ending.attempts)
             assertEquals(5_000, currentTime)
             val waits = observer.states().filterIsInstance<ChipReadState.WaitingForDocument>().map { it.waitedMillis }
             assertEquals(0L, waits.first())

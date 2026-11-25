@@ -170,6 +170,8 @@ internal class AndroidSim(
         object : NfcChipPlatform {
             override fun isEnabled(adapter: NfcAdapter): Boolean = enabled
 
+            override fun isTagReadingOff(adapter: NfcAdapter): Boolean = false
+
             override fun connectionOf(
                 tag: Tag,
                 timeoutMillis: Long,

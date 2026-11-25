@@ -289,6 +289,7 @@ class NfcOwnedReadTest {
                 NfcUnavailable.Reason.DISABLED,
                 NfcUnavailable.Reason.NOT_PERMITTED,
                 NfcUnavailable.Reason.REQUEST_REFUSED,
+                NfcUnavailable.Reason.TAG_READING_DISABLED,
             )) {
                 val rig = rig()
                 rig.activities.enableAnswer = reason

@@ -63,8 +63,10 @@ import kotlin.jvm.JvmOverloads
  *   first link to it, counted from the start, across tags whose link could not be set up (on
  *   iPhone the system session's 60-second limit plays this part, so its settings have no such value);
  *   [NO_LIMIT], the default, waits without a limit. When it
- *   passes, the read ends with [ChipReadEnding.EndedBySystem] and [NfcTimeout]. Once a first link
- *   is up it no longer applies: [waitForReturnMillis] bounds the waits after a lost link.
+ *   passes, the read ends with [ChipReadEnding.Failed], 0 attempts, and an [NfcTimeout] with
+ *   limit [NfcTimeout.Limit.WAIT_FOR_DOCUMENT]: your app set this limit, so the ending is not
+ *   [ChipReadEnding.EndedBySystem]. Once a first link is up it no longer applies:
+ *   [waitForReturnMillis] bounds the waits after a lost link.
  * @property presenceCheckDelayMillis How often the platform checks that the document is still
  *   there, set when the Activity-owning start turns reader mode on. Default 1000: the platform's
  *   own 125 ms drops the link of some chips, and a longer delay is a known remedy; whether it helps

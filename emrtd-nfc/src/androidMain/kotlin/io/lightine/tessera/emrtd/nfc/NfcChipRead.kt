@@ -16,6 +16,9 @@ import io.lightine.tessera.emrtd.ChipReadEnding
 import io.lightine.tessera.emrtd.ChipReadHandle
 import io.lightine.tessera.emrtd.ChipReadObserver
 import io.lightine.tessera.emrtd.ChipReadOptions
+import io.lightine.tessera.emrtd.ChipReadReadiness
+import io.lightine.tessera.emrtd.ChipReadReadinessListener
+import io.lightine.tessera.emrtd.ChipReadReadinessRegistration
 import io.lightine.tessera.emrtd.ChipReadUpdate
 import io.lightine.tessera.emrtd.ChipReader
 import io.lightine.tessera.emrtd.HandoffObserver
@@ -92,7 +95,7 @@ import kotlin.jvm.JvmOverloads
  *
  * // In the read screen, once per read, while the screen is shown (onCreate or onResume):
  * NfcReaderMode.enable(activity, read)?.let { reason ->
- *     read.cancel()   // the read cannot get a document: free it
+ *     // The read has already ended with NotStarted(reason): it cannot get a document.
  *     showWhy(reason) // for example "turn NFC on"
  * }
  *
@@ -103,6 +106,8 @@ import kotlin.jvm.JvmOverloads
  *
  * ## Your app and the screen
  *
+ * - [NfcReaderMode.enable] replaces any reader mode your app had turned on for the same Activity,
+ *   as the Activity-owning [start] does: see [NfcReaderMode].
  * - Call [NfcReaderMode.enable] once for each read. The platform turns reader mode off when the
  *   Activity pauses and on again, with the same read, when it resumes: do not call it again in
  *   `onResume`, and never turn reader mode off while a document may be on the phone. After a
@@ -134,8 +139,13 @@ import kotlin.jvm.JvmOverloads
  * - Checks the MRZ key's check digits before anything else: a key that does not add up ends with
  *   [ChipReadEnding.KeyRejected] and nothing is sent (see
  *   [io.lightine.tessera.emrtd.ChipReadOptions.allowCheckDigitMismatch]).
- * - Ends with [ChipReadEnding.NotStarted] when the device has no NFC (`NOT_SUPPORTED`) or NFC is
- *   off (`DISABLED`).
+ * - Ends with [ChipReadEnding.NotStarted] when the device has no NFC (`NOT_SUPPORTED`), NFC is
+ *   off (`DISABLED`), or NFC is on but its option for reading tags is off (`TAG_READING_DISABLED`,
+ *   known from Android 15, API level 35, on).
+ * - When no document is found within [NfcReadSettings.waitForDocumentMillis] (no limit by
+ *   default), ends with [ChipReadEnding.Failed] and an
+ *   [io.lightine.tessera.types.errors.NfcTimeout] with limit `WAIT_FOR_DOCUMENT`, 0 attempts: the
+ *   app set that limit, so it is not [ChipReadEnding.EndedBySystem].
  * - While no document is found, the observer gets
  *   [io.lightine.tessera.emrtd.ChipReadState.WaitingForDocument] again every 2 seconds, with the
  *   time waited. A tag that is not an ISO 14443-4 chip (a transit card, for example) is skipped,
@@ -148,7 +158,9 @@ import kotlin.jvm.JvmOverloads
  *   public-key work and [NfcReadSettings.readTimeoutMillis] for the others, such as reading a
  *   file. The platform's time limit is changed only when the next command needs another. A link that
  *   cannot be set up sends the read back to waiting, with no attempt used; after 3 such failures
- *   in a row the read ends.
+ *   in a row the read ends with [ChipReadEnding.Failed] and
+ *   [io.lightine.tessera.types.errors.NfcNoAnswer] when no try got past the first commands, the
+ *   same ending as on iPhone.
  * - When the chip does not answer before the key is used (found, but with too little power to
  *   answer), reports [io.lightine.tessera.emrtd.ChipReadState.NoAnswerYet] and tries the same
  *   `Tag` again after a short pause, with no restart used, while the person moves the document:
@@ -167,7 +179,12 @@ import kotlin.jvm.JvmOverloads
  *   The Activity-owning form does not try while its Activity is paused (it has no reader mode
  *   then); the wait for the return keeps counting.
  * - When NFC is switched off during the read, ends with [ChipReadEnding.EndedBySystem] and
- *   [NfcUnavailable.Reason.DISABLED], instead of waiting for a document that cannot come.
+ *   [NfcUnavailable.Reason.DISABLED] (or `TAG_READING_DISABLED` for the option for reading tags),
+ *   instead of waiting for a document that cannot come: at once when a command or a connect
+ *   fails, and within 2 seconds while the read waits for a document.
+ * - A fault the SDK does not expect (an exception from the platform's NFC code with no meaning
+ *   the SDK knows) ends the read with [ChipReadEnding.Failed] and
+ *   [NfcUnavailable.Reason.UNEXPECTED_FAULT]; it never reaches the app as an exception.
  * - Closes the link on every path, and the observer is never blocked by it: the read starts the
  *   close right before it hands the ending to the observer, and the platform's close, which talks
  *   to the tag and can take up to the command time limit, runs in the background. The next
@@ -298,13 +315,13 @@ public class NfcChipRead internal constructor(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    // A platform fault the read does not expect still gets an ending.
-                    coordinator.fail(NfcUnavailable(NfcUnavailable.Reason.REQUEST_REFUSED))
+                    // A platform fault the read does not expect still gets an ending, named as such.
+                    coordinator.fail(UNEXPECTED_FAULT)
                 } finally {
                     setIntake(false)
                     closeLink()
                     // Every path above ends the read; this only guards against a path that did not.
-                    if (!coordinator.isEnded) coordinator.fail(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
+                    if (!coordinator.isEnded) coordinator.fail(UNEXPECTED_FAULT)
                 }
             }
         if (coordinator.isEnded) job?.cancel()
@@ -323,6 +340,10 @@ public class NfcChipRead internal constructor(
         }
         if (!env.platform.isEnabled(adapter)) {
             coordinator.notStarted(NfcUnavailable.Reason.DISABLED)
+            return
+        }
+        if (env.platform.isTagReadingOff(adapter)) {
+            coordinator.notStarted(NfcUnavailable.Reason.TAG_READING_DISABLED)
             return
         }
         setIntake(true)
@@ -376,12 +397,18 @@ public class NfcChipRead internal constructor(
                 val error = opened.exceptionOrNull()
                 if (error != null) {
                     if (endIfNfcOff(adapter)) return
-                    if (error is ApduTransportException && error.error.isLinkLevel() && ++failedConnects < MAX_CONNECT_ATTEMPTS) {
-                        // No command was sent: back to waiting, with no attempt used.
-                        coordinator.connectionFailed()
-                        continue
+                    val linkError = (error as? ApduTransportException)?.error
+                    if (linkError != null && linkError.isLinkLevel()) {
+                        if (++failedConnects < MAX_CONNECT_ATTEMPTS) {
+                            // No command was sent: back to waiting, with no attempt used.
+                            coordinator.connectionFailed()
+                            continue
+                        }
+                        // The found chip never let the link be set up: no answer, as on iPhone.
+                        coordinator.connectsFailed(linkError)
+                        return
                     }
-                    coordinator.fail((error as? ApduTransportException)?.error ?: NfcTagLost)
+                    coordinator.fail(linkError ?: NfcTagLost)
                     return
                 }
                 transport = opened.getOrThrow()
@@ -393,7 +420,7 @@ public class NfcChipRead internal constructor(
                 coordinator.read(
                     transport,
                     readAgainAllowed = true,
-                    systemEnd = { if (env.platform.isEnabled(adapter)) null else NfcUnavailable(NfcUnavailable.Reason.DISABLED) },
+                    systemEnd = { nfcOff(adapter)?.let(::NfcUnavailable) },
                     useTimeLimit = { kind -> transport.useTimeLimit(settings.timeoutFor(kind)) },
                 )
             if (outcome == ChipReadAttemptOutcome.ENDED) return
@@ -438,7 +465,8 @@ public class NfcChipRead internal constructor(
                 if (linkedOnce) {
                     coordinator.documentNotReturned()
                 } else {
-                    coordinator.endedBySystem(NfcTimeout(settings.waitForDocumentMillis))
+                    // The app's own limit passed: neither the system nor the person ended the read.
+                    coordinator.fail(NfcTimeout(settings.waitForDocumentMillis, NfcTimeout.Limit.WAIT_FOR_DOCUMENT))
                 }
                 return null
             }
@@ -506,10 +534,26 @@ public class NfcChipRead internal constructor(
         }
     }
 
+    /** Why NFC cannot read tags now: switched off, or its option for reading tags is off; `null` when it can. */
+    private fun nfcOff(adapter: NfcAdapter): NfcUnavailable.Reason? =
+        when {
+            !env.platform.isEnabled(adapter) -> NfcUnavailable.Reason.DISABLED
+            env.platform.isTagReadingOff(adapter) -> NfcUnavailable.Reason.TAG_READING_DISABLED
+            else -> null
+        }
+
     /** Ends the read when NFC was switched off; `true` when the read has ended, by this or before. */
     private fun endIfNfcOff(adapter: NfcAdapter): Boolean {
-        if (!env.platform.isEnabled(adapter)) coordinator.endedBySystem(NfcUnavailable(NfcUnavailable.Reason.DISABLED))
+        nfcOff(adapter)?.let { coordinator.endedBySystem(NfcUnavailable(it)) }
         return coordinator.isEnded
+    }
+
+    /**
+     * The callback form: [NfcReaderMode.enable] could not turn reader mode on for this read, so it
+     * cannot get a document. It ends as not started, as the Activity-owning start does.
+     */
+    internal fun readerModeRefused(reason: NfcUnavailable.Reason) {
+        if (coordinator.notStarted(reason)) job?.cancel()
     }
 
     /** Releases the link in the background: the platform's close talks to the tag. */
@@ -645,11 +689,59 @@ public class NfcChipRead internal constructor(
          * on iPhone.
          *
          * @param context Any context of the app.
-         * @return `null` when NFC is usable; otherwise why it is not.
+         * @return `null` when NFC is usable; otherwise why it is not: `NOT_SUPPORTED`, `DISABLED`,
+         *   or `TAG_READING_DISABLED` (from Android 15, API level 35, on).
          * @since 1.0.0
          */
         @JvmStatic
         public fun availability(context: Context): NfcUnavailable.Reason? = NfcReaderMode.availability(context)
+
+        /**
+         * Whether a read started now is expected to be accepted at once: for a "read the chip"
+         * button. The same question and type as `CoreNfcChipRead.readiness()` on iPhone.
+         * [ChipReadReadiness.Unavailable] as [availability] reports it (no NFC reader, NFC off,
+         * or its option for reading tags off); else [ChipReadReadiness.ReadInProgress] while a
+         * read of this app runs (a start now ends with `NotStarted(READ_IN_PROGRESS)`); else
+         * [ChipReadReadiness.Ready]. Android never reports [ChipReadReadiness.NotYet]: it has no
+         * wait between reads that an app would see (a new read's first link waits for the last
+         * link's close by itself, at most the command time limit, while it already waits for a
+         * document).
+         *
+         * Each call asks the platform afresh. Cheap enough for a screen's `onResume`.
+         *
+         * @param context Any context of the app; only its application context is used.
+         * @return The readiness now.
+         * @since 1.0.0
+         */
+        @JvmStatic
+        public fun readiness(context: Context): ChipReadReadiness = NfcReadEnvironment.process.readiness.current(context)
+
+        /**
+         * Registers [listener] to hear when [readiness] changes kind, on the main thread: when the
+         * person switches NFC on or off (the platform's `ACTION_ADAPTER_STATE_CHANGED` broadcast),
+         * and when a read of this app starts or ends. Not called at registration: register, then
+         * ask [readiness]. A change of the option for reading tags has no broadcast: it shows at
+         * the next of these changes, and in [readiness] when asked.
+         *
+         * The SDK registers one broadcast receiver, with the application context of [context],
+         * while at least one listener is registered, and unregisters it with the last one; it
+         * keeps no Activity. From Android 13 (API level 33) on it is registered as not exported:
+         * the broadcast comes from the system, never from another app. From Android 14 the
+         * system may hold broadcasts back while the app is in the cached state and deliver them
+         * when it returns, so ask [readiness] again in `onResume`. The SDK holds the listener,
+         * and what it refers to, until [ChipReadReadinessRegistration.remove]: remove it when the
+         * screen goes away.
+         *
+         * @param context Any context of the app; only its application context is kept.
+         * @param listener Called with each new value.
+         * @return The registration, to remove the listener.
+         * @since 1.0.0
+         */
+        @JvmStatic
+        public fun addReadinessListener(
+            context: Context,
+            listener: ChipReadReadinessListener,
+        ): ChipReadReadinessRegistration = NfcReadEnvironment.process.readiness.add(context, listener)
 
         /**
          * Starts a read whose reader mode your app runs. Returns at once; the read waits for reader
@@ -718,6 +810,12 @@ public class NfcChipRead internal constructor(
          * @param observer Gets every update and exactly one ending.
          * @param settings What to do after a lost link, the time limits, reader mode and the
          *   observer's thread.
+         * **Your app's own reader mode.** An Activity has one reader mode: this start replaces any
+         * reader mode your app turned on for [activity] (its callback hears no tag during the
+         * read), and the ending turns reader mode off for [activity]. The platform has no call
+         * that tells whether an Activity already has reader mode on, so the SDK cannot report it:
+         * turn your own reader mode off before the read, and on again after its ending if you need it.
+         *
          * @return The read, to cancel it. It is also the reader-mode callback, already registered:
          *   do not pass it to [NfcReaderMode.enable].
          * @since 1.0.0
@@ -756,6 +854,9 @@ public class NfcChipRead internal constructor(
          */
         internal const val NO_ANSWER_RETRY_MILLIS = 300L
 
+        /** The ending's error for a fault the read did not expect. */
+        private val UNEXPECTED_FAULT = NfcUnavailable(NfcUnavailable.Reason.UNEXPECTED_FAULT)
+
         /** Failed connects in a row after which the read ends: the shared value. */
         internal const val MAX_CONNECT_ATTEMPTS = ChipReadCoordinator.MAX_CONNECT_ATTEMPTS
 
@@ -782,7 +883,11 @@ internal class NfcReadEnvironment(
     val reader: ChipReader = ChipReader(),
     val main: MainThread = InlineMainThread,
     val activities: ActivityPlatform = PlatformActivities,
+    val state: NfcStateSource = PlatformNfcState,
 ) {
+    /** The readiness of a new read in this environment, and its listeners. */
+    val readiness: NfcReadinessWatch by lazy { NfcReadinessWatch(registry, state, main) }
+
     companion object {
         /** The real platform, one registry for the whole process. */
         val process: NfcReadEnvironment by lazy {
@@ -865,7 +970,7 @@ internal object PlatformActivities : ActivityPlatform {
         activity: Activity,
         callback: NfcAdapter.ReaderCallback,
         settings: NfcReadSettings,
-    ): NfcUnavailable.Reason? = NfcReaderMode.enable(activity, callback, settings.presenceCheckDelayMillis, settings.platformSounds)
+    ): NfcUnavailable.Reason? = NfcReaderMode.turnOn(activity, callback, settings.presenceCheckDelayMillis, settings.platformSounds)
 
     override fun disable(activity: Activity) = NfcReaderMode.disable(activity)
 }
@@ -877,17 +982,24 @@ internal object PlatformActivities : ActivityPlatform {
 internal class NfcReadRegistry {
     private val live = AtomicReference<Any?>(null)
 
+    /** Called after a read became live or ended; set once by the readiness watch. */
+    @Volatile
+    var onChange: () -> Unit = {}
+
     // Collections.newSetFromMap, not ConcurrentHashMap.newKeySet(): the latter is API 24 and minSdk is 23.
     private val releasing: MutableSet<CompletableDeferred<Unit>> =
         Collections.newSetFromMap(ConcurrentHashMap<CompletableDeferred<Unit>, Boolean>())
 
     /** Makes [read] the live read; `false` when another read is live. */
-    fun claim(read: Any): Boolean = live.compareAndSet(null, read)
+    fun claim(read: Any): Boolean = live.compareAndSet(null, read).also { if (it) onChange() }
 
     /** [read] has its ending: another read may start. */
     fun ended(read: Any) {
-        live.compareAndSet(read, null)
+        if (live.compareAndSet(read, null)) onChange()
     }
+
+    /** Whether a read is live. */
+    fun isLive(): Boolean = live.get() != null
 
     /** A link is about to open; [release] completes when the platform let go of it. */
     fun track(release: CompletableDeferred<Unit>) {
@@ -908,6 +1020,9 @@ internal class NfcReadRegistry {
 internal interface NfcChipPlatform {
     /** Whether [adapter] is on. */
     fun isEnabled(adapter: NfcAdapter): Boolean
+
+    /** Whether NFC's option for reading tags is known to be off, with NFC on: see [NfcReaderMode.isTagReadingOff]. */
+    fun isTagReadingOff(adapter: NfcAdapter): Boolean
 
     /**
      * The ISO-DEP connection of [tag], or `null` when the tag speaks none. Nothing is sent to the
@@ -942,6 +1057,8 @@ internal fun connectionOver(
 /** The platform itself: `NfcAdapter` for the state, `IsoDep` for the tag's link. */
 internal object PlatformNfcChip : NfcChipPlatform {
     override fun isEnabled(adapter: NfcAdapter): Boolean = adapter.isEnabled
+
+    override fun isTagReadingOff(adapter: NfcAdapter): Boolean = NfcReaderMode.isTagReadingOff(adapter)
 
     override fun connectionOf(
         tag: Tag,

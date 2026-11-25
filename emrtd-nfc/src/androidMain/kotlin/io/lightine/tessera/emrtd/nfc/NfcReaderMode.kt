@@ -3,6 +3,7 @@ package io.lightine.tessera.emrtd.nfc
 import android.app.Activity
 import android.content.Context
 import android.nfc.NfcAdapter
+import android.os.Build
 import android.os.Bundle
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.NfcUnavailable
@@ -25,6 +26,11 @@ import kotlin.jvm.JvmOverloads
  * - Do not use `NfcAdapter.ignore` to keep a document from being found again: the platform
  *   documentation says it does not work reliably with tags that have a random ID, and passport
  *   chips use one.
+ * - An Activity has one reader mode. [enable] replaces any reader mode your app turned on for the
+ *   same Activity (its callback hears no tag after that), and [disable] turns reader mode off
+ *   for the Activity, whoever turned it on. The platform has no call that tells whether an
+ *   Activity already has reader mode on, so the SDK cannot see or report it: turn your own
+ *   reader mode off before a chip read, and on again after its ending if you need it.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -82,7 +88,12 @@ public object NfcReaderMode {
      *   ignores reader mode then), `NOT_PERMITTED` when the platform refuses the app
      *   (`SecurityException`), and `REQUEST_REFUSED` for any other refusal, such as the
      *   `IllegalStateException` the platform throws when the Activity has set another discovery
-     *   technology. When it is not `null`, cancel the read: it cannot get a document.
+     *   technology. `TAG_READING_DISABLED` when NFC is on but its option for reading tags is off
+     *   (known from Android 15, API level 35, on). When it is not `null` and [callback] is an
+     *   [NfcChipRead], the read has already ended with
+     *   [ChipReadEnding.NotStarted][io.lightine.tessera.emrtd.ChipReadEnding.NotStarted] and this
+     *   reason, as the Activity-owning start ends it: show why, and do not wait for a document.
+     *   Calling its `cancel()` then changes nothing.
      */
     @JvmStatic
     @JvmOverloads
@@ -92,10 +103,24 @@ public object NfcReaderMode {
         presenceCheckDelayMillis: Long = DEFAULT_PRESENCE_CHECK_DELAY_MILLIS,
         platformSounds: Boolean = true,
     ): NfcUnavailable.Reason? {
+        val refused = turnOn(activity, callback, presenceCheckDelayMillis, platformSounds)
+        // The callback form ends its read the way the Activity-owning start does: not started.
+        if (refused != null && callback is NfcChipRead) callback.readerModeRefused(refused)
+        return refused
+    }
+
+    /** [enable] without ending the read: the Activity-owning start ends it itself. */
+    internal fun turnOn(
+        activity: Activity,
+        callback: NfcAdapter.ReaderCallback,
+        presenceCheckDelayMillis: Long,
+        platformSounds: Boolean,
+    ): NfcUnavailable.Reason? {
         val flags = FLAGS or if (platformSounds) 0 else NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS
         return try {
             val adapter = NfcAdapter.getDefaultAdapter(activity) ?: return NfcUnavailable.Reason.NOT_SUPPORTED
             if (!adapter.isEnabled) return NfcUnavailable.Reason.DISABLED
+            if (isTagReadingOff(adapter)) return NfcUnavailable.Reason.TAG_READING_DISABLED
             adapter.enableReaderMode(activity, callback, flags, extras(presenceCheckDelayMillis))
             null
         } catch (e: UnsupportedOperationException) {
@@ -126,16 +151,43 @@ public object NfcReaderMode {
      *
      * @param context Any context of the app.
      * @return `null` when NFC is usable; otherwise why it is not, the same reason [enable] would
-     *   return. The same question and the same return type as `CoreNfcChipRead.availability()` on
-     *   iPhone, and [NfcChipRead.availability] is the same call from the entry point.
+     *   return: `NOT_SUPPORTED` with no NFC reader, `DISABLED` when NFC is off, and
+     *   `TAG_READING_DISABLED` when NFC is on but its option for reading tags is off (known from
+     *   Android 15, API level 35, on; never reported before it). The same question and the same
+     *   return type as `CoreNfcChipRead.availability()` on iPhone, and
+     *   [NfcChipRead.availability] is the same call from the entry point.
      */
     @JvmStatic
-    public fun availability(context: Context): NfcUnavailable.Reason? {
-        val adapter = NfcAdapter.getDefaultAdapter(context)
-        return when {
-            adapter == null -> NfcUnavailable.Reason.NOT_SUPPORTED
-            !adapter.isEnabled -> NfcUnavailable.Reason.DISABLED
-            else -> null
+    public fun availability(context: Context): NfcUnavailable.Reason? = availabilityOf(NfcAdapter.getDefaultAdapter(context))
+
+    /** [availability] for an adapter already in hand; `null` adapter means no NFC reader. */
+    internal fun availabilityOf(adapter: NfcAdapter?): NfcUnavailable.Reason? =
+        try {
+            when {
+                adapter == null -> NfcUnavailable.Reason.NOT_SUPPORTED
+                !adapter.isEnabled -> NfcUnavailable.Reason.DISABLED
+                isTagReadingOff(adapter) -> NfcUnavailable.Reason.TAG_READING_DISABLED
+                else -> null
+            }
+        } catch (e: UnsupportedOperationException) {
+            NfcUnavailable.Reason.NOT_SUPPORTED
+        }
+
+    /**
+     * Whether NFC's option for reading tags is known to be off: from Android 15 (API level 35) on,
+     * when the device has the option (`isReaderOptionSupported`) and it is off
+     * (`isReaderOptionEnabled`). `false` on earlier versions, where the platform cannot tell, and
+     * when the platform's call fails: the SDK reports only what it knows.
+     */
+    internal fun isTagReadingOff(adapter: NfcAdapter): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) return false
+        return try {
+            adapter.isReaderOptionSupported && !adapter.isReaderOptionEnabled
+        } catch (e: RuntimeException) {
+            false
+        } catch (e: LinkageError) {
+            // A build of the platform without the flagged call.
+            false
         }
     }
 }

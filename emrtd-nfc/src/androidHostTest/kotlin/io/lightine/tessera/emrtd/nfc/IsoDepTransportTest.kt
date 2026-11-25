@@ -300,13 +300,13 @@ class IsoDepTransportTest {
         }
 
     @Test
-    fun `a command the platform calls too long is NfcUnavailable NOT_SUPPORTED`() =
+    fun `a command the platform calls too long is NfcUnavailable COMMAND_TOO_LONG, as on iPhone`() =
         runTest {
             val channel =
                 FakeChannel().apply { transceiveFailure = IOException("Transceive length exceeds supported maximum") }
 
             assertEquals(
-                NfcUnavailable(NfcUnavailable.Reason.NOT_SUPPORTED),
+                NfcUnavailable(NfcUnavailable.Reason.COMMAND_TOO_LONG),
                 errorOf { transport(channel).transceive(byteArrayOf(0)) },
             )
         }
@@ -335,12 +335,12 @@ class IsoDepTransportTest {
         }
 
     @Test
-    fun `a time limit the platform refuses is NfcUnavailable NOT_SUPPORTED`() =
+    fun `a time limit the platform refuses is NfcUnavailable REQUEST_REFUSED`() =
         runTest {
             val channel = FakeChannel().apply { setTimeoutFailure = IllegalArgumentException("The supplied timeout is not valid") }
 
             assertEquals(
-                NfcUnavailable(NfcUnavailable.Reason.NOT_SUPPORTED),
+                NfcUnavailable(NfcUnavailable.Reason.REQUEST_REFUSED),
                 errorOf { IsoDepTransport.open(channel, 3_000, StandardTestDispatcher(testScheduler)) },
             )
             assertEquals(0, channel.transceiveCalls)
