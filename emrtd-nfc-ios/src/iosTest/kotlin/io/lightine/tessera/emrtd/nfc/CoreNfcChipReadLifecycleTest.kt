@@ -1,6 +1,7 @@
 package io.lightine.tessera.emrtd.nfc
 
 import io.lightine.tessera.emrtd.ChipReadEnding
+import io.lightine.tessera.emrtd.ChipReadReadiness
 import io.lightine.tessera.emrtd.ChipReadState
 import io.lightine.tessera.emrtd.LinkLossPolicy
 import io.lightine.tessera.types.errors.ChipError
@@ -472,7 +473,13 @@ class CoreNfcChipReadLifecycleTest {
                 if (rec.ending !is ChipReadEnding.Cancelled) assertEquals(code.toInt(), rec.ending.systemCode, "code $code")
                 assertTrue(port.endings.isEmpty(), "code $code")
                 assertNothingLeft(read)
-                step(2_000) // past the wait after a system end
+                // The rest after a system end: longer after a session that never reported a document (202).
+                val rest = (env.readiness.current() as? ChipReadReadiness.NotYet)?.remainingMillis
+                when (code) {
+                    202L -> assertEquals(CoreNfcChipRead.UNSETTLED_SYSTEM_REST_MILLIS, rest, "code $code")
+                    201L, 203L -> assertEquals(1_000L, rest, "code $code")
+                }
+                step(CoreNfcChipRead.UNSETTLED_SYSTEM_REST_MILLIS) // past the rest after a system end
             }
         }
 
@@ -636,7 +643,9 @@ class CoreNfcChipReadLifecycleTest {
             assertNothingLeft(first)
             val (second, rec) = start(settings = oneSession())
             assertEquals(listOf("Starting"), rec.names)
-            step(999)
+            // The session never reported a document: the longer rest, not the 1 s setting.
+            step(CoreNfcChipRead.UNSETTLED_SYSTEM_REST_MILLIS - 1)
+            assertEquals(listOf("Starting"), rec.names)
             assertEquals(1, ports.size)
             step(1)
             assertEquals(2, ports.size)

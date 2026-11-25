@@ -54,7 +54,10 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  * @property waitAfterSystemEndMillis How long a new read waits before it begins a system session
  *   when the previous one was ended by the system (its time limit, the app leaving the screen) or
  *   refused because the reader was busy. Default 1000. A read ended by the app or the person
- *   needs no wait. The read that sees the system's end sets the rest with its own value; a later
+ *   needs no wait. After a session that never reported a document (Core NFC's code 202, or 203
+ *   two seconds or more after its begin), or after the busy tries of [busyRetryMillis] gave up,
+ *   the rest is at least 10 seconds: on a device, starts 5 to 7 seconds after such an end were
+ *   still refused. The read that sees the system's end sets the rest with its own value; a later
  *   read waits until that time, whatever its own value, and
  *   [io.lightine.tessera.emrtd.ChipReadReadiness.NotYet] counts the same time.
  * @property telemetry Where the read's step events go (step, protocol, status word, file id, byte

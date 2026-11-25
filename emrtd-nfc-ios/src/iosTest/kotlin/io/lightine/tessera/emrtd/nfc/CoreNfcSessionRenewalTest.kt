@@ -649,12 +649,15 @@ class CoreNfcSessionRenewalTest {
             step(5_000)
             end202()
             assertIs<ChipReadEnding.EndedBySystem>(rec.ending)
+            // The session never reported a document: the longer rest.
             val notYet = assertIs<ChipReadReadiness.NotYet>(watch.current())
-            assertEquals(1_000L, notYet.remainingMillis)
+            assertEquals(CoreNfcChipRead.UNSETTLED_SYSTEM_REST_MILLIS, notYet.remainingMillis)
             step(400)
-            assertEquals(600L, assertIs<ChipReadReadiness.NotYet>(watch.current()).remainingMillis)
+            assertEquals(9_600L, assertIs<ChipReadReadiness.NotYet>(watch.current()).remainingMillis)
             assertTrue(heard.isEmpty(), "the listener is called on the main queue, not in place")
-            step(600)
+            step(9_599)
+            assertEquals(1L, assertIs<ChipReadReadiness.NotYet>(watch.current()).remainingMillis)
+            step(1)
             assertEquals(ChipReadReadiness.Ready, watch.current())
             main.toList().forEach { it() }
             main.clear()
@@ -676,8 +679,9 @@ class CoreNfcSessionRenewalTest {
         chipReadTest {
             val caller = CoreNfcReadSettings(observerOn = ObserverThread.CALLER, waitAfterSystemEndMillis = 600)
             val (first, rec) = startTimed(oneSession(caller))
-            step(1_000)
-            end202()
+            // The system's 60 s limit: a normal end, so the read's own rest, not the longer one.
+            step(60_000)
+            systemEnds(CoreNfcErrorCode.SESSION_TIMEOUT)
             assertIs<ChipReadEnding.EndedBySystem>(rec.ending)
             assertEquals(600L, assertIs<ChipReadReadiness.NotYet>(env.readiness.current()).remainingMillis)
             // A later read with a longer rest of its own waits the time readiness said, not its own.
@@ -690,6 +694,68 @@ class CoreNfcSessionRenewalTest {
             second.cancel()
             step()
             assertNothingLeft(first)
+        }
+
+    @Test
+    fun i__readiness__a_dead_session_ending_the_read_rests_10_seconds_and_a_start_waits_them_in_starting() =
+        chipReadTest {
+            // Code 203 at 3 s, past the refusal window: a dead session with no renewal left.
+            val (first, rec) = startTimed(oneSession())
+            step(3_000)
+            busy(port)
+            step()
+            assertEquals(NfcUnavailable(Reason.ENDED_BY_SYSTEM), assertIs<ChipReadEnding.EndedBySystem>(rec.ending).reason)
+            assertNothingLeft(first)
+            assertEquals(10_000L, assertIs<ChipReadReadiness.NotYet>(env.readiness.current()).remainingMillis)
+            step(4_000)
+            assertEquals(6_000L, assertIs<ChipReadReadiness.NotYet>(env.readiness.current()).remainingMillis)
+            val (second, next) = startTimed(oneSession())
+            step(5_999)
+            assertEquals(listOf("Starting"), next.names)
+            assertEquals(1, ports.size, "still resting")
+            step(1)
+            assertEquals(2, ports.size)
+            assertEquals("WaitingForDocument", next.names.last())
+            second.cancel()
+            step()
+            assertNothingLeft(second)
+            assertEquals(ChipReadReadiness.Ready, env.readiness.current())
+        }
+
+    @Test
+    fun i__readiness__after_the_busy_tries_give_up_the_rest_is_10_seconds() =
+        chipReadTest {
+            onBegin = { p -> busy(p) }
+            val (first, rec) = startTimed()
+            step(6_000)
+            assertEquals(Reason.BUSY, assertIs<ChipReadEnding.NotStarted>(rec.ending).reason)
+            assertNothingLeft(first)
+            assertEquals(10_000L, assertIs<ChipReadReadiness.NotYet>(env.readiness.current()).remainingMillis)
+            step(9_999)
+            assertEquals(1L, assertIs<ChipReadReadiness.NotYet>(env.readiness.current()).remainingMillis)
+            step(1)
+            assertEquals(ChipReadReadiness.Ready, env.readiness.current())
+        }
+
+    @Test
+    fun i__readiness__a_system_end_after_a_document_rests_the_short_time_and_a_complete_read_none() =
+        chipReadTest {
+            val chip = FakeChip().apply { silentFrom = 1 }
+            val (first, rec) = startTimed()
+            present(FakeChipTag(chip))
+            step(400)
+            end202()
+            assertEquals(NfcUnavailable(Reason.ENDED_BY_SYSTEM), assertIs<ChipReadEnding.EndedBySystem>(rec.ending).reason)
+            assertNothingLeft(first)
+            assertEquals(1_000L, assertIs<ChipReadReadiness.NotYet>(env.readiness.current()).remainingMillis)
+            step(1_000)
+            assertEquals(ChipReadReadiness.Ready, env.readiness.current())
+            val (second, done) = startTimed()
+            present(FakeChipTag(FakeChip()))
+            step(400)
+            assertIs<ChipReadEnding.Complete>(done.ending)
+            assertNothingLeft(second)
+            assertEquals(ChipReadReadiness.Ready, env.readiness.current())
         }
 
     @Test

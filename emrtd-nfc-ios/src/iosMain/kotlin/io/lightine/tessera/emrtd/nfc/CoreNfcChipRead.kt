@@ -526,10 +526,13 @@ public class CoreNfcChipRead internal constructor(
         }
     }
 
+    /** The rest after a dead session or the busy tries: the read's own, at least [UNSETTLED_SYSTEM_REST_MILLIS]. */
+    private fun unsettledRestMillis(): Long = maxOf(settings.waitAfterSystemEndMillis, UNSETTLED_SYSTEM_REST_MILLIS)
+
     /** The system kept refusing a session as busy for [CoreNfcReadSettings.busyRetryMillis]. */
     private fun endAfterRefusals(renewal: Int) {
         refusedOut = true
-        env.registry.systemEnded(env.now(), settings.waitAfterSystemEndMillis)
+        env.registry.systemEnded(env.now(), unsettledRestMillis())
         val busy = NfcUnavailable(NfcUnavailable.Reason.BUSY)
         // Only Core NFC's code 203 ("system is busy") leads here.
         val code = CoreNfcErrorCode.SYSTEM_IS_BUSY.toInt()
@@ -835,7 +838,9 @@ public class CoreNfcChipRead internal constructor(
         sessionEnd.complete(error)
         restarts.stop()
         if (error is NfcTimeout || (error is NfcUnavailable && error.reason in RESTING_REASONS)) {
-            env.registry.systemEnded(env.now(), settings.waitAfterSystemEndMillis)
+            // A dead session leaves the system refusing new sessions for longer than a normal end.
+            val rest = if (dead) unsettledRestMillis() else settings.waitAfterSystemEndMillis
+            env.registry.systemEnded(env.now(), rest)
         }
         val renewed = locked { renewalsUsed > 0 }
         val code = systemCode?.toInt()
@@ -1212,7 +1217,8 @@ public class CoreNfcChipRead internal constructor(
          * The rule, as the SDK applies it: after the system ended a session on its own, or refused
          * one as busy, the SDK notes when it saw that end (the system's report of it), and treats
          * the system as ready [CoreNfcReadSettings.waitAfterSystemEndMillis] of the read that saw
-         * it later; after a session the SDK ended itself, as soon as the system reported it closed,
+         * it later, and at least 10 seconds later after a session that never reported a document or
+         * after the busy tries gave up; after a session the SDK ended itself, as soon as the system reported it closed,
          * and at most 5 seconds after the read ended. [ChipReadReadiness.NotYet.remainingMillis]
          * is the longest wait as the SDK counts it then: while it waits for the system's report
          * that the last session closed, it counts the 5-second bound, and the value turns
@@ -1385,6 +1391,13 @@ public class CoreNfcChipRead internal constructor(
          * milliseconds, and a dead session ran 7 to 18 seconds before its 203.
          */
         internal const val REFUSAL_WINDOW_MILLIS = 2_000L
+
+        /**
+         * The least rest before the next read after the system ended a session that never reported
+         * a document, or kept refusing sessions as busy. On a device, starts 5 to 7 s after such an
+         * end were still refused; after a normal end 1.5 s was enough.
+         */
+        internal const val UNSETTLED_SYSTEM_REST_MILLIS = 10_000L
 
         /** The pauses before each new try to begin a session refused as busy; the last repeats. */
         internal val BUSY_RETRY_PAUSES_MILLIS = listOf(500L, 1_000L, 2_000L, 3_000L)
