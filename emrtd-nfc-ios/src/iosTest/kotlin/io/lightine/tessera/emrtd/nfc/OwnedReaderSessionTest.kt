@@ -13,7 +13,10 @@ class OwnedReaderSessionTest {
         object : ReaderSessionEvents {
             override fun onTagsDetected(tags: List<DetectedTag>) = Unit
 
-            override fun onInvalidated(error: NfcError) {
+            override fun onInvalidated(
+                error: NfcError,
+                systemCode: Long?,
+            ) {
                 owned.systemEnd()
             }
         }

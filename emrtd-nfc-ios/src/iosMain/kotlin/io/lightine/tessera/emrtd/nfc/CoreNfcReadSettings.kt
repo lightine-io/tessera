@@ -83,8 +83,21 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  *   the same system session while at least 10 of its 60 seconds are left; when they stop and no
  *   try got past these commands, the read ends with [io.lightine.tessera.emrtd.ChipReadEnding.Failed]
  *   and [io.lightine.tessera.types.errors.NfcNoAnswer].
+ * @property searchRestartMillis How often the read asks the system to search for the document
+ *   again (Core NFC's `restartPolling`) while it waits for one and the system has reported none.
+ *   On an iPhone, when the first contact between phone and chip happened in a weak position, the
+ *   system reported no document at all, and ended the session about 22 seconds later; moving the
+ *   document did not help. A new search gives that first contact another try, with the sheet still
+ *   up. Default 4000, so the first new search comes well before that end and a person moving the
+ *   document gets several. No new search is asked for once a document was reported or the read is
+ *   ending. [SEARCH_RESTART_OFF] (0) turns it off; any other value must be at least
+ *   [MIN_SEARCH_RESTART_MILLIS] (2000). The read still counts the system session's 60 seconds
+ *   from its start: Core NFC's header does not say that a new search changes them. There is no such setting on Android, where the system reports a document that
+ *   does not answer.
  * @throws IllegalArgumentException when [commandTimeoutMillis], [readTimeoutMillis] or
- *   [commandTimeoutBeforeAccessMillis] is not positive, or [settleDelayMillis] or [waitAfterSystemEndMillis] is negative.
+ *   [commandTimeoutBeforeAccessMillis] is not positive, [settleDelayMillis] or
+ *   [waitAfterSystemEndMillis] is negative, or [searchRestartMillis] is neither
+ *   [SEARCH_RESTART_OFF] nor at least [MIN_SEARCH_RESTART_MILLIS].
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
@@ -99,8 +112,9 @@ public class CoreNfcReadSettings
         public val observerOn: ObserverThread = ObserverThread.MAIN,
         public val commandTimeoutBeforeAccessMillis: Long = DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS,
         public val readTimeoutMillis: Long = DEFAULT_READ_TIMEOUT_MILLIS,
+        public val searchRestartMillis: Long = DEFAULT_SEARCH_RESTART_MILLIS,
     ) {
-        /** The defaults: [LinkLossPolicy.Resume] with 2 restarts, 400, 5000, 1000, 1500 and 2000 milliseconds. */
+        /** The defaults: [LinkLossPolicy.Resume] with 2 restarts, 400, 5000, 1000, 1500, 2000 and 4000 milliseconds. */
         public constructor() : this(LinkLossPolicy.Resume(DEFAULT_RESTARTS))
 
         init {
@@ -109,6 +123,9 @@ public class CoreNfcReadSettings
             require(commandTimeoutBeforeAccessMillis > 0) { "commandTimeoutBeforeAccessMillis must be positive" }
             require(readTimeoutMillis > 0) { "readTimeoutMillis must be positive" }
             require(waitAfterSystemEndMillis >= 0) { "waitAfterSystemEndMillis must not be negative" }
+            require(searchRestartMillis == SEARCH_RESTART_OFF || searchRestartMillis >= MIN_SEARCH_RESTART_MILLIS) {
+                "searchRestartMillis must be 0 (off) or at least $MIN_SEARCH_RESTART_MILLIS"
+            }
         }
 
         /** The values, never document data. */
@@ -116,7 +133,7 @@ public class CoreNfcReadSettings
             "CoreNfcReadSettings(linkLoss=$linkLoss, settleDelayMillis=$settleDelayMillis, " +
                 "commandTimeoutMillis=$commandTimeoutMillis, readTimeoutMillis=$readTimeoutMillis, " +
                 "commandTimeoutBeforeAccessMillis=$commandTimeoutBeforeAccessMillis, " +
-                "waitAfterSystemEndMillis=$waitAfterSystemEndMillis, " +
+                "waitAfterSystemEndMillis=$waitAfterSystemEndMillis, searchRestartMillis=$searchRestartMillis, " +
                 "observerOn=$observerOn)"
 
         /**
@@ -135,6 +152,7 @@ public class CoreNfcReadSettings
                 .observerOn(observerOn)
                 .commandTimeoutBeforeAccessMillis(commandTimeoutBeforeAccessMillis)
                 .readTimeoutMillis(readTimeoutMillis)
+                .searchRestartMillis(searchRestartMillis)
 
         /** The time limit for one command before access: the smaller of the two limits. */
         internal val effectiveTimeoutBeforeAccessMillis: Long
@@ -163,6 +181,7 @@ public class CoreNfcReadSettings
             private var observerOn: ObserverThread = ObserverThread.MAIN
             private var commandTimeoutBeforeAccessMillis: Long = DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS
             private var readTimeoutMillis: Long = DEFAULT_READ_TIMEOUT_MILLIS
+            private var searchRestartMillis: Long = DEFAULT_SEARCH_RESTART_MILLIS
 
             /** What the read does when the link to the chip is lost. */
             public fun linkLoss(policy: LinkLossPolicy): Builder = apply { linkLoss = policy }
@@ -178,6 +197,9 @@ public class CoreNfcReadSettings
 
             /** The longest wait for the chip's answer to one command before access. */
             public fun commandTimeoutBeforeAccessMillis(millis: Long): Builder = apply { commandTimeoutBeforeAccessMillis = millis }
+
+            /** How often to ask the system to search again while no document was reported; [SEARCH_RESTART_OFF] for never. */
+            public fun searchRestartMillis(millis: Long): Builder = apply { searchRestartMillis = millis }
 
             /** How long a new read waits after the system ended the previous session. */
             public fun waitAfterSystemEndMillis(millis: Long): Builder = apply { waitAfterSystemEndMillis = millis }
@@ -204,6 +226,7 @@ public class CoreNfcReadSettings
                     observerOn,
                     commandTimeoutBeforeAccessMillis,
                     readTimeoutMillis,
+                    searchRestartMillis,
                 )
         }
 
@@ -227,5 +250,14 @@ public class CoreNfcReadSettings
 
             /** The default [waitAfterSystemEndMillis]: 1000. */
             public const val DEFAULT_WAIT_AFTER_SYSTEM_END_MILLIS: Long = 1_000
+
+            /** The default [searchRestartMillis]: 4000. */
+            public const val DEFAULT_SEARCH_RESTART_MILLIS: Long = 4_000
+
+            /** The [searchRestartMillis] that turns new searches off: 0. */
+            public const val SEARCH_RESTART_OFF: Long = 0
+
+            /** The shortest [searchRestartMillis] other than [SEARCH_RESTART_OFF]: 2000. */
+            public const val MIN_SEARCH_RESTART_MILLIS: Long = 2_000
         }
     }

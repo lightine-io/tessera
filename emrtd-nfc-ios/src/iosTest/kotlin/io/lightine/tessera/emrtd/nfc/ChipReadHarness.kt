@@ -74,6 +74,9 @@ internal class ChipReadHarness(
 
     /** The worker each read's sheet calls run on: at once, in the caller, by default. */
     var sheetWorker: () -> SerialWorker = { InlineWorker }
+
+    /** The worker each read's restartPolling calls run on: at once, in the caller, by default. */
+    var restartWorker: () -> SerialWorker = { InlineWorker }
     val now: () -> Long = { test.testScheduler.currentTime }
 
     val env =
@@ -94,6 +97,7 @@ internal class ChipReadHarness(
             reader = ChipReader(),
             mainQueue = { block -> mainQueue(block) },
             sheetWorker = { sheetWorker() },
+            restartWorker = { restartWorker() },
         )
 
     val port: FakeSessionPort get() = ports.last()
@@ -123,7 +127,7 @@ internal class ChipReadHarness(
 
     /** The system ends the current session with Core NFC code [code]. */
     fun systemEnds(code: Long) {
-        port.systemEnd(nfcErrorFor(platform.CoreNFC.NFCErrorDomain, code, CoreNfcErrorSource.SESSION_END))
+        port.systemEnd(nfcErrorFor(platform.CoreNFC.NFCErrorDomain, code, CoreNfcErrorSource.SESSION_END), code)
         step()
     }
 

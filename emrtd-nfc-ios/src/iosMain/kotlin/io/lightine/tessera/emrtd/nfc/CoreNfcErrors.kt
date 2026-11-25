@@ -161,3 +161,9 @@ internal fun connectRetryable(
             CoreNfcErrorCode.TAG_RESPONSE_ERROR,
             CoreNfcErrorCode.RETRY_EXCEEDED,
         )
+
+/** The raw code of an error of Core NFC's domain, as a fact; `null` for an error of another domain. */
+internal fun systemCodeOf(
+    domain: String?,
+    code: Long,
+): Long? = if (domain == NFCErrorDomain) code else null

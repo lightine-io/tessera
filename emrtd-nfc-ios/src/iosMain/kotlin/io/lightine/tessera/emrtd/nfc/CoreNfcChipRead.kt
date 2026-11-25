@@ -73,6 +73,15 @@ import kotlin.time.TimeSource
  *   holds up the updates, the ending or a cancel. While no document is found, the observer gets
  *   [io.lightine.tessera.emrtd.ChipReadState.WaitingForDocument] again every 2 seconds, with the
  *   time waited.
+ * - While no document is found, asks the system to search again every
+ *   [CoreNfcReadSettings.searchRestartMillis] (4 seconds by default), with the sheet still up: on
+ *   an iPhone a first contact in a weak position made the system report no document at all and
+ *   end the session about 22 seconds later. The call is made on a queue of the read's own, and
+ *   never once a document was reported or the read is ending.
+ * - When the system ends the session on its own, reports Core NFC's raw code to the read's
+ *   telemetry sink: an [io.lightine.tessera.emrtd.ChipReadEvent] with step
+ *   [ChipReadStep.SESSION_END] and the code in
+ *   [io.lightine.tessera.emrtd.ChipReadEvent.systemCode].
  * - When a document is found, waits [CoreNfcReadSettings.settleDelayMillis] before the first
  *   command, connects, and reads. Each command has its own time limit:
  *   [CoreNfcReadSettings.commandTimeoutBeforeAccessMillis] for the commands before the key is
@@ -142,6 +151,7 @@ public class CoreNfcChipRead internal constructor(
         )
     private val tags = Channel<List<DetectedTag>>(Channel.UNLIMITED)
     private val alerts = AlertWriter()
+    private val restarts = SearchRestarter(env.restartWorker()) { coordinator.isEnded }
 
     // Where a slow sheet text setting is reported: the read's telemetry sink.
     private val sink: TelemetrySink = settings.telemetry ?: TelemetrySinkRegistry.current
@@ -161,6 +171,10 @@ public class CoreNfcChipRead internal constructor(
     // What the system reported when it ended the session, once it did.
     @Volatile
     private var sessionEndError: NfcError? = null
+
+    // When the system session began, for the time to its end in the SESSION_END event.
+    @Volatile
+    private var sessionBegan: Long? = null
 
     // Completed when the system reports the session's end, for a command that saw it first.
     private val sessionEnd = CompletableDeferred<NfcError>()
@@ -217,6 +231,7 @@ public class CoreNfcChipRead internal constructor(
         writer.awaitIdle(FIRST_TEXT_WAIT_MILLIS)
         if (!session.begin()) return
         val began = env.now()
+        sessionBegan = began
         var waitingSince = began
         var failedConnects = 0
         while (!coordinator.isEnded) {
@@ -279,24 +294,42 @@ public class CoreNfcChipRead internal constructor(
         if (wait > 0) delay(wait)
     }
 
-    /** Waits for one ISO 7816 tag, reporting the time waited every 2 seconds. */
+    /**
+     * Waits for one ISO 7816 tag, reporting the time waited every 2 seconds, and asking the system
+     * to search again every [CoreNfcReadSettings.searchRestartMillis] while no tag was reported.
+     */
     private suspend fun awaitDocument(
         session: OwnedReaderSession,
         since: Long,
     ): Pair<DetectedTag, Iso7816Channel> {
+        val period = settings.searchRestartMillis
         var nextReport = since + WAITING_REPORT_MILLIS
+        var search = restarts.searchBegan()
+        var nextRestart = if (period > 0) env.now() + period else Long.MAX_VALUE
         while (true) {
-            val found = withTimeoutOrNull((nextReport - env.now()).coerceAtLeast(0)) { tags.receive() }
+            val wakeAt = minOf(nextReport, nextRestart)
+            val found = withTimeoutOrNull((wakeAt - env.now()).coerceAtLeast(0)) { tags.receive() }
             if (found == null) {
-                coordinator.waiting(env.now() - since)
-                nextReport += WAITING_REPORT_MILLIS
+                val now = env.now()
+                if (now >= nextReport) {
+                    coordinator.waiting(now - since)
+                    nextReport += WAITING_REPORT_MILLIS
+                }
+                if (now >= nextRestart) {
+                    // Posted, never run here: a call that does not return holds up nothing.
+                    restarts.restartWhileSearching(search, session)
+                    nextRestart = now + period
+                }
                 continue
             }
+            restarts.tagReported()
             val tag = found.singleOrNull()
             val channel = tag?.iso7816
             // More than one tag, or not an ISO 7816 tag: keep looking.
             if (tag == null || channel == null) {
                 restartPolling(session)
+                search = restarts.searchBegan()
+                if (period > 0) nextRestart = env.now() + period
                 continue
             }
             return tag to channel
@@ -312,7 +345,7 @@ public class CoreNfcChipRead internal constructor(
     private fun restartPolling(session: OwnedReaderSession) {
         // Tags reported before the restart are no longer valid.
         while (tags.tryReceive().isSuccess) Unit
-        session.restartPolling()
+        restarts.restartNow(session)
     }
 
     /**
@@ -353,19 +386,29 @@ public class CoreNfcChipRead internal constructor(
                 // A usable document counts as found from the moment the system reports it, so a
                 // session end right after is the system's ending, never "not started".
                 if (tags.singleOrNull()?.iso7816 != null) documentSeen = true
+                // Before the read can take the tag: no periodic restart is run after this point.
+                restarts.tagReported()
                 this@CoreNfcChipRead.tags.trySend(tags)
             }
 
-            override fun onInvalidated(error: NfcError) = systemEnded(error)
+            override fun onInvalidated(
+                error: NfcError,
+                systemCode: Long?,
+            ) = systemEnded(error, systemCode)
         }
 
     /** The system ended the session: the ending, unless the SDK ended it. */
-    private fun systemEnded(error: NfcError) {
+    private fun systemEnded(
+        error: NfcError,
+        systemCode: Long?,
+    ) {
         sessionEndError = error
         sessionEnd.complete(error)
+        restarts.stop()
         val session = locked { owned } ?: return
         session.systemEnd()
         if (session.endedBySdk) return
+        reportSessionEnd(systemCode)
         if (error is NfcTimeout || (error is NfcUnavailable && error.reason in RESTING_REASONS)) {
             env.registry.systemEnded(env.now())
         }
@@ -401,6 +444,7 @@ public class CoreNfcChipRead internal constructor(
      */
     private fun finish(ending: ChipReadEnding) {
         alerts.stop()
+        restarts.stop()
         val (session, writer) = locked { owned to sheet }
         env.registry.ended(this, session)
         stopTransport(NfcUnavailable(NfcUnavailable.Reason.CLOSED))
@@ -424,6 +468,19 @@ public class CoreNfcChipRead internal constructor(
     ) {
         val outcome = if (returned) ChipReadStepOutcome.SUCCEEDED else ChipReadStepOutcome.FAILED
         sink.record(ChipReadEvent.platformStep(ChipReadStep.SHEET_TEXT, outcome, durationMillis))
+    }
+
+    /**
+     * The system ended the session on its own (not the echo of the SDK's own end): the raw Core NFC
+     * code as a fact for diagnosis, with the time since the session began.
+     */
+    private fun reportSessionEnd(systemCode: Long?) {
+        val since = sessionBegan?.let { env.now() - it } ?: 0L
+        try {
+            sink.record(ChipReadEvent.sessionEnd(systemCode?.toInt(), since))
+        } catch (e: Throwable) {
+            // Ignored on purpose: telemetry is never part of the read.
+        }
     }
 
     private fun textForEnding(ending: ChipReadEnding): String =
@@ -700,6 +757,8 @@ internal class CoreNfcReadEnvironment(
     val mainQueue: (() -> Unit) -> Unit = { it() },
     // A new worker for one read's sheet calls; tests run them at once or on a queue of their own.
     val sheetWorker: () -> SerialWorker = { InlineWorker },
+    // A new worker for one read's restartPolling calls; the same for tests.
+    val restartWorker: () -> SerialWorker = { InlineWorker },
 ) {
     companion object {
         private val clock = TimeSource.Monotonic.markNow()
@@ -715,6 +774,7 @@ internal class CoreNfcReadEnvironment(
                 reader = ChipReader(),
                 mainQueue = { block -> dispatch_async(dispatch_get_main_queue()) { block() } },
                 sheetWorker = ::newSheetQueueWorker,
+                restartWorker = ::newSearchQueueWorker,
             )
         }
     }

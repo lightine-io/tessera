@@ -70,7 +70,14 @@ internal class ConnectFailure(
 internal interface ReaderSessionEvents {
     fun onTagsDetected(tags: List<DetectedTag>)
 
-    fun onInvalidated(error: NfcError)
+    /**
+     * The session ended. [systemCode] is the raw `NFCReaderError` code when the error is of Core
+     * NFC's domain (`NFCErrorDomain`), else `null`.
+     */
+    fun onInvalidated(
+        error: NfcError,
+        systemCode: Long? = null,
+    )
 }
 
 /** The system reader session. */
@@ -198,7 +205,10 @@ private class SessionDelegate(
         session: NFCTagReaderSession,
         didInvalidateWithError: NSError,
     ) {
-        events.onInvalidated(nfcErrorFor(didInvalidateWithError, CoreNfcErrorSource.SESSION_END))
+        events.onInvalidated(
+            nfcErrorFor(didInvalidateWithError, CoreNfcErrorSource.SESSION_END),
+            systemCodeOf(didInvalidateWithError.domain, didInvalidateWithError.code),
+        )
     }
 
     override fun tagReaderSession(

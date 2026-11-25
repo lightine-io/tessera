@@ -290,13 +290,16 @@ class CoreNfcChipReadLifecycleTest {
             val chip = FakeChip().apply { loseAt += 3 }
             val (read, rec) = start()
             step(51_000)
+            // The new searches while no document was reported (one every 4 seconds) are not the
+            // restarts after a loss.
+            assertEquals(12, port.restarts)
             present(FakeChipTag(chip))
             step(400)
             // The loss came before access and no try may follow: the chip never got past the first
             // commands, so the read ends with NfcNoAnswer (TES-346; before, the loss itself).
             assertEquals(NfcNoAnswer, stoppedBy(rec.ending))
             assertFalse("LinkLost" in rec.names)
-            assertEquals(0, port.restarts)
+            assertEquals(12, port.restarts, "no restart after the loss")
             assertNothingLeft(read)
         }
 
@@ -308,11 +311,12 @@ class CoreNfcChipReadLifecycleTest {
             val chip = FakeChip(scope = scope, answerDelayMillis = 1_000, dg1Size = 3_000).apply { loseAt += 13 }
             val (read, rec) = start()
             step(40_000)
+            val searches = port.restarts
             present(FakeChipTag(chip))
             step(400 + 13_000)
             assertEquals(NfcTagLost, stoppedBy(rec.ending))
             assertTrue("LinkLost" in rec.names)
-            assertEquals(0, port.restarts, "no polling restart once the time is too short")
+            assertEquals(searches, port.restarts, "no polling restart once the time is too short")
             assertNothingLeft(read)
         }
 

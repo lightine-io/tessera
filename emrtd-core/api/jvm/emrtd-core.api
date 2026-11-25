@@ -601,6 +601,7 @@ public final class io/lightine/tessera/emrtd/ChipReadEvent : io/lightine/tessera
 	public final fun getProtocol ()Ljava/lang/String;
 	public final fun getStatusWord ()Ljava/lang/Integer;
 	public final fun getStep ()Lio/lightine/tessera/emrtd/ChipReadStep;
+	public final fun getSystemCode ()Ljava/lang/Integer;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -767,6 +768,7 @@ public final class io/lightine/tessera/emrtd/ChipReadStep : java/lang/Enum {
 	public static final field READ Lio/lightine/tessera/emrtd/ChipReadStep;
 	public static final field READ_FILE Lio/lightine/tessera/emrtd/ChipReadStep;
 	public static final field SELECT_APPLICATION Lio/lightine/tessera/emrtd/ChipReadStep;
+	public static final field SESSION_END Lio/lightine/tessera/emrtd/ChipReadStep;
 	public static final field SHEET_TEXT Lio/lightine/tessera/emrtd/ChipReadStep;
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lio/lightine/tessera/emrtd/ChipReadStep;

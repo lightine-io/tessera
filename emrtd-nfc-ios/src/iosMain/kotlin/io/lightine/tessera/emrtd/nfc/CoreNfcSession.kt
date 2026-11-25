@@ -279,7 +279,10 @@ public class CoreNfcSession internal constructor(
         object : ReaderSessionEvents {
             override fun onTagsDetected(tags: List<DetectedTag>) = handleTags(tags)
 
-            override fun onInvalidated(error: NfcError) = handleInvalidated(error)
+            override fun onInvalidated(
+                error: NfcError,
+                systemCode: Long?,
+            ) = handleInvalidated(error)
         }
 
     private fun handleTags(tags: List<DetectedTag>) {

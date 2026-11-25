@@ -283,7 +283,10 @@ class CoreNfcSheetWriterTest {
     private object NoEvents : ReaderSessionEvents {
         override fun onTagsDetected(tags: List<DetectedTag>) = Unit
 
-        override fun onInvalidated(error: NfcError) = Unit
+        override fun onInvalidated(
+            error: NfcError,
+            systemCode: Long?,
+        ) = Unit
     }
 
     private companion object {

@@ -82,10 +82,13 @@ internal class FakeSessionPort(
     /** How many times the system ended the session on its own, through [systemEnd]. */
     var systemEnds = 0
 
-    /** The system ends the session on its own with [error]. */
-    fun systemEnd(error: NfcError) {
+    /** The system ends the session on its own with [error] and the raw Core NFC [code], if any. */
+    fun systemEnd(
+        error: NfcError,
+        code: Long? = null,
+    ) {
         systemEnds++
-        events.onInvalidated(error)
+        events.onInvalidated(error, code)
     }
 
     /** Runs inside setAlertMessage before it records the text: a test can block here, as Core NFC did on a device. */
@@ -123,20 +126,24 @@ internal class FakeSessionPort(
     /** Called by restartPolling(), like Core NFC polling again (a document still near is found again). */
     var onRestart: (FakeSessionPort) -> Unit = {}
 
+    /** When each restart was asked for, by [clock]. */
+    val restartTimes = mutableListOf<Long>()
+
     override fun restartPolling() {
         restarts++
+        restartTimes += clock()
         onRestart(this)
     }
 
     override fun invalidate() {
         log("invalidate")
         endings += null
-        if (reportEnd) events.onInvalidated(NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER))
+        if (reportEnd) events.onInvalidated(NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER), CoreNfcErrorCode.USER_CANCELED)
     }
 
     override fun invalidate(errorMessage: String) {
         log("invalidate:$errorMessage")
         endings += errorMessage
-        if (reportEnd) events.onInvalidated(NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER))
+        if (reportEnd) events.onInvalidated(NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER), CoreNfcErrorCode.USER_CANCELED)
     }
 }

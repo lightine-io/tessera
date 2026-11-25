@@ -20,6 +20,9 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  * @property byteCount The number of bytes read, for a file step that read the file.
  * @property statusWord The chip's status word, when the step ended on one.
  * @property durationMillis How long the step took, in milliseconds.
+ * @property systemCode The platform's own code, for a step that ended on one: today only
+ *   [ChipReadStep.SESSION_END] on iPhone, with Core NFC's `NFCReaderError` code. `null` for every
+ *   other step and on Android.
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
@@ -31,6 +34,7 @@ public class ChipReadEvent internal constructor(
     public val byteCount: Int?,
     public val statusWord: Int?,
     public val durationMillis: Long,
+    public val systemCode: Int? = null,
 ) : TelemetryEvent {
     // Only the SDK makes these events, so new fields can be added later without breaking callers.
 
@@ -40,7 +44,7 @@ public class ChipReadEvent internal constructor(
     /** The fields; no document data. */
     override fun toString(): String =
         "ChipReadEvent($step, $outcome, protocol=$protocol, fileId=${fileId?.toString(16)}, byteCount=$byteCount, " +
-            "statusWord=${statusWord?.toString(16)}, durationMillis=$durationMillis)"
+            "statusWord=${statusWord?.toString(16)}, durationMillis=$durationMillis, systemCode=$systemCode)"
 
     /** Constants for [ChipReadEvent]. */
     public companion object {
@@ -65,6 +69,25 @@ public class ChipReadEvent internal constructor(
             outcome: ChipReadStepOutcome,
             durationMillis: Long,
         ): ChipReadEvent = ChipReadEvent(step, outcome, null, null, null, null, durationMillis)
+
+        /**
+         * A [ChipReadStep.SESSION_END] event: the platform ended its reader session on its own,
+         * with [systemCode], [durationMillis] after the session began. The outcome is
+         * [ChipReadStepOutcome.FAILED]: the session ended without the read asking for it.
+         *
+         * Internal: see [InternalTesseraChipApi].
+         *
+         * @param systemCode The platform's raw code, or `null` when it gave none of its own kind.
+         * @param durationMillis The time from the session's start to its end, in milliseconds.
+         * @return The event, with no protocol, file, byte count or status word.
+         * @since 1.0.0
+         */
+        @InternalTesseraChipApi
+        public fun sessionEnd(
+            systemCode: Int?,
+            durationMillis: Long,
+        ): ChipReadEvent =
+            ChipReadEvent(ChipReadStep.SESSION_END, ChipReadStepOutcome.FAILED, null, null, null, null, durationMillis, systemCode)
     }
 }
 
@@ -148,6 +171,21 @@ public enum class ChipReadStep {
      * @since 1.0.0
      */
     SHEET_TEXT,
+
+    /**
+     * The system ended the NFC reader session on iPhone on its own: not at the read's request.
+     * Reported once per session, with [ChipReadStepOutcome.FAILED], the time since the session
+     * began, and Core NFC's raw `NFCReaderError` code in [ChipReadEvent.systemCode] (`null` when
+     * the error was not of Core NFC's domain). The SDK reports the number and does not interpret
+     * it. Codes from Core NFC's header (`NFCError.h`): 200 the person tapped Cancel, 201 the
+     * session's 60-second limit passed, 202 the session ended unexpectedly, 203 the system is
+     * busy, 1 NFC not supported, 2 the entitlement or Info.plist entries are missing, 6 the radio is
+     * off, 7 the system setting or hardware is not eligible, 8 the person has not answered the
+     * request to use the reader. On Android there is no such event.
+     *
+     * @since 1.0.0
+     */
+    SESSION_END,
 }
 
 /**

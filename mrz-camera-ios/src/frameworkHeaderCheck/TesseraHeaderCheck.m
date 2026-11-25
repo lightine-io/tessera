@@ -93,6 +93,7 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
                                                                                     observerOn:TesseraObserverThread.main
                                                               commandTimeoutBeforeAccessMillis:1500
                                                                              readTimeoutMillis:2000
+                                                                           searchRestartMillis:4000
                                                                                          error:nil];
     TesseraCoreNfcReadSettings *built = [[[[[[TesseraCoreNfcReadSettingsBuilder alloc] init]
         linkLossPolicy:[TesseraLinkLossPolicyCompanion.shared readAgainMaxRestarts:1 error:nil]] telemetrySink:nil]
@@ -102,6 +103,10 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
     int64_t beforeAccess = settings.commandTimeoutBeforeAccessMillis;
     TesseraCoreNfcReadSettings *shorterReads = [[settings.toBuilder readTimeoutMillisMillis:1000] buildAndReturnError:nil];
     int64_t reads = settings.readTimeoutMillis;
+    TesseraCoreNfcReadSettings *noSearchRestarts =
+        [[settings.toBuilder searchRestartMillisMillis:TesseraCoreNfcReadSettings.companion.SEARCH_RESTART_OFF] buildAndReturnError:nil];
+    int64_t searchRestart = settings.searchRestartMillis;
+    TesseraChipReadStep *sessionEnd = TesseraChipReadStep.sessionEnd;
     TesseraLinkLossPolicy *noRestart = TesseraLinkLossPolicyCompanion.shared.end;
     TesseraLinkLossPolicy *resumeTwice = [TesseraLinkLossPolicyCompanion.shared resumeMaxRestarts:2 error:nil];
     TesseraNfcUnavailableReason *unavailable = TesseraCoreNfcChipRead.companion.availability;
@@ -111,6 +116,9 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
     (void)beforeAccess;
     (void)shorterReads;
     (void)reads;
+    (void)noSearchRestarts;
+    (void)searchRestart;
+    (void)sessionEnd;
     (void)noRestart;
     (void)resumeTwice;
     (void)unavailable;
@@ -135,4 +143,12 @@ static void tesseraChipReadStates(TesseraChipReadState *state, TesseraChipReadEn
     TesseraNfcError *noAnswer = TesseraNfcNoAnswer.shared;
     (void)neverAnswered;
     (void)noAnswer;
+}
+
+// The raw Core NFC code of a session the system ended, as a telemetry fact (emrtd-core).
+static void tesseraChipReadEvents(TesseraChipReadEvent *event) {
+    BOOL sessionEnded = event.step == TesseraChipReadStep.sessionEnd;
+    TesseraInt *systemCode = event.systemCode;
+    (void)sessionEnded;
+    (void)systemCode;
 }
