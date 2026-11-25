@@ -40,6 +40,7 @@ private class FakeChannel(
     var transceiveCalls = 0
     var closeCalls = 0
     var threadName: String? = null
+
     @Volatile var closeThreadName: String? = null
     val closed = java.util.concurrent.CountDownLatch(1)
     val calls = mutableListOf<String>()

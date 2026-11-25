@@ -15,7 +15,8 @@ class InternalChipApiFromJavaTest {
         val constructors = type.constructors.filterNot { it.isSynthetic }
         assertTrue(constructors.isEmpty(), "${type.simpleName}: public constructors $constructors")
         val callable =
-            type.declaredMethods.filter { Modifier.isPublic(it.modifiers) && !it.isSynthetic && !it.isBridge }
+            type.declaredMethods
+                .filter { Modifier.isPublic(it.modifiers) && !it.isSynthetic && !it.isBridge }
                 // Interface methods the platform calls through ChipReadObserver: harmless without an instance.
                 .filterNot { it.name == "onUpdate" || it.name == "onEnding" }
         assertTrue(callable.isEmpty(), "${type.simpleName}: callable from Java: $callable")

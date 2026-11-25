@@ -37,12 +37,13 @@ kotlin {
 tasks.named("check").configure {
     setDependsOn(
         dependsOn.filterNot { dep ->
-            val name = when (dep) {
-                is TaskProvider<*> -> dep.name
-                is Task -> dep.name
-                is String -> dep
-                else -> null
-            }
+            val name =
+                when (dep) {
+                    is TaskProvider<*> -> dep.name
+                    is Task -> dep.name
+                    is String -> dep
+                    else -> null
+                }
             name != null && name.startsWith("lint")
         },
     )

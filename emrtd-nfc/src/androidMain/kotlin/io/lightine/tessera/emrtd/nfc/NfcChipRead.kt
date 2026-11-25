@@ -806,6 +806,7 @@ internal object PlatformActivities : ActivityPlatform {
  */
 internal class NfcReadRegistry {
     private val live = AtomicReference<Any?>(null)
+
     // Collections.newSetFromMap, not ConcurrentHashMap.newKeySet(): the latter is API 24 and minSdk is 23.
     private val releasing: MutableSet<CompletableDeferred<Unit>> =
         Collections.newSetFromMap(ConcurrentHashMap<CompletableDeferred<Unit>, Boolean>())

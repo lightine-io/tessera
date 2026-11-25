@@ -173,7 +173,13 @@ public class ChipReadCoordinator private constructor(
         val key = options.accessKey
         when {
             key.isCleared -> {
-                end(ChipReadEnding.KeyRejected(ChipAccessDenied(ChipAccessProtocol.NONE, ChipAccessDenied.Reason.KEY_CLEARED), 0, lastProgress.load()))
+                end(
+                    ChipReadEnding.KeyRejected(
+                        ChipAccessDenied(ChipAccessProtocol.NONE, ChipAccessDenied.Reason.KEY_CLEARED),
+                        0,
+                        lastProgress.load(),
+                    ),
+                )
             }
 
             key is ChipAccessKey.Mrz && key.checkDigitFindings.isNotEmpty() && !options.allowCheckDigitMismatch -> {

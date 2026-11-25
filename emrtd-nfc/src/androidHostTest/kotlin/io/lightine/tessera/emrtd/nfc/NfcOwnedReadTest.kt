@@ -400,7 +400,12 @@ class NfcOwnedReadTest {
     fun `while the screen is paused after a lost link the earlier tag is not retried, and it is once the screen resumes`() =
         runTest {
             val rig = rig()
-            val controller = Robolectric.buildActivity(Activity::class.java).create().start().resume()
+            val controller =
+                Robolectric
+                    .buildActivity(Activity::class.java)
+                    .create()
+                    .start()
+                    .resume()
             val observer = OrderedObserver(rig.events)
             rig.platform.next += ScriptedChipChannel(failOnCommand = 7, failure = android.nfc.TagLostException("Tag was lost."))
             val read = rig.start(controller.get(), observer)
@@ -431,7 +436,12 @@ class NfcOwnedReadTest {
     fun `the paused screen does not change when a document that does not return ends the read`() =
         runTest {
             val rig = rig()
-            val controller = Robolectric.buildActivity(Activity::class.java).create().start().resume()
+            val controller =
+                Robolectric
+                    .buildActivity(Activity::class.java)
+                    .create()
+                    .start()
+                    .resume()
             val observer = OrderedObserver(rig.events)
             rig.platform.next += ScriptedChipChannel(failOnCommand = 7, failure = android.nfc.TagLostException("Tag was lost."))
             val read = rig.start(controller.get(), observer)

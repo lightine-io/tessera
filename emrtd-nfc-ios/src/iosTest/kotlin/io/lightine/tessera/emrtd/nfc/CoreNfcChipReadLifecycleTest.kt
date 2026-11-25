@@ -222,7 +222,10 @@ class CoreNfcChipReadLifecycleTest {
             val before = ports.size
             val (read, rec) = start(options = options)
             val ending = assertIs<ChipReadEnding.KeyRejected>(rec.ending)
-            assertEquals(io.lightine.tessera.types.errors.ChipAccessDenied.Reason.KEY_CLEARED, assertIs<io.lightine.tessera.types.errors.ChipAccessDenied>(ending.error).reason)
+            assertEquals(
+                io.lightine.tessera.types.errors.ChipAccessDenied.Reason.KEY_CLEARED,
+                assertIs<io.lightine.tessera.types.errors.ChipAccessDenied>(ending.error).reason,
+            )
             assertEquals(listOf("Starting"), rec.names)
             assertEquals(before, ports.size, "no system session for a used key")
             assertNothingLeft(read)

@@ -314,7 +314,10 @@ class ChipReadCoordinatorTest {
             val k = coordinator(keyObserver, options = options(badKey))
             assertFalse(k.start())
             val rejected = assertIs<ChipReadEnding.KeyRejected>(keyObserver.endings.single())
-            assertEquals(setOf(io.lightine.tessera.types.vocabulary.MrzField.DOCUMENT_NUMBER), assertIs<io.lightine.tessera.types.errors.ChipKeyCheckDigitMismatch>(rejected.error).fields)
+            assertEquals(
+                setOf(io.lightine.tessera.types.vocabulary.MrzField.DOCUMENT_NUMBER),
+                assertIs<io.lightine.tessera.types.errors.ChipKeyCheckDigitMismatch>(rejected.error).fields,
+            )
             assertEquals(0, rejected.attempts)
             val transport = HeldTransport()
             assertEquals(ChipReadAttemptOutcome.ENDED, k.read(transport))
@@ -427,7 +430,13 @@ class ChipReadCoordinatorTest {
             val q = coordinator(quiet)
             q.start()
             val asked = mutableListOf<io.lightine.tessera.types.errors.NfcError>()
-            assertEquals(ChipReadAttemptOutcome.ENDED, q.read(FailingTransport(closed)) { asked += it; null })
+            assertEquals(
+                ChipReadAttemptOutcome.ENDED,
+                q.read(FailingTransport(closed)) {
+                    asked += it
+                    null
+                },
+            )
             assertEquals(listOf<io.lightine.tessera.types.errors.NfcError>(closed), asked)
             assertEquals(closed, assertIs<ChipReadEnding.EndedBySystem>(quiet.endings.single()).reason)
 
@@ -480,13 +489,17 @@ class ChipReadCoordinatorTest {
     fun theSameOptionsForASecondReadAreRejectedAtStart() =
         runTest {
             val opts = options()
-            val first = ChipReadCoordinator(opts, LinkLossPolicy.End, RecordingObserver(), ChipReader(NoOpTelemetrySink), clearKeyAtEnding = true)
+            val first =
+                ChipReadCoordinator(opts, LinkLossPolicy.End, RecordingObserver(), ChipReader(NoOpTelemetrySink), clearKeyAtEnding = true)
             assertTrue(first.start())
             first.cancel(ChipReadEnding.Cancelled.By.APP)
             val observer = RecordingObserver()
             val second = ChipReadCoordinator(opts, LinkLossPolicy.End, observer, ChipReader(NoOpTelemetrySink), clearKeyAtEnding = true)
             assertFalse(second.start())
-            assertEquals(ChipAccessDenied.Reason.KEY_CLEARED, assertIs<ChipAccessDenied>(assertIs<ChipReadEnding.KeyRejected>(observer.endings.single()).error).reason)
+            assertEquals(
+                ChipAccessDenied.Reason.KEY_CLEARED,
+                assertIs<ChipAccessDenied>(assertIs<ChipReadEnding.KeyRejected>(observer.endings.single()).error).reason,
+            )
         }
 
     @Test

@@ -137,15 +137,46 @@ public object CoreNfcDefaultSheetTexts : CoreNfcSheetTexts {
     /** A short line per ending, for example "Done" or "Reading failed. Try again." */
     override fun textForEnding(ending: ChipReadEnding): String =
         when (ending) {
-            is ChipReadEnding.Complete -> "Done"
-            is ChipReadEnding.Partial -> "Not everything could be read. Try again."
-            is ChipReadEnding.Failed -> "Reading failed. Try again."
-            is ChipReadEnding.KeyNotAccepted -> "The chip did not accept the details. Check them and try again."
-            is ChipReadEnding.KeyRejected -> if (ending.error is ChipKeyCheckDigitMismatch) "The document details do not add up. Check them." else "Start the read again."
-            is ChipReadEnding.Cancelled -> "Cancelled"
-            is ChipReadEnding.EndedBySystem -> "Reading stopped. Try again."
-            is ChipReadEnding.NotStarted -> "NFC reading is not available"
-            else -> "Reading ended"
+            is ChipReadEnding.Complete -> {
+                "Done"
+            }
+
+            is ChipReadEnding.Partial -> {
+                "Not everything could be read. Try again."
+            }
+
+            is ChipReadEnding.Failed -> {
+                "Reading failed. Try again."
+            }
+
+            is ChipReadEnding.KeyNotAccepted -> {
+                "The chip did not accept the details. Check them and try again."
+            }
+
+            is ChipReadEnding.KeyRejected -> {
+                // A used key is the app's to fix, not the person's details.
+                if (ending.error is ChipKeyCheckDigitMismatch) {
+                    "The document details do not add up. Check them."
+                } else {
+                    "Start the read again."
+                }
+            }
+
+            is ChipReadEnding.Cancelled -> {
+                "Cancelled"
+            }
+
+            is ChipReadEnding.EndedBySystem -> {
+                "Reading stopped. Try again."
+            }
+
+            is ChipReadEnding.NotStarted -> {
+                "NFC reading is not available"
+            }
+
+            else -> {
+                "Reading ended"
+            }
         }
 
     /**

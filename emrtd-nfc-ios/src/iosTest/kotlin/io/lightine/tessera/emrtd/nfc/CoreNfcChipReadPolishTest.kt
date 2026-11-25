@@ -56,7 +56,8 @@ class CoreNfcChipReadPolishTest {
             read.cancel()
             step()
             assertTrue(LiveSessions.contains(read), "the read waits for the system's report of the session's end")
-            kotlin.native.runtime.GC.collect()
+            kotlin.native.runtime.GC
+                .collect()
             assertNull(observer.get(), "the observer is not kept alive by the read after the ending")
             port.events.onInvalidated(NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER))
             step()
