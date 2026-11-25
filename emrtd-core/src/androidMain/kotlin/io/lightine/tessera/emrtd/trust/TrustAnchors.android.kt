@@ -1,14 +1,18 @@
 package io.lightine.tessera.emrtd.trust
 
+import android.content.Context
+import android.net.Uri
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
 
 // The module's source sets already opt in to the experimental chip API (build.gradle.kts), so no
 // opt-in annotation is needed on this file. Kotlin has no source set shared by the JVM and Android
-// targets, so this file exists twice: here and in jvmMain. Keep the two copies identical.
+// targets, so this file exists twice: here and in jvmMain. Keep the two copies identical, except for
+// the content-address forms (`Context` and `Uri`), which only Android has.
 
 @ExperimentalTesseraChipApi
 public actual object TrustAnchors {
@@ -50,6 +54,64 @@ public actual object TrustAnchors {
         stream: InputStream,
         heldRoots: List<TrustAnchor>,
     ): TrustAnchorLoad = load(stream, MAX_BYTES, heldRoots)
+
+    /**
+     * Reads the root certificates behind [uri], the content address the Storage Access Framework
+     * (the system file picker) gives your app, through the content resolver of [context]. The
+     * stream is opened and closed here; the bytes go to [load]. Android only.
+     *
+     * Call it off the main thread: it reads the whole content. Nothing is fetched from the
+     * network: an address that starts with `http://` or `https://` is answered with
+     * [TrustAnchorLoadProblem.NOT_A_LOCAL_FILE] without being opened, and the app downloads the file
+     * itself. Content larger than 16 MiB is answered with [TrustAnchorLoadProblem.TOO_LARGE].
+     * Never throws: every failure is a typed [TrustAnchorLoad.problem].
+     *
+     * - A content address nobody answers for: [TrustAnchorLoadProblem.NOT_FOUND].
+     * - A provider that gives no stream, an app with no permission for the address (a refused
+     *   permission grant), or any other failure to read: [TrustAnchorLoadProblem.NOT_READABLE].
+     *
+     * @param context Any context of the app.
+     * @param uri The content address of the file the person picked.
+     * @param heldRoots Roots the app already holds, used only for a master list's own checks, as in
+     *   [load] on bytes.
+     * @since 1.0.0
+     */
+    public fun load(
+        context: Context,
+        uri: Uri,
+        heldRoots: List<TrustAnchor>,
+    ): TrustAnchorLoad = load(context, uri, MAX_BYTES, heldRoots)
+
+    /** As [load] on a content address, with no held roots. */
+    public fun load(
+        context: Context,
+        uri: Uri,
+    ): TrustAnchorLoad = load(context, uri, MAX_BYTES, emptyList())
+
+    internal fun load(
+        context: Context,
+        uri: Uri,
+        maxBytes: Long,
+        heldRoots: List<TrustAnchor>,
+    ): TrustAnchorLoad {
+        if (isWebAddress(uri.toString())) return trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_A_LOCAL_FILE)
+        return try {
+            val stream = context.contentResolver.openInputStream(uri)
+            if (stream == null) {
+                trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_READABLE)
+            } else {
+                stream.use { load(it, maxBytes, heldRoots) }
+            }
+        } catch (e: FileNotFoundException) {
+            trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_FOUND)
+        } catch (e: IOException) {
+            trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_READABLE)
+        } catch (e: RuntimeException) {
+            // A permission the app lacks (SecurityException), a provider that failed or died: the
+            // platform's provider calls throw many kinds, and none of them is a certificate problem.
+            trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_READABLE)
+        }
+    }
 
     /** The same read as [load] with a different cap, so tests can exercise [TrustAnchorLoadProblem.TOO_LARGE]. */
     internal fun load(

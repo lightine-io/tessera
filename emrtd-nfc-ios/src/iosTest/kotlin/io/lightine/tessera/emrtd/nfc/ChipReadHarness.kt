@@ -56,6 +56,9 @@ internal class ChipReadHarness(
     var readingAvailable = true
     var reportEnd = true
     var onBegin: (FakeSessionPort) -> Unit = {}
+
+    /** What the read's main queue does with a posted block: at once by default, or queued by a test. */
+    var mainQueue: (() -> Unit) -> Unit = { it() }
     val now: () -> Long = { test.testScheduler.currentTime }
 
     val env =
@@ -73,6 +76,7 @@ internal class ChipReadHarness(
             now = now,
             registry = registry,
             reader = ChipReader(),
+            mainQueue = { block -> mainQueue(block) },
         )
 
     val port: FakeSessionPort get() = ports.last()

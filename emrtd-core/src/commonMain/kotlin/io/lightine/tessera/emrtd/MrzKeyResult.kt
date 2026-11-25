@@ -12,7 +12,9 @@ import io.lightine.tessera.types.vocabulary.MrzField
  * check digits match its values is [ChipAccessKey.Mrz.checkDigitFindings], and the check-digit gate
  * of the read ([ChipReadOptions.allowCheckDigitMismatch]) still applies at read time.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -55,7 +57,9 @@ public sealed class MrzKeyResult {
  * Why no MRZ key could be made ([MrzKeyResult.NotBuilt]). Each value is a fact about the input,
  * never a verdict on a document.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -83,4 +87,37 @@ public enum class MrzKeyProblem {
      * optional data does not hold the rest of the number and its check digit.
      */
     NUMBER_CONTINUATION_MISSING,
+}
+
+/**
+ * The three values a person typed, cleaned up by [ChipAccessKey.Mrz.normalizeTypedFields], and the
+ * fields that cleaning changed.
+ *
+ * The values are the person's own input in a cleaned form: show them to the person before the read,
+ * then pass them to [ChipAccessKey.Mrz.fromTypedFields]. `toString()` never shows them.
+ *
+ * Experimental: see [ExperimentalTesseraChipApi].
+ *
+ * @property documentNumber The document number with spaces removed at both ends and ASCII letters
+ *   in upper case.
+ * @property dateOfBirth The date of birth, cleaned the same way.
+ * @property dateOfExpiry The date of expiry, cleaned the same way.
+ * @property changedFields The fields whose value is not the same as typed: any of
+ *   [MrzField.DOCUMENT_NUMBER], [MrzField.DATE_OF_BIRTH] and [MrzField.DATE_OF_EXPIRY]; empty when
+ *   nothing needed cleaning.
+ * @since 1.0.0
+ */
+@ExperimentalTesseraChipApi
+public class NormalizedMrzFields internal constructor(
+    public val documentNumber: String,
+    public val dateOfBirth: String,
+    public val dateOfExpiry: String,
+    public val changedFields: Set<MrzField>,
+) {
+    /** `true` when cleaning changed at least one value. */
+    public val wasChanged: Boolean
+        get() = changedFields.isNotEmpty()
+
+    /** The changed fields, never a value. */
+    override fun toString(): String = "NormalizedMrzFields(changedFields=$changedFields)"
 }

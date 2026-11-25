@@ -74,7 +74,9 @@ public class TrustAnchor internal constructor(
 /**
  * The outcome of reading a root certificate.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -98,7 +100,9 @@ public sealed class TrustAnchorParse {
 /**
  * Why a root certificate could not be read.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *

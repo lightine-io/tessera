@@ -32,7 +32,9 @@ import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
  * In Swift these are the classes `ChipReadResultComplete`, `ChipReadResultPartial` and
  * `ChipReadResultFailed`; none is generic.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -217,7 +219,9 @@ public class AccessReport internal constructor(
 /**
  * The kind of key that opened the chip.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -235,7 +239,9 @@ public enum class ChipPassword {
 /**
  * The three PACE mappings (Part 11, section 4.4.3.3).
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -310,7 +316,9 @@ public class ChipFileError internal constructor(
 /**
  * What a read did with the files of earlier attempts after a lost link ([LinkLossPolicy.Resume]).
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *

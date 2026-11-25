@@ -1,6 +1,7 @@
 package io.lightine.tessera.emrtd.nfc
 
 import io.lightine.tessera.emrtd.LinkLossPolicy
+import io.lightine.tessera.emrtd.ObserverThread
 import io.lightine.tessera.telemetry.TelemetrySink
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 
@@ -8,7 +9,9 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  * How a [CoreNfcChipRead] behaves around the radio. Every value has a default that suits an
  * ordinary app: create it with no arguments, or do not pass one at all.
  *
- * Times are in milliseconds.
+ * Every time is a `Long` in milliseconds, as in the Android read's settings (`NfcReadSettings`),
+ * where [linkLoss], [settleDelayMillis], [commandTimeoutMillis] and [observerOn] mean the same,
+ * with the same defaults.
  *
  * Experimental: see [ExperimentalTesseraChipApi]. In Swift, `CoreNfcReadSettings()` gives the
  * defaults; the full initializer takes every value. To change one value without naming the others,
@@ -38,6 +41,10 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  *   count, time): the sink you give here. With `null`, the default, the sink registered in
  *   `TelemetrySinkRegistry` when the read starts, which is a sink that drops everything when none
  *   is registered. The events never hold document or chip data.
+ * @property observerOn The thread the observer is called on: [ObserverThread.MAIN], the main
+ *   queue, by default, so the updates reach a screen without a hop of your own; [ObserverThread.CALLER]
+ *   for the read's own threads. Either way the calls come one at a time, in order, with the ending
+ *   last, exactly once, and none comes before `start` returned.
  * @throws IllegalArgumentException when [commandTimeoutMillis] is not positive, or
  *   [settleDelayMillis] or [waitAfterSystemEndMillis] is negative.
  * @since 1.0.0
@@ -51,6 +58,7 @@ public class CoreNfcReadSettings
         public val commandTimeoutMillis: Long = DEFAULT_COMMAND_TIMEOUT_MILLIS,
         public val waitAfterSystemEndMillis: Long = DEFAULT_WAIT_AFTER_SYSTEM_END_MILLIS,
         public val telemetry: TelemetrySink? = null,
+        public val observerOn: ObserverThread = ObserverThread.MAIN,
     ) {
         /** The defaults: [LinkLossPolicy.Resume] with 2 restarts, 400, 5000 and 1000 milliseconds. */
         public constructor() : this(LinkLossPolicy.Resume(DEFAULT_RESTARTS))
@@ -64,7 +72,8 @@ public class CoreNfcReadSettings
         /** The values, never document data. */
         override fun toString(): String =
             "CoreNfcReadSettings(linkLoss=$linkLoss, settleDelayMillis=$settleDelayMillis, " +
-                "commandTimeoutMillis=$commandTimeoutMillis, waitAfterSystemEndMillis=$waitAfterSystemEndMillis)"
+                "commandTimeoutMillis=$commandTimeoutMillis, waitAfterSystemEndMillis=$waitAfterSystemEndMillis, " +
+                "observerOn=$observerOn)"
 
         /**
          * A builder that starts from these values, so one value can change without naming the
@@ -79,6 +88,7 @@ public class CoreNfcReadSettings
                 .commandTimeoutMillis(commandTimeoutMillis)
                 .waitAfterSystemEndMillis(waitAfterSystemEndMillis)
                 .telemetry(telemetry)
+                .observerOn(observerOn)
 
         /**
          * Builds [CoreNfcReadSettings] step by step, with the constructor's defaults.
@@ -92,6 +102,7 @@ public class CoreNfcReadSettings
             private var commandTimeoutMillis: Long = DEFAULT_COMMAND_TIMEOUT_MILLIS
             private var waitAfterSystemEndMillis: Long = DEFAULT_WAIT_AFTER_SYSTEM_END_MILLIS
             private var telemetry: TelemetrySink? = null
+            private var observerOn: ObserverThread = ObserverThread.MAIN
 
             /** What the read does when the link to the chip is lost. */
             public fun linkLoss(policy: LinkLossPolicy): Builder = apply { linkLoss = policy }
@@ -108,6 +119,9 @@ public class CoreNfcReadSettings
             /** Where the read's step events go; `null` uses the sink registered when the read starts. */
             public fun telemetry(sink: TelemetrySink?): Builder = apply { telemetry = sink }
 
+            /** The thread the observer is called on. */
+            public fun observerOn(thread: ObserverThread): Builder = apply { observerOn = thread }
+
             /**
              * The settings.
              *
@@ -115,7 +129,7 @@ public class CoreNfcReadSettings
              */
             @Throws(IllegalArgumentException::class)
             public fun build(): CoreNfcReadSettings =
-                CoreNfcReadSettings(linkLoss, settleDelayMillis, commandTimeoutMillis, waitAfterSystemEndMillis, telemetry)
+                CoreNfcReadSettings(linkLoss, settleDelayMillis, commandTimeoutMillis, waitAfterSystemEndMillis, telemetry, observerOn)
         }
 
         /** The default values. */

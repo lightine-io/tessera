@@ -3,6 +3,7 @@ package io.lightine.tessera.emrtd
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.vocabulary.CheckOutcome
 import io.lightine.tessera.types.vocabulary.CheckReason
+import io.lightine.tessera.types.vocabulary.MrzField
 
 /**
  * One fact from reading a chip: what was checked, and how it came out.
@@ -45,7 +46,9 @@ public class ChipCheck internal constructor(
  * How a [ChipCheck] reached its outcome: facts about the inputs, kept beside the check so that the
  * kind stays the same whichever way the check went.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -71,12 +74,55 @@ public sealed class ChipCheckDetail {
         public val signer: ChipCountrySource?,
         public val root: ChipCountrySource?,
     ) : ChipCheckDetail()
+
+    /**
+     * For [ChipCheckKind.Dg1MatchesPrintedMrz]: for each MRZ field, whether the chip's DG1 shows the
+     * same characters as the printed MRZ your app gave ([ChipReadOptions.printedDocument]). It holds
+     * no value from either MRZ.
+     *
+     * @property sameFormat Whether both MRZs have the same format (TD1, TD2, TD3).
+     * @property fields One entry for every [MrzField], in the order of [MrzField.entries].
+     */
+    public data class PrintedMrzFields(
+        public val sameFormat: Boolean,
+        public val fields: Map<MrzField, ChipFieldMatch>,
+    ) : ChipCheckDetail() {
+        /** The fields that differ, in [MrzField] order. */
+        public val differingFields: List<MrzField>
+            get() = fields.filterValues { it == ChipFieldMatch.DIFFERENT }.keys.toList()
+    }
+}
+
+/**
+ * How one MRZ field compares between the chip's DG1 and the printed MRZ. A fact about the
+ * characters, never a verdict on the document.
+ *
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
+ *
+ * Experimental: see [ExperimentalTesseraChipApi].
+ *
+ * @since 1.0.0
+ */
+@ExperimentalTesseraChipApi
+public enum class ChipFieldMatch {
+    /** Both MRZs have the field and show the same characters, check digit included. */
+    SAME,
+
+    /** Both MRZs have the field and show different characters. */
+    DIFFERENT,
+
+    /** One of the two MRZ formats has no such field, so there is nothing to compare. */
+    NOT_COMPARABLE,
 }
 
 /**
  * Where a signer certificate came from.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -94,7 +140,9 @@ public enum class ChipSignerOrigin {
 /**
  * How two certificate names were found equal.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -112,7 +160,9 @@ public enum class ChipNameComparison {
 /**
  * Where a certificate's country was read from.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -133,7 +183,9 @@ public enum class ChipCountrySource {
 /**
  * Which signed chip file a signer check is about.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -151,7 +203,9 @@ public enum class ChipSignedFile {
 /**
  * Where a signed copy of EF.CardAccess's entries was read from (Part 11, section 9.2.11).
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -169,7 +223,9 @@ public enum class ChipSignedCopy {
 /**
  * Where on the chip chip authentication ran (Part 11, section 6.2).
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -187,7 +243,9 @@ public enum class ChipFileContext {
 /**
  * What a [ChipCheck] is about.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -343,7 +401,13 @@ public sealed class ChipCheckKind {
             get() = "active-authentication"
     }
 
-    /** Every field of the chip's DG1 shows the same characters as the printed MRZ (Part 11, 5.1.1 best practice 2). */
+    /**
+     * Every field of the chip's DG1 shows the same characters as the printed MRZ (Part 11, 5.1.1
+     * best practice 2). Made only when your app gave a printed MRZ
+     * ([ChipReadOptions.printedDocument]) or combined one with a read ([ChipMrzComparison]); its
+     * [ChipCheckDetail.PrintedMrzFields] says which fields differ. Never decides what a difference
+     * means.
+     */
     public data object Dg1MatchesPrintedMrz : ChipCheckKind() {
         override val code: String
             get() = "dg1-matches-printed-mrz"
@@ -359,7 +423,9 @@ public sealed class ChipCheckKind {
  * Implements [CheckReason], the shared reason type of [CheckOutcome], so a chip check's outcome
  * carries a typed reason.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -561,6 +627,12 @@ public enum class ChipCheckReason : CheckReason {
 
     /** The chip's DG1 was not read or could not be parsed. */
     NO_CHIP_MRZ,
+
+    ;
+
+    /** The stable code of this reason: `chip` and the name in lower case, words joined by hyphens. */
+    override val code: String
+        get() = "chip." + name.lowercase().replace('_', '-')
 }
 
 /** `SECURITY_OBJECT` as `security-object`. */

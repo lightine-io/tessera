@@ -2,6 +2,7 @@ package io.lightine.tessera.emrtd.nfc
 
 import io.lightine.tessera.emrtd.ChipReadEnding
 import io.lightine.tessera.emrtd.LinkLossPolicy
+import io.lightine.tessera.emrtd.ObserverThread
 import io.lightine.tessera.telemetry.TelemetrySink
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.NfcTimeout
@@ -11,9 +12,11 @@ import kotlin.jvm.JvmOverloads
  * How an [NfcChipRead] behaves around the radio. Every value has a default that suits an ordinary
  * app: create it with no arguments, or do not pass one at all.
  *
- * Times are in milliseconds. [linkLoss], [settleDelayMillis] and [commandTimeoutMillis] mean the
- * same, with the same defaults, as in the iPhone read's settings (`CoreNfcReadSettings`). The two
- * waits are Android's own: on iPhone the system session's 60-second limit bounds every wait.
+ * Every time is a `Long` in milliseconds. [linkLoss], [settleDelayMillis], [commandTimeoutMillis]
+ * and [observerOn] mean the same, with the same defaults, as in the iPhone read's settings
+ * (`CoreNfcReadSettings`). The two waits are Android's own: on iPhone the system session's
+ * 60-second limit bounds every wait. [presenceCheckDelayMillis] and [platformSounds] set reader
+ * mode, which only the Activity-owning `NfcChipRead.start(activity, ...)` turns on for you.
  *
  * Kotlin callers use the constructor with named arguments; Java callers can use [Builder], which
  * also changes one value of an existing settings object without naming the others
@@ -39,17 +42,28 @@ import kotlin.jvm.JvmOverloads
  *   link, counted from the loss, before it ends with [ChipReadEnding.Partial] or
  *   [ChipReadEnding.Failed]. Default 15000.
  * @property waitForDocumentMillis How long the read may take to find a document and set up the
- *   first link to it, counted from the start, across tags whose link could not be set up; `null`,
- *   the default, waits without a limit. When it passes, the read ends with
- *   [ChipReadEnding.EndedBySystem] and [NfcTimeout]. Once a first link is up it no longer applies:
- *   [waitForReturnMillis] bounds the waits after a lost link.
+ *   first link to it, counted from the start, across tags whose link could not be set up;
+ *   [NO_LIMIT], the default, waits without a limit ([hasDocumentWaitLimit] is then `false`). When it
+ *   passes, the read ends with [ChipReadEnding.EndedBySystem] and [NfcTimeout]. Once a first link
+ *   is up it no longer applies: [waitForReturnMillis] bounds the waits after a lost link.
+ * @property presenceCheckDelayMillis How often the platform checks that the document is still
+ *   there, set when the Activity-owning start turns reader mode on. Default 1000: the platform's
+ *   own 125 ms drops the link of some chips, and a longer delay is a known remedy; whether it helps
+ *   is for your app to test with its own documents. Not used by the callback form, where your app
+ *   passes it to [NfcReaderMode.enable].
+ * @property platformSounds Whether the platform plays its own sound when a document is found, set
+ *   when the Activity-owning start turns reader mode on. Default `true`; `false` when your app
+ *   gives its own feedback, because the system sound can make people move the document.
+ * @property observerOn The thread the observer is called on: [ObserverThread.MAIN] by default, so
+ *   the updates reach a screen without a hop of your own; [ObserverThread.CALLER] for the
+ *   read's own threads. Either way the calls come one at a time, in order, with the ending last.
  * @property telemetry Where the read's step events go (step, protocol, status word, file id, byte
  *   count, time): the sink you give here. With `null`, the default, the sink registered in
  *   `TelemetrySinkRegistry` when the read starts, which is a sink that drops everything when none
  *   is registered. The events never hold document or chip data.
- * @throws IllegalArgumentException when [settleDelayMillis] or [waitForReturnMillis] is negative,
- *   [commandTimeoutMillis] is not in 1 to [Int.MAX_VALUE], or [waitForDocumentMillis] is set and
- *   negative.
+ * @throws IllegalArgumentException when [settleDelayMillis], [waitForReturnMillis] or
+ *   [waitForDocumentMillis] is negative, [commandTimeoutMillis] is not in 1 to [Int.MAX_VALUE], or
+ *   [presenceCheckDelayMillis] is not in 0 to [Int.MAX_VALUE] (the platform takes an `int`).
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
@@ -61,8 +75,11 @@ public class NfcReadSettings
         public val settleDelayMillis: Long = DEFAULT_SETTLE_DELAY_MILLIS,
         public val commandTimeoutMillis: Long = DEFAULT_COMMAND_TIMEOUT_MILLIS,
         public val waitForReturnMillis: Long = DEFAULT_WAIT_FOR_RETURN_MILLIS,
-        public val waitForDocumentMillis: Long? = null,
+        public val waitForDocumentMillis: Long = NO_LIMIT,
         public val telemetry: TelemetrySink? = null,
+        public val presenceCheckDelayMillis: Long = DEFAULT_PRESENCE_CHECK_DELAY_MILLIS,
+        public val platformSounds: Boolean = true,
+        public val observerOn: ObserverThread = ObserverThread.MAIN,
     ) {
         init {
             require(settleDelayMillis >= 0) { "settleDelayMillis must not be negative, was $settleDelayMillis" }
@@ -70,16 +87,22 @@ public class NfcReadSettings
                 "commandTimeoutMillis must be positive and fit an Int, was $commandTimeoutMillis"
             }
             require(waitForReturnMillis >= 0) { "waitForReturnMillis must not be negative, was $waitForReturnMillis" }
-            require(waitForDocumentMillis == null || waitForDocumentMillis >= 0) {
-                "waitForDocumentMillis must not be negative when set, was $waitForDocumentMillis"
+            require(waitForDocumentMillis >= 0) { "waitForDocumentMillis must not be negative, was $waitForDocumentMillis" }
+            require(presenceCheckDelayMillis in 0..Int.MAX_VALUE) {
+                "presenceCheckDelayMillis must be in 0 to ${Int.MAX_VALUE}, was $presenceCheckDelayMillis"
             }
         }
+
+        /** `true` when [waitForDocumentMillis] is a limit; `false` for [NO_LIMIT]. */
+        public val hasDocumentWaitLimit: Boolean
+            get() = waitForDocumentMillis != NO_LIMIT
 
         /** The values, never document data. */
         override fun toString(): String =
             "NfcReadSettings(linkLoss=$linkLoss, settleDelayMillis=$settleDelayMillis, " +
                 "commandTimeoutMillis=$commandTimeoutMillis, waitForReturnMillis=$waitForReturnMillis, " +
-                "waitForDocumentMillis=$waitForDocumentMillis)"
+                "waitForDocumentMillis=$waitForDocumentMillis, presenceCheckDelayMillis=$presenceCheckDelayMillis, " +
+                "platformSounds=$platformSounds, observerOn=$observerOn)"
 
         /**
          * A builder that starts from these values, so one value can change without naming the
@@ -95,6 +118,9 @@ public class NfcReadSettings
                 .waitForReturnMillis(waitForReturnMillis)
                 .waitForDocumentMillis(waitForDocumentMillis)
                 .telemetry(telemetry)
+                .presenceCheckDelayMillis(presenceCheckDelayMillis)
+                .platformSounds(platformSounds)
+                .observerOn(observerOn)
 
         /**
          * Builds [NfcReadSettings] step by step, with the constructor's defaults.
@@ -107,8 +133,11 @@ public class NfcReadSettings
             private var settleDelayMillis: Long = DEFAULT_SETTLE_DELAY_MILLIS
             private var commandTimeoutMillis: Long = DEFAULT_COMMAND_TIMEOUT_MILLIS
             private var waitForReturnMillis: Long = DEFAULT_WAIT_FOR_RETURN_MILLIS
-            private var waitForDocumentMillis: Long? = null
+            private var waitForDocumentMillis: Long = NO_LIMIT
             private var telemetry: TelemetrySink? = null
+            private var presenceCheckDelayMillis: Long = DEFAULT_PRESENCE_CHECK_DELAY_MILLIS
+            private var platformSounds: Boolean = true
+            private var observerOn: ObserverThread = ObserverThread.MAIN
 
             /** What the read does when the link to the chip is lost. */
             public fun linkLoss(policy: LinkLossPolicy): Builder = apply { linkLoss = policy }
@@ -122,11 +151,23 @@ public class NfcReadSettings
             /** How long to wait for the document to come back after a lost link. */
             public fun waitForReturnMillis(millis: Long): Builder = apply { waitForReturnMillis = millis }
 
-            /** How long the read may take to find a document and link to it; `null` waits without a limit. */
-            public fun waitForDocumentMillis(millis: Long?): Builder = apply { waitForDocumentMillis = millis }
+            /** How long the read may take to find a document and link to it. */
+            public fun waitForDocumentMillis(millis: Long): Builder = apply { waitForDocumentMillis = millis }
+
+            /** Waits for a document without a limit, the default: the same as [NO_LIMIT]. */
+            public fun noLimitForDocument(): Builder = apply { waitForDocumentMillis = NO_LIMIT }
 
             /** Where the read's step events go; `null` uses the sink registered when the read starts. */
             public fun telemetry(sink: TelemetrySink?): Builder = apply { telemetry = sink }
+
+            /** How often the platform checks that the document is still there, in reader mode. */
+            public fun presenceCheckDelayMillis(millis: Long): Builder = apply { presenceCheckDelayMillis = millis }
+
+            /** Whether the platform plays its sound when a document is found. */
+            public fun platformSounds(on: Boolean): Builder = apply { platformSounds = on }
+
+            /** The thread the observer is called on. */
+            public fun observerOn(thread: ObserverThread): Builder = apply { observerOn = thread }
 
             /**
              * The settings.
@@ -135,7 +176,17 @@ public class NfcReadSettings
              */
             @Throws(IllegalArgumentException::class)
             public fun build(): NfcReadSettings =
-                NfcReadSettings(linkLoss, settleDelayMillis, commandTimeoutMillis, waitForReturnMillis, waitForDocumentMillis, telemetry)
+                NfcReadSettings(
+                    linkLoss,
+                    settleDelayMillis,
+                    commandTimeoutMillis,
+                    waitForReturnMillis,
+                    waitForDocumentMillis,
+                    telemetry,
+                    presenceCheckDelayMillis,
+                    platformSounds,
+                    observerOn,
+                )
         }
 
         /** The default values. */
@@ -151,5 +202,11 @@ public class NfcReadSettings
 
             /** The default [waitForReturnMillis]: 15000. */
             public const val DEFAULT_WAIT_FOR_RETURN_MILLIS: Long = 15_000
+
+            /** The default [presenceCheckDelayMillis]: 1000, the same as [NfcReaderMode.DEFAULT_PRESENCE_CHECK_DELAY_MILLIS]. */
+            public const val DEFAULT_PRESENCE_CHECK_DELAY_MILLIS: Long = NfcReaderMode.DEFAULT_PRESENCE_CHECK_DELAY_MILLIS
+
+            /** The value of [waitForDocumentMillis] that means no limit: [Long.MAX_VALUE]. */
+            public const val NO_LIMIT: Long = Long.MAX_VALUE
         }
     }

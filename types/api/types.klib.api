@@ -111,7 +111,10 @@ final enum class io.lightine.tessera.types.vocabulary/Sex : kotlin/Enum<io.light
     final fun values(): kotlin/Array<io.lightine.tessera.types.vocabulary/Sex> // io.lightine.tessera.types.vocabulary/Sex.values|values#static(){}[0]
 }
 
-abstract interface io.lightine.tessera.types.vocabulary/CheckReason // io.lightine.tessera.types.vocabulary/CheckReason|null[0]
+abstract interface io.lightine.tessera.types.vocabulary/CheckReason { // io.lightine.tessera.types.vocabulary/CheckReason|null[0]
+    abstract val code // io.lightine.tessera.types.vocabulary/CheckReason.code|{}code[0]
+        abstract fun <get-code>(): kotlin/String // io.lightine.tessera.types.vocabulary/CheckReason.code.<get-code>|<get-code>(){}[0]
+}
 
 sealed interface io.lightine.tessera.types.vocabulary/CheckOutcome { // io.lightine.tessera.types.vocabulary/CheckOutcome|null[0]
     final class Failed : io.lightine.tessera.types.vocabulary/CheckOutcome { // io.lightine.tessera.types.vocabulary/CheckOutcome.Failed|null[0]
@@ -841,6 +844,7 @@ final class io.lightine.tessera.types.errors/NfcUnavailable : io.lightine.tesser
     final fun toString(): kotlin/String // io.lightine.tessera.types.errors/NfcUnavailable.toString|toString(){}[0]
 
     final enum class Reason : kotlin/Enum<io.lightine.tessera.types.errors/NfcUnavailable.Reason> { // io.lightine.tessera.types.errors/NfcUnavailable.Reason|null[0]
+        enum entry ACTIVITY_DESTROYED // io.lightine.tessera.types.errors/NfcUnavailable.Reason.ACTIVITY_DESTROYED|null[0]
         enum entry BUSY // io.lightine.tessera.types.errors/NfcUnavailable.Reason.BUSY|null[0]
         enum entry CANCELLED_BY_USER // io.lightine.tessera.types.errors/NfcUnavailable.Reason.CANCELLED_BY_USER|null[0]
         enum entry CLOSED // io.lightine.tessera.types.errors/NfcUnavailable.Reason.CLOSED|null[0]

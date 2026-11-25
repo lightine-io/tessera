@@ -29,7 +29,9 @@ import kotlin.jvm.JvmStatic
  * action of the person.
  *
  * To make an MRZ key from a scanned or parsed MRZ, use [Mrz.from]; from values a person typed,
- * [Mrz.fromTypedFields].
+ * [Mrz.fromTypedFields] (with [Mrz.normalizeTypedFields] before it, if your form should accept
+ * lower-case letters and spaces around a value); from a card access number, [Can.from]. Every
+ * builder answers with a result, so bad input is shown to the person, not thrown.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -238,6 +240,11 @@ public sealed class ChipAccessKey {
                  * A scanner's decoded result holds a [ParseResult]; pass that to the other overload,
                  * or its `document`.
                  *
+                 * The key does not keep the document. To have the read compare the printed MRZ with
+                 * the chip's DG1, pass the same document to
+                 * [ChipReadOptions.Builder.printedDocument] yourself: the two calls are separate on
+                 * purpose, so nothing is passed on that you did not choose.
+                 *
                  * Nothing is thrown for a document that lacks a field: the answer is
                  * [MrzKeyResult.NotBuilt] with the field and the problem. A visa has no chip
                  * ([MrzKeyProblem.DOCUMENT_HAS_NO_CHIP]).
@@ -307,14 +314,58 @@ public sealed class ChipAccessKey {
                     }
 
                 /**
+                 * Cleans up the three values a person typed, in the two ways a keyboard makes
+                 * likely, and reports what it changed. It is separate from [fromTypedFields] so
+                 * that the person always sees the change: show [NormalizedMrzFields.documentNumber],
+                 * [NormalizedMrzFields.dateOfBirth] and [NormalizedMrzFields.dateOfExpiry] (and
+                 * [NormalizedMrzFields.changedFields]) and let the person confirm, then pass them
+                 * to [fromTypedFields].
+                 *
+                 * It does exactly two things, per value: removes spaces (`' '`) at the start and at
+                 * the end, and turns the ASCII letters `a` to `z` into `A` to `Z`. Nothing else is
+                 * changed: a space inside a value, a letter outside `A` to `Z`, a digit or a `<`
+                 * stays as typed, so [fromTypedFields] still refuses it and says why. It never
+                 * guesses a letter for a digit or the other way round.
+                 *
+                 * It never throws and never checks the values.
+                 *
+                 * @param documentNumber The document number as typed.
+                 * @param dateOfBirth The date of birth as typed.
+                 * @param dateOfExpiry The date of expiry as typed.
+                 * @return The cleaned values and the fields that were changed.
+                 * @since 1.0.0
+                 */
+                @JvmStatic
+                public fun normalizeTypedFields(
+                    documentNumber: String,
+                    dateOfBirth: String,
+                    dateOfExpiry: String,
+                ): NormalizedMrzFields {
+                    val number = normalizeTyped(documentNumber)
+                    val birth = normalizeTyped(dateOfBirth)
+                    val expiry = normalizeTyped(dateOfExpiry)
+                    val changed =
+                        buildSet {
+                            if (number != documentNumber) add(MrzField.DOCUMENT_NUMBER)
+                            if (birth != dateOfBirth) add(MrzField.DATE_OF_BIRTH)
+                            if (expiry != dateOfExpiry) add(MrzField.DATE_OF_EXPIRY)
+                        }
+                    return NormalizedMrzFields(number, birth, expiry, changed)
+                }
+
+                /**
                  * A key from the three values as a person types them, with the check digits worked
                  * out by the SDK: the document number (up to nine characters or a longer complete
                  * number), the date of birth and the date of expiry (`YYMMDD`).
                  *
                  * The document number is padded at its end with `<` to nine characters, as the MRZ
                  * prints it; a longer number is kept whole. The three check digits are computed with
-                 * `computeCheckDigit`. Nothing else is changed: letters must be upper case, and a
-                 * date is six digits, with no check that it is a real calendar date.
+                 * `computeCheckDigit`. Nothing else is changed: letters must be upper case, with no
+                 * spaces around the value, and a date is six digits, with no check that it is a real
+                 * calendar date. This call is strict on purpose: it never alters what the person
+                 * typed in a way they cannot see. When your form should accept lower-case letters
+                 * and spaces around a value, call [normalizeTypedFields] first: it says which
+                 * fields it changed, so you can show the person the result before the read.
                  *
                  * **A typed value has no printed check digit to compare.** A typing mistake still
                  * gives a key whose digits are right for the mistaken value, so the read sends it
@@ -360,7 +411,19 @@ public sealed class ChipAccessKey {
 
     /**
      * A key from the card access number (CAN): the short number printed on the document for chip
-     * access, often six digits.
+     * access, often six digits. Use it when the document has one and the MRZ is not at hand, or
+     * when a chip asks for it.
+     *
+     * **The valid form.** Digits `0` to `9` only, at least one, exactly as printed on the document,
+     * with no spaces or other characters. ICAO Doc 9303 Part 11 lists the CAN among the passwords
+     * of PACE and has it printed or displayed on the document; the SDK uses its digits as ASCII
+     * characters for the PACE key. The SDK sets no upper limit on the length, because it cannot know
+     * how long a number each issuer prints. A CAN has no check digit, so a mistyped CAN is not
+     * noticed before the read: it costs the chip a try, as a wrong MRZ value does.
+     *
+     * The constructor throws for a value that is not usable; [from] gives the same answer as a
+     * result, the same way the MRZ key builders do, so one piece of code can handle both kinds of
+     * key.
      *
      * @param can The card access number as printed: digits only, at least one.
      * @throws IllegalArgumentException when [can] is empty or holds a character other than `0` to
@@ -383,8 +446,38 @@ public sealed class ChipAccessKey {
 
             /** `ChipAccessKey.Can`, without the value. */
             override fun toString(): String = "ChipAccessKey.Can"
+
+            /** Builds a CAN key without an exception. */
+            public companion object {
+                /**
+                 * A key from the card access number, answering with a result instead of throwing:
+                 * the same rules as the [Can] constructor, in the same style as
+                 * [Mrz.Companion.from] and [Mrz.Companion.fromTypedFields].
+                 *
+                 * Nothing is trimmed or corrected. Pass the digits exactly as printed.
+                 *
+                 * @param can The card access number as printed: digits only, at least one.
+                 * @return [CanKeyResult.Built] with the key, or [CanKeyResult.NotBuilt] with the
+                 *   problem ([CanKeyProblem.EMPTY], or [CanKeyProblem.CHARACTER_NOT_ALLOWED] with
+                 *   the index of the first character that is not a digit).
+                 * @since 1.0.0
+                 */
+                @JvmStatic
+                public fun from(can: String): CanKeyResult {
+                    if (can.isEmpty()) return CanKeyResult.NotBuilt(CanKeyProblem.EMPTY, null)
+                    val bad = can.indexOfFirst { it !in '0'..'9' }
+                    if (bad >= 0) return CanKeyResult.NotBuilt(CanKeyProblem.CHARACTER_NOT_ALLOWED, bad)
+                    return CanKeyResult.Built(Can(can))
+                }
+            }
         }
 }
+
+/** The typed value with spaces removed at both ends and the ASCII letters `a` to `z` in upper case; nothing else. */
+private fun normalizeTyped(value: String): String =
+    buildString {
+        for (c in value.trim(' ')) append(if (c in 'a'..'z') c - ('a' - 'A') else c)
+    }
 
 private const val FILLER = '<'
 

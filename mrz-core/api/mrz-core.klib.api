@@ -54,6 +54,8 @@ final enum class io.lightine.tessera.mrz.validation/MrzNotRunReason : io.lightin
     enum entry INVALID_LENGTH // io.lightine.tessera.mrz.validation/MrzNotRunReason.INVALID_LENGTH|null[0]
     enum entry NO_COMPOSITE_CHECK_DIGIT // io.lightine.tessera.mrz.validation/MrzNotRunReason.NO_COMPOSITE_CHECK_DIGIT|null[0]
 
+    final val code // io.lightine.tessera.mrz.validation/MrzNotRunReason.code|{}code[0]
+        final fun <get-code>(): kotlin/String // io.lightine.tessera.mrz.validation/MrzNotRunReason.code.<get-code>|<get-code>(){}[0]
     final val entries // io.lightine.tessera.mrz.validation/MrzNotRunReason.entries|#static{}entries[0]
         final fun <get-entries>(): kotlin.enums/EnumEntries<io.lightine.tessera.mrz.validation/MrzNotRunReason> // io.lightine.tessera.mrz.validation/MrzNotRunReason.entries.<get-entries>|<get-entries>#static(){}[0]
 

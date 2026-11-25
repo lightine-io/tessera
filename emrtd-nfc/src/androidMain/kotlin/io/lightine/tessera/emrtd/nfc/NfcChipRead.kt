@@ -1,9 +1,14 @@
 package io.lightine.tessera.emrtd.nfc
 
+import android.app.Activity
+import android.app.Application
 import android.content.Context
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.IsoDep
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import io.lightine.tessera.emrtd.ApduTransportException
 import io.lightine.tessera.emrtd.ChipReadAttemptOutcome
 import io.lightine.tessera.emrtd.ChipReadCoordinator
@@ -13,6 +18,8 @@ import io.lightine.tessera.emrtd.ChipReadObserver
 import io.lightine.tessera.emrtd.ChipReadOptions
 import io.lightine.tessera.emrtd.ChipReadUpdate
 import io.lightine.tessera.emrtd.ChipReader
+import io.lightine.tessera.emrtd.HandoffObserver
+import io.lightine.tessera.emrtd.ObserverThread
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.NfcError
 import io.lightine.tessera.types.errors.NfcTagLost
@@ -30,16 +37,53 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.jvm.JvmOverloads
 
 /**
  * Reads a passport or ID card chip on Android, from start to end: the SDK owns the link to the
  * chip and every way the read can stop; your app owns the screen. This is the main way to read a
  * chip on Android; [IsoDepTransport] stays the low-level path, where your app owns the link.
  *
- * The read is the platform's reader-mode callback: start it, hand it to [NfcReaderMode.enable],
- * show the updates, and act on the one ending.
+ * ## The shortest read
+ *
+ * Start it with the screen that shows it. The read turns reader mode on for that screen, runs, and
+ * turns reader mode off at its ending, on every ending:
+ *
+ * ```kotlin
+ * val read = NfcChipRead.start(activity, options, observer)
+ * // later, if the person leaves the screen: read.cancel()
+ * ```
+ *
+ * [start] with an Activity checks that NFC can be used, turns on reader mode with the SDK's flags
+ * and [NfcReadSettings.presenceCheckDelayMillis], and ends the read as [ChipReadEnding.NotStarted]
+ * when it cannot: NFC missing or off, the Activity finishing or destroyed
+ * ([NfcUnavailable.Reason.ACTIVITY_DESTROYED]), or reader mode refused. It never turns reader
+ * mode off and on again while a document may be on the phone: it is switched on once, here, and off
+ * once, at the ending, before the observer hears the ending. Call it on the main thread, with the
+ * Activity that shows the read; the observer is called on the main thread by default
+ * ([NfcReadSettings.observerOn]). The SDK cannot ask an Activity whether it is resumed (the platform
+ * has no public call for it): the platform keeps the reader-mode request and applies it when the
+ * Activity resumes, so a read started from `onCreate` simply waits for that.
+ *
+ * **Configuration change.** The read is for one Activity. The platform turns reader mode off and
+ * on with that Activity's pause and resume, and a pause in the middle of a read drops the link the
+ * way a moved document does (see below). When the Activity is destroyed, for example by a rotation,
+ * the read ends at once as [ChipReadEnding.EndedBySystem] with
+ * [NfcUnavailable.Reason.ACTIVITY_DESTROYED], because reader mode ended with the Activity and a new
+ * Activity cannot take the read over without turning reader mode off and on. That is the safest
+ * behaviour to promise: no read is left running without a screen, and the key is cleared. To read
+ * through a rotation, keep the read screen out of it (`android:configChanges` for the screen's
+ * orientation and size, or a fixed orientation), or use the lower-level form below. The read holds
+ * the Activity weakly, and lets it go at the ending, so a finished read never keeps an Activity
+ * alive; do not keep the read in a ViewModel past the screen.
+ *
+ * ## The lower-level form
+ *
+ * Your app can run reader mode itself: start the read with an adapter, hand it to
+ * [NfcReaderMode.enable], show the updates, and act on the one ending.
  *
  * ```kotlin
  * // In a ViewModel, or anything else that outlives a configuration change:
@@ -69,7 +113,7 @@ import java.util.concurrent.atomic.AtomicReference
  *   not watch the Activity.
  * - One read at a time in the app: [start] while another read has not ended ends at once with
  *   [ChipReadEnding.NotStarted] and [NfcUnavailable.Reason.READ_IN_PROGRESS]. A read waiting for a
- *   document waits until [NfcReadSettings.waitForDocumentMillis] passes, which by default is never:
+ *   document waits until [NfcReadSettings.waitForDocumentMillis] passes, which by default is never ([NfcReadSettings.NO_LIMIT]):
  *   cancel a read your app no longer shows, or no other read can start.
  *
  * ## The key
@@ -113,9 +157,12 @@ import java.util.concurrent.atomic.AtomicReference
  * ## Threads
  *
  * [start], [cancel] and [onTagDiscovered] return at once, from any thread. The read runs on the
- * I/O dispatcher. The observer's calls never overlap and come in order; they come from the read's
- * own thread, or from the thread that calls [start] or [cancel] for the updates and the ending
- * those cause. Never from the main thread by promise: hand the values to your UI yourself.
+ * I/O dispatcher. The observer's calls never overlap and come in order, with the one ending last,
+ * and by default ([NfcReadSettings.observerOn] is [ObserverThread.MAIN]) they come on the main
+ * thread, handed over through the main looper in the order the SDK made them; none comes before
+ * [start] returns. With [ObserverThread.CALLER] they come from the read's own thread, or from the
+ * thread that calls [start] or [cancel] for the updates and the ending those cause. An exception the
+ * observer throws is ignored, so it never reaches the main thread.
  *
  * The observer is held until the ending.
  *
@@ -136,7 +183,7 @@ public class NfcChipRead internal constructor(
         ChipReadCoordinator(
             options,
             settings.linkLoss,
-            Forwarder(observer),
+            Forwarder(if (settings.observerOn == ObserverThread.MAIN) HandoffObserver(observer, env.main::post) else observer),
             settings.telemetry?.let { ChipReader(it) } ?: env.reader,
             clearKeyAtEnding = true,
         )
@@ -154,8 +201,15 @@ public class NfcChipRead internal constructor(
     @Volatile
     private var job: Job? = null
 
+    // The screen of an Activity-owning read; null for the callback form. Set once, before begin.
+    @Volatile
+    private var hold: ActivityHold? = null
+
     /** `true` once the read's ending is decided. */
     override val isEnded: Boolean get() = coordinator.isEnded
+
+    /** The screen this read holds, for tests: `null` for the callback form, and after the ending. */
+    internal val heldActivity: Activity? get() = hold?.activity
 
     override fun cancel() {
         if (coordinator.cancel(ChipReadEnding.Cancelled.By.APP)) job?.cancel()
@@ -177,6 +231,44 @@ public class NfcChipRead internal constructor(
             coordinator.notStarted(NfcUnavailable.Reason.READ_IN_PROGRESS)
             return
         }
+        launchRun()
+    }
+
+    /** The Activity-owning start: the same first steps, then reader mode on the main thread, then the run. */
+    internal fun beginOwned(owner: ActivityHold) {
+        hold = owner
+        if (!coordinator.start()) return
+        if (!env.registry.claim(this)) {
+            coordinator.notStarted(NfcUnavailable.Reason.READ_IN_PROGRESS)
+            return
+        }
+        env.main.runNow { prepareOwned(owner) }
+    }
+
+    /** On the main thread: the screen must be shown, then reader mode goes on once, then the read runs. */
+    private fun prepareOwned(owner: ActivityHold) {
+        if (coordinator.isEnded) return
+        val activity = owner.activity
+        if (activity == null || !env.activities.isUsable(activity)) {
+            coordinator.notStarted(NfcUnavailable.Reason.ACTIVITY_DESTROYED)
+            return
+        }
+        owner.watch()
+        val refused = env.activities.enable(activity, this, settings)
+        if (refused != null) {
+            coordinator.notStarted(refused)
+            return
+        }
+        owner.enabled = true
+        launchRun()
+    }
+
+    /** The Activity was destroyed: reader mode ended with it, so the read ends. */
+    internal fun activityDestroyed() {
+        coordinator.endedBySystem(NfcUnavailable(NfcUnavailable.Reason.ACTIVITY_DESTROYED))
+    }
+
+    private fun launchRun() {
         job =
             scope.launch {
                 try {
@@ -217,7 +309,7 @@ public class NfcChipRead internal constructor(
         var waitingSince = began
         // Before the first link: the app's limit on finding a document. After a lost link: the
         // limit on its return, counted from the loss.
-        var deadline: Long? = settings.waitForDocumentMillis?.let { saturatingAdd(began, it) }
+        var deadline: Long? = if (settings.hasDocumentWaitLimit) saturatingAdd(began, settings.waitForDocumentMillis) else null
         var linkedOnce = false
         var lostTag: Tag? = null
         var failedConnects = 0
@@ -360,10 +452,24 @@ public class NfcChipRead internal constructor(
         link.getAndSet(null)?.close()
     }
 
-    /** What happens when the ending is decided, before the app hears of it. */
-    private fun finish() {
+    /**
+     * What happens when the ending is decided, before the app hears of it. [then] hands the ending to
+     * the app. An Activity-owning read first turns reader mode off, on the main thread, and only
+     * then lets another read start and the app hear the ending, so an app that starts a new read in
+     * its ending does not have it switched off behind its back.
+     */
+    private fun finish(then: () -> Unit) {
         setIntake(false)
-        env.registry.ended(this)
+        val owner = hold
+        if (owner == null) {
+            env.registry.ended(this)
+            then()
+        } else {
+            owner.release {
+                env.registry.ended(this)
+                then()
+            }
+        }
         closeLink()
         job?.cancel()
     }
@@ -374,9 +480,72 @@ public class NfcChipRead internal constructor(
     ) : ChipReadObserver {
         override fun onUpdate(update: ChipReadUpdate) = app.onUpdate(update)
 
-        override fun onEnding(ending: ChipReadEnding) {
-            finish()
-            app.onEnding(ending)
+        override fun onEnding(ending: ChipReadEnding) = finish { app.onEnding(ending) }
+    }
+
+    /**
+     * The screen an Activity-owning read belongs to. It holds the Activity weakly and lets go of it
+     * at the ending, watches for its destruction, and remembers whether this read turned reader
+     * mode on, so only what it switched on is switched off.
+     */
+    internal inner class ActivityHold(
+        activity: Activity,
+    ) {
+        private val ref = WeakReference(activity)
+        private val application: Application? = activity.application
+        private var watching = false
+
+        /** Whether this read turned reader mode on. Touched on the main thread only. */
+        var enabled = false
+
+        /** The Activity, or `null` once it is gone or the read let go of it. */
+        val activity: Activity? get() = ref.get()
+
+        private val callbacks =
+            object : Application.ActivityLifecycleCallbacks {
+                override fun onActivityDestroyed(activity: Activity) {
+                    if (activity === ref.get()) activityDestroyed()
+                }
+
+                override fun onActivityCreated(
+                    activity: Activity,
+                    savedInstanceState: Bundle?,
+                ) = Unit
+
+                override fun onActivityStarted(activity: Activity) = Unit
+
+                override fun onActivityResumed(activity: Activity) = Unit
+
+                override fun onActivityPaused(activity: Activity) = Unit
+
+                override fun onActivityStopped(activity: Activity) = Unit
+
+                override fun onActivitySaveInstanceState(
+                    activity: Activity,
+                    outState: Bundle,
+                ) = Unit
+            }
+
+        /** Starts watching for the Activity's destruction. Main thread. */
+        fun watch() {
+            if (watching) return
+            watching = true
+            application?.registerActivityLifecycleCallbacks(callbacks)
+        }
+
+        /** Stops watching, turns reader mode off (when this read turned it on) and lets go of the Activity; then [after]. */
+        fun release(after: () -> Unit) {
+            env.main.runNow {
+                if (watching) {
+                    watching = false
+                    application?.unregisterActivityLifecycleCallbacks(callbacks)
+                }
+                val held = ref.get()
+                if (enabled && held != null) env.activities.disable(held)
+                enabled = false
+                ref.clear()
+                after()
+            }
         }
     }
 
@@ -438,6 +607,59 @@ public class NfcChipRead internal constructor(
             env: NfcReadEnvironment,
         ): NfcChipRead = NfcChipRead(options, adapter, settings, observer, env).also { it.begin() }
 
+        /**
+         * Starts a read that owns reader mode: the easy way to read a chip on Android. Returns at
+         * once. It checks that NFC can be used, turns reader mode on for [activity] with the SDK's
+         * flags and [NfcReadSettings.presenceCheckDelayMillis], runs the read, and turns reader
+         * mode off at the ending, on every ending and before the observer hears it. Reader mode is
+         * never switched while a document may be on the phone: once on at the start, once off at the
+         * end.
+         *
+         * Call it on the main thread, with the Activity that shows the read (for example from a
+         * button, or `onResume`). When the read cannot start it ends at once as
+         * [ChipReadEnding.NotStarted] with a typed reason: [NfcUnavailable.Reason.ACTIVITY_DESTROYED]
+         * for an Activity that is finishing or destroyed, `NOT_SUPPORTED`, `DISABLED`,
+         * `NOT_PERMITTED` or `REQUEST_REFUSED` as [NfcReaderMode.enable] reports them, and
+         * `READ_IN_PROGRESS` for a second read at once. The SDK does not ask whether [activity] is
+         * resumed: the platform applies reader mode when it resumes. When [activity] is destroyed
+         * during the read (a rotation, for example) the read ends as [ChipReadEnding.EndedBySystem]
+         * with [NfcUnavailable.Reason.ACTIVITY_DESTROYED]; see the class documentation. The read
+         * holds [activity] weakly and lets it go at the ending.
+         *
+         * The observer is called on the main thread unless [NfcReadSettings.observerOn] says
+         * otherwise; it never hears anything before this call returns.
+         *
+         * @param activity The read screen, shown now.
+         * @param options The key, the data groups, the roots and the check time. The read takes the
+         *   key over and clears it at the ending.
+         * @param observer Gets every update and exactly one ending.
+         * @param settings What to do after a lost link, the time limits, reader mode and the
+         *   observer's thread.
+         * @return The read, to cancel it. It is also the reader-mode callback, already registered:
+         *   do not pass it to [NfcReaderMode.enable].
+         * @since 1.0.0
+         */
+        @JvmStatic
+        @JvmOverloads
+        public fun start(
+            activity: Activity,
+            options: ChipReadOptions,
+            observer: ChipReadObserver,
+            settings: NfcReadSettings = NfcReadSettings(),
+        ): NfcChipRead = start(activity, options, observer, settings, NfcReadEnvironment.process)
+
+        internal fun start(
+            activity: Activity,
+            options: ChipReadOptions,
+            observer: ChipReadObserver,
+            settings: NfcReadSettings,
+            env: NfcReadEnvironment,
+        ): NfcChipRead {
+            val read = NfcChipRead(options, env.activities.adapter(activity), settings, observer, env)
+            read.beginOwned(read.ActivityHold(activity))
+            return read
+        }
+
         /** How often the waiting state repeats with the time waited, as on iPhone. */
         internal const val WAITING_REPORT_MILLIS = 2_000L
 
@@ -468,6 +690,8 @@ internal class NfcReadEnvironment(
     val now: () -> Long,
     val registry: NfcReadRegistry,
     val reader: ChipReader = ChipReader(),
+    val main: MainThread = InlineMainThread,
+    val activities: ActivityPlatform = PlatformActivities,
 ) {
     companion object {
         /** The real platform, one registry for the whole process. */
@@ -477,11 +701,83 @@ internal class NfcReadEnvironment(
                 dispatcher = Dispatchers.IO,
                 now = { System.nanoTime() / NANOS_PER_MILLI },
                 registry = NfcReadRegistry(),
+                main = AndroidMainThread,
             )
         }
 
         private const val NANOS_PER_MILLI = 1_000_000L
     }
+}
+
+/** The main thread, as the Activity-owning read and the observer hand-over use it. */
+internal interface MainThread {
+    /** `true` on the main thread. */
+    fun isCurrent(): Boolean
+
+    /** Runs [block] later on the main thread, in the order of the calls; never before this returns. */
+    fun post(block: () -> Unit)
+
+    /** Runs [block] now when already on the main thread, otherwise posts it. */
+    fun runNow(block: () -> Unit) {
+        if (isCurrent()) block() else post(block)
+    }
+}
+
+/** The platform's main looper. */
+internal object AndroidMainThread : MainThread {
+    private val handler by lazy { Handler(Looper.getMainLooper()) }
+
+    override fun isCurrent(): Boolean = Looper.myLooper() == Looper.getMainLooper()
+
+    override fun post(block: () -> Unit) {
+        handler.post(block)
+    }
+}
+
+/** For tests that do not look at threads: everything runs on the calling thread, at once. */
+internal object InlineMainThread : MainThread {
+    override fun isCurrent(): Boolean = true
+
+    override fun post(block: () -> Unit) = block()
+}
+
+/** What the Activity-owning read asks of the platform about a screen, so its flow can be tested with a fake. */
+internal interface ActivityPlatform {
+    /** The device's NFC adapter, or `null` without NFC. */
+    fun adapter(activity: Activity): NfcAdapter?
+
+    /**
+     * Whether reader mode can still be turned on for [activity]: it is not finishing or destroyed.
+     * The Activity's resumed state is not asked: the platform has no public way to read it, and it
+     * holds a reader-mode request made before the Activity resumes (for example in `onCreate`)
+     * until it does.
+     */
+    fun isUsable(activity: Activity): Boolean
+
+    /** Turns reader mode on for [activity]; `null` when it is on, otherwise why not. */
+    fun enable(
+        activity: Activity,
+        callback: NfcAdapter.ReaderCallback,
+        settings: NfcReadSettings,
+    ): NfcUnavailable.Reason?
+
+    /** Turns reader mode off for [activity]. */
+    fun disable(activity: Activity)
+}
+
+/** The real platform. */
+internal object PlatformActivities : ActivityPlatform {
+    override fun adapter(activity: Activity): NfcAdapter? = NfcAdapter.getDefaultAdapter(activity)
+
+    override fun isUsable(activity: Activity): Boolean = !activity.isFinishing && !activity.isDestroyed
+
+    override fun enable(
+        activity: Activity,
+        callback: NfcAdapter.ReaderCallback,
+        settings: NfcReadSettings,
+    ): NfcUnavailable.Reason? = NfcReaderMode.enable(activity, callback, settings.presenceCheckDelayMillis, settings.platformSounds)
+
+    override fun disable(activity: Activity) = NfcReaderMode.disable(activity)
 }
 
 /**

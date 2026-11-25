@@ -46,17 +46,20 @@ public object NfcReaderMode {
      * a judgement for your app to test with its own documents, not a rule. The platform
      * documentation of `EXTRA_READER_PRESENCE_CHECK_DELAY` says the value is in milliseconds.
      */
-    public const val DEFAULT_PRESENCE_CHECK_DELAY_MILLIS: Int = 1_000
+    public const val DEFAULT_PRESENCE_CHECK_DELAY_MILLIS: Long = 1_000
 
     /**
      * The extras [enable] passes to reader mode: only the presence-check delay.
      *
      * @param presenceCheckDelayMillis How often the platform checks that the tag is still there,
-     *   in milliseconds.
+     *   in milliseconds; a value outside 0 to [Int.MAX_VALUE] is cut to that range, because the
+     *   platform takes an `int`.
      */
     @JvmOverloads
-    public fun extras(presenceCheckDelayMillis: Int = DEFAULT_PRESENCE_CHECK_DELAY_MILLIS): Bundle =
-        Bundle().apply { putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, presenceCheckDelayMillis) }
+    public fun extras(presenceCheckDelayMillis: Long = DEFAULT_PRESENCE_CHECK_DELAY_MILLIS): Bundle =
+        Bundle().apply {
+            putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, presenceCheckDelayMillis.coerceIn(0, Int.MAX_VALUE.toLong()).toInt())
+        }
 
     /**
      * Turns reader mode on for [activity], with [callback] as the one who hears every discovered
@@ -84,7 +87,7 @@ public object NfcReaderMode {
     public fun enable(
         activity: Activity,
         callback: NfcAdapter.ReaderCallback,
-        presenceCheckDelayMillis: Int = DEFAULT_PRESENCE_CHECK_DELAY_MILLIS,
+        presenceCheckDelayMillis: Long = DEFAULT_PRESENCE_CHECK_DELAY_MILLIS,
         platformSounds: Boolean = true,
     ): NfcUnavailable.Reason? {
         val flags = FLAGS or if (platformSounds) 0 else NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS

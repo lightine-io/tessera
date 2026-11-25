@@ -25,35 +25,49 @@ public final class io/lightine/tessera/emrtd/nfc/NfcChipRead : android/nfc/NfcAd
 	public fun cancel ()V
 	public fun isEnded ()Z
 	public fun onTagDiscovered (Landroid/nfc/Tag;)V
+	public static final fun start (Landroid/app/Activity;Lio/lightine/tessera/emrtd/ChipReadOptions;Lio/lightine/tessera/emrtd/ChipReadObserver;)Lio/lightine/tessera/emrtd/nfc/NfcChipRead;
+	public static final fun start (Landroid/app/Activity;Lio/lightine/tessera/emrtd/ChipReadOptions;Lio/lightine/tessera/emrtd/ChipReadObserver;Lio/lightine/tessera/emrtd/nfc/NfcReadSettings;)Lio/lightine/tessera/emrtd/nfc/NfcChipRead;
 	public static final fun start (Lio/lightine/tessera/emrtd/ChipReadOptions;Landroid/nfc/NfcAdapter;Lio/lightine/tessera/emrtd/ChipReadObserver;)Lio/lightine/tessera/emrtd/nfc/NfcChipRead;
 	public static final fun start (Lio/lightine/tessera/emrtd/ChipReadOptions;Landroid/nfc/NfcAdapter;Lio/lightine/tessera/emrtd/nfc/NfcReadSettings;Lio/lightine/tessera/emrtd/ChipReadObserver;)Lio/lightine/tessera/emrtd/nfc/NfcChipRead;
 }
 
 public final class io/lightine/tessera/emrtd/nfc/NfcChipRead$Companion {
 	public final fun availability (Landroid/content/Context;)Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+	public final fun start (Landroid/app/Activity;Lio/lightine/tessera/emrtd/ChipReadOptions;Lio/lightine/tessera/emrtd/ChipReadObserver;)Lio/lightine/tessera/emrtd/nfc/NfcChipRead;
+	public final fun start (Landroid/app/Activity;Lio/lightine/tessera/emrtd/ChipReadOptions;Lio/lightine/tessera/emrtd/ChipReadObserver;Lio/lightine/tessera/emrtd/nfc/NfcReadSettings;)Lio/lightine/tessera/emrtd/nfc/NfcChipRead;
 	public final fun start (Lio/lightine/tessera/emrtd/ChipReadOptions;Landroid/nfc/NfcAdapter;Lio/lightine/tessera/emrtd/ChipReadObserver;)Lio/lightine/tessera/emrtd/nfc/NfcChipRead;
 	public final fun start (Lio/lightine/tessera/emrtd/ChipReadOptions;Landroid/nfc/NfcAdapter;Lio/lightine/tessera/emrtd/nfc/NfcReadSettings;Lio/lightine/tessera/emrtd/ChipReadObserver;)Lio/lightine/tessera/emrtd/nfc/NfcChipRead;
+	public static synthetic fun start$default (Lio/lightine/tessera/emrtd/nfc/NfcChipRead$Companion;Landroid/app/Activity;Lio/lightine/tessera/emrtd/ChipReadOptions;Lio/lightine/tessera/emrtd/ChipReadObserver;Lio/lightine/tessera/emrtd/nfc/NfcReadSettings;ILjava/lang/Object;)Lio/lightine/tessera/emrtd/nfc/NfcChipRead;
 }
 
 public final class io/lightine/tessera/emrtd/nfc/NfcReadSettings {
 	public static final field Companion Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Companion;
 	public static final field DEFAULT_COMMAND_TIMEOUT_MILLIS J
+	public static final field DEFAULT_PRESENCE_CHECK_DELAY_MILLIS J
 	public static final field DEFAULT_RESTARTS I
 	public static final field DEFAULT_SETTLE_DELAY_MILLIS J
 	public static final field DEFAULT_WAIT_FOR_RETURN_MILLIS J
+	public static final field NO_LIMIT J
 	public fun <init> ()V
 	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;)V
 	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;J)V
 	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJ)V
 	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJ)V
-	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJLjava/lang/Long;)V
-	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJLjava/lang/Long;Lio/lightine/tessera/telemetry/TelemetrySink;)V
-	public synthetic fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJLjava/lang/Long;Lio/lightine/tessera/telemetry/TelemetrySink;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJJ)V
+	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJJLio/lightine/tessera/telemetry/TelemetrySink;)V
+	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJJLio/lightine/tessera/telemetry/TelemetrySink;J)V
+	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJJLio/lightine/tessera/telemetry/TelemetrySink;JZ)V
+	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJJLio/lightine/tessera/telemetry/TelemetrySink;JZLio/lightine/tessera/emrtd/ObserverThread;)V
+	public synthetic fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJJLio/lightine/tessera/telemetry/TelemetrySink;JZLio/lightine/tessera/emrtd/ObserverThread;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getCommandTimeoutMillis ()J
+	public final fun getHasDocumentWaitLimit ()Z
 	public final fun getLinkLoss ()Lio/lightine/tessera/emrtd/LinkLossPolicy;
+	public final fun getObserverOn ()Lio/lightine/tessera/emrtd/ObserverThread;
+	public final fun getPlatformSounds ()Z
+	public final fun getPresenceCheckDelayMillis ()J
 	public final fun getSettleDelayMillis ()J
 	public final fun getTelemetry ()Lio/lightine/tessera/telemetry/TelemetrySink;
-	public final fun getWaitForDocumentMillis ()Ljava/lang/Long;
+	public final fun getWaitForDocumentMillis ()J
 	public final fun getWaitForReturnMillis ()J
 	public final fun toBuilder ()Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 	public fun toString ()Ljava/lang/String;
@@ -64,9 +78,13 @@ public final class io/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder {
 	public final fun build ()Lio/lightine/tessera/emrtd/nfc/NfcReadSettings;
 	public final fun commandTimeoutMillis (J)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 	public final fun linkLoss (Lio/lightine/tessera/emrtd/LinkLossPolicy;)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
+	public final fun noLimitForDocument ()Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
+	public final fun observerOn (Lio/lightine/tessera/emrtd/ObserverThread;)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
+	public final fun platformSounds (Z)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
+	public final fun presenceCheckDelayMillis (J)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 	public final fun settleDelayMillis (J)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 	public final fun telemetry (Lio/lightine/tessera/telemetry/TelemetrySink;)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
-	public final fun waitForDocumentMillis (Ljava/lang/Long;)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
+	public final fun waitForDocumentMillis (J)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 	public final fun waitForReturnMillis (J)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 }
 
@@ -74,17 +92,17 @@ public final class io/lightine/tessera/emrtd/nfc/NfcReadSettings$Companion {
 }
 
 public final class io/lightine/tessera/emrtd/nfc/NfcReaderMode {
-	public static final field DEFAULT_PRESENCE_CHECK_DELAY_MILLIS I
+	public static final field DEFAULT_PRESENCE_CHECK_DELAY_MILLIS J
 	public static final field FLAGS I
 	public static final field INSTANCE Lio/lightine/tessera/emrtd/nfc/NfcReaderMode;
 	public final fun availability (Landroid/content/Context;)Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public final fun disable (Landroid/app/Activity;)V
 	public final fun enable (Landroid/app/Activity;Landroid/nfc/NfcAdapter$ReaderCallback;)Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
-	public final fun enable (Landroid/app/Activity;Landroid/nfc/NfcAdapter$ReaderCallback;I)Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
-	public final fun enable (Landroid/app/Activity;Landroid/nfc/NfcAdapter$ReaderCallback;IZ)Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
-	public static synthetic fun enable$default (Lio/lightine/tessera/emrtd/nfc/NfcReaderMode;Landroid/app/Activity;Landroid/nfc/NfcAdapter$ReaderCallback;IZILjava/lang/Object;)Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+	public final fun enable (Landroid/app/Activity;Landroid/nfc/NfcAdapter$ReaderCallback;J)Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+	public final fun enable (Landroid/app/Activity;Landroid/nfc/NfcAdapter$ReaderCallback;JZ)Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
+	public static synthetic fun enable$default (Lio/lightine/tessera/emrtd/nfc/NfcReaderMode;Landroid/app/Activity;Landroid/nfc/NfcAdapter$ReaderCallback;JZILjava/lang/Object;)Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public final fun extras ()Landroid/os/Bundle;
-	public final fun extras (I)Landroid/os/Bundle;
-	public static synthetic fun extras$default (Lio/lightine/tessera/emrtd/nfc/NfcReaderMode;IILjava/lang/Object;)Landroid/os/Bundle;
+	public final fun extras (J)Landroid/os/Bundle;
+	public static synthetic fun extras$default (Lio/lightine/tessera/emrtd/nfc/NfcReaderMode;JILjava/lang/Object;)Landroid/os/Bundle;
 }
 

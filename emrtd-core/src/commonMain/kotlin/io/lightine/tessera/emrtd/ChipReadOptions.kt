@@ -5,6 +5,7 @@ package io.lightine.tessera.emrtd
 
 import io.lightine.tessera.emrtd.trust.DocumentSignerCertificate
 import io.lightine.tessera.emrtd.trust.TrustAnchor
+import io.lightine.tessera.mrz.model.MrzDocument
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import kotlin.jvm.JvmOverloads
 import kotlin.native.ObjCName
@@ -27,8 +28,10 @@ import kotlin.time.Instant
  * @property accessKey The key that opens the chip: MRZ values or the card access number.
  *   [ChipReader.read] does not clear it; call [ChipAccessKey.clear] when your app no longer needs
  *   it. The easy entry points clear it at the ending of the read.
- * @property dataGroups The data groups to read, by number (1 to 16). EF.COM, EF.SOD, and DG14 and
- *   DG15 when the chip lists them, are always read: the checks need them. DG3 and DG4 need terminal
+ * @property dataGroups The data groups to read, by number (1 to 16), at least one. EF.COM, EF.SOD,
+ *   and DG14 and DG15 when the chip lists them, are always read: the checks need them. An empty
+ *   selection is refused, because a read that asks for no data group is nearly always a mistake;
+ *   ask for DG1 at least. DG3 and DG4 need terminal
  *   authentication, which the SDK does not run, so asking for them gives a
  *   [io.lightine.tessera.types.errors.ChipAccessDenied] entry in [ChipRead.fileErrors].
  * @property trustAnchors The root certificates your app chose for the signer checks. The SDK never
@@ -48,7 +51,16 @@ import kotlin.time.Instant
  *   [io.lightine.tessera.types.errors.ChipKeyCheckDigitMismatch]: a value read or typed with a
  *   mistake would otherwise cost the chip an access attempt. Set it to `true` only for a document
  *   known to be printed with a wrong check digit. A card access number has no check digit.
- * @throws IllegalArgumentException when a data group number is outside 1 to 16.
+ * @property printedDocument The MRZ your app read from the printed page (by the camera or typed in),
+ *   or `null`, the default. When it is given, the result holds one more check,
+ *   [ChipCheckKind.Dg1MatchesPrintedMrz], whose detail ([ChipCheckDetail.PrintedMrzFields]) says
+ *   for each MRZ field whether the chip's DG1 shows the same characters, different ones, or the
+ *   field cannot be compared. It holds no value, and it never corrects or prefers either side. Pass
+ *   it yourself: no key builder sets it for you. The options keep the document until your app lets
+ *   go of them; the SDK cannot wipe it as it wipes the key. A read with no DG1 reports the check as
+ *   not run ([ChipCheckReason.NO_CHIP_MRZ]). This works with no [checkTime].
+ * @throws IllegalArgumentException when a data group number is outside 1 to 16, or the selection
+ *   is empty.
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
@@ -63,15 +75,17 @@ public class ChipReadOptions
         public val allowExtendedLength: Boolean = true,
         public val signerCertificate: DocumentSignerCertificate? = null,
         public val allowCheckDigitMismatch: Boolean = false,
+        public val printedDocument: MrzDocument? = null,
     ) {
         init {
+            require(dataGroups.isNotEmpty()) { "dataGroups is empty: ask for at least one data group (DG1 holds the MRZ)" }
             require(dataGroups.all { it in 1..16 }) { "dataGroups holds a number outside 1 to 16" }
         }
 
         /** The data groups and counts, never the key. */
         override fun toString(): String =
             "ChipReadOptions(dataGroups=${dataGroups.sorted()}, trustAnchors=${trustAnchors.size}, checkTime=${checkTime != null}, " +
-                "allowCheckDigitMismatch=$allowCheckDigitMismatch)"
+                "allowCheckDigitMismatch=$allowCheckDigitMismatch, printedDocument=${printedDocument != null})"
 
         /**
          * Builds [ChipReadOptions] step by step, with the constructor's defaults.
@@ -89,9 +103,14 @@ public class ChipReadOptions
             private var allowExtendedLength: Boolean = true
             private var signerCertificate: DocumentSignerCertificate? = null
             private var allowCheckDigitMismatch: Boolean = false
+            private var printedDocument: MrzDocument? = null
 
-            /** The data groups to read, by number (1 to 16). In Swift: `dataGroups(numbers: [1, 2, 11])`. */
-            public fun dataGroups(numbers: Set<Int>): Builder = apply { dataGroups = numbers.toSet() }
+            /**
+             * The data groups to read, by number (1 to 16), from any collection: a set, a list, a
+             * range. Repeats count once. An empty selection makes [build] throw. In Swift:
+             * `dataGroups(numbers: [1, 2, 11])`.
+             */
+            public fun dataGroups(numbers: Collection<Int>): Builder = apply { dataGroups = numbers.toSet() }
 
             /**
              * The data groups to read, by number (1 to 16): `dataGroups(1, 2, 11)`. In Swift, where a
@@ -118,9 +137,16 @@ public class ChipReadOptions
             public fun allowCheckDigitMismatch(allow: Boolean): Builder = apply { allowCheckDigitMismatch = allow }
 
             /**
+             * The MRZ your app read from the printed page, to have the result compare it with the
+             * chip's DG1 ([ChipReadOptions.printedDocument]); `null` for no comparison.
+             */
+            public fun printedDocument(document: MrzDocument?): Builder = apply { printedDocument = document }
+
+            /**
              * The options.
              *
-             * @throws IllegalArgumentException when a data group number is outside 1 to 16.
+             * @throws IllegalArgumentException when a data group number is outside 1 to 16, or no data
+             *   group is selected.
              */
             @Throws(IllegalArgumentException::class)
             public fun build(): ChipReadOptions =
@@ -132,6 +158,7 @@ public class ChipReadOptions
                     allowExtendedLength,
                     signerCertificate,
                     allowCheckDigitMismatch,
+                    printedDocument,
                 )
         }
     }

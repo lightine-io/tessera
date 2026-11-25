@@ -7,10 +7,12 @@ import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
  * Receives a chip read's updates and its one ending.
  *
  * Calls never overlap and come in order: every [onUpdate], then exactly one [onEnding], then
- * nothing more. Which thread a call comes on is not promised: most come from the read's own
- * thread, but the first update and the updates and ending that a start or a cancel causes may
- * come on the thread that called it, and none is promised to be the main thread. Hand the values
- * to your UI thread yourself, and return quickly.
+ * nothing more. Which thread a call comes on is the read's setting: the platform read entry points
+ * hand every call to the main thread by default ([ObserverThread.MAIN], in the order the SDK made
+ * them, none before `start` returned), so an observer can update a screen directly. With
+ * [ObserverThread.CALLER] most calls come from the read's own thread, but the first update and the
+ * updates and ending that a start or a cancel causes may come on the thread that called it. Return
+ * quickly in either case.
  *
  * Updates and endings never carry document data: no file content, no key, no value read from the
  * document. An exception thrown by the observer is ignored and never changes the read.
@@ -73,7 +75,9 @@ public class ChipReadUpdate internal constructor(
  * needs, then [CheckingFiles]. [LinkLost] and [Stopping] can come at any point after the read
  * starts. Each state holds only identifiers and counts, never document data.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -242,7 +246,9 @@ public class ChipFileRef internal constructor(
 /**
  * A check with the chip's own key (ICAO Doc 9303 Part 11, sections 6.1 and 6.2).
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *

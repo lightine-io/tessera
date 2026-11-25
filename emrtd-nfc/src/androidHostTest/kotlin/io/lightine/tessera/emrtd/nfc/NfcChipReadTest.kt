@@ -11,6 +11,7 @@ import io.lightine.tessera.emrtd.ChipReadOptions
 import io.lightine.tessera.emrtd.ChipReadState
 import io.lightine.tessera.emrtd.ChipReadUpdate
 import io.lightine.tessera.emrtd.LinkLossPolicy
+import io.lightine.tessera.emrtd.ObserverThread
 import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.errors.NfcTimeout
 import io.lightine.tessera.types.errors.NfcUnavailable
@@ -52,7 +53,7 @@ private val SW_OK = byteArrayOf(0x90.toByte(), 0x00)
 private val SW_NOT_FOUND = byteArrayOf(0x6A.toByte(), 0x82.toByte())
 
 /** A plain chip's file map: EF.COM only, everything else missing. */
-private val PLAIN_CHIP = mapOf(0x011E to EF_COM_NONE)
+internal val PLAIN_CHIP = mapOf(0x011E to EF_COM_NONE)
 
 /** The command a plain chip's read fails on to lose the link after access: the 7th. */
 private const val AFTER_ACCESS = 7
@@ -65,7 +66,7 @@ private const val AFTER_ACCESS = 7
  * [blockOnCommand] or [blockConnect] block until the test releases them, as the platform blocks
  * while the chip does not answer. [events] records connect, close and blocking in order.
  */
-private class ScriptedChipChannel(
+internal class ScriptedChipChannel(
     private val files: Map<Int, ByteArray> = PLAIN_CHIP,
     private val failOnCommand: Int = Int.MAX_VALUE,
     private val failure: Throwable? = null,
@@ -167,7 +168,7 @@ private class ScriptedChipChannel(
  * The scripted platform: whether NFC is on, and the channel behind each connection it hands out,
  * wired exactly as [PlatformNfcChip] does, so the read's release tracking runs for real.
  */
-private class FakeNfcPlatform(
+internal class FakeNfcPlatform(
     private val io: CoroutineDispatcher,
 ) : NfcChipPlatform {
     @Volatile var enabled = true
@@ -215,7 +216,7 @@ private class FakeNfcPlatform(
 }
 
 /** Keeps every update and ending, in order; [waiting] opens once the reader waits for a document. */
-private class RecordingChipObserver : ChipReadObserver {
+internal class RecordingChipObserver : ChipReadObserver {
     val updates: MutableList<ChipReadUpdate> = Collections.synchronizedList(mutableListOf())
     val endings: MutableList<ChipReadEnding> = Collections.synchronizedList(mutableListOf())
     val threads: MutableList<String> = Collections.synchronizedList(mutableListOf())
@@ -239,7 +240,7 @@ private class RecordingChipObserver : ChipReadObserver {
 }
 
 /** An empty platform `Tag`, good enough to hand the read: the fake platform never looks inside. */
-private fun aTag(): Tag {
+internal fun aTag(): Tag {
     val constructor =
         Tag::class.java.declaredConstructors.maxByOrNull { it.parameterTypes.size }
             ?: error("android.nfc.Tag has no constructor")
@@ -261,7 +262,7 @@ private fun aTag(): Tag {
 }
 
 /** An NFC adapter instance under Robolectric; the fake platform decides what it reports. */
-private fun theAdapter(): NfcAdapter =
+internal fun theAdapter(): NfcAdapter =
     NfcAdapter::class.java
         .getDeclaredConstructor()
         .apply { isAccessible = true }
@@ -839,10 +840,15 @@ class NfcChipReadTest {
         assertEquals(400L, settings.settleDelayMillis)
         assertEquals(5_000L, settings.commandTimeoutMillis)
         assertEquals(15_000L, settings.waitForReturnMillis)
-        assertNull(settings.waitForDocumentMillis)
+        assertEquals(NfcReadSettings.NO_LIMIT, settings.waitForDocumentMillis)
+        assertFalse(settings.hasDocumentWaitLimit)
+        assertEquals(1_000L, settings.presenceCheckDelayMillis)
+        assertTrue(settings.platformSounds)
+        assertEquals(ObserverThread.MAIN, settings.observerOn)
         assertEquals(
             "NfcReadSettings(linkLoss=Resume(2), settleDelayMillis=400, commandTimeoutMillis=5000, " +
-                "waitForReturnMillis=15000, waitForDocumentMillis=null)",
+                "waitForReturnMillis=15000, waitForDocumentMillis=${Long.MAX_VALUE}, presenceCheckDelayMillis=1000, " +
+                "platformSounds=true, observerOn=MAIN)",
             settings.toString(),
         )
         val built =
@@ -856,8 +862,18 @@ class NfcChipReadTest {
                 .build()
         assertEquals(
             "NfcReadSettings(linkLoss=ReadAgain(1), settleDelayMillis=100, commandTimeoutMillis=3000, " +
-                "waitForReturnMillis=8000, waitForDocumentMillis=30000)",
+                "waitForReturnMillis=8000, waitForDocumentMillis=30000, presenceCheckDelayMillis=1000, " +
+                "platformSounds=true, observerOn=MAIN)",
             built.toString(),
+        )
+        assertTrue(built.hasDocumentWaitLimit)
+        // A limit set, then taken away with the no-limit call, goes back to waiting for ever.
+        assertFalse(
+            built
+                .toBuilder()
+                .noLimitForDocument()
+                .build()
+                .hasDocumentWaitLimit,
         )
     }
 
@@ -868,6 +884,8 @@ class NfcChipReadTest {
         assertFailsWith<IllegalArgumentException> { NfcReadSettings(settleDelayMillis = -1) }
         assertFailsWith<IllegalArgumentException> { NfcReadSettings(waitForReturnMillis = -1) }
         assertFailsWith<IllegalArgumentException> { NfcReadSettings(waitForDocumentMillis = -1) }
+        assertFailsWith<IllegalArgumentException> { NfcReadSettings(presenceCheckDelayMillis = -1) }
+        assertFailsWith<IllegalArgumentException> { NfcReadSettings(presenceCheckDelayMillis = Int.MAX_VALUE + 1L) }
     }
 
     // --- The polish round: the telemetry sink, the key's lifetime, the settings builder ------------

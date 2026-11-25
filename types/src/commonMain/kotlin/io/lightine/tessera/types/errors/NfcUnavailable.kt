@@ -17,7 +17,9 @@ public data class NfcUnavailable(
     /**
      * Why NFC cannot be used.
      *
-     * May gain members in a later release: a `when` over it needs an `else` branch.
+     * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+     * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+     * that is your choice, and today the compiler warns that such an `else` is redundant.
      *
      * @since 1.0.0
      */
@@ -77,6 +79,16 @@ public data class NfcUnavailable(
          * @since 1.0.0
          */
         READ_IN_PROGRESS,
+
+        /**
+         * The screen (the Android Activity) the read belongs to is finishing or destroyed: when the
+         * read was started with it (the read does not start), or while the read ran, for example by
+         * a configuration change such as a rotation, so reader mode ended with it. The app can start
+         * a new read on the new screen, with a new key.
+         *
+         * @since 1.0.0
+         */
+        ACTIVITY_DESTROYED,
     }
 
     /** English text for logs: the reason. */
@@ -92,6 +104,7 @@ public data class NfcUnavailable(
                 Reason.ENDED_BY_SYSTEM -> "The system ended the NFC session"
                 Reason.REQUEST_REFUSED -> "The NFC reader refused the request"
                 Reason.READ_IN_PROGRESS -> "Another chip read is already running in this app"
+                Reason.ACTIVITY_DESTROYED -> "The screen of the chip read is finishing or was destroyed"
             }
 
     /** A stable name of this error: see [ChipError.code]. */

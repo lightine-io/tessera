@@ -1,6 +1,7 @@
 package io.lightine.tessera.emrtd
 
 import io.lightine.tessera.telemetry.TelemetryEvent
+import io.lightine.tessera.telemetry.TelemetrySink
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 
 /**
@@ -49,9 +50,44 @@ public class ChipReadEvent internal constructor(
 }
 
 /**
+ * A telemetry sink for chip reads that hands you [ChipReadEvent] directly, with no cast from the
+ * general [TelemetryEvent]. It is a [TelemetrySink], so it goes wherever one goes: the `telemetry`
+ * of the Android and iPhone read settings, `ChipReader`, `TelemetrySinkRegistry`.
+ *
+ * ```kotlin
+ * val settings = NfcReadSettings(telemetry = ChipReadEventSink { event -> log(event.step, event.outcome) })
+ * ```
+ *
+ * Events of other kinds, which a registered sink may also receive, are not passed on. Like every
+ * sink, it can be called from any thread and must be thread-safe; an exception it throws is
+ * ignored. The general [TelemetrySink] stays for apps that count every kind of event.
+ *
+ * Experimental: see [ExperimentalTesseraChipApi].
+ *
+ * @since 1.0.0
+ */
+@ExperimentalTesseraChipApi
+public fun interface ChipReadEventSink : TelemetrySink {
+    /**
+     * Handles one step event of a chip read.
+     *
+     * @param event The event: protocol names, status words, file identifiers, byte counts and
+     *   timings, never document data.
+     */
+    public fun onEvent(event: ChipReadEvent)
+
+    /** Passes [event] to [onEvent] when it is a [ChipReadEvent]; drops any other kind. */
+    override fun record(event: TelemetryEvent) {
+        if (event is ChipReadEvent) onEvent(event)
+    }
+}
+
+/**
  * The steps of a chip read, for telemetry.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -87,7 +123,9 @@ public enum class ChipReadStep {
 /**
  * How a step ended, for telemetry.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *

@@ -14,7 +14,9 @@ import io.lightine.tessera.types.errors.NfcUnavailable
  * the person, the app or the system ended the read, or it could not start. No ending's
  * `toString()` carries document data.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -148,7 +150,9 @@ public sealed class ChipReadEnding {
         /**
          * Who ended a read.
          *
-         * May gain members in a later release: a `when` over it needs an `else` branch.
+         * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+         * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+         * that is your choice, and today the compiler warns that such an `else` is redundant.
          *
          * @since 1.0.0
          */

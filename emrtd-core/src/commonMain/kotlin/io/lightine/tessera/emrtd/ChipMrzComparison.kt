@@ -48,12 +48,7 @@ public object ChipMrzComparison {
         val chip = dg1.document
         val fields = MrzField.entries.mapNotNull { field -> compare(field, printed, chip) }
         val sexSame = printed.commonFields.rawSex == chip.commonFields.rawSex
-        val allSame = fields.all { it.sameAsPrinted } && sexSame && printed.format == chip.format
-        val check =
-            ChipCheck(
-                ChipCheckKind.Dg1MatchesPrintedMrz,
-                if (allSame) CheckOutcome.Passed else CheckOutcome.Failed(ChipCheckReason.FIELDS_DIFFER),
-            )
+        val check = printedCheck(printed, chip)
         val mixed =
             when (val r = dg1.parseResult) {
                 is ParseResult.Success -> r.copy(metadata = r.metadata.copy(readMethod = ReadMethod.MIXED))
@@ -61,6 +56,35 @@ public object ChipMrzComparison {
                 is ParseResult.Failure -> r
             }
         return CombinedMrzRead(mixed, printed, printed.format == chip.format, fields, sexSame, check)
+    }
+
+    /**
+     * The fact "the chip's DG1 matches the printed MRZ", with its per-field detail and no value.
+     * Passed when the formats are the same and no field differs; failed otherwise. The read makes
+     * the same check when [ChipReadOptions.printedDocument] is given.
+     */
+    internal fun printedCheck(
+        printed: MrzDocument,
+        chip: MrzDocument,
+    ): ChipCheck {
+        val fields =
+            MrzField.entries.associateWith { field ->
+                val a = valueOf(field, printed)
+                val b = valueOf(field, chip)
+                when {
+                    a == null || b == null -> ChipFieldMatch.NOT_COMPARABLE
+                    a == b -> ChipFieldMatch.SAME
+                    else -> ChipFieldMatch.DIFFERENT
+                }
+            }
+        val sameFormat = printed.format == chip.format
+        val outcome =
+            if (sameFormat && fields.values.none { it == ChipFieldMatch.DIFFERENT }) {
+                CheckOutcome.Passed
+            } else {
+                CheckOutcome.Failed(ChipCheckReason.FIELDS_DIFFER)
+            }
+        return ChipCheck(ChipCheckKind.Dg1MatchesPrintedMrz, outcome, ChipCheckDetail.PrintedMrzFields(sameFormat, fields))
     }
 
     private fun compare(

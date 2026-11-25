@@ -67,14 +67,27 @@ class ChipPolishApiTest {
                 .dataGroups,
         )
         assertFailsWith<IllegalArgumentException> { ChipReadOptions.Builder(key).dataGroups(1, 17).build() }
-        // No number given: no data group beyond the always-read files.
-        assertTrue(
+        // An empty selection is a mistake the builder names, not a read of nothing.
+        val empty = assertFailsWith<IllegalArgumentException> { ChipReadOptions.Builder(key).dataGroups().build() }
+        assertTrue("at least one data group" in (empty.message ?: ""), empty.message)
+        assertFailsWith<IllegalArgumentException> { ChipReadOptions.Builder(key).dataGroups(emptyList()).build() }
+        assertFailsWith<IllegalArgumentException> { ChipReadOptions(key, dataGroups = emptySet()) }
+        // Any collection is taken: a list, a range, with repeats counting once.
+        assertEquals(
+            setOf(1, 2, 11),
             ChipReadOptions
                 .Builder(key)
-                .dataGroups()
+                .dataGroups(listOf(1, 2, 2, 11))
                 .build()
-                .dataGroups
-                .isEmpty(),
+                .dataGroups,
+        )
+        assertEquals(
+            setOf(1, 2, 3),
+            ChipReadOptions
+                .Builder(key)
+                .dataGroups((1..3).toList())
+                .build()
+                .dataGroups,
         )
     }
 }

@@ -11,6 +11,7 @@ import io.lightine.tessera.emrtd.ChipCheckReason
 import io.lightine.tessera.emrtd.ChipFile
 import io.lightine.tessera.emrtd.ChipFileContext
 import io.lightine.tessera.emrtd.ChipFileError
+import io.lightine.tessera.emrtd.ChipMrzComparison
 import io.lightine.tessera.emrtd.ChipPaceOffer
 import io.lightine.tessera.emrtd.ChipPassword
 import io.lightine.tessera.emrtd.ChipRead
@@ -89,6 +90,7 @@ import io.lightine.tessera.emrtd.lds.EfComView
 import io.lightine.tessera.emrtd.lds.LdsParseResult
 import io.lightine.tessera.emrtd.lds.SecurityObjectParse
 import io.lightine.tessera.emrtd.lds.SecurityObjectView
+import io.lightine.tessera.mrz.model.MrzDocument
 import io.lightine.tessera.telemetry.TelemetrySink
 import io.lightine.tessera.types.errors.ChipAccessDenied
 import io.lightine.tessera.types.errors.ChipBlank
@@ -101,6 +103,7 @@ import io.lightine.tessera.types.errors.ChipUnsupportedAlgorithm
 import io.lightine.tessera.types.vocabulary.CheckOutcome
 import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.time.Instant
 import kotlin.time.TimeSource
 
 /**
@@ -1177,6 +1180,7 @@ internal class ReadFlow(
         checks += ChipCheck(ChipCheckKind.PaceChipAuthenticationMapping, camOutcome(pa))
         val aaPassed = aaNeedsKeyFileChecks && applicationKeyFilePassed(pa, 15)
         checks += ChipCheck(ChipCheckKind.ActiveAuthentication, if (aaPassed) CheckOutcome.Passed else aaOutcome)
+        options.printedDocument?.let { printed -> checks += printedMrzCheck(printed, dg1) }
         return ChipRead(
             access = accessReport(),
             files = files.toList(),
@@ -1194,6 +1198,24 @@ internal class ReadFlow(
             checks = checks,
             resume = resumeOutcome,
         )
+    }
+
+    /**
+     * The printed MRZ against the chip's DG1, from the characters only. DG1's parsed view needs a
+     * check time; the comparison does not (it reads the raw characters), so with no check time DG1
+     * is parsed for this check alone, at a fixed reference time that no result shows.
+     */
+    private fun printedMrzCheck(
+        printed: MrzDocument,
+        dg1: Dg1View?,
+    ): ChipCheck {
+        val view =
+            dg1 ?: appFile(FILE_DG1)?.let { (Dg1View.parse(it, COMPARISON_REFERENCE_TIME) as? LdsParseResult.Success)?.view }
+        return if (view == null) {
+            ChipCheck(ChipCheckKind.Dg1MatchesPrintedMrz, CheckOutcome.NotRun(ChipCheckReason.NO_CHIP_MRZ))
+        } else {
+            ChipMrzComparison.printedCheck(printed, view.document)
+        }
     }
 
     /** The signed copy of EF.CardAccess's entries: EF.CardSecurity when it was read and readable, else DG14. */
@@ -1379,6 +1401,9 @@ internal class ReadFlow(
         const val FILE_EF_DIR = 0x2F00
         const val FILE_CARD_SECURITY = 0x011D
         const val FILE_DG1 = 0x0101
+
+        /** Picks the century of two-digit years when DG1 is parsed only to compare its characters; never shown. */
+        private val COMPARISON_REFERENCE_TIME = Instant.fromEpochSeconds(0)
         const val FILE_DG14 = 0x010E
         const val FILE_DG15 = 0x010F
         const val TAG_MRZ = 0x5F1F

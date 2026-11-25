@@ -8,6 +8,8 @@ import io.lightine.tessera.emrtd.ChipReadObserver
 import io.lightine.tessera.emrtd.ChipReadOptions
 import io.lightine.tessera.emrtd.ChipReadUpdate
 import io.lightine.tessera.emrtd.ChipReader
+import io.lightine.tessera.emrtd.HandoffObserver
+import io.lightine.tessera.emrtd.ObserverThread
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.NfcError
 import io.lightine.tessera.types.errors.NfcTimeout
@@ -22,6 +24,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import platform.Foundation.NSLock
+import platform.darwin.dispatch_async
+import platform.darwin.dispatch_get_main_queue
 import kotlin.concurrent.Volatile
 import kotlin.time.TimeSource
 
@@ -88,8 +92,11 @@ import kotlin.time.TimeSource
  *
  * The app needs the same entitlement and Info.plist entries as [CoreNfcSession] (see there).
  *
- * The observer is held until the ending. Its calls come from the read's own thread, never the main
- * thread by promise: hand the values to your UI yourself.
+ * The observer is held until the ending. Its calls never overlap and come in order, with the one
+ * ending last, and by default ([CoreNfcReadSettings.observerOn] is [ObserverThread.MAIN]) they come
+ * on the main queue, handed over in the order the SDK made them; none comes before [start] returns.
+ * With [ObserverThread.CALLER] they come from the read's own thread. An exception the observer
+ * throws is ignored.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -107,7 +114,7 @@ public class CoreNfcChipRead internal constructor(
         ChipReadCoordinator(
             options,
             settings.linkLoss,
-            Forwarder(observer),
+            Forwarder(if (settings.observerOn == ObserverThread.MAIN) HandoffObserver(observer, env.mainQueue) else observer),
             settings.telemetry?.let { ChipReader(it) } ?: env.reader,
             clearKeyAtEnding = true,
         )
@@ -583,6 +590,8 @@ internal class CoreNfcReadEnvironment(
     val now: () -> Long,
     val registry: ChipReadRegistry,
     val reader: ChipReader,
+    // Runs a block later on the main queue, first in, first out; tests run it at once or queue it.
+    val mainQueue: (() -> Unit) -> Unit = { it() },
 ) {
     companion object {
         private val clock = TimeSource.Monotonic.markNow()
@@ -596,6 +605,7 @@ internal class CoreNfcReadEnvironment(
                 now = { clock.elapsedNow().inWholeMilliseconds },
                 registry = ChipReadRegistry(),
                 reader = ChipReader(),
+                mainQueue = { block -> dispatch_async(dispatch_get_main_queue()) { block() } },
             )
         }
     }

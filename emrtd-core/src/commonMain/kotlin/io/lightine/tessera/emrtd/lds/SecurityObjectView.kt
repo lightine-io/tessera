@@ -10,6 +10,7 @@ import io.lightine.tessera.emrtd.internal.x509.KeyUsageBit
 import io.lightine.tessera.emrtd.internal.x509.X509Certificate
 import io.lightine.tessera.emrtd.internal.x509.X509Exception
 import io.lightine.tessera.emrtd.internal.x509.X509Parser
+import io.lightine.tessera.emrtd.trust.TrustAnchorProblem
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 
 /**
@@ -49,13 +50,21 @@ public class SecurityObjectView internal constructor(
     public val signers: List<SecurityObjectSigner>,
     /** The certificates stored in the file that could be read, in order. */
     public val certificates: List<SignerCertificateView>,
-    /** How many stored certificates could not be read. */
-    public val unreadableCertificateCount: Int,
+    /**
+     * The stored certificates that could not be read, one entry each, in the order stored: its
+     * position, its length, the problem and the byte offset where reading stopped. Facts only: no
+     * certificate content. Empty when every stored certificate could be read.
+     */
+    public val unreadableCertificates: List<UnreadableSignerCertificate>,
     /** `true` when the file was not DER (it used indefinite or longer-than-needed lengths). The content is read the same way. */
     public val wasBer: Boolean,
     internal val encodedContent: ByteArray,
     internal val signedData: CmsSignedData,
 ) {
+    /** How many stored certificates could not be read: the size of [unreadableCertificates]. */
+    public val unreadableCertificateCount: Int
+        get() = unreadableCertificates.size
+
     /** The hash stored for data group [number], or `null` when the object has none. The first one if it lists the group twice. */
     public fun hashOf(number: Int): ByteArray? = dataGroupHashes.firstOrNull { it.number == number }?.hash?.copyOf()
 
@@ -91,14 +100,14 @@ public class SecurityObjectView internal constructor(
             val sd = CmsParser.parse(file)
             val lds = LdsSecurityObject.parse(sd.eContent)
             val certs = ArrayList<SignerCertificateView>()
-            var unreadable = 0
-            for (der in sd.certificates) {
+            val unreadable = ArrayList<UnreadableSignerCertificate>()
+            sd.certificates.forEachIndexed { position, der ->
                 try {
                     certs.add(SignerCertificateView.from(X509Parser.parse(der)))
                 } catch (e: Asn1Exception) {
-                    unreadable++
+                    unreadable.add(UnreadableSignerCertificate(position, der.size, TrustAnchorProblem.MALFORMED_ENCODING, e.offset))
                 } catch (e: X509Exception) {
-                    unreadable++
+                    unreadable.add(UnreadableSignerCertificate(position, der.size, TrustAnchorProblem.INVALID_CERTIFICATE_FIELD, e.offset))
                 }
             }
             return SecurityObjectView(
@@ -112,7 +121,7 @@ public class SecurityObjectView internal constructor(
                 unicodeVersion = lds.unicodeVersion,
                 signers = sd.signerInfos.map { SecurityObjectSigner.from(it) },
                 certificates = certs,
-                unreadableCertificateCount = unreadable,
+                unreadableCertificates = unreadable,
                 wasBer = sd.wasBer,
                 encodedContent = sd.eContent,
                 signedData = sd,
@@ -129,6 +138,32 @@ public class SecurityObjectView internal constructor(
                 else -> null
             }
     }
+}
+
+/**
+ * A certificate stored in EF.SOD that could not be read: where it sits, how long it is, what is
+ * wrong with it and where reading stopped. Facts only: none of the certificate's content is here.
+ * It is the same problem and offset that [io.lightine.tessera.emrtd.trust.DocumentSignerCertificate.fromDer]
+ * and [io.lightine.tessera.emrtd.trust.TrustAnchor.fromDer] report for the same bytes.
+ *
+ * Experimental: see [ExperimentalTesseraChipApi].
+ *
+ * @property position The certificate's place among the certificates stored in the file, counted
+ *   from 0, in the order stored (readable ones included).
+ * @property length The certificate's length in bytes, as stored.
+ * @property problem Why it could not be read.
+ * @property offset The byte offset where reading stopped, counted from the certificate's first byte.
+ * @since 1.0.0
+ */
+@ExperimentalTesseraChipApi
+public class UnreadableSignerCertificate internal constructor(
+    public val position: Int,
+    public val length: Int,
+    public val problem: TrustAnchorProblem,
+    public val offset: Int,
+) {
+    /** The position, the length, the problem and the offset; never certificate content. */
+    override fun toString(): String = "UnreadableSignerCertificate(position=$position, length=$length, problem=$problem, offset=$offset)"
 }
 
 /**
@@ -317,7 +352,9 @@ public class SignerCertificateView internal constructor(
 /**
  * The outcome of reading EF.SOD.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -340,7 +377,9 @@ public sealed class SecurityObjectParse {
 /**
  * Why EF.SOD could not be read.
  *
- * May gain members in a later release: a `when` over it needs an `else` branch.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *

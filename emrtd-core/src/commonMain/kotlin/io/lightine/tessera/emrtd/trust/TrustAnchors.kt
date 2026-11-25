@@ -285,7 +285,13 @@ private fun deduplicated(anchors: List<TrustAnchor>): List<TrustAnchor> {
 public class TrustAnchorLoad internal constructor(
     /** Every certificate that could be read, de-duplicated by its encoded bytes, in the order it was read. */
     public val anchors: List<TrustAnchor>,
-    /** What the content turned out to be. [kind] may gain members in a later release: keep an `else` branch in a `when` over it. */
+    /**
+     * What the content turned out to be.
+     *
+     * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+     * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+     * that is your choice, and today the compiler warns that such an `else` is redundant.
+     */
     public val kind: TrustAnchorLoadKind,
     /** One entry per certificate that could not be read, in order. A master list reports its own count instead: [masterList]. */
     public val unreadable: List<UnreadableTrustAnchor>,
@@ -309,7 +315,9 @@ public class TrustAnchorLoad internal constructor(
 /**
  * What the content turned out to be.
  *
- * This list may gain members in a later release: keep an `else` branch in a `when` over it.
+ * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+ * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+ * that is your choice, and today the compiler warns that such an `else` is redundant.
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *

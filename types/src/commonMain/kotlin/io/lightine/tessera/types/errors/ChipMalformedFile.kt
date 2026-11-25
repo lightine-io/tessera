@@ -29,7 +29,9 @@ public data class ChipMalformedFile(
     /**
      * What is wrong with a file.
      *
-     * May gain members in a later release: a `when` over it needs an `else` branch.
+     * May gain members in a later release: an exhaustive `when` over it then stops compiling until
+     * the new member is handled. An `else` branch keeps it compiling without handling the new member:
+     * that is your choice, and today the compiler warns that such an `else` is redundant.
      *
      * @since 1.0.0
      */
