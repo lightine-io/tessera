@@ -52,8 +52,15 @@ static void tesseraEasyApi(TesseraMrzDocument *document, TesseraParseResult *res
     TesseraMrzKeyResult *fromResult = [TesseraChipAccessKeyMrzCompanion.shared fromResult:result];
     TesseraMrzKeyResult *typed = [TesseraChipAccessKeyMrzCompanion.shared fromTypedFieldsDocumentNumber:@"" dateOfBirth:@"" dateOfExpiry:@""];
     TesseraChipAccessKeyCan *can = [[TesseraChipAccessKeyCan alloc] initWithCan:@"123456" error:nil];
+    TesseraCanKeyResult *canResult = [TesseraChipAccessKeyCanCompanion.shared fromCan:@"123456"];
+    TesseraNormalizedMrzFields *normalized = [TesseraChipAccessKeyMrzCompanion.shared normalizeTypedFieldsDocumentNumber:@" t1 "
+                                                                                                           dateOfBirth:@"900315"
+                                                                                                          dateOfExpiry:@"340314"];
+    NSSet<TesseraMrzField *> *changedFields = normalized.changedFields;
     TesseraChipReadOptions *options = [[[[TesseraChipReadOptionsBuilder alloc] initWithAccessKey:can]
         dataGroupsNumbers:[NSSet setWithObjects:@(1), @(2), nil]] buildAndReturnError:nil];
+    TesseraChipReadOptions *withPrinted = [[[[[TesseraChipReadOptionsBuilder alloc] initWithAccessKey:can]
+        dataGroupsNumberCollection:@[ @(1), @(2) ]] printedDocumentDocument:document] buildAndReturnError:nil];
     TesseraTrustAnchorLoad *roots = [TesseraTrustAnchors.shared loadBytes:bytes heldRoots:@[]];
     TesseraTrustAnchorLoad *more = [TesseraTrustAnchors.shared loadPath:@"roots.ml" heldRoots:@[]];
     TesseraTrustAnchorLoad *both = [roots plusOther:more];
@@ -63,6 +70,9 @@ static void tesseraEasyApi(TesseraMrzDocument *document, TesseraParseResult *res
     (void)fromDocument;
     (void)fromResult;
     (void)typed;
+    (void)canResult;
+    (void)changedFields;
+    (void)withPrinted;
     (void)options;
     (void)both;
     (void)code;
@@ -80,10 +90,11 @@ static void tesseraChipReadTypes(TesseraChipReadOptions *options, id<TesseraChip
                                                                           commandTimeoutMillis:5000
                                                                       waitAfterSystemEndMillis:1000
                                                                                      telemetry:nil
+                                                                                    observerOn:TesseraObserverThread.main
                                                                                          error:nil];
-    TesseraCoreNfcReadSettings *built = [[[[[TesseraCoreNfcReadSettingsBuilder alloc] init]
+    TesseraCoreNfcReadSettings *built = [[[[[[TesseraCoreNfcReadSettingsBuilder alloc] init]
         linkLossPolicy:[TesseraLinkLossPolicyCompanion.shared readAgainMaxRestarts:1 error:nil]] telemetrySink:nil]
-        buildAndReturnError:nil];
+        observerOnThread:TesseraObserverThread.caller] buildAndReturnError:nil];
     TesseraCoreNfcReadSettings *changed = [[settings.toBuilder settleDelayMillisMillis:0] buildAndReturnError:nil];
     TesseraLinkLossPolicy *noRestart = TesseraLinkLossPolicyCompanion.shared.end;
     TesseraLinkLossPolicy *resumeTwice = [TesseraLinkLossPolicyCompanion.shared resumeMaxRestarts:2 error:nil];

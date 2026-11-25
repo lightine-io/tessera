@@ -461,8 +461,10 @@ public class NfcChipRead internal constructor(
     private fun finish(then: () -> Unit) {
         setIntake(false)
         val owner = hold
+        if (owner == null) env.registry.ended(this)
+        closeLink()
+        job?.cancel()
         if (owner == null) {
-            env.registry.ended(this)
             then()
         } else {
             owner.release {
@@ -470,8 +472,6 @@ public class NfcChipRead internal constructor(
                 then()
             }
         }
-        closeLink()
-        job?.cancel()
     }
 
     /** Hands the coordinator's calls to the app, after the SDK's own work on the ending. */

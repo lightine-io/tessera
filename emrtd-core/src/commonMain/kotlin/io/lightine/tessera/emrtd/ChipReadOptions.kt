@@ -105,12 +105,17 @@ public class ChipReadOptions
             private var allowCheckDigitMismatch: Boolean = false
             private var printedDocument: MrzDocument? = null
 
+            /** The data groups to read, by number (1 to 16), at least one. In Swift: `dataGroups(numbers: [1, 2, 11])`. */
+            public fun dataGroups(numbers: Set<Int>): Builder = apply { dataGroups = numbers.toSet() }
+
             /**
-             * The data groups to read, by number (1 to 16), from any collection: a set, a list, a
-             * range. Repeats count once. An empty selection makes [build] throw. In Swift:
-             * `dataGroups(numbers: [1, 2, 11])`.
+             * The data groups to read, by number (1 to 16), from any collection: a list, a range, a
+             * set. Repeats count once. An empty selection makes [build] throw. In Swift, where the
+             * set form above has the label `numbers:`, this form is `dataGroups(numberCollection:)`.
              */
-            public fun dataGroups(numbers: Collection<Int>): Builder = apply { dataGroups = numbers.toSet() }
+            public fun dataGroups(
+                @ObjCName("numberCollection") numbers: Collection<Int>,
+            ): Builder = apply { dataGroups = numbers.toSet() }
 
             /**
              * The data groups to read, by number (1 to 16): `dataGroups(1, 2, 11)`. In Swift, where a

@@ -652,6 +652,7 @@ public final class io/lightine/tessera/emrtd/ChipReadOptions$Builder {
 	public final fun build ()Lio/lightine/tessera/emrtd/ChipReadOptions;
 	public final fun checkTime (Lkotlin/time/Instant;)Lio/lightine/tessera/emrtd/ChipReadOptions$Builder;
 	public final fun dataGroups (Ljava/util/Collection;)Lio/lightine/tessera/emrtd/ChipReadOptions$Builder;
+	public final fun dataGroups (Ljava/util/Set;)Lio/lightine/tessera/emrtd/ChipReadOptions$Builder;
 	public final fun dataGroups ([I)Lio/lightine/tessera/emrtd/ChipReadOptions$Builder;
 	public final fun printedDocument (Lio/lightine/tessera/mrz/model/MrzDocument;)Lio/lightine/tessera/emrtd/ChipReadOptions$Builder;
 	public final fun signerCertificate (Lio/lightine/tessera/emrtd/trust/DocumentSignerCertificate;)Lio/lightine/tessera/emrtd/ChipReadOptions$Builder;
