@@ -477,10 +477,23 @@ class CatalogueAndroidTest {
 
     /** A GET CHALLENGE answered with an error status word is an answer, not silence: as before. */
     @Test
-    fun noAnswer_h_getChallengeAnsweredWithAnErrorStatusWord_isARefusalAsBefore() =
+    fun noAnswer_h_getChallengeAnsweredWithAnErrorStatusWord_isARefusal_andTheOneMoreTryOnTheSameLinkCompletes() =
         simTest { flow ->
             script.fault(ChipFaultAction.Status(0x6982)) { it.ins == 0x84 }
             val r = read(deviceOptions(flow))
+            // TES-346: the first refusal of a read gets one more try on the same link.
+            assertEquals(1, assertIs<ChipReadEnding.Complete>(r.ending, "${r.ending}").attempts)
+            assertEquals(1, script.links)
+            assertEquals(2, script.exchanges.count { it.command.ins == 0x84 })
+            assertTrue(r.states.none { it is ChipReadState.NoAnswerYet || it is ChipReadState.LinkLost })
+        }
+
+    @Test
+    fun noAnswer_h_getChallengeRefusedTwice_endsKeyNotAccepted_withNoThirdTry() =
+        simTest { flow ->
+            script.fault(ChipFaultAction.Status(0x6982), times = 3) { it.ins == 0x84 }
+            val r = read(deviceOptions(flow))
+            assertEquals(2, script.exchanges.count { it.command.ins == 0x84 })
             val error = assertIs<ChipReadEnding.KeyNotAccepted>(r.ending, "${r.ending}").error
             assertEquals(ChipAccessProtocol.BAC, error.protocol)
             assertEquals(0x6982, error.statusWord)
@@ -662,13 +675,14 @@ class CatalogueAndroidTest {
     // --- Refusals: never a new attempt (DES 5.1 rule 2), review item 17 ---------------------------
 
     @Test
-    fun g29_wrongKey_keyNotAcceptedNoRestartAndTheLinkClosed() =
+    fun g29_wrongKey_keyNotAcceptedAfterOneMoreTryNoRestartAndTheLinkClosed() =
         simTest { flow ->
             val r = read(ChipReadOptions(FakeReadFlowChip.wrongMrzKey(), setOf(1, 2), listOf(flow.anchor), CHECK_TIME))
             val ending = assertIs<ChipReadEnding.KeyNotAccepted>(r.ending)
             assertEquals(ChipAccessDenied.Reason.KEY_NOT_MATCHED, ending.error.reason)
             assertEquals(1, script.links)
-            assertEquals(1, script.exchanges.count { it.command.ins == 0x82 })
+            // One more try on the same link after the first refusal, never a third (TES-346).
+            assertEquals(2, script.exchanges.count { it.command.ins == 0x82 })
             assertEquals(1, channels.single().closeCalls)
         }
 
