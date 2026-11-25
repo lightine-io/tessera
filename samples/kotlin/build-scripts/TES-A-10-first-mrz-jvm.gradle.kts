@@ -16,7 +16,7 @@ repositories {
 }
 
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:0.7.0"))
+    implementation(platform("io.lightine.tessera:tessera-bom:1.0.0"))
     implementation("io.lightine.tessera:tessera-mrz-core")
 }
 

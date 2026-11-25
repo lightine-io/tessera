@@ -6,6 +6,7 @@ import io.lightine.tessera.emrtd.ApduTransportException
 import io.lightine.tessera.emrtd.ChipAccessKey
 import io.lightine.tessera.emrtd.ChipReadOptions
 import io.lightine.tessera.emrtd.ChipReadResult
+import io.lightine.tessera.emrtd.ChipReadUpdateListener
 import io.lightine.tessera.emrtd.ChipReader
 import io.lightine.tessera.emrtd.CanKeyResult
 import io.lightine.tessera.emrtd.MrzKeyResult
@@ -77,4 +78,17 @@ fun optionsWithCan(): ChipReadOptions? =
             null
         }
     }
+// endregion
+
+// region TES-A-167 block 8
+// The same read with progress: the listener hears each step, one at a time, on the calling coroutine.
+suspend fun readChipWithProgress(readerName: String, key: ChipAccessKey): ChipReadResult {
+    val options = ChipReadOptions(accessKey = key, checkTime = Clock.System.now())
+    val progress = ChipReadUpdateListener { update ->
+        println("${update.state} ${update.progress.percent}%") // states and counts, never document data
+    }
+    return PcscReaders.connect(readerName).use { transport ->
+        ChipReader().read(transport, options, progress)
+    }
+}
 // endregion

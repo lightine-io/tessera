@@ -3,6 +3,9 @@ package samples.tesa166
 
 // region TES-A-166 block 2
 import android.app.Activity
+import android.content.Context
+import android.net.Uri
+import android.widget.Button
 import io.lightine.tessera.emrtd.ChipAccessKey
 import io.lightine.tessera.emrtd.ChipCheckDetail
 import io.lightine.tessera.emrtd.ChipCheckKind
@@ -11,18 +14,23 @@ import io.lightine.tessera.emrtd.ChipReadEnding
 import io.lightine.tessera.emrtd.ChipReadHandle
 import io.lightine.tessera.emrtd.ChipReadObserver
 import io.lightine.tessera.emrtd.ChipReadOptions
+import io.lightine.tessera.emrtd.ChipReadReadiness
+import io.lightine.tessera.emrtd.ChipReadReadinessRegistration
 import io.lightine.tessera.emrtd.ChipReadState
 import io.lightine.tessera.emrtd.ChipReadUpdate
 import io.lightine.tessera.emrtd.ChipSignedFile
 import io.lightine.tessera.emrtd.MrzKeyResult
 import io.lightine.tessera.emrtd.nfc.NfcChipRead
 import io.lightine.tessera.emrtd.nfc.NfcReadSettings
+import io.lightine.tessera.emrtd.trust.TrustAnchors
 import io.lightine.tessera.mrz.model.MrzDocument
 import io.lightine.tessera.types.errors.ChipAccessDenied
 import io.lightine.tessera.types.errors.ChipError
 import io.lightine.tessera.types.errors.NfcNoAnswer
 import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.errors.NfcTimeout
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.time.Clock
 // endregion
 
@@ -75,7 +83,7 @@ object ReadScreen : ChipReadObserver {
     override fun onEnding(ending: ChipReadEnding) = handle(ending) // exactly once, and last
 }
 
-// Five states are objects, matched by name. Six are classes with values, matched with `is`.
+// Five states are objects, matched by name. Seven are classes with values, matched with `is`.
 // With no `else`, the compiler tells you when a later release adds a state.
 fun describe(state: ChipReadState): String = when (state) {
     ChipReadState.Starting -> "Starting"
@@ -181,5 +189,39 @@ fun startFullRead(activity: Activity, key: ChipAccessKey, printed: MrzDocument):
         .platformSounds(false) // the system sound can make people move the document
         .build()
     return NfcChipRead.start(activity, options, ReadScreen, settings)
+}
+// endregion
+
+// region TES-A-166 block 10
+// Enables the read button only when a read can start. Call it in onResume.
+fun bindReadButton(context: Context, readButton: Button): ChipReadReadinessRegistration {
+    readButton.isEnabled = NfcChipRead.readiness(context) == ChipReadReadiness.Ready
+    // The listener is not called when it is registered: the line above gives the value now.
+    return NfcChipRead.addReadinessListener(context) { readiness ->
+        readButton.isEnabled = readiness == ChipReadReadiness.Ready // on the main thread
+        if (readiness is ChipReadReadiness.Unavailable) show("NFC cannot be used: ${readiness.reason}")
+    }
+}
+
+// Call it in onPause: the SDK holds the listener, and the button, until remove().
+fun unbindReadButton(registration: ChipReadReadinessRegistration) {
+    registration.remove()
+}
+// endregion
+
+// region TES-A-166 block 11
+// uri is the file the person picked with the system file picker (ACTION_OPEN_DOCUMENT).
+suspend fun optionsWithPickedRoots(context: Context, uri: Uri, key: ChipAccessKey): ChipReadOptions? {
+    // load reads the whole file: call it off the main thread.
+    val roots = withContext(Dispatchers.IO) { TrustAnchors.load(context, uri) }
+    if (roots.problem != null) {
+        show("No roots loaded: ${roots.problem}") // a typed reason, for example NOT_READABLE
+        return null
+    }
+    show("Roots: ${roots.anchors.size}, items not read: ${roots.unreadable.size}")
+    return ChipReadOptions.Builder(key)
+        .trustAnchors(roots.anchors)
+        .checkTime(Clock.System.now())
+        .build()
 }
 // endregion
