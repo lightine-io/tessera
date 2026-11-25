@@ -10,6 +10,7 @@ import kotlin.io.encoding.Base64
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -190,6 +191,30 @@ class TrustAnchorsTest {
         assertEquals(TrustAnchorProblem.MALFORMED_ENCODING, loaded.unreadable[0].problem)
         assertEquals(0, loaded.unreadable[0].offset)
         assertEquals(2, loaded.unreadable[1].position)
+    }
+
+    @Test
+    fun aCertificateWithAnInvalidFieldIsUnreadableWithItsProblemAndOffset() {
+        val a = FakePki.cscaCertificate()
+        val badTime = FakePki.certificate(notBefore = DerWriter.utcTime("249901000000Z"))
+        val expected = assertIs<TrustAnchorParse.Unreadable>(TrustAnchor.fromDer(badTime))
+        for (loaded in listOf(TrustAnchors.load((pem(a) + pem(badTime)).encodeToByteArray()), TrustAnchors.load(a + badTime))) {
+            assertEquals(1, loaded.anchors.size)
+            val bad = loaded.unreadable.single()
+            assertEquals(1, bad.position)
+            assertEquals(TrustAnchorProblem.INVALID_CERTIFICATE_FIELD, bad.problem)
+            assertEquals(expected.offset, bad.offset)
+            assertTrue(bad.offset > 0)
+            assertEquals("UnreadableTrustAnchor(position=1, problem=INVALID_CERTIFICATE_FIELD, offset=${bad.offset})", bad.toString())
+        }
+    }
+
+    @Test
+    fun mergeOfFailedLoadsKeepsTheFirstProblem() {
+        val missing = trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_FOUND)
+        val merged = TrustAnchors.merge(missing, TrustAnchors.load(ByteArray(0)))
+        assertEquals(TrustAnchorLoadKind.UNRECOGNIZED, merged.kind)
+        assertEquals(TrustAnchorLoadProblem.NOT_FOUND, merged.problem)
     }
 
     @Test

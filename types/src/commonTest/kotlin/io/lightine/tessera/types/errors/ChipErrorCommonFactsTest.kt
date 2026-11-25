@@ -74,6 +74,72 @@ class ChipErrorCommonFactsTest {
         assertEquals("unavailable.unexpected-fault", NfcUnavailable(NfcUnavailable.Reason.UNEXPECTED_FAULT).code)
     }
 
+    // Every code, written out: a code is public contract, so a rename of a reason or a change of the
+    // slug rule fails here, value by value, including the reasons no read produces today.
+    @Test
+    fun everyCodeIsExactlyTheDocumentedString() {
+        val expected =
+            listOf(
+                "access-denied.chip-refused",
+                "access-denied.file-protected",
+                "access-denied.key-blocked",
+                "access-denied.key-cleared",
+                "access-denied.key-deactivated",
+                "access-denied.key-needs-pace",
+                "access-denied.key-not-matched",
+                "access-denied.key-suspended",
+                "access-denied.key-tries-limited",
+                "access-denied.unexpected-chip-answer",
+                "blank",
+                "file-not-found",
+                "key-check-digit-mismatch",
+                "malformed-file.invalid-element",
+                "malformed-file.missing-element",
+                "malformed-file.nesting-too-deep",
+                "malformed-file.not-signed-data",
+                "malformed-file.not-valid-tlv",
+                "malformed-file.unexpected-content-type",
+                "malformed-file.unexpected-file-tag",
+                "no-answer",
+                "secure-messaging-lost.chip-ended-session",
+                "secure-messaging-lost.malformed-answer",
+                "secure-messaging-lost.missing-checksum",
+                "secure-messaging-lost.plain-length-hint",
+                "secure-messaging-lost.session-closed",
+                "secure-messaging-lost.unauthenticated-status",
+                "secure-messaging-lost.wrong-checksum",
+                "secure-messaging-lost.wrong-padding",
+                "tag-lost",
+                "timeout.command",
+                "timeout.session",
+                "timeout.wait-for-document",
+                "unavailable.access-not-answered",
+                "unavailable.activity-destroyed",
+                "unavailable.busy",
+                "unavailable.cancelled-by-user",
+                "unavailable.closed",
+                "unavailable.command-too-long",
+                "unavailable.disabled",
+                "unavailable.ended-by-system",
+                "unavailable.not-eligible",
+                "unavailable.not-permitted",
+                "unavailable.not-supported",
+                "unavailable.read-in-progress",
+                "unavailable.request-refused",
+                "unavailable.tag-reading-disabled",
+                "unavailable.unexpected-fault",
+                "unexpected-answer.no-status-word",
+                "unexpected-answer.unexpected-status-word",
+                "unexpected-answer.unusable-file-answer",
+                "unsupported-algorithm.chip-refused-suite",
+                "unsupported-algorithm.cryptography-failed",
+                "unsupported-algorithm.extended-length-required",
+                "unsupported-algorithm.no-cryptography-on-platform",
+                "unsupported-algorithm.no-supported-suite",
+            )
+        assertEquals(expected, everyError.map { it.code }.sorted())
+    }
+
     @Test
     fun theStatusWordIsReadFromTheRootAndIsNullWhereThereIsNone() {
         val denied: ChipError = ChipAccessDenied(ChipAccessProtocol.PACE, ChipAccessDenied.Reason.KEY_NOT_MATCHED, 0x63C2)

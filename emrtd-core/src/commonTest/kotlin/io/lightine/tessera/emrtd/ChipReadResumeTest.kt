@@ -222,7 +222,8 @@ class ChipReadResumeTest {
                 // The lost attempt's authentication left no outcome; the update showed it was running.
                 val states = observer.updates.map { it.state }
                 val lost = states.indexOfFirst { it is ChipReadState.LinkLost }
-                assertTrue(states.take(lost).last() is ChipReadState.AuthenticatingChip, "$states")
+                val running = assertIs<ChipReadState.AuthenticatingChip>(states.take(lost).last(), "$states")
+                assertEquals(ChipAuthMethod.CHIP_AUTHENTICATION, running.method)
             }
         }
 
