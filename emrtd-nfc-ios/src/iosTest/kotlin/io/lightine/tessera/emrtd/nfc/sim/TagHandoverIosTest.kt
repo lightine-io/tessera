@@ -18,7 +18,9 @@ import io.lightine.tessera.emrtd.internal.crypto.chipCrypto
 import io.lightine.tessera.emrtd.internal.pa.TestKeys
 import io.lightine.tessera.telemetry.TelemetryEvent
 import io.lightine.tessera.telemetry.TelemetrySink
+import io.lightine.tessera.types.errors.NfcError
 import io.lightine.tessera.types.errors.NfcTagLost
+import io.lightine.tessera.types.errors.NfcUnavailable
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -318,6 +320,124 @@ class TagHandoverIosTest {
             assertEquals(1, script.links, "no new link after the cancel")
         }
 
+    /** Starts a read and moves time on until the first planned handover was made; [failure] fails the reconnect after it. */
+    private fun IosSim.readWithFailedReconnect(
+        flow: FlowChip,
+        failure: NfcError,
+        settings: CoreNfcReadSettings = CoreNfcReadSettings(),
+        beforeReconnect: IosSim.() -> Unit = {},
+    ): SimRecorder {
+        val (_, recorder) = start(deviceOptions(flow), settings, telemetry = sink)
+        while (handovers.isEmpty() && recorder.endings.isEmpty()) step(IosSim.STEP_MILLIS)
+        assertEquals(1, handovers.size, "the handover was made")
+        connectFailures += failure
+        beforeReconnect()
+        runUntilEnded(recorder)
+        assertNull(recorder.checkPromises())
+        assertTrue(connectFailures.isEmpty(), "the reconnect after the handover failed")
+        return recorder
+    }
+
+    @Test
+    fun i_cancelDuringTheReconnectAfterAHandover_endsCancelledByThePerson_andSpendsNothing() =
+        simTest { flow ->
+            val r = readWithFailedReconnect(flow, NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER))
+
+            val ending = assertIs<ChipReadEnding.Cancelled>(r.ending)
+            assertEquals(ChipReadEnding.Cancelled.By.PERSON, ending.by)
+            assertEquals(1, r.endings.size)
+            assertTrue(r.states.none { it is ChipReadState.LinkLost }, "no restart spent: ${r.states}")
+            assertEquals(1, ending.attempts, "no new attempt")
+        }
+
+    @Test
+    fun i_cancelDuringTheReconnectAfterAHandover_noRestartLeft_endsCancelledByThePerson() =
+        simTest { flow ->
+            // The only restart goes to a real loss early on the first link.
+            script.fault(ChipFaultAction.LoseLink(Shapes.LOSS_AFTER_MILLIS)) { c -> c.link == 1 && isPhotoRead(c) && c.indexInLink > 40 }
+            val r =
+                readWithFailedReconnect(
+                    flow,
+                    NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER),
+                    CoreNfcReadSettings(linkLoss = LinkLossPolicy.Resume(1)),
+                )
+
+            val ending = assertIs<ChipReadEnding.Cancelled>(r.ending)
+            assertEquals(ChipReadEnding.Cancelled.By.PERSON, ending.by)
+            assertEquals(1, r.endings.size)
+            assertEquals(1, r.states.count { it is ChipReadState.LinkLost }, "only the real loss")
+        }
+
+    @Test
+    fun i_cancelDuringTheReconnectAfterAHandover_littleSessionLeft_endsCancelledByThePerson() =
+        simTest { flow ->
+            // The reconnect takes so long that under 10 s of the session is left when it fails.
+            val r =
+                readWithFailedReconnect(flow, NfcUnavailable(NfcUnavailable.Reason.CANCELLED_BY_USER)) {
+                    connectMillis = LONG_CONNECT_MILLIS
+                }
+
+            val ending = assertIs<ChipReadEnding.Cancelled>(r.ending)
+            assertEquals(ChipReadEnding.Cancelled.By.PERSON, ending.by)
+            assertTrue(r.endings.single().atMillis > CoreNfcChipRead.SESSION_LIMIT_MILLIS - CoreNfcChipRead.MIN_TIME_FOR_A_NEW_START_MILLIS)
+            assertTrue(r.states.none { it is ChipReadState.LinkLost })
+        }
+
+    @Test
+    fun j_aLostLinkWhileReconnectingAfterAHandover_isOneLoss_usesOneRestart_andTheReadResumes() =
+        simTest { flow ->
+            val r = readWithFailedReconnect(flow, NfcTagLost)
+
+            val ending = assertIs<ChipReadEnding.Complete>(r.ending)
+            assertDeviceChecksPass(ending)
+            // One LinkLost, published once, showing the budget the restart was taken from.
+            val lost = r.updates.filter { it.value.state is ChipReadState.LinkLost }
+            assertEquals(1, lost.size, "one LinkLost: ${r.states}")
+            assertEquals(2, (lost.single().value.state as ChipReadState.LinkLost).restartsLeft)
+            assertEquals(2, ending.attempts, "the loss made a new attempt")
+            assertTrue(
+                ending.read.files
+                    .single { it.dataGroup == 2 }
+                    .continuedAt != null,
+                "still resumed",
+            )
+        }
+
+    @Test
+    fun j_aLostLinkWhileReconnectingAfterAHandover_spendsOneRestart_aLaterLossHasOneLeft() =
+        simTest { flow ->
+            // A real loss on the link after the failed reconnect: one restart is left for it.
+            script.fault(ChipFaultAction.LoseLink(Shapes.LOSS_AFTER_MILLIS)) { c -> c.link == 2 && isPhotoRead(c) && c.indexInLink > 20 }
+            val r = readWithFailedReconnect(flow, NfcTagLost)
+
+            assertIs<ChipReadEnding.Complete>(r.ending)
+            assertEquals(listOf(2, 1), r.states.filterIsInstance<ChipReadState.LinkLost>().map { it.restartsLeft })
+        }
+
+    @Test
+    fun j_aLostLinkWhileReconnectingAfterAHandover_noRestartLeft_endsWithTheLoss() =
+        simTest { flow ->
+            // The only restart goes to a real loss early on the first link.
+            script.fault(ChipFaultAction.LoseLink(Shapes.LOSS_AFTER_MILLIS)) { c -> c.link == 1 && isPhotoRead(c) && c.indexInLink > 40 }
+            val r = readWithFailedReconnect(flow, NfcTagLost, CoreNfcReadSettings(linkLoss = LinkLossPolicy.Resume(1)))
+
+            val ending = assertIs<ChipReadEnding.Partial>(r.ending)
+            assertIs<NfcTagLost>(ending.stoppedBy)
+            assertEquals(1, r.endings.size)
+            assertEquals(1, r.states.count { it is ChipReadState.LinkLost }, "only the real loss")
+        }
+
+    @Test
+    fun j_aLostLinkWhileReconnectingAfterAHandover_littleSessionLeft_endsWithTheLoss() =
+        simTest { flow ->
+            val r = readWithFailedReconnect(flow, NfcTagLost) { connectMillis = LONG_CONNECT_MILLIS }
+
+            val ending = assertIs<ChipReadEnding.Partial>(r.ending)
+            assertIs<NfcTagLost>(ending.stoppedBy)
+            assertEquals(1, r.endings.size)
+            assertTrue(r.states.none { it is ChipReadState.LinkLost })
+        }
+
     @Test
     fun h_settings_tagTimeLimit_defaultOffAndRange() {
         val defaults = CoreNfcReadSettings()
@@ -363,5 +483,8 @@ class TagHandoverIosTest {
         const val CHUNK = 0xDF
 
         const val SLOW_EARLY_READ_MILLIS = 900L
+
+        /** A reconnect after the handover that ends with under 10 s of the 60 s session left. */
+        const val LONG_CONNECT_MILLIS = 35_000L
     }
 }

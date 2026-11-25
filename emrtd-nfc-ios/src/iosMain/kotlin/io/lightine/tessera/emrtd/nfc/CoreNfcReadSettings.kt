@@ -61,7 +61,10 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  * @property observerOn The thread the observer is called on: [ObserverThread.MAIN], the main
  *   queue, by default, so the updates reach a screen without a hop of your own; [ObserverThread.CALLER]
  *   for the read's own threads. Either way the calls come one at a time, in order, with the ending
- *   last, exactly once, and none comes before `start` returned.
+ *   last, exactly once. With [ObserverThread.MAIN] none comes before `start` returned; with
+ *   [ObserverThread.CALLER] the first ones can come on the calling thread inside `start`:
+ *   [io.lightine.tessera.emrtd.ChipReadState.Starting], and the ending of a read that ends at once
+ *   (a key refused at start, another read in progress).
  * @property readTimeoutMillis The longest wait for the chip's answer to one ordinary command after
  *   access: selecting a file and reading it, under secure messaging or not, and the other commands
  *   that need no public-key work on the chip. Default 2000: on a device a protected read of 223

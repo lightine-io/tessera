@@ -199,8 +199,12 @@ import kotlin.jvm.JvmOverloads
  * and by default ([NfcReadSettings.observerOn] is [ObserverThread.MAIN]) they come on the main
  * thread, handed over through the main looper in the order the SDK made them; none comes before
  * [start] returns. With [ObserverThread.CALLER] they come from the read's own thread, or from the
- * thread that calls [start] or [cancel] for the updates and the ending those cause. An exception the
- * observer throws is ignored, so it never reaches the main thread.
+ * thread that calls [start] or [cancel] for the updates and the ending those cause: then
+ * [io.lightine.tessera.emrtd.ChipReadState.Starting], and the ending of a read that cannot start,
+ * can come before [start] returns. One exception to the thread: a read that owns the Activity's
+ * reader mode (`start(activity, ...)`) hands over its ending on the main thread with either
+ * value, because it turns reader mode off there first. An exception the observer throws is
+ * ignored, so it never reaches the main thread.
  *
  * The read lets go of the observer when it hands over the ending (with [ObserverThread.MAIN], once
  * the main thread has run that call).
@@ -801,8 +805,12 @@ public class NfcChipRead internal constructor(
          * for a pause in the middle of a read. The read holds [activity] weakly and lets it go at
          * the ending.
          *
-         * The observer is called on the main thread unless [NfcReadSettings.observerOn] says
-         * otherwise; it never hears anything before this call returns.
+         * By default ([NfcReadSettings.observerOn] is [ObserverThread.MAIN]) the observer is
+         * called on the main thread and hears nothing before this call returns. With
+         * [ObserverThread.CALLER] the updates come from the read's own thread, and
+         * [io.lightine.tessera.emrtd.ChipReadState.Starting], and the ending of a read that cannot
+         * start, can come before this call returns; the ending still comes on the main thread,
+         * where the read turns reader mode off first.
          *
          * @param activity The read screen, shown now.
          * @param options The key, the data groups, the roots and the check time. The read takes the

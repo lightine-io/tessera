@@ -323,12 +323,18 @@ public class CoreNfcChipRead internal constructor(
             delay(settings.settleDelayMillis)
             coordinator.connecting()
             val failure = connect(tag)
-            if (failure != null && handoverWaitEnds != null) {
-                // The new link after a planned handover could not be set up: a real loss from here.
-                handoverWaitEnds = null
-                if (!handoverFailed(session)) return
-            }
+            val afterHandover = handoverWaitEnds != null
             handoverWaitEnds = null
+            if (failure != null && failure.retryable && afterHandover) {
+                // The new link after a planned handover could not be set up: a real loss from here,
+                // handled once by the lost-link rules; then the read waits for the document again.
+                // A failure that is not retryable (the person's Cancel, the system's end) takes the
+                // general path below, with its own ending, and spends nothing.
+                if (!handoverFailed(session)) return
+                restartPolling(session.owned)
+                waitingSince = env.now()
+                continue
+            }
             if (failure != null) {
                 if (failure.retryable) {
                     if (++failedConnects < MAX_CONNECT_ATTEMPTS) {
