@@ -35,13 +35,13 @@ Tessera's own code makes no network calls and logs nothing. On Android, the text
 
 ## Install
 
-Release 0.7.0. Minimums: minSdk 23. From the next release: Java 17 and iOS 15. The released 0.7.0 itself needs Java 21 and iOS 18. Modules: [Choose your pieces](https://lightine.youtrack.cloud/articles/TES-A-140).
+Release 1.0.0. Minimums: minSdk 23, Java 17, iOS 15. Modules: [Choose your pieces](https://lightine.youtrack.cloud/articles/TES-A-140).
 
 `build.gradle.kts` (the JVM needs only the first two lines):
 
 ```kotlin
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:0.7.0"))
+    implementation(platform("io.lightine.tessera:tessera-bom:1.0.0"))
     implementation("io.lightine.tessera:tessera-mrz-core")
     implementation("io.lightine.tessera:tessera-mrz-camera")
     implementation("io.lightine.tessera:tessera-mrz-camera-ui")
@@ -56,7 +56,7 @@ dependencies {
         <dependency>
             <groupId>io.lightine.tessera</groupId>
             <artifactId>tessera-bom</artifactId>
-            <version>0.7.0</version>
+            <version>1.0.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -73,7 +73,7 @@ dependencies {
 `Package.swift` (iOS):
 
 ```swift
-.package(url: "https://github.com/lightine-io/tessera-swift", exact: "0.7.0"),
+.package(url: "https://github.com/lightine-io/tessera-swift", exact: "1.0.0"),
 .product(name: "Tessera", package: "tessera-swift"),
 .product(name: "TesseraUI", package: "tessera-swift"),
 ```
@@ -96,7 +96,7 @@ android {
 }
 
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:0.7.0"))
+    implementation(platform("io.lightine.tessera:tessera-bom:1.0.0"))
     implementation("io.lightine.tessera:tessera-mrz-camera-ui")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.compose.material3:material3:1.4.0")
@@ -190,7 +190,7 @@ iOS: the Swift package has a ready-made SwiftUI screen, `TesseraUI`. See [Read y
 
 ## Read a chip (headless) in a few lines
 
-Experimental. Chip reading is not in release 0.7.0; the dependency lines below use version 1.0.0, as the compiled samples do. The chip API can change in any release before 1.0, and you opt in once. The SDK reports the files on the chip and the facts its checks found. It never says the document is valid or genuine, and it sends no write command.
+Experimental. Chip reading is new in release 1.0.0. The chip API can change in any release, and you opt in once. The SDK reports the files on the chip and the facts its checks found. It never says the document is valid or genuine, and it sends no write command.
 
 Android. `app/build.gradle.kts`:
 
@@ -302,7 +302,7 @@ when (val result = ChipAccessKey.Mrz.fromTypedFields(fields)) {
 
 To check the chip's signature, pass your own root certificates: `ChipReadOptions.Builder(key).trustAnchors(TrustAnchors.load(file).anchors)`. Every `TrustAnchors.load` form that reads a file, a stream or an address belongs off the main thread. On Android the forms are `load(File)`, `load(InputStream)`, `load(context, uri)` and `load(bytes)`; there is no `load(path)` on Android.
 
-iOS. Chip reading is in the Swift package's `Tessera` product from the next release, not in the 0.7.0 package: `import Tessera` gives it. The app needs the NFC entries in its Info.plist and the NFC entitlement (a paid Apple developer team is needed). The shortest use (it needs iOS 15 or later: see Install above for what 0.7.0 needs):
+iOS. Chip reading is in the Swift package's `Tessera` product: `import Tessera` gives it. The app needs the NFC entries in its Info.plist and the NFC entitlement (a paid Apple developer team is needed). The shortest use (it needs iOS 15 or later):
 
 ```swift
 let options = try ChipReadOptions.Builder(accessKey: key).build()
