@@ -2,6 +2,7 @@ package io.lightine.tessera.emrtd.nfc
 
 import io.lightine.tessera.emrtd.ChipReadEnding
 import io.lightine.tessera.emrtd.LinkLossPolicy
+import io.lightine.tessera.telemetry.TelemetrySink
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.NfcTimeout
 import kotlin.jvm.JvmOverloads
@@ -14,7 +15,9 @@ import kotlin.jvm.JvmOverloads
  * same, with the same defaults, as in the iPhone read's settings (`CoreNfcReadSettings`). The two
  * waits are Android's own: on iPhone the system session's 60-second limit bounds every wait.
  *
- * Kotlin callers use the constructor with named arguments; Java callers can use [Builder].
+ * Kotlin callers use the constructor with named arguments; Java callers can use [Builder], which
+ * also changes one value of an existing settings object without naming the others
+ * ([toBuilder]).
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -40,8 +43,13 @@ import kotlin.jvm.JvmOverloads
  *   the default, waits without a limit. When it passes, the read ends with
  *   [ChipReadEnding.EndedBySystem] and [NfcTimeout]. Once a first link is up it no longer applies:
  *   [waitForReturnMillis] bounds the waits after a lost link.
- * @throws IllegalArgumentException when [commandTimeoutMillis] is not positive or above
- *   [Int.MAX_VALUE], or a wait or a delay is negative.
+ * @property telemetry Where the read's step events go (step, protocol, status word, file id, byte
+ *   count, time): the sink you give here. With `null`, the default, the sink registered in
+ *   `TelemetrySinkRegistry` when the read starts, which is a sink that drops everything when none
+ *   is registered. The events never hold document or chip data.
+ * @throws IllegalArgumentException when [settleDelayMillis] or [waitForReturnMillis] is negative,
+ *   [commandTimeoutMillis] is not in 1 to [Int.MAX_VALUE], or [waitForDocumentMillis] is set and
+ *   negative.
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
@@ -54,6 +62,7 @@ public class NfcReadSettings
         public val commandTimeoutMillis: Long = DEFAULT_COMMAND_TIMEOUT_MILLIS,
         public val waitForReturnMillis: Long = DEFAULT_WAIT_FOR_RETURN_MILLIS,
         public val waitForDocumentMillis: Long? = null,
+        public val telemetry: TelemetrySink? = null,
     ) {
         init {
             require(settleDelayMillis >= 0) { "settleDelayMillis must not be negative, was $settleDelayMillis" }
@@ -73,6 +82,21 @@ public class NfcReadSettings
                 "waitForDocumentMillis=$waitForDocumentMillis)"
 
         /**
+         * A builder that starts from these values, so one value can change without naming the
+         * others: `settings.toBuilder().settleDelayMillis(0).build()`.
+         *
+         * @since 1.0.0
+         */
+        public fun toBuilder(): Builder =
+            Builder()
+                .linkLoss(linkLoss)
+                .settleDelayMillis(settleDelayMillis)
+                .commandTimeoutMillis(commandTimeoutMillis)
+                .waitForReturnMillis(waitForReturnMillis)
+                .waitForDocumentMillis(waitForDocumentMillis)
+                .telemetry(telemetry)
+
+        /**
          * Builds [NfcReadSettings] step by step, with the constructor's defaults.
          *
          * @since 1.0.0
@@ -84,6 +108,7 @@ public class NfcReadSettings
             private var commandTimeoutMillis: Long = DEFAULT_COMMAND_TIMEOUT_MILLIS
             private var waitForReturnMillis: Long = DEFAULT_WAIT_FOR_RETURN_MILLIS
             private var waitForDocumentMillis: Long? = null
+            private var telemetry: TelemetrySink? = null
 
             /** What the read does when the link to the chip is lost. */
             public fun linkLoss(policy: LinkLossPolicy): Builder = apply { linkLoss = policy }
@@ -100,6 +125,9 @@ public class NfcReadSettings
             /** How long the read may take to find a document and link to it; `null` waits without a limit. */
             public fun waitForDocumentMillis(millis: Long?): Builder = apply { waitForDocumentMillis = millis }
 
+            /** Where the read's step events go; `null` uses the sink registered when the read starts. */
+            public fun telemetry(sink: TelemetrySink?): Builder = apply { telemetry = sink }
+
             /**
              * The settings.
              *
@@ -107,7 +135,7 @@ public class NfcReadSettings
              */
             @Throws(IllegalArgumentException::class)
             public fun build(): NfcReadSettings =
-                NfcReadSettings(linkLoss, settleDelayMillis, commandTimeoutMillis, waitForReturnMillis, waitForDocumentMillis)
+                NfcReadSettings(linkLoss, settleDelayMillis, commandTimeoutMillis, waitForReturnMillis, waitForDocumentMillis, telemetry)
         }
 
         /** The default values. */

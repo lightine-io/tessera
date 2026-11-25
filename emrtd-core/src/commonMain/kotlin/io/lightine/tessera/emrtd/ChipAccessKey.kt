@@ -1,6 +1,13 @@
 package io.lightine.tessera.emrtd
 
 import io.lightine.tessera.mrz.checkdigit.computeCheckDigit
+import io.lightine.tessera.mrz.model.MrvA
+import io.lightine.tessera.mrz.model.MrvB
+import io.lightine.tessera.mrz.model.MrzDocument
+import io.lightine.tessera.mrz.model.TD1
+import io.lightine.tessera.mrz.model.TD2
+import io.lightine.tessera.mrz.model.TD3
+import io.lightine.tessera.mrz.parsing.ParseResult
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.vocabulary.MrzField
 import kotlin.jvm.JvmStatic
@@ -13,6 +20,16 @@ import kotlin.jvm.JvmStatic
  *
  * The key holds its values as bytes, which [clear] overwrites with zeros once the read is done. Its
  * `toString()` never shows them. Two keys are equal only when they are the same object.
+ *
+ * **Who clears it.** A key is for one person's action: one read, then it is cleared. The easy
+ * entry points (`NfcChipRead`, `CoreNfcChipRead`) take the key in the options over from the start
+ * and clear it at the ending of the read, whatever the ending is; a restart after a lost link
+ * still has it until then. When you call [ChipReader.read] yourself, you own the key and clear it.
+ * Never use one key for a second read: make a new one, so each attempt at the chip is a new
+ * action of the person.
+ *
+ * To make an MRZ key from a scanned or parsed MRZ, use [Mrz.from]; from values a person typed,
+ * [Mrz.fromTypedFields].
  *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
@@ -52,8 +69,9 @@ public sealed class ChipAccessKey {
      *
      * Give each value exactly as it is printed in the MRZ, fillers (`<`) included, and the check
      * digits as printed, even when one does not match its field: the chip was set up with the
-     * printed values, and the SDK never corrects them. When a person types the values in, the app
-     * can compute a check digit with `computeCheckDigit` from `mrz-core`.
+     * printed values, and the SDK never corrects them. From a parsed or scanned MRZ use
+     * [Companion.from]; when a person types the values in, use [Companion.fromTypedFields], which
+     * works out the check digits.
      *
      * Every value may hold only the MRZ characters `A` to `Z`, `0` to `9` and `<`.
      *
@@ -206,6 +224,137 @@ public sealed class ChipAccessKey {
                         dateOfExpiryCheckDigit,
                     )
                 }
+
+                /**
+                 * A key from a scanned or parsed MRZ, in one call: the document number, the date of
+                 * birth and the date of expiry, each with its check digit, exactly as printed.
+                 *
+                 * It works for TD1, TD2 and TD3. For a TD1 or TD2 document whose number is longer
+                 * than nine characters it joins the number from the optional data, as
+                 * [fromPrintedFields] does (Doc 9303 Part 11, section 9.7.3). Nothing is corrected:
+                 * a check digit that does not match its field stays as printed and shows in
+                 * [checkDigitFindings], and the check-digit gate at read time still applies.
+                 *
+                 * A scanner's decoded result holds a [ParseResult]; pass that to the other overload,
+                 * or its `document`.
+                 *
+                 * Nothing is thrown for a document that lacks a field: the answer is
+                 * [MrzKeyResult.NotBuilt] with the field and the problem. A visa has no chip
+                 * ([MrzKeyProblem.DOCUMENT_HAS_NO_CHIP]).
+                 *
+                 * @param document The document from `mrz-core`'s parser or the scanner.
+                 * @return [MrzKeyResult.Built] with the key, or [MrzKeyResult.NotBuilt].
+                 * @since 1.0.0
+                 */
+                @JvmStatic
+                public fun from(document: MrzDocument): MrzKeyResult {
+                    val optionalData =
+                        when (document) {
+                            is TD1 -> document.optionalData1
+                            is TD2 -> document.optionalData
+                            is TD3 -> ""
+                            is MrvA, is MrvB -> return MrzKeyResult.NotBuilt(null, MrzKeyProblem.DOCUMENT_HAS_NO_CHIP)
+                        }
+                    val c = document.commonFields
+                    val number = c.documentNumber
+                    val numberCheck = c.checkDigits.documentNumber
+                    val dob = c.dateOfBirth.rawYear + c.dateOfBirth.rawMonth + c.dateOfBirth.rawDay
+                    val doe = c.dateOfExpiry.rawYear + c.dateOfExpiry.rawMonth + c.dateOfExpiry.rawDay
+                    val continues = numberCheck == FILLER
+                    val problem =
+                        problemOfValue(number, MrzField.DOCUMENT_NUMBER, DOCUMENT_NUMBER_FIELD_LENGTH)
+                            ?: problemOfCharacter(numberCheck, MrzField.DOCUMENT_NUMBER)
+                            ?: problemOfValue(dob, MrzField.DATE_OF_BIRTH, DATE_LENGTH)
+                            ?: problemOfCharacter(c.checkDigits.dateOfBirth, MrzField.DATE_OF_BIRTH)
+                            ?: problemOfValue(doe, MrzField.DATE_OF_EXPIRY, DATE_LENGTH)
+                            ?: problemOfCharacter(c.checkDigits.dateOfExpiry, MrzField.DATE_OF_EXPIRY)
+                            // The optional data is read only when the number continues in it.
+                            ?: if (continues) problemOfValue(optionalData, MrzField.OPTIONAL_DATA, null, allowEmpty = true) else null
+                    if (problem != null) return problem
+                    return try {
+                        MrzKeyResult.Built(
+                            fromPrintedFields(
+                                number,
+                                numberCheck,
+                                if (continues) optionalData else "",
+                                dob,
+                                c.checkDigits.dateOfBirth,
+                                doe,
+                                c.checkDigits.dateOfExpiry,
+                            ),
+                        )
+                    } catch (e: IllegalArgumentException) {
+                        // Every other value was checked above: what is left is the missing continuation.
+                        MrzKeyResult.NotBuilt(MrzField.DOCUMENT_NUMBER, MrzKeyProblem.NUMBER_CONTINUATION_MISSING)
+                    }
+                }
+
+                /**
+                 * A key from a parse result, as a scanner returns it (`MrzScanResult.Decoded.parse`):
+                 * the same as [from] on the document of a success or a partial success.
+                 *
+                 * @param result The parse result.
+                 * @return [MrzKeyResult.Built], or [MrzKeyResult.NotBuilt] with
+                 *   [MrzKeyProblem.NO_DOCUMENT] when the parse failed and holds no document.
+                 * @since 1.0.0
+                 */
+                @JvmStatic
+                public fun from(result: ParseResult): MrzKeyResult =
+                    when (result) {
+                        is ParseResult.Success -> from(result.document)
+                        is ParseResult.PartialSuccess -> from(result.document)
+                        is ParseResult.Failure -> MrzKeyResult.NotBuilt(null, MrzKeyProblem.NO_DOCUMENT)
+                    }
+
+                /**
+                 * A key from the three values as a person types them, with the check digits worked
+                 * out by the SDK: the document number (up to nine characters or a longer complete
+                 * number), the date of birth and the date of expiry (`YYMMDD`).
+                 *
+                 * The document number is padded at its end with `<` to nine characters, as the MRZ
+                 * prints it; a longer number is kept whole. The three check digits are computed with
+                 * `computeCheckDigit`. Nothing else is changed: letters must be upper case, and a
+                 * date is six digits, with no check that it is a real calendar date.
+                 *
+                 * **A typed value has no printed check digit to compare.** A typing mistake still
+                 * gives a key whose digits are right for the mistaken value, so the read sends it
+                 * to the chip as a wrong key: one authentication attempt per call, as always. Show
+                 * the person what they typed, and let them confirm, before you start the read. When
+                 * the document is at hand, prefer the camera and [from].
+                 *
+                 * Nothing is thrown: a value that cannot be used is [MrzKeyResult.NotBuilt] with the
+                 * field and the problem.
+                 *
+                 * @param documentNumber The document number, at least one character: `A` to `Z`, `0`
+                 *   to `9` and `<`.
+                 * @param dateOfBirth The date of birth, six digits (`YYMMDD`).
+                 * @param dateOfExpiry The date of expiry, six digits (`YYMMDD`).
+                 * @return [MrzKeyResult.Built] with the key, or [MrzKeyResult.NotBuilt].
+                 * @since 1.0.0
+                 */
+                @JvmStatic
+                public fun fromTypedFields(
+                    documentNumber: String,
+                    dateOfBirth: String,
+                    dateOfExpiry: String,
+                ): MrzKeyResult {
+                    val problem =
+                        problemOfValue(documentNumber, MrzField.DOCUMENT_NUMBER, null)
+                            ?: problemOfValue(dateOfBirth, MrzField.DATE_OF_BIRTH, DATE_LENGTH, digitsOnly = true)
+                            ?: problemOfValue(dateOfExpiry, MrzField.DATE_OF_EXPIRY, DATE_LENGTH, digitsOnly = true)
+                    if (problem != null) return problem
+                    val number = documentNumber.padEnd(DOCUMENT_NUMBER_FIELD_LENGTH, FILLER)
+                    return MrzKeyResult.Built(
+                        Mrz(
+                            number,
+                            computeCheckDigit(number),
+                            dateOfBirth,
+                            computeCheckDigit(dateOfBirth),
+                            dateOfExpiry,
+                            computeCheckDigit(dateOfExpiry),
+                        ),
+                    )
+                }
             }
         }
 
@@ -240,6 +389,30 @@ public sealed class ChipAccessKey {
 private const val FILLER = '<'
 
 private const val DOCUMENT_NUMBER_FIELD_LENGTH = 9
+
+private const val DATE_LENGTH = 6
+
+/** The problem with [value] as the whole of [field], or `null` when it is usable. Never holds the value. */
+private fun problemOfValue(
+    value: String,
+    field: MrzField,
+    length: Int?,
+    digitsOnly: Boolean = false,
+    allowEmpty: Boolean = false,
+): MrzKeyResult.NotBuilt? =
+    when {
+        value.isEmpty() && !allowEmpty -> MrzKeyResult.NotBuilt(field, MrzKeyProblem.EMPTY)
+        length != null && value.length != length -> MrzKeyResult.NotBuilt(field, MrzKeyProblem.WRONG_LENGTH)
+        digitsOnly && !value.all { it in '0'..'9' } -> MrzKeyResult.NotBuilt(field, MrzKeyProblem.CHARACTER_NOT_ALLOWED)
+        !value.all(::isMrzCharacter) -> MrzKeyResult.NotBuilt(field, MrzKeyProblem.CHARACTER_NOT_ALLOWED)
+        else -> null
+    }
+
+/** The problem with the check digit [c] of [field], or `null` when it is an MRZ character. */
+private fun problemOfCharacter(
+    c: Char,
+    field: MrzField,
+): MrzKeyResult.NotBuilt? = if (isMrzCharacter(c)) null else MrzKeyResult.NotBuilt(field, MrzKeyProblem.CHARACTER_NOT_ALLOWED)
 
 private fun isMrzCharacter(c: Char): Boolean = c in 'A'..'Z' || c in '0'..'9' || c == FILLER
 

@@ -21,6 +21,7 @@ public final class io/lightine/tessera/emrtd/nfc/IsoDepTransport$Companion {
 
 public final class io/lightine/tessera/emrtd/nfc/NfcChipRead : android/nfc/NfcAdapter$ReaderCallback, io/lightine/tessera/emrtd/ChipReadHandle {
 	public static final field Companion Lio/lightine/tessera/emrtd/nfc/NfcChipRead$Companion;
+	public static final fun availability (Landroid/content/Context;)Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public fun cancel ()V
 	public fun isEnded ()Z
 	public fun onTagDiscovered (Landroid/nfc/Tag;)V
@@ -29,6 +30,7 @@ public final class io/lightine/tessera/emrtd/nfc/NfcChipRead : android/nfc/NfcAd
 }
 
 public final class io/lightine/tessera/emrtd/nfc/NfcChipRead$Companion {
+	public final fun availability (Landroid/content/Context;)Lio/lightine/tessera/types/errors/NfcUnavailable$Reason;
 	public final fun start (Lio/lightine/tessera/emrtd/ChipReadOptions;Landroid/nfc/NfcAdapter;Lio/lightine/tessera/emrtd/ChipReadObserver;)Lio/lightine/tessera/emrtd/nfc/NfcChipRead;
 	public final fun start (Lio/lightine/tessera/emrtd/ChipReadOptions;Landroid/nfc/NfcAdapter;Lio/lightine/tessera/emrtd/nfc/NfcReadSettings;Lio/lightine/tessera/emrtd/ChipReadObserver;)Lio/lightine/tessera/emrtd/nfc/NfcChipRead;
 }
@@ -45,12 +47,15 @@ public final class io/lightine/tessera/emrtd/nfc/NfcReadSettings {
 	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJ)V
 	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJ)V
 	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJLjava/lang/Long;)V
-	public synthetic fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJLjava/lang/Long;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJLjava/lang/Long;Lio/lightine/tessera/telemetry/TelemetrySink;)V
+	public synthetic fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJLjava/lang/Long;Lio/lightine/tessera/telemetry/TelemetrySink;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getCommandTimeoutMillis ()J
 	public final fun getLinkLoss ()Lio/lightine/tessera/emrtd/LinkLossPolicy;
 	public final fun getSettleDelayMillis ()J
+	public final fun getTelemetry ()Lio/lightine/tessera/telemetry/TelemetrySink;
 	public final fun getWaitForDocumentMillis ()Ljava/lang/Long;
 	public final fun getWaitForReturnMillis ()J
+	public final fun toBuilder ()Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -60,6 +65,7 @@ public final class io/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder {
 	public final fun commandTimeoutMillis (J)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 	public final fun linkLoss (Lio/lightine/tessera/emrtd/LinkLossPolicy;)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 	public final fun settleDelayMillis (J)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
+	public final fun telemetry (Lio/lightine/tessera/telemetry/TelemetrySink;)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 	public final fun waitForDocumentMillis (Ljava/lang/Long;)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 	public final fun waitForReturnMillis (J)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 }

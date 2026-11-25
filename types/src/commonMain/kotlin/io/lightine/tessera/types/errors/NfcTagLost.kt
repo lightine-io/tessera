@@ -17,6 +17,10 @@ public data object NfcTagLost : NfcError() {
     override val description: String
         get() = "The connection to the chip was lost before it answered"
 
+    /** A stable name of this error: see [ChipError.code]. */
+    override val code: String
+        get() = "tag-lost"
+
     /** `NfcTagLost: ` followed by [description]. */
     override fun toString(): String = "NfcTagLost: $description"
 }

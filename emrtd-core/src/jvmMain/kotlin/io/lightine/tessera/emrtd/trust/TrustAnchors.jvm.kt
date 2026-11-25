@@ -14,6 +14,13 @@ import java.io.InputStream
 public actual object TrustAnchors {
     public actual fun load(bytes: ByteArray): TrustAnchorLoad = readTrustAnchors(bytes)
 
+    public actual fun load(
+        bytes: ByteArray,
+        heldRoots: List<TrustAnchor>,
+    ): TrustAnchorLoad = readTrustAnchors(bytes, heldRoots)
+
+    public actual fun merge(vararg loads: TrustAnchorLoad): TrustAnchorLoad = mergeTrustAnchorLoads(loads.toList())
+
     /**
      * Reads [file], a local file the app obtained itself (the SDK never downloads), and hands its
      * bytes to [load]. A file larger than 16 MiB is answered with
@@ -22,7 +29,13 @@ public actual object TrustAnchors {
      * nothing is fetched; a `java.io.File` keeps such a path with its double slash collapsed to
      * one, and that form counts too. Never throws.
      */
-    public fun load(file: File): TrustAnchorLoad = load(file, MAX_BYTES)
+    public fun load(file: File): TrustAnchorLoad = load(file, MAX_BYTES, emptyList())
+
+    /** As [load] on a file, with [heldRoots] for a master list's own checks; see the bytes form. */
+    public fun load(
+        file: File,
+        heldRoots: List<TrustAnchor>,
+    ): TrustAnchorLoad = load(file, MAX_BYTES, heldRoots)
 
     /**
      * Reads [stream] to its end and hands the bytes to [load]. The stream is not closed. With more
@@ -30,12 +43,19 @@ public actual object TrustAnchors {
      * [TrustAnchorLoadProblem.TOO_LARGE]. An I/O failure is answered with
      * [TrustAnchorLoadProblem.NOT_READABLE]. Never throws.
      */
-    public fun load(stream: InputStream): TrustAnchorLoad = load(stream, MAX_BYTES)
+    public fun load(stream: InputStream): TrustAnchorLoad = load(stream, MAX_BYTES, emptyList())
+
+    /** As [load] on a stream, with [heldRoots] for a master list's own checks; see the bytes form. */
+    public fun load(
+        stream: InputStream,
+        heldRoots: List<TrustAnchor>,
+    ): TrustAnchorLoad = load(stream, MAX_BYTES, heldRoots)
 
     /** The same read as [load] with a different cap, so tests can exercise [TrustAnchorLoadProblem.TOO_LARGE]. */
     internal fun load(
         file: File,
         maxBytes: Long,
+        heldRoots: List<TrustAnchor> = emptyList(),
     ): TrustAnchorLoad {
         if (isWebAddress(file.path)) return trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_A_LOCAL_FILE)
         return try {
@@ -48,7 +68,7 @@ public actual object TrustAnchors {
                 file.length() > maxBytes -> trustAnchorLoadFailed(TrustAnchorLoadProblem.TOO_LARGE)
 
                 // Read through the cap too: the file may have grown since its length was read.
-                else -> file.inputStream().use { load(it, maxBytes) }
+                else -> file.inputStream().use { load(it, maxBytes, heldRoots) }
             }
         } catch (e: IOException) {
             trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_READABLE)
@@ -61,13 +81,14 @@ public actual object TrustAnchors {
     internal fun load(
         stream: InputStream,
         maxBytes: Long,
+        heldRoots: List<TrustAnchor> = emptyList(),
     ): TrustAnchorLoad =
         try {
             val bytes = readAtMost(stream, maxBytes + 1)
             if (bytes.size > maxBytes) {
                 trustAnchorLoadFailed(TrustAnchorLoadProblem.TOO_LARGE)
             } else {
-                readTrustAnchors(bytes)
+                readTrustAnchors(bytes, heldRoots)
             }
         } catch (e: IOException) {
             trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_READABLE)

@@ -4,6 +4,7 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
 import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.errors.NfcTimeout
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmStatic
 
 /**
  * What a read does when the link to the chip is lost: usually the document moved away from the
@@ -129,5 +130,37 @@ public sealed class LinkLossPolicy {
         /** The restarts the policies allow: 1 to 3. */
         @JvmField
         public val RESTARTS: IntRange = 1..3
+
+        /**
+         * [End]: the read ends at the first lost link. A short form for Swift and Java, where the
+         * nested object is awkward to name: `LinkLossPolicy.end()`.
+         *
+         * @since 1.0.0
+         */
+        @JvmStatic
+        public fun end(): LinkLossPolicy = End
+
+        /**
+         * [ReadAgain] with [maxRestarts] restarts: `LinkLossPolicy.readAgain(2)`.
+         *
+         * @param maxRestarts How many times the read may start again: 1 to 3 ([RESTARTS]).
+         * @throws IllegalArgumentException when [maxRestarts] is outside 1 to 3.
+         * @since 1.0.0
+         */
+        @JvmStatic
+        @Throws(IllegalArgumentException::class)
+        public fun readAgain(maxRestarts: Int): LinkLossPolicy = ReadAgain(maxRestarts)
+
+        /**
+         * [Resume] with [maxRestarts] restarts: `LinkLossPolicy.resume(2)`, the default of the
+         * platform read settings.
+         *
+         * @param maxRestarts How many times the read may continue: 1 to 3 ([RESTARTS]).
+         * @throws IllegalArgumentException when [maxRestarts] is outside 1 to 3.
+         * @since 1.0.0
+         */
+        @JvmStatic
+        @Throws(IllegalArgumentException::class)
+        public fun resume(maxRestarts: Int): LinkLossPolicy = Resume(maxRestarts)
     }
 }

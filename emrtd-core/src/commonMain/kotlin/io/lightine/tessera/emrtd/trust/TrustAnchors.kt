@@ -52,6 +52,38 @@ public expect object TrustAnchors {
      * @return [TrustAnchorLoad] with what could be read, what could not, and what the content is.
      */
     public fun load(bytes: ByteArray): TrustAnchorLoad
+
+    /**
+     * Reads root certificates from [bytes], as [load] does, and checks a master list's own
+     * signature against [heldRoots]: root certificates the app already holds (for example from an
+     * earlier load). With none, that check reports that it did not run
+     * ([TrustAnchorLoadKind.MASTER_LIST] only; other content has no signature to check).
+     *
+     * The roots in [heldRoots] are not added to [TrustAnchorLoad.anchors]: merge the loads you
+     * want to trust with [TrustAnchorLoad.plus]. Who is to be trusted stays the app's choice.
+     *
+     * @param heldRoots Roots the app already holds, used only for the master list's own checks.
+     * @return [TrustAnchorLoad] with what could be read, what could not, and what the content is.
+     * @since 1.0.0
+     */
+    public fun load(
+        bytes: ByteArray,
+        heldRoots: List<TrustAnchor>,
+    ): TrustAnchorLoad
+
+    /**
+     * Joins several loads into one: the anchors of all of them, without repeats (two anchors with
+     * the same encoded bytes count once; the first is kept), in the order given.
+     *
+     * The result has kind [TrustAnchorLoadKind.CERTIFICATE] when it holds anchors, and
+     * [TrustAnchorLoadKind.UNRECOGNIZED] with the first load's problem when it holds none; one load
+     * alone is returned unchanged. It carries every load's
+     * [TrustAnchorLoad.unreadable] entries, and no master list or problem of its own: read those on
+     * the loads you passed. With no loads, the result is [TrustAnchorLoadProblem.NOT_RECOGNIZED].
+     *
+     * @since 1.0.0
+     */
+    public fun merge(vararg loads: TrustAnchorLoad): TrustAnchorLoad
 }
 
 /** The largest file the file helpers read into memory: 16 MiB. A real master list is about 1 MB. */
@@ -65,8 +97,11 @@ internal const val MAX_BYTES: Long = 16L * 1024L * 1024L
 internal const val MAX_ITEMS: Int = 10_000
 
 /** Reads root certificates from content bytes: master list, one DER certificate, PEM, DER runs. */
-internal fun readTrustAnchors(bytes: ByteArray): TrustAnchorLoad {
-    when (val list = MasterListReader.read(bytes)) {
+internal fun readTrustAnchors(
+    bytes: ByteArray,
+    heldRoots: List<TrustAnchor> = emptyList(),
+): TrustAnchorLoad {
+    when (val list = MasterListReader.read(bytes, heldRoots)) {
         is MasterListRead.Read -> {
             return TrustAnchorLoad(
                 deduplicated(list.masterList.anchors),
@@ -130,6 +165,19 @@ internal fun readTrustAnchors(bytes: ByteArray): TrustAnchorLoad {
         }
     }
     return trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_RECOGNIZED)
+}
+
+/** Joins [loads] without repeats; see [TrustAnchors.merge]. */
+internal fun mergeTrustAnchorLoads(loads: List<TrustAnchorLoad>): TrustAnchorLoad {
+    if (loads.isEmpty()) return trustAnchorLoadFailed(TrustAnchorLoadProblem.NOT_RECOGNIZED)
+    if (loads.size == 1) return loads[0]
+    val anchors = deduplicated(loads.flatMap { it.anchors })
+    val unreadable = loads.flatMap { it.unreadable }
+    if (anchors.isEmpty()) {
+        val problem = loads.firstNotNullOfOrNull { it.problem } ?: TrustAnchorLoadProblem.NOT_RECOGNIZED
+        return TrustAnchorLoad(emptyList(), TrustAnchorLoadKind.UNRECOGNIZED, unreadable, null, problem)
+    }
+    return TrustAnchorLoad(anchors, TrustAnchorLoadKind.CERTIFICATE, unreadable, null, null)
 }
 
 /** The answer when nothing could be loaded: no anchors, and [problem] saying why. */
@@ -246,6 +294,13 @@ public class TrustAnchorLoad internal constructor(
     /** Why nothing was loaded when [kind] is [TrustAnchorLoadKind.UNRECOGNIZED], otherwise `null`. */
     public val problem: TrustAnchorLoadProblem?,
 ) {
+    /**
+     * This load and [other] joined: see [TrustAnchors.merge].
+     *
+     * @since 1.0.0
+     */
+    public operator fun plus(other: TrustAnchorLoad): TrustAnchorLoad = mergeTrustAnchorLoads(listOf(this, other))
+
     /** The kind, the counts and the problem; never certificate content. */
     override fun toString(): String =
         "TrustAnchorLoad(kind=$kind, problem=$problem, anchors=${anchors.size}, unreadable=${unreadable.size})"

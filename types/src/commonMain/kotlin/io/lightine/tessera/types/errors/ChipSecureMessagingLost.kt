@@ -17,7 +17,7 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
 @ExperimentalTesseraChipApi
 public data class ChipSecureMessagingLost(
     val reason: Reason,
-    val statusWord: Int? = null,
+    override val statusWord: Int? = null,
 ) : ChipError() {
     /**
      * Why the session ended.
@@ -72,6 +72,10 @@ public data class ChipSecureMessagingLost(
             val sw = statusWord?.let { " (status ${it.toString(16).uppercase().padStart(4, '0')})" } ?: ""
             return "The secure-messaging session with the chip ended: $what$sw"
         }
+
+    /** A stable name of this error: see [ChipError.code]. */
+    override val code: String
+        get() = "secure-messaging-lost." + slug(reason.name)
 
     /** `ChipSecureMessagingLost: ` followed by [description]. */
     override fun toString(): String = "ChipSecureMessagingLost: $description"

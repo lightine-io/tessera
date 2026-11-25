@@ -20,6 +20,10 @@ public data object ChipBlank : ChipError() {
     override val description: String
         get() = "The chip holds no eMRTD application; it may have been left blank by the issuer"
 
+    /** A stable name of this error: see [ChipError.code]. */
+    override val code: String
+        get() = "blank"
+
     /** `ChipBlank: ` followed by [description]. */
     override fun toString(): String = "ChipBlank: $description"
 }

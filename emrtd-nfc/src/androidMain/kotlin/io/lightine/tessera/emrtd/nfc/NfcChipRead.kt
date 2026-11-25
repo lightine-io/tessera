@@ -1,5 +1,6 @@
 package io.lightine.tessera.emrtd.nfc
 
+import android.content.Context
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.IsoDep
@@ -71,6 +72,16 @@ import java.util.concurrent.atomic.AtomicReference
  *   document waits until [NfcReadSettings.waitForDocumentMillis] passes, which by default is never:
  *   cancel a read your app no longer shows, or no other read can start.
  *
+ * ## The key
+ *
+ * The read takes the access key in `options` over from [start] until its ending: the SDK clears it
+ * ([io.lightine.tessera.emrtd.ChipAccessKey.clear]) when the read ends, whatever the ending is,
+ * and not earlier, so a restart after a lost link still has it. You do not clear it, and you do not
+ * use it for a second read: a new read needs a new key, which also keeps to one authentication
+ * attempt per action of the person. Reading with a cleared key ends the read with a
+ * [io.lightine.tessera.types.errors.ChipAccessDenied] whose reason is `KEY_CLEARED`. The
+ * low-level [io.lightine.tessera.emrtd.ChipReader.read] does not clear the key: there you own it.
+ *
  * ## What the SDK does
  *
  * - Checks the MRZ key's check digits before anything else: a key that does not add up ends with
@@ -121,7 +132,14 @@ public class NfcChipRead internal constructor(
     private val env: NfcReadEnvironment,
 ) : NfcAdapter.ReaderCallback,
     ChipReadHandle {
-    private val coordinator = ChipReadCoordinator(options, settings.linkLoss, Forwarder(observer), env.reader)
+    private val coordinator =
+        ChipReadCoordinator(
+            options,
+            settings.linkLoss,
+            Forwarder(observer),
+            settings.telemetry?.let { ChipReader(it) } ?: env.reader,
+            clearKeyAtEnding = true,
+        )
     private val scope = CoroutineScope(SupervisorJob() + env.dispatcher)
 
     // Tags the platform found while the read was willing to take one; only the newest is kept,
@@ -364,6 +382,18 @@ public class NfcChipRead internal constructor(
 
     /** Starts a read. */
     public companion object {
+        /**
+         * Whether NFC can be used right now, before a read starts: the same question, with the
+         * same answer, as [NfcReaderMode.availability], and as `CoreNfcChipRead.availability()`
+         * on iPhone.
+         *
+         * @param context Any context of the app.
+         * @return `null` when NFC is usable; otherwise why it is not.
+         * @since 1.0.0
+         */
+        @JvmStatic
+        public fun availability(context: Context): NfcUnavailable.Reason? = NfcReaderMode.availability(context)
+
         /**
          * Starts a read with the default settings. Returns at once; the read waits for reader mode
          * to hand it a document: pass it to [NfcReaderMode.enable].

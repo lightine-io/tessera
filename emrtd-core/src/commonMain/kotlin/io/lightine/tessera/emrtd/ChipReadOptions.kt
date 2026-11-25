@@ -12,19 +12,27 @@ import kotlin.time.Instant
  * Kotlin callers use the constructor with named arguments; Java and Swift callers can use
  * [Builder].
  *
+ * **Who clears the key.** The low-level [ChipReader.read] does not clear [accessKey]: the caller
+ * owns it. The easy entry points (`NfcChipRead` on Android, `CoreNfcChipRead` on iOS) take the key
+ * over for the length of the read and clear it at its ending, whatever the ending is; read the
+ * entry point's documentation. Either way a key is for one person's action: make a new one for the
+ * next read.
+ *
  * Experimental: see [ExperimentalTesseraChipApi].
  *
- * @property accessKey The key that opens the chip: MRZ values or the card access number. The reader
- *   does not clear it; call [ChipAccessKey.clear] when your app no longer needs it.
+ * @property accessKey The key that opens the chip: MRZ values or the card access number.
+ *   [ChipReader.read] does not clear it; call [ChipAccessKey.clear] when your app no longer needs
+ *   it. The easy entry points clear it at the ending of the read.
  * @property dataGroups The data groups to read, by number (1 to 16). EF.COM, EF.SOD, and DG14 and
  *   DG15 when the chip lists them, are always read: the checks need them. DG3 and DG4 need terminal
  *   authentication, which the SDK does not run, so asking for them gives a
  *   [io.lightine.tessera.types.errors.ChipAccessDenied] entry in [ChipRead.fileErrors].
  * @property trustAnchors The root certificates your app chose for the signer checks. The SDK never
  *   bundles or downloads any; with none, the root checks report that they did not run.
- * @property checkTime The time at which certificate validity is checked and DG1's dates are read.
- *   The SDK never reads a clock: with `null`, the validity checks report that they did not run and
- *   [ChipRead.dg1] is `null` (the raw DG1 is still read).
+ * @property checkTime With `null` (the default), the validity-period checks are reported as not run
+ *   (`CheckOutcome.NotRun` with [ChipCheckReason.NO_TIME_GIVEN]) and [ChipRead.dg1] is `null`; the
+ *   raw DG1 is still read. Otherwise this is the time at which certificate validity is checked and
+ *   DG1's dates are read. The SDK never reads a clock: give the time your app trusts.
  * @property allowExtendedLength Whether the reader may use extended-length APDUs. They are used only
  *   when this is `true`, the transport carries them and the chip states it accepts them.
  * @property signerCertificate A document signer certificate your app supplies for a chip whose
@@ -80,6 +88,9 @@ public class ChipReadOptions
 
             /** The data groups to read, by number (1 to 16). */
             public fun dataGroups(numbers: Set<Int>): Builder = apply { dataGroups = numbers.toSet() }
+
+            /** The data groups to read, by number (1 to 16): `dataGroups(1, 2, 11)`. */
+            public fun dataGroups(vararg numbers: Int): Builder = apply { dataGroups = numbers.toSet() }
 
             /** The root certificates for the signer checks. */
             public fun trustAnchors(anchors: List<TrustAnchor>): Builder = apply { trustAnchors = anchors.toList() }

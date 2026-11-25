@@ -62,6 +62,52 @@ class TrustAnchorsTest {
         }
 
     @Test
+    fun heldRootsLetAMasterListsOwnSignatureChainToThem() =
+        withKeys { keys ->
+            val pki = Pki.rsa(keys)
+            val bytes = masterList(keys, listOf(pki.csca), pki)
+            val without = TrustAnchors.load(bytes)
+            assertTrue(without.masterList?.outcomeOf(MasterListCheckKind.SIGNER_CHAINS_TO_SUPPLIED_ROOT) is CheckOutcome.NotRun)
+            val held = (TrustAnchors.load(pki.csca).anchors)
+            val with = TrustAnchors.load(bytes, held)
+            assertEquals(CheckOutcome.Passed, with.masterList?.outcomeOf(MasterListCheckKind.SIGNER_CHAINS_TO_SUPPLIED_ROOT))
+            // Held roots are not added to what is loaded.
+            assertEquals(1, with.anchors.size)
+            // Other content has no signature: held roots change nothing.
+            assertEquals(1, TrustAnchors.load(pki.csca, held).anchors.size)
+        }
+
+    @Test
+    fun mergeJoinsLoadsWithoutRepeatsInOrder() {
+        val a = FakePki.cscaCertificate()
+        val b = FakePki.documentSignerCertificate()
+        val notACertificate = DerWriter.sequence(DerWriter.integer(1))
+        val one = TrustAnchors.load(a + b)
+        val two = TrustAnchors.load((pem(b) + pem(a)).encodeToByteArray())
+        val three = TrustAnchors.load(a + notACertificate)
+        val merged = TrustAnchors.merge(one, two, three)
+        assertEquals(2, merged.anchors.size)
+        assertTrue(merged.anchors[0].encodedBytes().contentEquals(a))
+        assertTrue(merged.anchors[1].encodedBytes().contentEquals(b))
+        assertEquals(TrustAnchorLoadKind.CERTIFICATE, merged.kind)
+        assertEquals(1, merged.unreadable.size)
+        assertEquals(2, (one + two).anchors.size)
+        // One load alone is returned as it is.
+        assertTrue(one === TrustAnchors.merge(one))
+    }
+
+    @Test
+    fun mergeOfNothingUsableReportsAProblem() {
+        val bad = TrustAnchors.load(ByteArray(0))
+        val merged = TrustAnchors.merge(bad, bad)
+        assertEquals(TrustAnchorLoadKind.UNRECOGNIZED, merged.kind)
+        assertEquals(TrustAnchorLoadProblem.NOT_RECOGNIZED, merged.problem)
+        assertEquals(TrustAnchorLoadProblem.NOT_RECOGNIZED, TrustAnchors.merge().problem)
+        // A good load joined with a bad one keeps the good anchors.
+        assertEquals(1, (bad + TrustAnchors.load(FakePki.cscaCertificate())).anchors.size)
+    }
+
+    @Test
     fun aDerCertificateIsLoaded() {
         val loaded = TrustAnchors.load(FakePki.cscaCertificate())
         assertEquals(TrustAnchorLoadKind.CERTIFICATE, loaded.kind)

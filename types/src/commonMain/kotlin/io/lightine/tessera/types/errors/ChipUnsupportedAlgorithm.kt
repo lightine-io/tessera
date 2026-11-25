@@ -18,7 +18,7 @@ import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
 public data class ChipUnsupportedAlgorithm(
     val protocol: ChipAccessProtocol,
     val reason: Reason,
-    val statusWord: Int? = null,
+    override val statusWord: Int? = null,
 ) : ChipError() {
     /**
      * What was missing.
@@ -61,6 +61,10 @@ public data class ChipUnsupportedAlgorithm(
             val sw = statusWord?.let { " (status ${it.toString(16).uppercase().padStart(4, '0')})" } ?: ""
             return "No common algorithm for $protocol: $what$sw"
         }
+
+    /** A stable name of this error: see [ChipError.code]. */
+    override val code: String
+        get() = "unsupported-algorithm." + slug(reason.name)
 
     /** `ChipUnsupportedAlgorithm: ` followed by [description]. */
     override fun toString(): String = "ChipUnsupportedAlgorithm: $description"

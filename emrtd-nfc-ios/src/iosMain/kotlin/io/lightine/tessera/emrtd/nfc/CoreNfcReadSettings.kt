@@ -1,6 +1,7 @@
 package io.lightine.tessera.emrtd.nfc
 
 import io.lightine.tessera.emrtd.LinkLossPolicy
+import io.lightine.tessera.telemetry.TelemetrySink
 import io.lightine.tessera.types.ExperimentalTesseraChipApi
 
 /**
@@ -10,7 +11,9 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  * Times are in milliseconds.
  *
  * Experimental: see [ExperimentalTesseraChipApi]. In Swift, `CoreNfcReadSettings()` gives the
- * defaults; the full initializer takes every value.
+ * defaults; the full initializer takes every value. To change one value without naming the others,
+ * use [Builder]: `CoreNfcReadSettings.Builder().settleDelayMillis(millis: 0).build()`, or
+ * [toBuilder] on an existing object.
  *
  * @property linkLoss What the read does when the link to the chip is lost, usually because the
  *   document moved: the default, [LinkLossPolicy.Resume] with 2 restarts, waits for the document
@@ -31,6 +34,10 @@ import io.lightine.tessera.types.ExperimentalTesseraChipApi
  *   when the previous one was ended by the system (its time limit, the app leaving the screen) or
  *   refused because the reader was busy. Default 1000. A read ended by the app or the person
  *   needs no wait.
+ * @property telemetry Where the read's step events go (step, protocol, status word, file id, byte
+ *   count, time): the sink you give here. With `null`, the default, the sink registered in
+ *   `TelemetrySinkRegistry` when the read starts, which is a sink that drops everything when none
+ *   is registered. The events never hold document or chip data.
  * @throws IllegalArgumentException when [commandTimeoutMillis] is not positive, or
  *   [settleDelayMillis] or [waitAfterSystemEndMillis] is negative.
  * @since 1.0.0
@@ -43,6 +50,7 @@ public class CoreNfcReadSettings
         public val settleDelayMillis: Long = DEFAULT_SETTLE_DELAY_MILLIS,
         public val commandTimeoutMillis: Long = DEFAULT_COMMAND_TIMEOUT_MILLIS,
         public val waitAfterSystemEndMillis: Long = DEFAULT_WAIT_AFTER_SYSTEM_END_MILLIS,
+        public val telemetry: TelemetrySink? = null,
     ) {
         /** The defaults: [LinkLossPolicy.Resume] with 2 restarts, 400, 5000 and 1000 milliseconds. */
         public constructor() : this(LinkLossPolicy.Resume(DEFAULT_RESTARTS))
@@ -57,6 +65,58 @@ public class CoreNfcReadSettings
         override fun toString(): String =
             "CoreNfcReadSettings(linkLoss=$linkLoss, settleDelayMillis=$settleDelayMillis, " +
                 "commandTimeoutMillis=$commandTimeoutMillis, waitAfterSystemEndMillis=$waitAfterSystemEndMillis)"
+
+        /**
+         * A builder that starts from these values, so one value can change without naming the
+         * others.
+         *
+         * @since 1.0.0
+         */
+        public fun toBuilder(): Builder =
+            Builder()
+                .linkLoss(linkLoss)
+                .settleDelayMillis(settleDelayMillis)
+                .commandTimeoutMillis(commandTimeoutMillis)
+                .waitAfterSystemEndMillis(waitAfterSystemEndMillis)
+                .telemetry(telemetry)
+
+        /**
+         * Builds [CoreNfcReadSettings] step by step, with the constructor's defaults.
+         *
+         * @since 1.0.0
+         */
+        @ExperimentalTesseraChipApi
+        public class Builder {
+            private var linkLoss: LinkLossPolicy = LinkLossPolicy.Resume(DEFAULT_RESTARTS)
+            private var settleDelayMillis: Long = DEFAULT_SETTLE_DELAY_MILLIS
+            private var commandTimeoutMillis: Long = DEFAULT_COMMAND_TIMEOUT_MILLIS
+            private var waitAfterSystemEndMillis: Long = DEFAULT_WAIT_AFTER_SYSTEM_END_MILLIS
+            private var telemetry: TelemetrySink? = null
+
+            /** What the read does when the link to the chip is lost. */
+            public fun linkLoss(policy: LinkLossPolicy): Builder = apply { linkLoss = policy }
+
+            /** How long to wait after a document is found before the first command. */
+            public fun settleDelayMillis(millis: Long): Builder = apply { settleDelayMillis = millis }
+
+            /** The longest wait for the chip's answer to one command. */
+            public fun commandTimeoutMillis(millis: Long): Builder = apply { commandTimeoutMillis = millis }
+
+            /** How long a new read waits after the system ended the previous session. */
+            public fun waitAfterSystemEndMillis(millis: Long): Builder = apply { waitAfterSystemEndMillis = millis }
+
+            /** Where the read's step events go; `null` uses the sink registered when the read starts. */
+            public fun telemetry(sink: TelemetrySink?): Builder = apply { telemetry = sink }
+
+            /**
+             * The settings.
+             *
+             * @throws IllegalArgumentException as the [CoreNfcReadSettings] constructor does.
+             */
+            @Throws(IllegalArgumentException::class)
+            public fun build(): CoreNfcReadSettings =
+                CoreNfcReadSettings(linkLoss, settleDelayMillis, commandTimeoutMillis, waitAfterSystemEndMillis, telemetry)
+        }
 
         /** The default values. */
         public companion object {

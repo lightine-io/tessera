@@ -39,6 +39,10 @@ public data class ChipKeyCheckDigitMismatch(
             return "The check digit of the access key's $names does not match, so nothing was sent to the chip"
         }
 
+    /** A stable name of this error: see [ChipError.code]. */
+    override val code: String
+        get() = "key-check-digit-mismatch"
+
     /** `ChipKeyCheckDigitMismatch: ` followed by [description]. */
     override fun toString(): String = "ChipKeyCheckDigitMismatch: $description"
 }
