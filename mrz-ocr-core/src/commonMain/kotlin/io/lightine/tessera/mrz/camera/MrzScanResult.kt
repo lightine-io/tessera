@@ -21,7 +21,8 @@ public sealed interface MrzScanResult {
      * [parse] is the parser's own result, which can be a failure.
      *
      * @property parse the parser's result for the candidate.
-     * @property recognizedText the raw OCR text the candidate came from.
+     * @property recognizedText the raw OCR text the candidate came from; a short MRZ row may be the
+     *   engine's second read of the same region, which the result does not mark.
      * @property quality the quality signals for this frame.
      * @property fillerPadding the `<` the reader added at the end of a name line that was read short,
      *   or `null` when every line was read at full width. When it is set, [parse] was made from the
@@ -39,7 +40,8 @@ public sealed interface MrzScanResult {
          * Creates a result with no filler padding.
          *
          * @param parse the parser's result for the candidate.
-         * @param recognizedText the raw OCR text the candidate came from.
+         * @param recognizedText the raw OCR text the candidate came from; a short MRZ row may be the
+         *   engine's second read of the same region, which the result does not mark.
          * @param quality the quality signals for this frame.
          * @since 0.2.0
          */

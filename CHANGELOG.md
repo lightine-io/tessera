@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - **iPhone apps built with the framework no longer need iOS 26.4 to link and load** (`emrtd-nfc-ios`, the `TesseraCore` framework). In 1.0.0 the framework named the session configuration class of iOS 26.4 as a required link-time symbol, so an app could not link against an older SDK and could fail to load on iOS 15 to 26.3. The class is now looked up by name only when the system has it. Reading on iOS 26.4 and later works as before: ISO 14443 and PACE polling together, with the eMRTD application as the only select identifier.
 
+### Documentation
+
+- **API documentation explains that a short MRZ row may come from a second read of its region, what `TransliterationResult.Success` means for unmapped characters, and that scanner confirmation carries only the last agreeing frame** (`mrz-ocr-core`, `mrz-camera`, `mrz-camera-ios`, `mrz-core`, `mrz-camera-ui`; no behaviour change).
+
 ## [1.0.0] - 2026-11-26
 
 - **Reading a document's chip over NFC is new in this release, as experimental API** (`tessera-emrtd-core`, `tessera-emrtd-nfc` for Android, `tessera-emrtd-pcsc` for desktop Java, and the `Tessera` product of the Swift package; `types`). Every chip declaration is marked `ExperimentalTesseraChipApi`: using it is a compile error until you opt in with `@OptIn(ExperimentalTesseraChipApi::class)` or `optIn.add("io.lightine.tessera.types.ExperimentalTesseraChipApi")` in the build script, and it can change in any release until the mark is removed. Swift has no opt-in, so there the documentation says "experimental". The SDK reports the files on the chip and the facts its checks found. It never says the chip or the document is valid or genuine, sends no write command, and never downloads or bundles root certificates. The chip flows are tested against scripted chips and on devices; this is no promise about every phone and document. Every chip sealed type and enum may gain members in a later release: keep an `else` branch in a `when`.

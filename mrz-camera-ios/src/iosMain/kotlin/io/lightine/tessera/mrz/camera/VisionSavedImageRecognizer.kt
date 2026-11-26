@@ -184,9 +184,10 @@ internal class VisionSavedImageRecognizer(
  * Creates the iOS saved-image OCR recognizer, which reads a file [NSURL] with Apple Vision.
  *
  * Pass it to [SavedImageMrzReader], which closes it when the reader is closed. It runs on
- * `Dispatchers.Default`. It re-reads likely MRZ rows from a tighter crop and puts the lines whose
- * length matches an MRZ line width ahead of the first-pass lines, which it keeps. A Vision failure
- * on the first pass is thrown, and [MrzFrameAnalyzer] reports it as [CameraError.OcrFailed].
+ * `Dispatchers.Default`. When the first pass finds likely MRZ rows, it reads each region again from
+ * a tighter crop and puts reads whose length matches an MRZ line width ahead of the first-pass lines,
+ * which it keeps. A Vision failure on the first pass is thrown, and [MrzFrameAnalyzer] reports it as
+ * [CameraError.OcrFailed].
  *
  * @param acknowledgement the required saved-image acknowledgement. It has no default.
  * @return the recognizer.

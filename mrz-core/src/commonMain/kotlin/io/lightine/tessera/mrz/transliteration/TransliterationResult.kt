@@ -13,7 +13,9 @@ import io.lightine.tessera.types.vocabulary.UnmappedCharacter
  */
 public sealed class TransliterationResult {
     /**
-     * Every character was handled.
+     * The profile produced output for the whole input. A shipped profile writes `<` for a character
+     * it has no mapping for, but this result does not list those characters; compare the input with
+     * [output] to find them.
      *
      * @property output The mapped text, in the MRZ alphabet.
      * @since 0.1.0
