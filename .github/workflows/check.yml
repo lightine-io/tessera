@@ -152,11 +152,6 @@ jobs:
   # missing klib is not.
   publish-smoke:
     name: publish · smoke (empty-module guard)
-    # TEMPORARY (board-clearing run to 1.0, owner's call 2026-11-21): the two macOS jobs are
-    # skipped on pull requests to keep reviews fast; they still run on every push to main and on
-    # the schedule. A skipped job counts as passed for the required check. Remove these two `if:`
-    # lines before the 1.0.0 tag (release checklist).
-    if: github.event_name != 'pull_request'
     runs-on: macos-26
     steps:
       - name: Checkout
@@ -229,11 +224,6 @@ jobs:
 
   ios-compile:
     name: build & test · iOS
-    # TEMPORARY (board-clearing run to 1.0, owner's call 2026-11-21): the two macOS jobs are
-    # skipped on pull requests to keep reviews fast; they still run on every push to main and on
-    # the schedule. A skipped job counts as passed for the required check. Remove these two `if:`
-    # lines before the 1.0.0 tag (release checklist).
-    if: github.event_name != 'pull_request'
     # Apple targets can only be built on macOS (Kotlin/Native links against the Xcode toolchain);
     # a Linux runner cannot build them at all. macos-26 with the Xcode pinned in XCODE_VERSION, which Konan uses.
     runs-on: macos-26
