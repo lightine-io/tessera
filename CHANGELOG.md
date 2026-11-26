@@ -16,6 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 
 - **iPhone apps built with the framework no longer need iOS 26.4 to link and load** (`emrtd-nfc-ios`, the `TesseraCore` framework). In 1.0.0 the framework named the session configuration class of iOS 26.4 as a required link-time symbol, so an app could not link against an older SDK and could fail to load on iOS 15 to 26.3. The class is now looked up by name only when the system has it. Reading on iOS 26.4 and later works as before: ISO 14443 and PACE polling together, with the eMRTD application as the only select identifier.
+- **The Android scanner reads in a short camera area, such as with a phone held in landscape or in a small split-screen window** (`mrz-camera-ui`, `mrz-camera`). The area given to the text reader now always covers the guide box; before, it was a thin strip through the middle of the box, so nothing was read. In a short area, the torch button and the "What's the MRZ?" link can overlap the box.
+- **The Android scanner shows a notice when the camera area is too low for the guide box** (`mrz-camera-ui`). Manual entry and close stay reachable, and the camera returns when the window grows. The notice uses the string keys `tessera_scanner_window_too_small_title` and `tessera_scanner_window_too_small_body`.
 
 ### Documentation
 

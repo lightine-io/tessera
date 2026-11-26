@@ -34,25 +34,16 @@ import androidx.compose.ui.unit.dp
 /** Semantics anchor for the "window too small to scan" notice. Not user-facing. */
 internal const val WINDOW_TOO_SMALL_TEST_TAG: String = "tessera-mrz-window-too-small"
 
-/** The minimum touch target Material 3 gives the torch toggle ([TorchButton], `minimumInteractiveComponentSize`). */
-private val MinTouchTarget: Dp = 48.dp
-
 /**
- * The smallest camera-area height (the space under the top bar and method switcher, above the footer) in which
- * the live preview is usable. Derived from the preview's own layout, not tuned:
+ * The guide window ([MrzGuideOverlay]) plus a 12dp margin above and below: the guide itself is [GuideBandHeight],
+ * so the limit is [GuideBandHeight] + 24dp. Below it, the guide cannot fit with those margins and the notice is
+ * shown instead of the camera.
  *
- * - The guide window ([MrzGuideOverlay]) is [GuideBandHeight] (96dp) tall and vertically centred, so the space
- *   above it equals the space below it: (height - 96dp) / 2.
- * - Above it sits the torch toggle: [TorchEdgePadding] (16dp) from the top plus its 48dp touch target = 64dp.
- * - Below it the preview reserves [GuidanceBottomReserved] (64dp) for the pinned "What's the MRZ?" link.
- * - Each side therefore needs max(64dp, 64dp) = 64dp, so the height is 96dp + 2 × 64dp = 224dp.
- *
- * Below this height the torch overlaps the guide window and the "What's the MRZ?" link is drawn over it. The
- * framing hint under the window is not counted: its region already scrolls inside the space left between the
- * window and the link, so it never overlaps anything. Width is not gated: the guide window is the area's width
- * minus fixed margins and the controls sit beside or below it, so a narrow window does not overlap them.
+ * From this limit up to but not including 224dp, the torch button and the "What's the MRZ?" link can overlap the
+ * guide box. This is accepted until the layout is redesigned. Reading still works at these heights because the text
+ * reader's area covers the guide box at every height.
  */
-internal val MinScanAreaHeight: Dp = GuideBandHeight + maxOf(TorchEdgePadding + MinTouchTarget, GuidanceBottomReserved) * 2
+internal val MinScanAreaHeight: Dp = GuideBandHeight + 24.dp
 
 /** Whether a camera area of [height] is too short for the live preview ([MinScanAreaHeight]). Pure, so host-testable. */
 internal fun scanAreaTooSmall(height: Dp): Boolean = height < MinScanAreaHeight

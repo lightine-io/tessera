@@ -51,7 +51,7 @@ class WindowTooSmallTest {
     }
 
     private val made = mutableListOf<FakeScanner>()
-    private var size by mutableStateOf(DpSize(360.dp, 120.dp))
+    private var size by mutableStateOf(DpSize(360.dp, 100.dp))
     private var manualEntries = 0
     private var closes = 0
 
@@ -86,21 +86,31 @@ class WindowTooSmallTest {
     }
 
     @Test
-    fun the_threshold_is_the_guide_window_plus_the_torch_and_link_reserves() {
-        assertEquals(224.dp, MinScanAreaHeight)
-        assertTrue(scanAreaTooSmall(223.dp))
-        assertFalse(scanAreaTooSmall(224.dp))
+    fun the_threshold_is_the_guide_window_plus_a_24_dp_margin() {
+        assertEquals(GuideBandHeight + 24.dp, MinScanAreaHeight)
+        assertEquals(120.dp, MinScanAreaHeight)
+        assertTrue(scanAreaTooSmall(119.dp))
+        assertFalse(scanAreaTooSmall(120.dp))
     }
 
     @Test
     fun a_short_area_shows_the_notice_and_never_binds_the_camera() {
-        size = DpSize(360.dp, 120.dp)
+        size = DpSize(360.dp, 100.dp)
         setGate()
 
         composeRule.onNodeWithTag(WINDOW_TOO_SMALL_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithText("Window too small to scan").assertIsDisplayed()
         composeRule.onNodeWithTag(VIEWFINDER_TEST_TAG).assertDoesNotExist()
         assertTrue(made.isEmpty(), "no scanner may be made while the notice shows")
+    }
+
+    @Test
+    fun a_200_dp_landscape_area_shows_the_camera_without_the_notice() {
+        size = DpSize(360.dp, 200.dp)
+        setGate()
+
+        composeRule.onNodeWithTag(WINDOW_TOO_SMALL_TEST_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(VIEWFINDER_TEST_TAG).assertIsDisplayed()
     }
 
     @Test
@@ -117,7 +127,7 @@ class WindowTooSmallTest {
 
     @Test
     fun growing_the_window_brings_the_camera_back_by_itself() {
-        size = DpSize(360.dp, 120.dp)
+        size = DpSize(360.dp, 100.dp)
         setGate()
         assertTrue(made.isEmpty())
 
@@ -136,7 +146,7 @@ class WindowTooSmallTest {
         val first = made.single()
         assertTrue(first.started)
 
-        size = DpSize(360.dp, 120.dp)
+        size = DpSize(360.dp, 100.dp)
         composeRule.waitForIdle()
         composeRule.onNodeWithTag(WINDOW_TOO_SMALL_TEST_TAG).assertIsDisplayed()
         assertTrue(first.closed, "the camera must not run while the notice shows")
@@ -174,7 +184,7 @@ class WindowTooSmallTest {
         // well under the threshold.
         composeRule.setContent {
             TesseraScannerTheme(MrzScannerConfig().theme) {
-                Box(Modifier.size(DpSize(360.dp, 320.dp))) {
+                Box(Modifier.size(DpSize(360.dp, 200.dp))) {
                     ScannerScaffold(
                         enabledMethods = setOf(ScanMethod.CAMERA, ScanMethod.SAVED_IMAGE, ScanMethod.MANUAL_ENTRY),
                         currentState = ScannerUiState.Scanning(),
