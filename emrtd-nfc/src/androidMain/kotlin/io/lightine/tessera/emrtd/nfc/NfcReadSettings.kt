@@ -114,8 +114,9 @@ import kotlin.jvm.JvmOverloads
  *   [commandTimeoutMillis],
  *   [commandTimeoutMillis] applies before access too. A command not answered in time is a try that
  *   costs no restart ([io.lightine.tessera.emrtd.ChipReadState.NoAnswerYet]).
- * @property totalTimeLimitMillis How long after the read starts a lost link may still lead to a
- *   restart; the first lost link after it ends the read with [ChipReadEnding.Partial] or
+ * @property totalTimeLimitMillis How long a lost link may still lead to a restart, counted from the
+ *   first link to the document, not from the start of waiting ([waitForDocumentMillis] bounds the
+ *   waiting; before the first link this limit does nothing); the first lost link after it ends the read with [ChipReadEnding.Partial] or
  *   [ChipReadEnding.Failed], whatever restarts are left. Under [LinkLossPolicy.Resume] a lost
  *   link after an attempt that read more file bytes than the attempts before it uses no restart,
  *   so this limit is what ends a read that keeps making a little progress each time. It does not
@@ -244,7 +245,7 @@ public class NfcReadSettings
             public fun commandTimeoutBeforeAccessMillis(millis: Long): Builder = apply { commandTimeoutBeforeAccessMillis = millis }
 
             /**
-             * How long after the read starts a lost link may still lead to a restart.
+             * How long a lost link may still lead to a restart, counted from the first link to the document, not from the start of waiting.
              *
              * @since 1.1.0
              */

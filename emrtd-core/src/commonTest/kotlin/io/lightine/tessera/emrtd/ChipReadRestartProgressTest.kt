@@ -87,6 +87,7 @@ class ChipReadRestartProgressTest {
         policy: LinkLossPolicy,
         totalTimeLimitMillis: Long = ChipReadCoordinator.NO_TIME_LIMIT,
         perAttemptMillis: Long = 0,
+        waitMillis: Long = 0,
         clock: Clock = Clock(),
     ): Pair<ChipReadEnding, RecordingObserver> {
         val observer = RecordingObserver()
@@ -102,6 +103,7 @@ class ChipReadRestartProgressTest {
             )
         assertTrue(coordinator.start())
         var attempt = 1
+        clock.millis += waitMillis
         while (true) {
             coordinator.documentFound()
             coordinator.connecting()
@@ -211,6 +213,26 @@ class ChipReadRestartProgressTest {
             val script = Script(List(2) { Loss.NO_PROGRESS })
             chipFor(script) { flow ->
                 val (ending, _) = drive(flow, script, LinkLossPolicy.Resume(2), totalTimeLimitMillis = 70_000, perAttemptMillis = 10_000)
+                assertIs<ChipReadEnding.Complete>(ending, "$ending")
+                assertEquals(3, ending.attempts)
+            }
+        }
+
+    @Test
+    fun aFirstLinkMadeAfterALongWaitStillGetsItsRestarts() =
+        runTest {
+            val script = Script(List(2) { Loss.NO_PROGRESS })
+            chipFor(script) { flow ->
+                // The wait (100 s) is longer than the total limit (70 s): the limit counts from the first link.
+                val (ending, _) =
+                    drive(
+                        flow,
+                        script,
+                        LinkLossPolicy.Resume(2),
+                        totalTimeLimitMillis = 70_000,
+                        perAttemptMillis = 10_000,
+                        waitMillis = 100_000,
+                    )
                 assertIs<ChipReadEnding.Complete>(ending, "$ending")
                 assertEquals(3, ending.attempts)
             }

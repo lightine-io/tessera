@@ -86,8 +86,9 @@ import kotlin.time.TimeSource
  *   `true`, it clears the key at the ending, whatever the ending is, and not before, so every
  *   attempt of the read (a restart or a resume after a lost link) can still use it. The platform
  *   entry points pass `true`; a caller that owns its key passes `false`.
- * @param totalTimeLimitMillis How long after the coordinator was made a lost link may still lead to a
- *   restart; past it, the loss ends the read. [NO_TIME_LIMIT] for no limit.
+ * @param totalTimeLimitMillis How long a lost link may still lead to a restart, counted from the
+ *   first link to the document, not from the start of waiting; past it, the loss ends the read.
+ *   Before the first link it does nothing. [NO_TIME_LIMIT] for no limit.
  * @param now The clock for [totalTimeLimitMillis], in milliseconds, never going back.
  * @since 1.0.0
  */
@@ -102,8 +103,14 @@ public class ChipReadCoordinator private constructor(
     private val totalTimeLimitMillis: Long,
     private val now: () -> Long,
 ) {
-    // When the coordinator was made: the read's start for the total time limit.
-    private val startedAt: Long = now()
+    // When the first link to a document was made (the first documentFound(), or read() when the
+    // caller never announced one): the start of the total time limit. -1 until then, so the wait
+    // for a document is not counted.
+    private val firstLinkAt = AtomicLong(-1)
+
+    private fun markFirstLink() {
+        firstLinkAt.compareAndSet(-1, now())
+    }
 
     /**
      * Creates a coordinator: `ChipReadCoordinator(options, linkLoss, observer)`. Kotlin only: on the
@@ -371,6 +378,7 @@ public class ChipReadCoordinator private constructor(
      */
     @JvmSynthetic
     public fun documentFound() {
+        markFirstLink()
         if (noAnswer || handingOver) return
         publish(ChipReadState.DocumentFound)
     }
@@ -481,6 +489,7 @@ public class ChipReadCoordinator private constructor(
         handedOver: () -> Boolean = { false },
     ): ChipReadAttemptOutcome {
         if (isEnded) return ChipReadAttemptOutcome.ENDED
+        markFirstLink()
         val repeat = repeatAttempt.exchange(false)
         // A new attempt number starts fresh; the repeats after a handover continue from its carry.
         if (!repeat) resumeAfterHandover.store(false)
@@ -739,7 +748,8 @@ public class ChipReadCoordinator private constructor(
     private fun takeRestart(): Int {
         val bytes = carriedBytes()
         val grew = bytes > bytesAtLastLoss.exchange(bytes)
-        if (now() - startedAt >= totalTimeLimitMillis) return -1
+        val first = firstLinkAt.load()
+        if (first >= 0 && now() - first >= totalTimeLimitMillis) return -1
         if (grew && linkLoss is LinkLossPolicy.Resume) return restartsUsed.load()
         while (true) {
             val used = restartsUsed.load()
