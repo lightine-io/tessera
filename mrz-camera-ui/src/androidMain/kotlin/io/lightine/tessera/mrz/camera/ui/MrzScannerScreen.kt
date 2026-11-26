@@ -88,6 +88,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -186,7 +187,13 @@ private const val GATHERING_CUE_LINGER_MS: Long = 600L
  * link's own touch target plus a comfortable gap, so the guidance region's height cap ([MrzGuideOverlay])
  * never computes a height that would still let the two overlap.
  */
-private val GuidanceBottomReserved = 64.dp
+internal val GuidanceBottomReserved: Dp = 64.dp
+
+/** The height of the MRZ guide window in [MrzGuideOverlay]: the dashed box the person lines the MRZ up in. */
+internal val GuideBandHeight: Dp = 96.dp
+
+/** The gap between the torch toggle ([TorchButton]) and the top and end edges of the live preview. */
+internal val TorchEdgePadding: Dp = 16.dp
 
 /** Semantics anchor for the "analyzing photo" screen (mockup 07c). Not user-facing. */
 internal const val SAVED_IMAGE_ANALYZING_TEST_TAG: String = "tessera-mrz-saved-image-analyzing"
@@ -1209,19 +1216,25 @@ private fun CameraCapture(
 
     when (permissionFace) {
         PermissionScreenState.GRANTED -> {
-            CameraPreview(
-                struggleTimeout = config.struggleTimeout,
-                struggling = struggling,
-                gathering = gathering,
-                notAccepted = notAccepted,
-                acceptedDocumentTypes = config.acceptedDocumentTypes,
-                showTorchButton = config.showTorchButton,
-                torchOnByDefault = config.torchOnByDefault,
-                onCameraResult = onCameraResult,
-                onStruggling = onStruggling,
-                onManualEntry = onManualEntry,
-                showManualEntry = showManualEntry,
-            )
+            // TES-342: in a window too short for the guide window and the controls around it (split screen
+            // dragged small), a notice replaces the live preview. CameraPreview then leaves composition, so its
+            // scanner is closed and the camera unbound; when the window grows back, CameraPreview returns with a
+            // fresh scanner, the same way it does after the camera-in-use notice.
+            ScanAreaSizeGate(onManualEntry = onManualEntry, showManualEntry = showManualEntry) {
+                CameraPreview(
+                    struggleTimeout = config.struggleTimeout,
+                    struggling = struggling,
+                    gathering = gathering,
+                    notAccepted = notAccepted,
+                    acceptedDocumentTypes = config.acceptedDocumentTypes,
+                    showTorchButton = config.showTorchButton,
+                    torchOnByDefault = config.torchOnByDefault,
+                    onCameraResult = onCameraResult,
+                    onStruggling = onStruggling,
+                    onManualEntry = onManualEntry,
+                    showManualEntry = showManualEntry,
+                )
+            }
         }
 
         PermissionScreenState.NEEDS_GRANT -> {
@@ -1481,7 +1494,7 @@ private fun CameraPreview(
                             torchOn = !torchOn
                             scanner.setTorchEnabled(torchOn)
                         },
-                        modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
+                        modifier = Modifier.align(Alignment.TopEnd).padding(TorchEdgePadding),
                     )
                 }
 
@@ -1735,7 +1748,7 @@ internal fun MrzGuideOverlay(
         // centred. The scrim, the dashed frame, and the message below all derive from it, so the dimmed
         // surround, the frame, and the guidance can never drift apart.
         val marginH = 24.dp
-        val bandHeight = 96.dp
+        val bandHeight = GuideBandHeight
         val corner = 10.dp
         val bandWidth = maxWidth - marginH * 2
         val bandTop = (maxHeight - bandHeight) / 2
