@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **On Android, waiting for a document ends after 2 minutes by default** (`emrtd-nfc`). `NfcReadSettings.waitForDocumentMillis` was "no limit" in 1.0.x, so a read that never found a document never ended and blocked the next read. That includes a read whose reader mode the app switched off behind the SDK's back, which the SDK cannot see. The read now ends by itself as `Failed` with `NfcTimeout` and the limit `WAIT_FOR_DOCUMENT`. Pass `NfcReadSettings.NO_LIMIT` to wait without a limit as before; `cancel()` on the handle stays the way to stop a read.
+
 ## [1.0.1] - 2026-11-26
 
 ### Fixed
