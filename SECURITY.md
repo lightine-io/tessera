@@ -6,10 +6,10 @@ Tessera is a vendor-neutral SDK for reading, validating, and generating identity
 
 | Version | Supported with security fixes |
 |---|---|
-| Latest released `0.x` minor | Yes |
-| Earlier `0.x` releases | No. Upgrade to the latest minor. |
+| Latest released `1.x` minor | Yes |
+| Earlier `1.x` minors and all `0.x` releases | No. Upgrade to the latest release. |
 
-Until `1.0.0`, only the latest minor in the `0.x` line receives fixes. After `1.0.0`, a longer-support policy will be set and documented here.
+The project has one maintainer, so one supported line is what can be kept.
 
 ## Reporting a Vulnerability
 

@@ -119,8 +119,13 @@
     <!-- Camera unavailable (terminal, mockup 05b): the camera cannot be started at all; no retry. -->
     <string name="tessera_scanner_camera_unavailable_title">Camera unavailable</string>
     <string name="tessera_scanner_camera_unavailable_body">This device\'s camera can\'t be started. You can still enter the document details by hand.</string>
-    <!-- Shared action on both camera-status screens AND both permission screens (04 / 04b): switch to
-         typing the details by hand. -->
+    <!-- Window too small to scan: shown in place of the live preview when the window is too short for the
+         guide window and its controls (split screen dragged small). The camera is off while it shows and comes
+         back by itself when the window is larger. -->
+    <string name="tessera_scanner_window_too_small_title">Window too small to scan</string>
+    <string name="tessera_scanner_window_too_small_body">Make this window larger to use the camera. The camera comes back when there is room.</string>
+    <!-- Shared action on both camera-status screens, the window-too-small notice, AND both permission screens
+         (04 / 04b): switch to typing the details by hand. -->
     <string name="tessera_scanner_camera_manual">Enter details manually</string>
 
     <!-- ============================ Adaptive camera-permission screen (mockups 04 / 04b) ============================ -->
