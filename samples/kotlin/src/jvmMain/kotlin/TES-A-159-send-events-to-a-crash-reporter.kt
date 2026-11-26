@@ -46,6 +46,7 @@ class CrashReporterSink(private val reporter: CrashReporter) : TelemetrySink {
                 "mrzRegionFound" to event.mrzRegionFound.toString(),
                 "ocrConfidence" to (event.ocrConfidence?.toString() ?: "none"),
                 "detectedFormat" to (event.detectedFormat?.name ?: "none"),
+                "fillerPaddingAdded" to event.fillerPaddingAdded.toString(),
             ),
         )
     }
