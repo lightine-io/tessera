@@ -4,6 +4,7 @@ package samples.tesa24
 // region TES-A-24 block 2
 import io.lightine.tessera.mrz.generation.MrzGenerator
 import io.lightine.tessera.mrz.transliteration.AzeTransliterationProfile
+import io.lightine.tessera.mrz.transliteration.IcaoCyrillicLanguageProfiles
 import io.lightine.tessera.mrz.transliteration.IcaoDefaultTransliterationProfile
 import io.lightine.tessera.mrz.transliteration.TransliterationProfile
 import io.lightine.tessera.mrz.transliteration.TransliterationProfileRegistry
@@ -83,5 +84,33 @@ internal fun configure() {
         dateOfBirth = LocalDate(1990, 1, 15), sex = Sex.MALE, dateOfExpiry = LocalDate(2030, 1, 14),
         personalNumber = "", transliteration = AzeTransliterationProfile,
     )
+    // endregion
+}
+
+private fun output(profile: TransliterationProfile, name: String): String =
+    (profile.transliterate(name).result as TransliterationResult.Success).output
+
+fun printTransliterationProfiles() {
+    // region TES-A-24 block 10
+    println(output(IcaoDefaultTransliterationProfile, "Алекс")) // ALEKS
+    // endregion
+
+    // region TES-A-24 block 11
+    println(output(IcaoDefaultTransliterationProfile, "Ганна")) // GANNA
+    println(output(IcaoCyrillicLanguageProfiles.ukrainian, "Ганна")) // HANNA
+    // The app chooses the profile. The SDK never guesses the language.
+    // endregion
+
+    // region TES-A-24 block 12
+    val custom = IcaoDefaultTransliterationProfile.withOverrides("CUSTOM-ICAO", mapOf('Ж' to "J"))
+    println(output(custom, "Жанна")) // JANNA
+    // Overrides apply first and are case-sensitive.
+    // Values may contain only A-Z, 0-9 and <.
+    // This profile is not in the registry until it is registered.
+    TransliterationProfileRegistry.register(custom)
+    // endregion
+
+    // region TES-A-24 block 13
+    println(output(IcaoDefaultTransliterationProfile, "Ω")) // <
     // endregion
 }
