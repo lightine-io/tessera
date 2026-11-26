@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-## [1.1.0] - 2026-11-26
+## [1.1.0] - 2026-11-27
 
 This release fixes the iPhone framework of 1.0.0 and adds facts and settings. Version 1.0.1 was never published.
 
