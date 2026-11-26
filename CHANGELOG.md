@@ -11,6 +11,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **Name conversion tells which characters it could not map** (`mrz-core`). `TransliterationResult.Success` has a new `replacedCharacters`: the characters of the normalized input that the profile wrote as `<` because it had no mapping for them, each with its position. A space or a hyphen that becomes `<` by rule is not listed. Every shipped profile fills it; a profile of your own that still uses the one-argument constructor reports an empty list. The SDK already did this replacement in 1.0; it now reports it.
+- **The frame agreement reports its vote** (`mrz-ocr-core`). `ConsensusVerdict.Confirmed` has `agreement` (how many frames agreed when the reading was confirmed) and `distinctReadings` (how many different readings were offered in the round, the confirmed one included). The other readings themselves are not exposed. The counts stay as they were at confirmation and start again after `reset()`.
+
 ## [1.0.1] - 2026-11-26
 
 ### Fixed

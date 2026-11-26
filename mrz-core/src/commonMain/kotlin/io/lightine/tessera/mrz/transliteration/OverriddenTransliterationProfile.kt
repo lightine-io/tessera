@@ -11,8 +11,7 @@ internal class OverriddenTransliterationProfile(
     private val rules: IcaoNameRules =
         IcaoNameRules(cyrillicLanguage = cyrillicLanguage, overrides = overrides)
 
-    override fun toMrzAlphabet(normalizedInput: String): TransliterationResult =
-        TransliterationResult.Success(rules.convert(normalizedInput))
+    override fun toMrzAlphabet(normalizedInput: String): TransliterationResult = rules.convert(normalizedInput)
 }
 
 internal fun createOverriddenTransliterationProfile(

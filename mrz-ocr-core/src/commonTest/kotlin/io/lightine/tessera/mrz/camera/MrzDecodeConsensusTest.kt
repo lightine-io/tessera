@@ -50,7 +50,10 @@ class MrzDecodeConsensusTest {
         assertIs<ConsensusVerdict.Gathering>(consensus.offer(goodDecode))
         val third = consensus.offer(goodDecode)
 
-        assertEquals(ConsensusVerdict.Confirmed(goodDecode), third)
+        val confirmed = assertIs<ConsensusVerdict.Confirmed>(third)
+        assertEquals(goodDecode, confirmed.decoded)
+        assertEquals(3, confirmed.agreement)
+        assertEquals(1, confirmed.distinctReadings)
     }
 
     @Test
@@ -64,26 +67,31 @@ class MrzDecodeConsensusTest {
         consensus.offer(goodDecode)
         val verdict = consensus.offer(goodDecode)
 
-        assertEquals(ConsensusVerdict.Confirmed(goodDecode), verdict)
+        val confirmed = assertIs<ConsensusVerdict.Confirmed>(verdict)
+        assertEquals(goodDecode, confirmed.decoded)
+        assertEquals(3, confirmed.agreement)
+        assertEquals(2, confirmed.distinctReadings)
     }
 
     @Test
     fun threshold_one_confirms_the_first_decode() {
         val verdict = MrzDecodeConsensus(threshold = 1).offer(goodDecode)
 
-        assertEquals(ConsensusVerdict.Confirmed(goodDecode), verdict)
+        assertEquals(ConsensusVerdict.Confirmed(goodDecode, agreement = 1, distinctReadings = 1), verdict)
     }
 
     @Test
-    fun reset_discards_accumulated_votes() {
+    fun reset_starts_a_new_round() {
         val consensus = MrzDecodeConsensus(threshold = 3)
         consensus.offer(goodDecode)
-        consensus.offer(goodDecode)
+        consensus.offer(misreadDecode)
 
         consensus.reset()
+        assertEquals(ConsensusVerdict.Gathering(agreement = 1, threshold = 3), consensus.offer(goodDecode))
+        assertEquals(ConsensusVerdict.Gathering(agreement = 2, threshold = 3), consensus.offer(goodDecode))
         val afterReset = consensus.offer(goodDecode)
 
-        assertEquals(ConsensusVerdict.Gathering(agreement = 1, threshold = 3), afterReset)
+        assertEquals(ConsensusVerdict.Confirmed(goodDecode, agreement = 3, distinctReadings = 1), afterReset)
     }
 
     @Test
@@ -95,7 +103,7 @@ class MrzDecodeConsensusTest {
         // normally stops offering, but the gate is idempotent regardless).
         val afterSettle = consensus.offer(misreadDecode)
 
-        assertEquals(ConsensusVerdict.Confirmed(goodDecode), afterSettle)
+        assertEquals(ConsensusVerdict.Confirmed(goodDecode, agreement = 1, distinctReadings = 1), afterSettle)
     }
 
     @Test

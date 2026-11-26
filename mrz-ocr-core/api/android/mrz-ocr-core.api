@@ -151,11 +151,18 @@ public abstract interface class io/lightine/tessera/mrz/camera/ConsensusVerdict 
 
 public final class io/lightine/tessera/mrz/camera/ConsensusVerdict$Confirmed : io/lightine/tessera/mrz/camera/ConsensusVerdict {
 	public fun <init> (Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;)V
+	public fun <init> (Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;II)V
 	public final fun component1 ()Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;
+	public final fun component2 ()I
+	public final fun component3 ()I
 	public final fun copy (Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;)Lio/lightine/tessera/mrz/camera/ConsensusVerdict$Confirmed;
+	public final fun copy (Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;II)Lio/lightine/tessera/mrz/camera/ConsensusVerdict$Confirmed;
+	public static synthetic fun copy$default (Lio/lightine/tessera/mrz/camera/ConsensusVerdict$Confirmed;Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;IIILjava/lang/Object;)Lio/lightine/tessera/mrz/camera/ConsensusVerdict$Confirmed;
 	public static synthetic fun copy$default (Lio/lightine/tessera/mrz/camera/ConsensusVerdict$Confirmed;Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;ILjava/lang/Object;)Lio/lightine/tessera/mrz/camera/ConsensusVerdict$Confirmed;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAgreement ()I
 	public final fun getDecoded ()Lio/lightine/tessera/mrz/camera/MrzScanResult$Decoded;
+	public final fun getDistinctReadings ()I
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

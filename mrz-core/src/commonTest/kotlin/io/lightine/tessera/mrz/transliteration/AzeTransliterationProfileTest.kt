@@ -1,5 +1,6 @@
 package io.lightine.tessera.mrz.transliteration
 
+import io.lightine.tessera.types.vocabulary.UnmappedCharacter
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -45,7 +46,7 @@ class AzeTransliterationProfileTest {
         )
         // ICAO default has no schwa entry — falls through to filler.
         assertEquals(
-            TransliterationResult.Success("<"),
+            TransliterationResult.Success("<", listOf(UnmappedCharacter('Ə', 0))),
             IcaoDefaultTransliterationProfile.toMrzAlphabet("Ə"),
         )
     }
@@ -192,7 +193,7 @@ class AzeTransliterationProfileTest {
     fun unmapped_character_falls_back_to_filler() {
         // Cyrillic letter — outside the table for both profiles.
         val result = AzeTransliterationProfile.toMrzAlphabet("Я")
-        assertEquals(TransliterationResult.Success("<"), result)
+        assertEquals(TransliterationResult.Success("<", listOf(UnmappedCharacter('Я', 0))), result)
     }
 
     @Test
