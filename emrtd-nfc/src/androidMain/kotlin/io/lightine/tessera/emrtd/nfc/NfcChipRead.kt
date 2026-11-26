@@ -77,7 +77,7 @@ import kotlin.jvm.JvmOverloads
  * If your app calls `NfcAdapter.disableReaderMode` for the read's Activity, or turns on its own
  * reader mode there, the read does not end: no document can reach it, it keeps reporting
  * [io.lightine.tessera.emrtd.ChipReadState.WaitingForDocument], and it stays so until
- * [NfcReadSettings.waitForDocumentMillis] passes (by default never, [NfcReadSettings.NO_LIMIT]),
+ * [NfcReadSettings.waitForDocumentMillis] passes (by default 2 minutes; [NfcReadSettings.NO_LIMIT] never),
  * the Activity is destroyed, or your app calls [cancel]. To stop a read, call [cancel]: it ends the
  * read with [ChipReadEnding.Cancelled] and turns reader mode off itself.
  *
@@ -128,7 +128,7 @@ import kotlin.jvm.JvmOverloads
  *   not watch the Activity.
  * - One read at a time in the app: [start] while another read has not ended ends at once with
  *   [ChipReadEnding.NotStarted] and [NfcUnavailable.Reason.READ_IN_PROGRESS]. A read waiting for a
- *   document waits until [NfcReadSettings.waitForDocumentMillis] passes, which by default is never ([NfcReadSettings.NO_LIMIT]):
+ *   document waits until [NfcReadSettings.waitForDocumentMillis] passes, which by default is 2 minutes ([NfcReadSettings.NO_LIMIT] is never):
  *   cancel a read your app no longer shows, or no other read can start. Switching reader mode off
  *   yourself (`NfcAdapter.disableReaderMode`) does not end the read, and the SDK cannot see it:
  *   call [cancel].
@@ -153,7 +153,7 @@ import kotlin.jvm.JvmOverloads
  * - Ends with [ChipReadEnding.NotStarted] when the device has no NFC (`NOT_SUPPORTED`), NFC is
  *   off (`DISABLED`), or NFC is on but its option for reading tags is off (`TAG_READING_DISABLED`,
  *   known from Android 15, API level 35, on).
- * - When no document is found within [NfcReadSettings.waitForDocumentMillis] (no limit by
+ * - When no document is found within [NfcReadSettings.waitForDocumentMillis] (2 minutes by
  *   default), ends with [ChipReadEnding.Failed] and an
  *   [io.lightine.tessera.types.errors.NfcTimeout] with limit `WAIT_FOR_DOCUMENT`, 0 attempts: the
  *   app set that limit, so it is not [ChipReadEnding.EndedBySystem].
@@ -270,7 +270,7 @@ public class NfcChipRead internal constructor(
      * nothing once the read has ended. This is the way to stop a read: switching reader mode off
      * behind the SDK's back (`NfcAdapter.disableReaderMode`, or your own reader mode on the same
      * Activity) cannot be seen by the SDK, so the read goes on waiting for a document that can no
-     * longer arrive, until [NfcReadSettings.waitForDocumentMillis] passes (never, by default), or
+     * longer arrive, until [NfcReadSettings.waitForDocumentMillis] passes (2 minutes by default), or
      * the Activity of an Activity-owning read is destroyed. In the callback form, also call
      * [NfcReaderMode.disable] afterwards.
      */

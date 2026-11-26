@@ -66,15 +66,18 @@ import kotlin.jvm.JvmOverloads
  * @property waitForDocumentMillis How long the read may take to find a document and set up the
  *   first link to it, counted from the start, across tags whose link could not be set up (on
  *   iPhone the system session's 60-second limit plays this part, so its settings have no such value);
- *   [NO_LIMIT], the default, waits without a limit. When it
+ *   the default is 120000 (2 minutes) since 1.1.0; it was [NO_LIMIT] in 1.0.x. A read whose reader
+ *   mode the app took away, or whose screen was left open, must end by itself and free the
+ *   one-read-at-a-time slot. Pass [NO_LIMIT] (or `Builder.noLimitForDocument()`) to wait without a
+ *   limit, as before. On iPhone the system session's 60-second limit bounds the wait. When it
  *   passes, the read ends with [ChipReadEnding.Failed], 0 attempts, and an [NfcTimeout] with
- *   limit [NfcTimeout.Limit.WAIT_FOR_DOCUMENT]: your app set this limit, so the ending is not
+ *   limit [NfcTimeout.Limit.WAIT_FOR_DOCUMENT]: the limit is in the settings, so the ending is not
  *   [ChipReadEnding.EndedBySystem]. Once a first link is up it no longer applies:
  *   [waitForReturnMillis] bounds the waits after a lost link.
  *   This is also the only time bound on a read whose reader mode your app switched off behind the
  *   SDK's back: the SDK cannot see that, so with [NO_LIMIT] such a read waits until the app calls
- *   `cancel()` (or, for an Activity-owning read, the Activity is destroyed). Set a limit when the
- *   app cannot promise to cancel.
+ *   `cancel()` (or, for an Activity-owning read, the Activity is destroyed). With the 2-minute default it
+ *   ends by itself; still call `cancel()` to stop sooner.
  * @property presenceCheckDelayMillis How often the platform checks that the document is still
  *   there, set when the Activity-owning start turns reader mode on. Default 1000: the platform's
  *   own 125 ms drops the link of some chips, and a longer delay is a known remedy; whether it helps
@@ -126,7 +129,7 @@ public class NfcReadSettings
         public val settleDelayMillis: Long = DEFAULT_SETTLE_DELAY_MILLIS,
         public val commandTimeoutMillis: Long = DEFAULT_COMMAND_TIMEOUT_MILLIS,
         public val waitForReturnMillis: Long = DEFAULT_WAIT_FOR_RETURN_MILLIS,
-        public val waitForDocumentMillis: Long = NO_LIMIT,
+        public val waitForDocumentMillis: Long = 120_000,
         public val telemetry: TelemetrySink? = null,
         public val presenceCheckDelayMillis: Long = DEFAULT_PRESENCE_CHECK_DELAY_MILLIS,
         public val platformSounds: Boolean = true,
@@ -204,7 +207,7 @@ public class NfcReadSettings
             private var settleDelayMillis: Long = DEFAULT_SETTLE_DELAY_MILLIS
             private var commandTimeoutMillis: Long = DEFAULT_COMMAND_TIMEOUT_MILLIS
             private var waitForReturnMillis: Long = DEFAULT_WAIT_FOR_RETURN_MILLIS
-            private var waitForDocumentMillis: Long = NO_LIMIT
+            private var waitForDocumentMillis: Long = 120_000
             private var telemetry: TelemetrySink? = null
             private var presenceCheckDelayMillis: Long = DEFAULT_PRESENCE_CHECK_DELAY_MILLIS
             private var platformSounds: Boolean = true
@@ -233,7 +236,7 @@ public class NfcReadSettings
             /** How long the read may take to find a document and link to it. */
             public fun waitForDocumentMillis(millis: Long): Builder = apply { waitForDocumentMillis = millis }
 
-            /** Waits for a document without a limit, the default: the same as [NO_LIMIT]. */
+            /** Waits for a document without a limit: the same as [NO_LIMIT]; the default is 2 minutes. */
             public fun noLimitForDocument(): Builder = apply { waitForDocumentMillis = NO_LIMIT }
 
             /** Where the read's step events go; `null` uses the sink registered when the read starts. */
