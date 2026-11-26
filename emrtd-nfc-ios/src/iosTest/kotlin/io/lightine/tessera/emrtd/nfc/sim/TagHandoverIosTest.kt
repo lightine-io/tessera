@@ -251,9 +251,10 @@ class TagHandoverIosTest {
         }
 
     @Test
-    fun e_noDocumentAfterThePlannedRestart_noRestartLeft_endsPartialWithTheLoss() =
+    fun e_noDocumentAfterThePlannedRestart_afterProgress_usesNoRestartAndKeepsWaiting() =
         simTest { flow ->
-            // The only restart goes to a real loss early on the first link.
+            // The first loss comes after new bytes (TES-369): it uses no restart, so the failed
+            // reconnect after the handover (more new bytes) uses none either, with one restart set.
             script.fault(ChipFaultAction.LoseLink(Shapes.LOSS_AFTER_MILLIS)) { c -> c.link == 1 && isPhotoRead(c) && c.indexInLink > 40 }
             var tagAt = Long.MAX_VALUE
             script.fault(ChipFaultAction.Silence, times = Int.MAX_VALUE) { c ->
@@ -264,13 +265,13 @@ class TagHandoverIosTest {
             // The second tag's time counts from its own report.
             while (recorder.updates.count { it.value.state is ChipReadState.Connecting } < 2) step(IosSim.STEP_MILLIS)
             tagAt = recorder.updates.last { it.value.state is ChipReadState.DocumentFound }.atMillis
-            runUntilEnded(recorder)
-            assertNull(recorder.checkPromises())
+            runUntilEnded(recorder, limitMillis = 40_000)
 
-            val ending = assertIs<ChipReadEnding.Partial>(recorder.ending)
-            assertIs<NfcTagLost>(ending.stoppedBy)
+            // The document never returns: the read waits for the system's own session limit (the
+            // simulated session does not end), and both losses show the whole budget.
+            assertTrue(recorder.endings.isEmpty(), "${recorder.endings}")
             assertEquals(1, handovers.size)
-            assertEquals(1, recorder.states.count { it is ChipReadState.LinkLost }, "only the real loss")
+            assertEquals(listOf(1, 1), recorder.states.filterIsInstance<ChipReadState.LinkLost>().map { it.restartsLeft })
         }
 
     @Test
@@ -384,7 +385,7 @@ class TagHandoverIosTest {
         }
 
     @Test
-    fun j_aLostLinkWhileReconnectingAfterAHandover_isOneLoss_usesOneRestart_andTheReadResumes() =
+    fun j_aLostLinkWhileReconnectingAfterAHandover_isOneLoss_afterProgressUsesNoRestart_andTheReadResumes() =
         simTest { flow ->
             val r = readWithFailedReconnect(flow, NfcTagLost)
 
@@ -404,27 +405,27 @@ class TagHandoverIosTest {
         }
 
     @Test
-    fun j_aLostLinkWhileReconnectingAfterAHandover_spendsOneRestart_aLaterLossHasOneLeft() =
+    fun j_aLostLinkWhileReconnectingAfterAHandover_afterProgressUsesNoRestart_aLaterLossHasTwoLeft() =
         simTest { flow ->
-            // A real loss on the link after the failed reconnect: one restart is left for it.
+            // A real loss on the link after the failed reconnect: the first loss came after new bytes (TES-369), so both restarts are left.
             script.fault(ChipFaultAction.LoseLink(Shapes.LOSS_AFTER_MILLIS)) { c -> c.link == 2 && isPhotoRead(c) && c.indexInLink > 20 }
             val r = readWithFailedReconnect(flow, NfcTagLost)
 
             assertIs<ChipReadEnding.Complete>(r.ending)
-            assertEquals(listOf(2, 1), r.states.filterIsInstance<ChipReadState.LinkLost>().map { it.restartsLeft })
+            assertEquals(listOf(2, 2), r.states.filterIsInstance<ChipReadState.LinkLost>().map { it.restartsLeft })
         }
 
     @Test
-    fun j_aLostLinkWhileReconnectingAfterAHandover_noRestartLeft_endsWithTheLoss() =
+    fun j_aLostLinkWhileReconnectingAfterAHandover_afterProgress_theOneRestartIsNotUsed() =
         simTest { flow ->
-            // The only restart goes to a real loss early on the first link.
+            // The real loss on the first link came after new bytes (TES-369), and so did the failed
+            // reconnect: neither uses the one restart, and the read completes.
             script.fault(ChipFaultAction.LoseLink(Shapes.LOSS_AFTER_MILLIS)) { c -> c.link == 1 && isPhotoRead(c) && c.indexInLink > 40 }
             val r = readWithFailedReconnect(flow, NfcTagLost, CoreNfcReadSettings(linkLoss = LinkLossPolicy.Resume(1)))
 
-            val ending = assertIs<ChipReadEnding.Partial>(r.ending)
-            assertIs<NfcTagLost>(ending.stoppedBy)
+            assertIs<ChipReadEnding.Complete>(r.ending)
             assertEquals(1, r.endings.size)
-            assertEquals(1, r.states.count { it is ChipReadState.LinkLost }, "only the real loss")
+            assertEquals(listOf(1, 1), r.states.filterIsInstance<ChipReadState.LinkLost>().map { it.restartsLeft })
         }
 
     @Test

@@ -18,11 +18,13 @@ import io.lightine.tessera.types.errors.NfcUnavailable
 import io.lightine.tessera.types.vocabulary.ChipAccessProtocol
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.incrementAndFetch
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.jvm.JvmSynthetic
+import kotlin.time.TimeSource
 
 /**
  * The platform-neutral part of one chip read through a platform entry point: the states, the one
@@ -84,6 +86,9 @@ import kotlin.jvm.JvmSynthetic
  *   `true`, it clears the key at the ending, whatever the ending is, and not before, so every
  *   attempt of the read (a restart or a resume after a lost link) can still use it. The platform
  *   entry points pass `true`; a caller that owns its key passes `false`.
+ * @param totalTimeLimitMillis How long after the coordinator was made a lost link may still lead to a
+ *   restart; past it, the loss ends the read. [NO_TIME_LIMIT] for no limit.
+ * @param now The clock for [totalTimeLimitMillis], in milliseconds, never going back.
  * @since 1.0.0
  */
 @InternalTesseraChipApi
@@ -94,7 +99,12 @@ public class ChipReadCoordinator private constructor(
     private val observer: ChipReadObserver,
     private val reader: ChipReader,
     private val clearKeyAtEnding: Boolean,
+    private val totalTimeLimitMillis: Long,
+    private val now: () -> Long,
 ) {
+    // When the coordinator was made: the read's start for the total time limit.
+    private val startedAt: Long = now()
+
     /**
      * Creates a coordinator: `ChipReadCoordinator(options, linkLoss, observer)`. Kotlin only: on the
      * JVM this and every member are synthetic, so Java code cannot call them (the opt-in marker
@@ -110,7 +120,17 @@ public class ChipReadCoordinator private constructor(
             observer: ChipReadObserver,
             reader: ChipReader = ChipReader(),
             clearKeyAtEnding: Boolean = false,
-        ): ChipReadCoordinator = ChipReadCoordinator(options, linkLoss, observer, reader, clearKeyAtEnding)
+            totalTimeLimitMillis: Long = NO_TIME_LIMIT,
+            now: () -> Long = monotonicMillis(),
+        ): ChipReadCoordinator = ChipReadCoordinator(options, linkLoss, observer, reader, clearKeyAtEnding, totalTimeLimitMillis, now)
+
+        /** The value of `totalTimeLimitMillis` that means no limit. */
+        public const val NO_TIME_LIMIT: Long = Long.MAX_VALUE
+
+        private fun monotonicMillis(): () -> Long {
+            val mark = TimeSource.Monotonic.markNow()
+            return { mark.elapsedNow().inWholeMilliseconds }
+        }
 
         /** How often a platform reports [ChipReadState.WaitingForDocument] again: every 2 seconds, on both platforms. */
         public const val WAITING_REPORT_MILLIS: Long = 2_000
@@ -218,6 +238,10 @@ public class ChipReadCoordinator private constructor(
     private val lastProgress = AtomicReference(tracker.snapshot())
     private val attemptsStarted = AtomicInt(0)
     private val restartsUsed = AtomicInt(0)
+
+    // The file bytes the carry held at the last lost link (0 before the first): a restart is
+    // free when the carry now holds more (see takeRestart).
+    private val bytesAtLastLoss = AtomicLong(0)
     private val waitingAfterLoss = AtomicBoolean(false)
     private val lastLinkLost = AtomicReference<ChipReadState.LinkLost?>(null)
     private val lastLoss = AtomicReference<ChipError?>(null)
@@ -260,7 +284,12 @@ public class ChipReadCoordinator private constructor(
     public val isEnded: Boolean
         get() = ended.load()
 
-    /** The most attempts this read can make: 1 plus [LinkLossPolicy.maxRestarts]. */
+    /**
+     * The attempts the read can make when every restart is used: 1 plus [LinkLossPolicy.maxRestarts].
+     * Under [LinkLossPolicy.Resume] a restart after an attempt that kept more bytes uses no restart
+     * (see [takeRestart]), so the attempt number can pass this; the updates then carry the attempt
+     * number as the most.
+     */
     @get:JvmSynthetic
     public val maxAttempts: Int = 1 + linkLoss.maxRestarts
 
@@ -693,11 +722,25 @@ public class ChipReadCoordinator private constructor(
         noAnswerTries.store(0)
     }
 
+    /** The data group bytes the carry holds, finished and cut off: what a resume keeps. */
+    private fun carriedBytes(): Long {
+        val held = carry.load() ?: return 0
+        return held.files.sumOf { it.size.toLong() } + (held.unfinished?.second?.size ?: 0)
+    }
+
     /**
-     * Takes one restart from the budget with one compare-and-set, so no misuse can buy an uncounted
-     * attempt: the restarts used before this one, or -1 when none is left.
+     * Decides the restart after a lost link: the restarts used before this one, or -1 when the read
+     * ends. Under [LinkLossPolicy.Resume], a loss after an attempt that kept more bytes than the
+     * attempts before it (the carry grew since the last loss) uses no restart: the read is
+     * getting somewhere. Every other loss takes one restart from the budget with one
+     * compare-and-set, so no misuse can buy an uncounted attempt. Past the total time limit no
+     * restart is given at all.
      */
     private fun takeRestart(): Int {
+        val bytes = carriedBytes()
+        val grew = bytes > bytesAtLastLoss.exchange(bytes)
+        if (now() - startedAt >= totalTimeLimitMillis) return -1
+        if (grew && linkLoss is LinkLossPolicy.Resume) return restartsUsed.load()
         while (true) {
             val used = restartsUsed.load()
             if (used >= linkLoss.maxRestarts) return -1
@@ -904,7 +947,10 @@ public class ChipReadCoordinator private constructor(
         return (started + next).coerceAtLeast(1)
     }
 
-    private fun updateOf(state: ChipReadState): ChipReadUpdate = ChipReadUpdate(state, lastProgress.load(), attemptOf(state), maxAttempts)
+    private fun updateOf(state: ChipReadState): ChipReadUpdate =
+        attemptOf(state).let {
+            ChipReadUpdate(state, lastProgress.load(), it, maxOf(maxAttempts, it))
+        }
 
     private fun publish(state: ChipReadState) {
         if (isEnded) return
@@ -920,7 +966,11 @@ public class ChipReadCoordinator private constructor(
         // The one gate every ending passes: the key is wiped here, before the app hears of it.
         if (clearKeyAtEnding) options.accessKey.clear()
         val items = ArrayList<Item>(2)
-        if (before != null) items += Item.Update(ChipReadUpdate(before, lastProgress.load(), attemptOf(before), maxAttempts))
+        if (before !=
+            null
+        ) {
+            items += Item.Update(attemptOf(before).let { ChipReadUpdate(before, lastProgress.load(), it, maxOf(maxAttempts, it)) })
+        }
         items += Item.End(ending)
         post(items)
         return true

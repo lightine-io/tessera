@@ -100,7 +100,11 @@ public sealed class LinkLossPolicy {
 
     /**
      * Continue the read where it stopped when the document is found again; at most [maxRestarts]
-     * times.
+     * times in a row that make no progress. A lost link after an attempt that read more bytes of
+     * the data groups than the attempts before it (counting the bytes kept, and a data group cut
+     * off) uses no restart, so a read that keeps getting somewhere is not ended by the limit; the
+     * platform's total time limit still ends it (Android `NfcReadSettings.totalTimeLimitMillis`;
+     * on iPhone the system session's own limit).
      *
      * The access protocol runs again, then the reader reads EF.SOD (the chip's signed list of data
      * group hashes) again and compares it byte for byte with the earlier one:
@@ -120,7 +124,8 @@ public sealed class LinkLossPolicy {
      * each file. The identity check is the signed data, never the chip's radio identifier (many
      * chips give a random one).
      *
-     * @property maxRestarts How many times the read may continue after a lost link: 1 to 3.
+     * @property maxRestarts How many times the read may continue after a lost link that made no
+     *   progress: 1 to 3.
      * @throws IllegalArgumentException when [maxRestarts] is outside 1 to 3.
      * @since 1.0.0
      */

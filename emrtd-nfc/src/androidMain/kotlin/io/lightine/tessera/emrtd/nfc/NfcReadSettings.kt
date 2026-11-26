@@ -107,8 +107,17 @@ import kotlin.jvm.JvmOverloads
  *   [commandTimeoutMillis],
  *   [commandTimeoutMillis] applies before access too. A command not answered in time is a try that
  *   costs no restart ([io.lightine.tessera.emrtd.ChipReadState.NoAnswerYet]).
+ * @property totalTimeLimitMillis How long after the read starts a lost link may still lead to a
+ *   restart; the first lost link after it ends the read with [ChipReadEnding.Partial] or
+ *   [ChipReadEnding.Failed], whatever restarts are left. Under [LinkLossPolicy.Resume] a lost
+ *   link after an attempt that read more file bytes than the attempts before it uses no restart,
+ *   so this limit is what ends a read that keeps making a little progress each time. It does not
+ *   cut a command or a read that is running: only the next restart. Default 120000 (2 minutes),
+ *   twice the iPhone system session's 60 seconds, so a read that worked before is not cut;
+ *   [NO_LIMIT] turns it off. On iPhone the system session's limit plays this part, so its
+ *   settings have no such value. Since 1.1.0.
  * @throws IllegalArgumentException when [settleDelayMillis], [waitForReturnMillis] or
- *   [waitForDocumentMillis] is negative, [commandTimeoutMillis], [readTimeoutMillis] or
+ *   [waitForDocumentMillis] is negative, [totalTimeLimitMillis] is not positive, [commandTimeoutMillis], [readTimeoutMillis] or
  *   [commandTimeoutBeforeAccessMillis] is not in 1 to [Int.MAX_VALUE], or
  *   [presenceCheckDelayMillis] is not in 0 to [Int.MAX_VALUE] (the platform takes an `int`).
  * @since 1.0.0
@@ -129,8 +138,10 @@ public class NfcReadSettings
         public val observerOn: ObserverThread = ObserverThread.MAIN,
         public val commandTimeoutBeforeAccessMillis: Long = DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS,
         public val readTimeoutMillis: Long = DEFAULT_READ_TIMEOUT_MILLIS,
+        public val totalTimeLimitMillis: Long = DEFAULT_TOTAL_TIME_LIMIT_MILLIS,
     ) {
         init {
+            require(totalTimeLimitMillis > 0) { "totalTimeLimitMillis must be positive, was $totalTimeLimitMillis" }
             require(settleDelayMillis >= 0) { "settleDelayMillis must not be negative, was $settleDelayMillis" }
             require(commandTimeoutMillis in 1..Int.MAX_VALUE) {
                 "commandTimeoutMillis must be positive and fit an Int, was $commandTimeoutMillis"
@@ -153,7 +164,7 @@ public class NfcReadSettings
             "NfcReadSettings(linkLoss=$linkLoss, settleDelayMillis=$settleDelayMillis, " +
                 "commandTimeoutMillis=$commandTimeoutMillis, readTimeoutMillis=$readTimeoutMillis, " +
                 "commandTimeoutBeforeAccessMillis=$commandTimeoutBeforeAccessMillis, " +
-                "waitForReturnMillis=$waitForReturnMillis, " +
+                "waitForReturnMillis=$waitForReturnMillis, totalTimeLimitMillis=$totalTimeLimitMillis, " +
                 "waitForDocumentMillis=$waitForDocumentMillis, presenceCheckDelayMillis=$presenceCheckDelayMillis, " +
                 "platformSounds=$platformSounds, observerOn=$observerOn)"
 
@@ -176,6 +187,7 @@ public class NfcReadSettings
                 .observerOn(observerOn)
                 .commandTimeoutBeforeAccessMillis(commandTimeoutBeforeAccessMillis)
                 .readTimeoutMillis(readTimeoutMillis)
+                .totalTimeLimitMillis(totalTimeLimitMillis)
 
         /** The time limit for one command before access: the smaller of the two limits. */
         internal val effectiveTimeoutBeforeAccessMillis: Long
@@ -207,6 +219,7 @@ public class NfcReadSettings
             private var observerOn: ObserverThread = ObserverThread.MAIN
             private var commandTimeoutBeforeAccessMillis: Long = DEFAULT_COMMAND_TIMEOUT_BEFORE_ACCESS_MILLIS
             private var readTimeoutMillis: Long = DEFAULT_READ_TIMEOUT_MILLIS
+            private var totalTimeLimitMillis: Long = DEFAULT_TOTAL_TIME_LIMIT_MILLIS
 
             /** What the read does when the link to the chip is lost. */
             public fun linkLoss(policy: LinkLossPolicy): Builder = apply { linkLoss = policy }
@@ -222,6 +235,13 @@ public class NfcReadSettings
 
             /** The longest wait for the chip's answer to one command before access. */
             public fun commandTimeoutBeforeAccessMillis(millis: Long): Builder = apply { commandTimeoutBeforeAccessMillis = millis }
+
+            /**
+             * How long after the read starts a lost link may still lead to a restart.
+             *
+             * @since 1.1.0
+             */
+            public fun totalTimeLimitMillis(millis: Long): Builder = apply { totalTimeLimitMillis = millis }
 
             /** How long to wait for the document to come back after a lost link. */
             public fun waitForReturnMillis(millis: Long): Builder = apply { waitForReturnMillis = millis }
@@ -263,6 +283,7 @@ public class NfcReadSettings
                     observerOn,
                     commandTimeoutBeforeAccessMillis,
                     readTimeoutMillis,
+                    totalTimeLimitMillis,
                 )
         }
 
@@ -283,6 +304,13 @@ public class NfcReadSettings
 
             /** The default [readTimeoutMillis]: 2000. */
             public const val DEFAULT_READ_TIMEOUT_MILLIS: Long = ChipReadCoordinator.DEFAULT_READ_TIMEOUT_MILLIS
+
+            /**
+             * The default [totalTimeLimitMillis]: 120000.
+             *
+             * @since 1.1.0
+             */
+            public const val DEFAULT_TOTAL_TIME_LIMIT_MILLIS: Long = 120_000
 
             /** The default [waitForReturnMillis]: 15000. */
             public const val DEFAULT_WAIT_FOR_RETURN_MILLIS: Long = 15_000

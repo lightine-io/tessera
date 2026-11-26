@@ -438,7 +438,8 @@ class CatalogueGroupKIosTest {
             val r = read(flow)
             assertDeviceChecksPass(r.ending)
             assertEquals(3, r.ending.attempts)
-            assertEquals(listOf(2, 1), r.states.filterIsInstance<ChipReadState.LinkLost>().map { it.restartsLeft })
+            // Both later losses came after new DG2 bytes, so neither used a restart (TES-369).
+            assertEquals(listOf(2, 2), r.states.filterIsInstance<ChipReadState.LinkLost>().map { it.restartsLeft })
             assertEquals(5, script.links)
             assertEquals(
                 listOf(

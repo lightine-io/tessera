@@ -267,7 +267,8 @@ class ChipReadResumeTest {
                 assertEquals(1, read.dataGroup(1)!!.attempt)
                 assertHashPassed(read, 2)
                 val lost = observer.updates.mapNotNull { it.state as? ChipReadState.LinkLost }.map { it.restartsLeft }
-                assertEquals(listOf(2, 1), lost)
+                // Each loss came after new bytes of DG2: none used a restart (TES-369).
+                assertEquals(listOf(2, 2), lost)
                 assertEquals(listOf(1, 2, 3), observer.updates.map { it.attempt }.distinct())
                 assertTrue(observer.updates.all { it.maxAttempts == 3 })
             }
@@ -412,17 +413,14 @@ class ChipReadResumeTest {
     fun theBudgetUsedUpEndsPartialWithWhatWasRead() =
         runTest {
             withChips { c, keys ->
-                val fired = mutableListOf<Int>()
-                val loss =
-                    FakeLinkLoss(times = 2) { chip, cmd ->
-                        val o = FakeLinkLoss.offset(cmd)
-                        (dataGroupRead(chip, cmd, dg2) && o > (fired.maxOrNull() ?: 0)).also { if (it) fired += o }
-                    }
+                // The first loss comes after new bytes (free); the second and third find DG2 at the
+                // same offset, so with one restart the third ends the read (TES-369).
+                val loss = FakeLinkLoss(times = 3) { chip, cmd -> dataGroupRead(chip, cmd, dg2) && FakeLinkLoss.offset(cmd) > 0 }
                 val flow = build(c, keys, FlowAccess.BAC, listOf(loss))
                 val (ending, _) = drive(flow, LinkLossPolicy.Resume(1))
                 val partial = assertIs<ChipReadEnding.Partial>(ending)
                 assertEquals(NfcTagLost, partial.stoppedBy)
-                assertEquals(2, partial.attempts)
+                assertEquals(3, partial.attempts)
                 assertEquals(1, partial.read.dataGroup(1)!!.attempt)
                 assertNull(partial.read.dataGroup(2))
                 val stoppedIn = assertIs<ChipReadState.ReadingFile>(partial.stoppedIn)
