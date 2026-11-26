@@ -3,13 +3,13 @@
 
 // region TES-A-128 block 1
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:1.0.1"))
+    implementation(platform("io.lightine.tessera:tessera-bom:1.1.0"))
 }
 // endregion
 
 // region TES-A-128 block 2
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:1.0.1"))
+    implementation(platform("io.lightine.tessera:tessera-bom:1.1.0"))
     implementation("io.lightine.tessera:tessera-mrz-core")
     implementation("io.lightine.tessera:tessera-mrz-ocr-core")
 }
