@@ -134,7 +134,7 @@ class ChipFollowUpApiTest {
     // --- Item 9: every reason has a stable, unique code ----------------------------------------
 
     @Test
-    fun everyCheckReasonOfEveryModuleHasANonEmptyUniqueCodeOfTheDocumentedShape() {
+    fun everyCheckReasonOfEveryModuleCarriesANonEmptyUniqueCodeOfTheDocumentedShape() {
         val shape = Regex("[a-z]+(-[a-z]+)*\\.[a-z0-9]+(-[a-z0-9]+)*")
         val groups: Map<String, List<CheckReason>> =
             mapOf(

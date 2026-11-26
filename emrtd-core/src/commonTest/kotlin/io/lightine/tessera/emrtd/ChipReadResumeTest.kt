@@ -315,7 +315,7 @@ class ChipReadResumeTest {
         }
 
     @Test
-    fun aDifferentDocumentThatTakesTheKeyButHasAnotherEfSodIsReadAfresh() =
+    fun aDifferentDocumentThatTakesTheKeyButHoldsAnotherEfSodIsReadAfresh() =
         runTest {
             withChips { c, keys ->
                 val flow = build(c, keys, FlowAccess.BAC, listOf(midFile(dg2)))

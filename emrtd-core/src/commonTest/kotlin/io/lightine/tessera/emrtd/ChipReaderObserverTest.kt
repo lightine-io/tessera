@@ -71,7 +71,7 @@ class ChipReaderObserverTest {
         }
 
     @Test
-    fun anUpdateListenerLambdaGetsTheSameUpdatesAsAnObserver() =
+    fun anUpdateListenerLambdaGetsTheSameUpdatesThatAnObserverGets() =
         runTest {
             withChips { c, keys ->
                 val flow = FakeReadFlowChip.build(c, keys, FlowAccess.BAC)
