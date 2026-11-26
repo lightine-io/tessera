@@ -240,6 +240,8 @@ public class NfcChipRead internal constructor(
             Forwarder(if (settings.observerOn == ObserverThread.MAIN) HandoffObserver(observer, env.main::post) else observer),
             settings.telemetry?.let { ChipReader(it) } ?: env.reader,
             clearKeyAtEnding = true,
+            totalTimeLimitMillis = settings.totalTimeLimitMillis,
+            now = env.now,
         )
     private val scope = CoroutineScope(SupervisorJob() + env.dispatcher)
 

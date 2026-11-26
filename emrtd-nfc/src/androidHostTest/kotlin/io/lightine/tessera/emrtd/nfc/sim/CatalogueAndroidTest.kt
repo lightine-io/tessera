@@ -328,7 +328,8 @@ class CatalogueAndroidTest {
             val r = read(deviceOptions(flow))
             assertDeviceChecksPass(r.ending)
             assertEquals(3, r.ending.attempts)
-            assertEquals(listOf(2, 1), r.states.filterIsInstance<ChipReadState.LinkLost>().map { it.restartsLeft })
+            // Both later losses came after new DG2 bytes, so neither used a restart (TES-369).
+            assertEquals(listOf(2, 2), r.states.filterIsInstance<ChipReadState.LinkLost>().map { it.restartsLeft })
             assertEquals(5, script.links, "2 unanswered tries, then 3 attempts")
             // (e) What the app saw: found, "no answer yet" twice, then the read goes on.
             assertEquals(
@@ -356,6 +357,17 @@ class CatalogueAndroidTest {
                 "the first loss belongs to attempt 1",
             )
             assertTrue(r.states.drop(8).none { it is ChipReadState.NoAnswerYet })
+        }
+
+    /** A loss after the total time limit ends the read even when the attempt read new bytes (TES-369). */
+    @Test
+    fun totalTimeLimit_aLossAfterItEndsTheReadAtOnce() =
+        simTest { flow ->
+            script.fault(ChipFaultAction.LoseLink(10), times = 1, match = Shapes.midDg2)
+            val r = read(deviceOptions(flow), NfcReadSettings(totalTimeLimitMillis = 1))
+            val partial = assertIs<ChipReadEnding.Partial>(r.ending, "${r.ending}")
+            assertEquals(1, partial.attempts)
+            assertTrue(r.states.none { it is ChipReadState.LinkLost })
         }
 
     /** Silence once the key is used (EXTERNAL AUTHENTICATE) still spends the budget, with the general 5 s limit (regression). */

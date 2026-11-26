@@ -76,7 +76,9 @@ public fun interface ChipReadUpdateListener {
  *   [ChipReadState.LinkLost] belongs to the attempt that lost the link, each time it is reported;
  *   every update after it belongs to the attempt that starts when the document is back. So
  *   `attempt + 1` is the "try 2 of 3" to show with [ChipReadState.LinkLost].
- * @property maxAttempts The most attempts this read can make: 1, plus the restarts the app allowed.
+ * @property maxAttempts The most attempts this read can make: 1, plus the restarts the app allowed. Under
+ *   [LinkLossPolicy.Resume] a restart after an attempt that read more bytes uses none of them, so this is
+ *   at least [attempt]: it grows with the attempts when the read keeps making progress.
  * @since 1.0.0
  */
 @ExperimentalTesseraChipApi
@@ -216,8 +218,13 @@ public sealed class ChipReadState {
      * [DocumentFound], and the read starts again from the beginning as a new attempt. This state
      * lasts until then, or until the read ends.
      *
-     * @property restartsLeft How many more times the read can start again after a lost link,
-     *   counting the start it is now waiting for (at least 1).
+     * @property restartsLeft How many more times the read can start again after a lost link that
+     *   made no progress, counting the start it is now waiting for when that start used a restart (so at least 1 then;
+     *   0 when it used none and the restarts are all used). Under
+     *   [LinkLossPolicy.Resume], a lost link after an attempt that read more file bytes than the
+     *   attempts before it uses no restart, so this stays the same then: it counts down only
+     *   for the losses that made no progress. Another limit applies on Android: the read ends at
+     *   the first lost link after its total time limit, whatever is left here.
      * @since 1.0.0
      */
     public class LinkLost internal constructor(

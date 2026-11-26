@@ -405,12 +405,14 @@ class CatalogueGroupHTest {
                 ok.complete
                 assertEquals(3, ok.ending.attempts)
 
-                val thrice = FakeLinkLoss(times = 3) { chip, cmd -> SimDrive.readsAppFile(chip, cmd, dg2) && SimDrive.offset(cmd) > 0 }
+                // The first loss comes after new bytes and uses no restart (TES-369): the read ends at the third
+                // loss that finds DG2 at the same offset, so four losses in all.
+                val thrice = FakeLinkLoss(times = 4) { chip, cmd -> SimDrive.readsAppFile(chip, cmd, dg2) && SimDrive.offset(cmd) > 0 }
                 val flow = bacChip(c, keys, listOf(thrice))
                 val ended = driveFlow(flow)
                 val partial = assertIs<ChipReadEnding.Partial>(ended.ending)
                 assertEquals(NfcTagLost, partial.stoppedBy)
-                assertEquals(3, partial.attempts)
+                assertEquals(4, partial.attempts)
                 assertNotNull(partial.read.dataGroup(1), "what was read stays in the ending")
                 assertContentEquals(flow.dataGroups.getValue(1), partial.read.dataGroup(1)!!.bytes())
             }

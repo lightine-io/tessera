@@ -148,8 +148,13 @@ class ChipReadHandoverTest {
             val observer = RecordingObserver()
             val k = coordinator(flow, LinkLossPolicy.Resume(1), observer)
             assertEquals(ChipReadAttemptOutcome.LINK_LOST, k.read(HandingOverLink(flow, atOffset = 1)))
-            val second = HandingOverLink(flow, atOffset = 600)
+            // The first loss came after new bytes, so it used no restart; this handover brought no new
+            // bytes, so its failure is a loss that uses the one restart, and the next one ends the read.
+            val second = HandingOverLink(flow, atOffset = 1)
             assertEquals(ChipReadAttemptOutcome.HANDED_OVER, k.read(second, handedOver = { second.handed }))
+            assertTrue(k.handoverFailed())
+            val third = HandingOverLink(flow, atOffset = 1)
+            assertEquals(ChipReadAttemptOutcome.HANDED_OVER, k.read(third, handedOver = { third.handed }))
             assertFalse(k.handoverFailed())
             val ending = assertIs<ChipReadEnding.Partial>(observer.endings.single())
             assertEquals(NfcTagLost, ending.stoppedBy)

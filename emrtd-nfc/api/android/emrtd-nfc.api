@@ -53,6 +53,7 @@ public final class io/lightine/tessera/emrtd/nfc/NfcReadSettings {
 	public static final field DEFAULT_READ_TIMEOUT_MILLIS J
 	public static final field DEFAULT_RESTARTS I
 	public static final field DEFAULT_SETTLE_DELAY_MILLIS J
+	public static final field DEFAULT_TOTAL_TIME_LIMIT_MILLIS J
 	public static final field DEFAULT_WAIT_FOR_RETURN_MILLIS J
 	public static final field NO_LIMIT J
 	public fun <init> ()V
@@ -67,7 +68,8 @@ public final class io/lightine/tessera/emrtd/nfc/NfcReadSettings {
 	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJJLio/lightine/tessera/telemetry/TelemetrySink;JZLio/lightine/tessera/emrtd/ObserverThread;)V
 	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJJLio/lightine/tessera/telemetry/TelemetrySink;JZLio/lightine/tessera/emrtd/ObserverThread;J)V
 	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJJLio/lightine/tessera/telemetry/TelemetrySink;JZLio/lightine/tessera/emrtd/ObserverThread;JJ)V
-	public synthetic fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJJLio/lightine/tessera/telemetry/TelemetrySink;JZLio/lightine/tessera/emrtd/ObserverThread;JJILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJJLio/lightine/tessera/telemetry/TelemetrySink;JZLio/lightine/tessera/emrtd/ObserverThread;JJJ)V
+	public synthetic fun <init> (Lio/lightine/tessera/emrtd/LinkLossPolicy;JJJJLio/lightine/tessera/telemetry/TelemetrySink;JZLio/lightine/tessera/emrtd/ObserverThread;JJJILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getCommandTimeoutBeforeAccessMillis ()J
 	public final fun getCommandTimeoutMillis ()J
 	public final fun getLinkLoss ()Lio/lightine/tessera/emrtd/LinkLossPolicy;
@@ -77,6 +79,7 @@ public final class io/lightine/tessera/emrtd/nfc/NfcReadSettings {
 	public final fun getReadTimeoutMillis ()J
 	public final fun getSettleDelayMillis ()J
 	public final fun getTelemetry ()Lio/lightine/tessera/telemetry/TelemetrySink;
+	public final fun getTotalTimeLimitMillis ()J
 	public final fun getWaitForDocumentMillis ()J
 	public final fun getWaitForReturnMillis ()J
 	public final fun toBuilder ()Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
@@ -96,6 +99,7 @@ public final class io/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder {
 	public final fun readTimeoutMillis (J)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 	public final fun settleDelayMillis (J)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 	public final fun telemetry (Lio/lightine/tessera/telemetry/TelemetrySink;)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
+	public final fun totalTimeLimitMillis (J)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 	public final fun waitForDocumentMillis (J)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 	public final fun waitForReturnMillis (J)Lio/lightine/tessera/emrtd/nfc/NfcReadSettings$Builder;
 }
