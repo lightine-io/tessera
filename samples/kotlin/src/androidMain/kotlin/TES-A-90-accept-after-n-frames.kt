@@ -29,7 +29,10 @@ internal class MainActivity : ComponentActivity() {
         scanner.results.collect { result ->
             if (result is MrzScanResult.Decoded && result.parse !is ParseResult.Failure) {
                 when (val verdict = consensus.offer(result)) {
-                    is ConsensusVerdict.Confirmed -> onAgreed(verdict.decoded)   // your handler
+                    is ConsensusVerdict.Confirmed -> {
+                        scanner.stop()   // Confirmed repeats on every later frame, so stop and act once
+                        onAgreed(verdict.decoded)   // your handler
+                    }
                     is ConsensusVerdict.Gathering -> { /* verdict.agreement of verdict.threshold so far */ }
                 }
             }
