@@ -213,6 +213,8 @@ class TesseraStringKeysTest {
                 "tessera_scanner_torch",
                 "tessera_scanner_torch_state_off",
                 "tessera_scanner_torch_state_on",
+                "tessera_scanner_window_too_small_body",
+                "tessera_scanner_window_too_small_title",
             )
     }
 }
