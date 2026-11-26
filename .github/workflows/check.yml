@@ -152,11 +152,6 @@ jobs:
   # missing klib is not.
   publish-smoke:
     name: publish · smoke (empty-module guard)
-    # TEMPORARY (board-clearing run to 1.0, owner's call 2026-11-21): the two macOS jobs are
-    # skipped on pull requests to keep reviews fast; they still run on every push to main and on
-    # the schedule. A skipped job counts as passed for the required check. Remove these two `if:`
-    # lines before the 1.0.0 tag (release checklist).
-    if: github.event_name != 'pull_request'
     runs-on: macos-26
     steps:
       - name: Checkout
@@ -229,11 +224,6 @@ jobs:
 
   ios-compile:
     name: build & test · iOS
-    # TEMPORARY (board-clearing run to 1.0, owner's call 2026-11-21): the two macOS jobs are
-    # skipped on pull requests to keep reviews fast; they still run on every push to main and on
-    # the schedule. A skipped job counts as passed for the required check. Remove these two `if:`
-    # lines before the 1.0.0 tag (release checklist).
-    if: github.event_name != 'pull_request'
     # Apple targets can only be built on macOS (Kotlin/Native links against the Xcode toolchain);
     # a Linux runner cannot build them at all. macos-26 with the Xcode pinned in XCODE_VERSION, which Konan uses.
     runs-on: macos-26
@@ -303,6 +293,11 @@ jobs:
       # framework and fails on duplicate symbols (the framework hides the OpenSSL it embeds).
       - name: Compile iOS targets, run simulator tests, assemble the XCFramework, check iOS ABI and OpenSSL symbols
         run: ./gradlew iosSimulatorArm64Test compileKotlinIosArm64 :mrz-camera-ios:assembleTesseraCoreDebugXCFramework :mrz-camera-ios:checkTesseraFrameworkHeader :mrz-camera-ios:checkKotlinAbi :emrtd-nfc-ios:checkKotlinAbi :emrtd-core:checkKotlinAbi :mrz-camera-ios:checkOpenSslSymbolClash
+
+      # The framework supports iOS 15: it must not need, at link time, an Objective-C class that
+      # a newer iOS added (the 1.0.0 framework needed one from iOS 26.4, TES-366).
+      - name: No Objective-C class newer than iOS 15 is required by the framework
+        run: scripts/check-ios-framework-symbols.sh mrz-camera-ios/build/XCFrameworks/debug/TesseraCore.xcframework
 
   # Cheap repository checks, hermetic and fast. Required (branch protection), so every
   # rule here can fail a merge. The hook tests use throwaway temp folders and never touch

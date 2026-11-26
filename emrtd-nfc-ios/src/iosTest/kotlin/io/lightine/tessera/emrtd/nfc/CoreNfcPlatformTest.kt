@@ -5,7 +5,11 @@ import io.lightine.tessera.types.errors.NfcTagLost
 import io.lightine.tessera.types.errors.NfcUnavailable
 import io.lightine.tessera.types.errors.NfcUnavailable.Reason
 import platform.CoreNFC.NFCErrorDomain
+import platform.CoreNFC.NFCPollingISO14443
+import platform.CoreNFC.NFCPollingPACE
 import platform.Foundation.NSError
+import platform.Foundation.NSNumber
+import platform.Foundation.valueForKey
 import platform.darwin.NSObject
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -111,5 +115,14 @@ class CoreNfcPlatformTest {
     fun the_configuration_exists_on_the_simulator_runtime() {
         // The Simulator runs iOS 26.4 or later, so the Configuration path is the one taken there.
         assertNotNull(PlatformReaderSession.emrtdConfiguration())
+    }
+
+    @Test
+    fun the_configuration_polls_iso14443_and_pace_and_selects_only_the_emrtd_application() {
+        // The properties are set by key-value coding, so read them back the same way.
+        val configuration = assertNotNull(PlatformReaderSession.emrtdConfiguration())
+        assertEquals(NFCPollingISO14443 or NFCPollingPACE, (configuration.valueForKey("polling") as NSNumber).longValue)
+        assertEquals(listOf<Any?>(EMRTD_AID_HEX), configuration.valueForKey("iso7816SelectIdentifiers"))
+        assertEquals(emptyList<Any?>(), configuration.valueForKey("felicaSystemCodes"))
     }
 }

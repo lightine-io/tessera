@@ -5,6 +5,8 @@ import io.lightine.tessera.types.errors.NfcUnavailable
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.convert
+import kotlinx.cinterop.interpretObjCPointer
+import kotlinx.cinterop.objcPtr
 import kotlinx.cinterop.useContents
 import kotlinx.cinterop.usePinned
 import platform.CoreNFC.NFCISO7816APDU
@@ -13,13 +15,14 @@ import platform.CoreNFC.NFCPollingISO14443
 import platform.CoreNFC.NFCPollingPACE
 import platform.CoreNFC.NFCTagProtocol
 import platform.CoreNFC.NFCTagReaderSession
-import platform.CoreNFC.NFCTagReaderSessionConfiguration
 import platform.CoreNFC.NFCTagReaderSessionDelegateProtocol
 import platform.Foundation.NSClassFromString
 import platform.Foundation.NSData
 import platform.Foundation.NSError
+import platform.Foundation.NSNumber
 import platform.Foundation.NSProcessInfo
 import platform.Foundation.create
+import platform.Foundation.setValue
 import platform.darwin.NSObject
 import platform.darwin.NSObjectMeta
 import platform.darwin.dispatch_queue_create
@@ -248,7 +251,7 @@ private class SessionDelegate(
  */
 internal class PlatformReaderSession internal constructor(
     events: ReaderSessionEvents,
-    configuration: NFCTagReaderSessionConfiguration?,
+    configuration: NSObject?,
 ) : ReaderSessionPort {
     constructor(events: ReaderSessionEvents) : this(events, CoreNfcPolling.AUTOMATIC)
 
@@ -261,7 +264,10 @@ internal class PlatformReaderSession internal constructor(
         newTagReaderSession(
             configuration,
             newSessionQueue(),
-            withConfiguration = { config, queue -> NFCTagReaderSession(configuration = config, delegate = delegate, queue = queue) },
+            withConfiguration = { config, queue ->
+                // A raw object pointer, not a cast: see emrtdConfiguration.
+                NFCTagReaderSession(configuration = interpretObjCPointer(config.objcPtr()), delegate = delegate, queue = queue)
+            },
             withPolling = { queue -> NFCTagReaderSession(pollingOption = NFCPollingISO14443, delegate = delegate, queue = queue) },
         )
 
@@ -282,19 +288,26 @@ internal class PlatformReaderSession internal constructor(
          * The iOS 26.4 session Configuration: ISO 14443 and PACE polling, the eMRTD application as
          * the only select identifier. `null` before iOS 26.4.
          *
-         * The class is looked up by name at run time, never named in code: Kotlin/Native links a
-         * named Objective-C class as a strong symbol, and an app built with this framework would
-         * then fail to launch on iOS 15 (the framework's minimum) to 26.3, where the class does not
-         * exist. The object is set up with its property setters, which are plain messages.
+         * The class exists only from iOS 26.4, and the framework supports iOS 15, so the built
+         * framework must not need it at link time. The class is looked up by name at run time, the
+         * object is held as a plain `NSObject`, and its properties are set by key-value coding
+         * (`setValue:forKey:`). The session gets it as a raw object pointer
+         * (`interpretObjCPointer`). A value typed as the class must never pass through generic code
+         * (as [configurationFor] and [newTagReaderSession] are): it gets a type check there, and the
+         * check makes Kotlin/Native link the class as a required symbol
+         * (`_OBJC_CLASS_$_NFCTagReaderSessionConfiguration`). An app built with the framework then
+         * cannot link against an SDK older than iOS 26.4, and the framework would need the class
+         * when loaded on iOS 15 to 26.3. `scripts/check-ios-framework-symbols.sh` checks the built
+         * framework for such symbols.
          */
         @OptIn(BetaInteropApi::class) // the class object from NSClassFromString
-        internal fun emrtdConfiguration(): NFCTagReaderSessionConfiguration? {
+        internal fun emrtdConfiguration(): NSObject? {
             if (!isAtLeastIos264()) return null
             val meta = NSClassFromString(CONFIGURATION_CLASS) as? NSObjectMeta ?: return null
-            val configuration: NFCTagReaderSessionConfiguration = meta.new()?.uncheckedAs() ?: return null
-            configuration.polling = NFCPollingISO14443 or NFCPollingPACE
-            configuration.iso7816SelectIdentifiers = listOf(EMRTD_AID_HEX)
-            configuration.felicaSystemCodes = emptyList<String>()
+            val configuration = meta.new() as? NSObject ?: return null
+            configuration.setValue(NSNumber(long = NFCPollingISO14443 or NFCPollingPACE), forKey = "polling")
+            configuration.setValue(listOf(EMRTD_AID_HEX), forKey = "iso7816SelectIdentifiers")
+            configuration.setValue(emptyList<String>(), forKey = "felicaSystemCodes")
             return configuration
         }
 
@@ -334,10 +347,6 @@ internal fun <C : Any, S> newTagReaderSession(
     withConfiguration: (configuration: C, queue: NSObject) -> S,
     withPolling: (queue: NSObject) -> S,
 ): S = if (configuration != null) withConfiguration(configuration, queue) else withPolling(queue)
-
-/** A cast the compiler does not check, so the type's class symbol is not referenced. */
-@Suppress("UNCHECKED_CAST")
-private fun <T> Any.uncheckedAs(): T = this as T
 
 /** Whether this device can read NFC tags at all (`NFCTagReaderSession.readingAvailable`). */
 internal fun platformReadingAvailable(): Boolean = NFCTagReaderSession.readingAvailable
