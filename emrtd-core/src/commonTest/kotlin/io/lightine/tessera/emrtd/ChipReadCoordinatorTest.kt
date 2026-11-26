@@ -256,7 +256,7 @@ class ChipReadCoordinatorTest {
         }
 
     @Test
-    fun cancellingTheReadCoroutineEndsTheReadAsAnAppCancel() =
+    fun cancellingTheReadCoroutineEndsTheReadWithAnAppCancel() =
         runTest {
             val observer = RecordingObserver()
             val c = coordinator(observer)
@@ -478,7 +478,7 @@ class ChipReadCoordinatorTest {
     // --- A link closed under the read, with no app cancel (TES-346) ------------------------------
 
     @Test
-    fun aClosedLinkWithNoAppCancelAsksThePlatformAndNeverEndsAsAnAppCancel() =
+    fun aClosedLinkWithNoAppCancelAsksThePlatformAndNeverEndsWithAnAppCancel() =
         runTest {
             val closed = NfcUnavailable(NfcUnavailable.Reason.CLOSED)
             // No answer from the platform: ended by the system, with the closed-link error.
