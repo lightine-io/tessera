@@ -3,6 +3,9 @@ package io.lightine.tessera.mrz.camera
 /**
  * The text an OCR engine recognized in one frame, as lines in reading order.
  *
+ * Every character is an engine read, never edited by the SDK. A short MRZ row may be the engine's
+ * second read of the same region; the result does not mark this.
+ *
  * It is raw OCR output, not an MRZ: lines can be in any case, hold non-MRZ characters, or carry
  * stray spaces. It can hold MRZ text, so do not log it verbatim. `toString()` on it and on
  * [RecognizedLine] shows no document values; they are in the properties.
@@ -25,7 +28,11 @@ public data class RecognizedText(
  * @since 0.2.0
  */
 public data class RecognizedLine(
-    /** The recognized characters of this line, exactly as the engine reported them. */
+    /**
+     * The recognized characters of this line, exactly as the engine reported them; the SDK does not
+     * edit them. A short MRZ row may be the engine's second read of the same region, which the result
+     * does not mark.
+     */
     public val text: String,
     /** OCR confidence in `[0, 1]`; `null` when the engine reports none. */
     public val confidence: Float?,

@@ -38,6 +38,10 @@ public sealed interface MrzScannerResult {
      * It holds document data, so do not log it verbatim. `toString()` shows no document values;
      * they are in the properties.
      *
+     * For a live-camera reading, [MrzScannerConfig.consensusReads] frames must agree on the same
+     * parsed document. In that case, this carries only the last agreeing frame, not the count or
+     * other readings seen; a misread repeated on every frame also reaches agreement.
+     *
      * @property result The decoded reading, as the headless reader produced it.
      * @since 0.5.0
      */
