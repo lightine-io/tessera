@@ -71,6 +71,10 @@ import kotlin.jvm.JvmOverloads
  *   limit [NfcTimeout.Limit.WAIT_FOR_DOCUMENT]: your app set this limit, so the ending is not
  *   [ChipReadEnding.EndedBySystem]. Once a first link is up it no longer applies:
  *   [waitForReturnMillis] bounds the waits after a lost link.
+ *   This is also the only time bound on a read whose reader mode your app switched off behind the
+ *   SDK's back: the SDK cannot see that, so with [NO_LIMIT] such a read waits until the app calls
+ *   `cancel()` (or, for an Activity-owning read, the Activity is destroyed). Set a limit when the
+ *   app cannot promise to cancel.
  * @property presenceCheckDelayMillis How often the platform checks that the document is still
  *   there, set when the Activity-owning start turns reader mode on. Default 1000: the platform's
  *   own 125 ms drops the link of some chips, and a longer delay is a known remedy; whether it helps

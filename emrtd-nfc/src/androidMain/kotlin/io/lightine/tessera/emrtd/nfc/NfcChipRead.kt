@@ -72,6 +72,15 @@ import kotlin.jvm.JvmOverloads
  * has no public call for it): the platform keeps the reader-mode request and applies it when the
  * Activity resumes, so a read started from `onCreate` waits for that.
  *
+ * **Reader mode is the read's alone.** The platform tells the SDK nothing when reader mode is
+ * switched off or taken over: no callback, and no call that tells whether an Activity has it on.
+ * If your app calls `NfcAdapter.disableReaderMode` for the read's Activity, or turns on its own
+ * reader mode there, the read does not end: no document can reach it, it keeps reporting
+ * [io.lightine.tessera.emrtd.ChipReadState.WaitingForDocument], and it stays so until
+ * [NfcReadSettings.waitForDocumentMillis] passes (by default never, [NfcReadSettings.NO_LIMIT]),
+ * the Activity is destroyed, or your app calls [cancel]. To stop a read, call [cancel]: it ends the
+ * read with [ChipReadEnding.Cancelled] and turns reader mode off itself.
+ *
  * **Configuration change.** The read is for one Activity. The platform turns reader mode off and
  * on with that Activity's pause and resume, and a pause in the middle of a read drops the link the
  * way a moved document does (see below). When the Activity is destroyed, for example by a rotation,
@@ -120,7 +129,9 @@ import kotlin.jvm.JvmOverloads
  * - One read at a time in the app: [start] while another read has not ended ends at once with
  *   [ChipReadEnding.NotStarted] and [NfcUnavailable.Reason.READ_IN_PROGRESS]. A read waiting for a
  *   document waits until [NfcReadSettings.waitForDocumentMillis] passes, which by default is never ([NfcReadSettings.NO_LIMIT]):
- *   cancel a read your app no longer shows, or no other read can start.
+ *   cancel a read your app no longer shows, or no other read can start. Switching reader mode off
+ *   yourself (`NfcAdapter.disableReaderMode`) does not end the read, and the SDK cannot see it:
+ *   call [cancel].
  *
  * ## The key
  *
@@ -254,6 +265,15 @@ public class NfcChipRead internal constructor(
     /** The screen this read holds, for tests: `null` for the callback form, and after the ending. */
     internal val heldActivity: Activity? get() = hold?.activity
 
+    /**
+     * Ends the read with [ChipReadEnding.Cancelled] (by the app), whatever it is doing; it changes
+     * nothing once the read has ended. This is the way to stop a read: switching reader mode off
+     * behind the SDK's back (`NfcAdapter.disableReaderMode`, or your own reader mode on the same
+     * Activity) cannot be seen by the SDK, so the read goes on waiting for a document that can no
+     * longer arrive, until [NfcReadSettings.waitForDocumentMillis] passes (never, by default), or
+     * the Activity of an Activity-owning read is destroyed. In the callback form, also call
+     * [NfcReaderMode.disable] afterwards.
+     */
     override fun cancel() {
         if (coordinator.cancel(ChipReadEnding.Cancelled.By.APP)) job?.cancel()
     }
