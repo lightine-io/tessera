@@ -29,7 +29,8 @@ import kotlin.test.assertSame
  * CameraX does with the viewport on a real bind is checked on a device (QA scenario), not here.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+// A screen large enough for every preview size the tests set (Robolectric's default screen is smaller).
+@Config(sdk = [34], qualifiers = "w1300dp-h1100dp")
 class ViewportScannerTest {
     @get:Rule
     val composeRule = createComposeRule()
@@ -42,7 +43,7 @@ class ViewportScannerTest {
     }
 
     private val made = mutableListOf<FakeScanner>()
-    private var size by mutableStateOf(DpSize(100.dp, 200.dp))
+    private var size by mutableStateOf(DpSize(300.dp, 600.dp))
     private var rotation by mutableIntStateOf(0)
 
     private fun setUp() {
@@ -81,7 +82,7 @@ class ViewportScannerTest {
         val first = made.single()
 
         // Split screen turns a tall preview area into a wide one.
-        size = DpSize(200.dp, 100.dp)
+        size = DpSize(1200.dp, 600.dp)
         composeRule.waitForIdle()
 
         assertEquals(2, made.size)
@@ -109,7 +110,22 @@ class ViewportScannerTest {
         setUp()
         val first = made.single()
 
-        size = DpSize(150.dp, 300.dp)
+        size = DpSize(450.dp, 900.dp)
+        composeRule.waitForIdle()
+
+        assertSame(first, made.single())
+        assertEquals(false, first.closed)
+    }
+
+    @Test
+    fun a_resize_between_two_short_heights_keeps_the_scanner() {
+        // TES-342: below MinAnalysisCropHeight the viewport is the area's width by that height, so the
+        // height of a short area (a phone in landscape, split screen) does not change it.
+        size = DpSize(800.dp, 220.dp)
+        setUp()
+        val first = made.single()
+
+        size = DpSize(800.dp, 180.dp)
         composeRule.waitForIdle()
 
         assertSame(first, made.single())

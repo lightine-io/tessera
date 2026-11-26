@@ -704,6 +704,39 @@ class NfcChipReadTest {
         }
 
     @Test
+    fun `with the default settings a read that finds no document ends after 2 minutes`() =
+        runTest {
+            val rig = rig()
+            val observer = RecordingChipObserver()
+            rig.start(observer)
+            runCurrent()
+            advanceTimeBy(119_999)
+            runCurrent()
+            assertTrue(observer.endings.isEmpty())
+            advanceTimeBy(2)
+            runCurrent()
+
+            val ending = assertIs<ChipReadEnding.Failed>(observer.endings.single())
+            assertEquals(NfcTimeout(120_000, NfcTimeout.Limit.WAIT_FOR_DOCUMENT), ending.error)
+            assertEquals(0, ending.attempts)
+        }
+
+    @Test
+    fun `with no limit set a read that finds no document is still waiting after 2 minutes`() =
+        runTest {
+            val rig = rig()
+            val observer = RecordingChipObserver()
+            val read = rig.start(observer, NfcReadSettings(waitForDocumentMillis = NfcReadSettings.NO_LIMIT))
+            runCurrent()
+            advanceTimeBy(600_000)
+            runCurrent()
+
+            assertTrue(observer.endings.isEmpty())
+            read.cancel()
+            runCurrent()
+        }
+
+    @Test
     fun `NFC switched off while waiting ends the read at the next tick`() =
         runTest {
             val rig = rig()
@@ -960,13 +993,13 @@ class NfcChipReadTest {
         assertEquals(1_500L, settings.commandTimeoutBeforeAccessMillis)
         assertEquals(2_000L, settings.readTimeoutMillis)
         assertEquals(15_000L, settings.waitForReturnMillis)
-        assertEquals(NfcReadSettings.NO_LIMIT, settings.waitForDocumentMillis)
+        assertEquals(120_000L, settings.waitForDocumentMillis)
         assertEquals(1_000L, settings.presenceCheckDelayMillis)
         assertTrue(settings.platformSounds)
         assertEquals(ObserverThread.MAIN, settings.observerOn)
         assertEquals(
             "NfcReadSettings(linkLoss=Resume(2), settleDelayMillis=400, commandTimeoutMillis=5000, readTimeoutMillis=2000, " +
-                "commandTimeoutBeforeAccessMillis=1500, waitForReturnMillis=15000, waitForDocumentMillis=${Long.MAX_VALUE}, " +
+                "commandTimeoutBeforeAccessMillis=1500, waitForReturnMillis=15000, waitForDocumentMillis=120000, " +
                 "presenceCheckDelayMillis=1000, " +
                 "platformSounds=true, observerOn=MAIN)",
             settings.toString(),
@@ -989,7 +1022,7 @@ class NfcChipReadTest {
                 "platformSounds=true, observerOn=MAIN)",
             built.toString(),
         )
-        // A limit set, then taken away with the no-limit call, goes back to waiting for ever.
+        // A limit set, then taken away with the no-limit call, waits for ever.
         assertEquals(
             NfcReadSettings.NO_LIMIT,
             built

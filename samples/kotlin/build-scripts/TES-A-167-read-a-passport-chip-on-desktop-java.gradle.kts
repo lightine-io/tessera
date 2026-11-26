@@ -8,7 +8,7 @@ dependencies {
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(17)
     compilerOptions {
         optIn.add("io.lightine.tessera.types.ExperimentalTesseraChipApi")
     }
