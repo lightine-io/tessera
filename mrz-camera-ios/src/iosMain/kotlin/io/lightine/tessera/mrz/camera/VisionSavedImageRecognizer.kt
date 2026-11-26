@@ -35,7 +35,8 @@ import platform.Vision.VNImageRequestHandler
  * more faithfully than accurate's language modelling), keeping only reads whose stripped length matches an
  * ICAO MRZ width. Selection among actual OCR reads, never invention - no character is padded or guessed,
  * and the parser's check digits remain the arbiter. Pass-1 rows are always appended after the rescued
- * lines, so a photo the first pass already read correctly is never made worse.
+ * lines, so a photo the first pass already read correctly is never made worse. Every rescued line is marked
+ * with [RecognizedLine.secondRead].
  *
  * Obtained from the gated factory [visionSavedImageRecognizer]; the class is `internal` so it is only
  * reachable through that factory, which requires the saved-image-reading acknowledgement (the public
@@ -142,7 +143,7 @@ internal class VisionSavedImageRecognizer(
                     for (line in VisionMrzTextRecognizer.groupRows(fragments).map(VisionMrzTextRecognizer::joinRow)) {
                         val stripped = line.text.filterNot(Char::isWhitespace)
                         for (text in MrzRowRescue.rescuedLines(stripped)) {
-                            if (seen.add(text)) rescued.add(RecognizedLine(text = text, confidence = line.confidence))
+                            if (seen.add(text)) rescued.add(RecognizedLine(text = text, confidence = line.confidence, secondRead = true))
                         }
                     }
                 }
@@ -186,7 +187,8 @@ internal class VisionSavedImageRecognizer(
  * Pass it to [SavedImageMrzReader], which closes it when the reader is closed. It runs on
  * `Dispatchers.Default`. When the first pass finds likely MRZ rows, it reads each region again from
  * a tighter crop and puts reads whose length matches an MRZ line width ahead of the first-pass lines,
- * which it keeps. A Vision failure on the first pass is thrown, and [MrzFrameAnalyzer] reports it as
+ * which it keeps. Rescued lines are marked with [RecognizedLine.secondRead]. A Vision failure on the first
+ * pass is thrown, and [MrzFrameAnalyzer] reports it as
  * [CameraError.OcrFailed].
  *
  * @param acknowledgement the required saved-image acknowledgement. It has no default.

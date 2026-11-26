@@ -208,7 +208,8 @@ class MrzRowRescueTest {
                 line(td3Line2, 100.0, 428.0, 980.0, 434.0, confidence = 0.5f),
             )
         val kept = MrzRowRescue.keptLines(reread, plan)
-        assertEquals(listOf(RecognizedLine(td3Line1.replace("<<<<<", "«<<<<"), 0.9f)), kept)
+        assertEquals(listOf(RecognizedLine(td3Line1.replace("<<<<<", "«<<<<"), 0.9f, secondRead = true)), kept)
+        assertTrue(kept.single().secondRead)
     }
 
     @Test
@@ -226,21 +227,37 @@ class MrzRowRescueTest {
                 line(td3Line1.take(20), 100.0, 401.0, 500.0, 420.0, confidence = 0.8f),
                 line(td3Line1.drop(20), 510.0, 401.0, 980.0, 420.0, confidence = 0.6f),
             )
-        assertEquals(listOf(RecognizedLine(td3Line1, 0.6f)), MrzRowRescue.keptLines(reread, plan))
+        assertEquals(listOf(RecognizedLine(td3Line1, 0.6f, secondRead = true)), MrzRowRescue.keptLines(reread, plan))
     }
 
     // --- splice ---
 
     @Test
     fun rescued_lines_take_the_place_of_the_short_rows_fragments() {
-        val original = listOf("header", fragmentA, fragmentB, td3Line2)
+        val original =
+            listOf(
+                RecognizedLine("header", null),
+                RecognizedLine(fragmentA, null),
+                RecognizedLine(fragmentB, null),
+                RecognizedLine(td3Line2, null),
+            )
+        val rescued = RecognizedLine(td3Line1, 0.9f, secondRead = true)
+        val spliced = MrzRowRescue.splice(original, mapOf(listOf(1, 2) to listOf(rescued)))
         assertEquals(
-            listOf("header", td3Line1, td3Line2),
-            MrzRowRescue.splice(original, mapOf(listOf(1, 2) to listOf(td3Line1))),
+            listOf(original[0], rescued, original[3]),
+            spliced,
         )
+        assertTrue(spliced[1].secondRead)
+        assertFalse(spliced[0].secondRead)
+        assertFalse(spliced[2].secondRead)
         // No replacement, or an empty one: unchanged.
         assertEquals(original, MrzRowRescue.splice(original, emptyMap()))
         assertEquals(original, MrzRowRescue.splice(original, mapOf(listOf(1, 2) to emptyList())))
+    }
+
+    @Test
+    fun the_old_recognized_line_constructor_defaults_to_not_a_second_read() {
+        assertFalse(RecognizedLine(td3Line1, 0.9f).secondRead)
     }
 
     private fun assertBoxEquals(

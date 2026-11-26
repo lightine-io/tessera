@@ -254,6 +254,7 @@ final class <#A: kotlin/Any?> io.lightine.tessera.mrz.camera/SavedImageMrzReader
 
 final class io.lightine.tessera.mrz.camera/CameraFrameEvent : io.lightine.tessera.telemetry/TelemetryEvent { // io.lightine.tessera.mrz.camera/CameraFrameEvent|null[0]
     constructor <init>(io.lightine.tessera.mrz.camera/CameraFrameOutcome, kotlin/Int, kotlin/Boolean, kotlin/Float?, io.lightine.tessera.types.vocabulary/MrzFormat?, kotlin/Int = ...) // io.lightine.tessera.mrz.camera/CameraFrameEvent.<init>|<init>(io.lightine.tessera.mrz.camera.CameraFrameOutcome;kotlin.Int;kotlin.Boolean;kotlin.Float?;io.lightine.tessera.types.vocabulary.MrzFormat?;kotlin.Int){}[0]
+    constructor <init>(io.lightine.tessera.mrz.camera/CameraFrameOutcome, kotlin/Int, kotlin/Boolean, kotlin/Float?, io.lightine.tessera.types.vocabulary/MrzFormat?, kotlin/Int = ..., kotlin/Int) // io.lightine.tessera.mrz.camera/CameraFrameEvent.<init>|<init>(io.lightine.tessera.mrz.camera.CameraFrameOutcome;kotlin.Int;kotlin.Boolean;kotlin.Float?;io.lightine.tessera.types.vocabulary.MrzFormat?;kotlin.Int;kotlin.Int){}[0]
 
     final val detectedFormat // io.lightine.tessera.mrz.camera/CameraFrameEvent.detectedFormat|{}detectedFormat[0]
         final fun <get-detectedFormat>(): io.lightine.tessera.types.vocabulary/MrzFormat? // io.lightine.tessera.mrz.camera/CameraFrameEvent.detectedFormat.<get-detectedFormat>|<get-detectedFormat>(){}[0]
@@ -269,6 +270,8 @@ final class io.lightine.tessera.mrz.camera/CameraFrameEvent : io.lightine.tesser
         final fun <get-outcome>(): io.lightine.tessera.mrz.camera/CameraFrameOutcome // io.lightine.tessera.mrz.camera/CameraFrameEvent.outcome.<get-outcome>|<get-outcome>(){}[0]
     final val recognizedLineCount // io.lightine.tessera.mrz.camera/CameraFrameEvent.recognizedLineCount|{}recognizedLineCount[0]
         final fun <get-recognizedLineCount>(): kotlin/Int // io.lightine.tessera.mrz.camera/CameraFrameEvent.recognizedLineCount.<get-recognizedLineCount>|<get-recognizedLineCount>(){}[0]
+    final val secondReadRows // io.lightine.tessera.mrz.camera/CameraFrameEvent.secondReadRows|{}secondReadRows[0]
+        final fun <get-secondReadRows>(): kotlin/Int // io.lightine.tessera.mrz.camera/CameraFrameEvent.secondReadRows.<get-secondReadRows>|<get-secondReadRows>(){}[0]
 
     final fun component1(): io.lightine.tessera.mrz.camera/CameraFrameOutcome // io.lightine.tessera.mrz.camera/CameraFrameEvent.component1|component1(){}[0]
     final fun component2(): kotlin/Int // io.lightine.tessera.mrz.camera/CameraFrameEvent.component2|component2(){}[0]
@@ -276,7 +279,9 @@ final class io.lightine.tessera.mrz.camera/CameraFrameEvent : io.lightine.tesser
     final fun component4(): kotlin/Float? // io.lightine.tessera.mrz.camera/CameraFrameEvent.component4|component4(){}[0]
     final fun component5(): io.lightine.tessera.types.vocabulary/MrzFormat? // io.lightine.tessera.mrz.camera/CameraFrameEvent.component5|component5(){}[0]
     final fun component6(): kotlin/Int // io.lightine.tessera.mrz.camera/CameraFrameEvent.component6|component6(){}[0]
+    final fun component7(): kotlin/Int // io.lightine.tessera.mrz.camera/CameraFrameEvent.component7|component7(){}[0]
     final fun copy(io.lightine.tessera.mrz.camera/CameraFrameOutcome = ..., kotlin/Int = ..., kotlin/Boolean = ..., kotlin/Float? = ..., io.lightine.tessera.types.vocabulary/MrzFormat? = ..., kotlin/Int = ...): io.lightine.tessera.mrz.camera/CameraFrameEvent // io.lightine.tessera.mrz.camera/CameraFrameEvent.copy|copy(io.lightine.tessera.mrz.camera.CameraFrameOutcome;kotlin.Int;kotlin.Boolean;kotlin.Float?;io.lightine.tessera.types.vocabulary.MrzFormat?;kotlin.Int){}[0]
+    final fun copy(io.lightine.tessera.mrz.camera/CameraFrameOutcome = ..., kotlin/Int = ..., kotlin/Boolean = ..., kotlin/Float? = ..., io.lightine.tessera.types.vocabulary/MrzFormat? = ..., kotlin/Int = ..., kotlin/Int): io.lightine.tessera.mrz.camera/CameraFrameEvent // io.lightine.tessera.mrz.camera/CameraFrameEvent.copy|copy(io.lightine.tessera.mrz.camera.CameraFrameOutcome;kotlin.Int;kotlin.Boolean;kotlin.Float?;io.lightine.tessera.types.vocabulary.MrzFormat?;kotlin.Int;kotlin.Int){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.mrz.camera/CameraFrameEvent.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // io.lightine.tessera.mrz.camera/CameraFrameEvent.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // io.lightine.tessera.mrz.camera/CameraFrameEvent.toString|toString(){}[0]
@@ -424,15 +429,20 @@ final class io.lightine.tessera.mrz.camera/MrzFillerPadding { // io.lightine.tes
 
 final class io.lightine.tessera.mrz.camera/RecognizedLine { // io.lightine.tessera.mrz.camera/RecognizedLine|null[0]
     constructor <init>(kotlin/String, kotlin/Float?) // io.lightine.tessera.mrz.camera/RecognizedLine.<init>|<init>(kotlin.String;kotlin.Float?){}[0]
+    constructor <init>(kotlin/String, kotlin/Float?, kotlin/Boolean) // io.lightine.tessera.mrz.camera/RecognizedLine.<init>|<init>(kotlin.String;kotlin.Float?;kotlin.Boolean){}[0]
 
     final val confidence // io.lightine.tessera.mrz.camera/RecognizedLine.confidence|{}confidence[0]
         final fun <get-confidence>(): kotlin/Float? // io.lightine.tessera.mrz.camera/RecognizedLine.confidence.<get-confidence>|<get-confidence>(){}[0]
+    final val secondRead // io.lightine.tessera.mrz.camera/RecognizedLine.secondRead|{}secondRead[0]
+        final fun <get-secondRead>(): kotlin/Boolean // io.lightine.tessera.mrz.camera/RecognizedLine.secondRead.<get-secondRead>|<get-secondRead>(){}[0]
     final val text // io.lightine.tessera.mrz.camera/RecognizedLine.text|{}text[0]
         final fun <get-text>(): kotlin/String // io.lightine.tessera.mrz.camera/RecognizedLine.text.<get-text>|<get-text>(){}[0]
 
     final fun component1(): kotlin/String // io.lightine.tessera.mrz.camera/RecognizedLine.component1|component1(){}[0]
     final fun component2(): kotlin/Float? // io.lightine.tessera.mrz.camera/RecognizedLine.component2|component2(){}[0]
+    final fun component3(): kotlin/Boolean // io.lightine.tessera.mrz.camera/RecognizedLine.component3|component3(){}[0]
     final fun copy(kotlin/String = ..., kotlin/Float? = ...): io.lightine.tessera.mrz.camera/RecognizedLine // io.lightine.tessera.mrz.camera/RecognizedLine.copy|copy(kotlin.String;kotlin.Float?){}[0]
+    final fun copy(kotlin/String = ..., kotlin/Float? = ..., kotlin/Boolean): io.lightine.tessera.mrz.camera/RecognizedLine // io.lightine.tessera.mrz.camera/RecognizedLine.copy|copy(kotlin.String;kotlin.Float?;kotlin.Boolean){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.mrz.camera/RecognizedLine.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // io.lightine.tessera.mrz.camera/RecognizedLine.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // io.lightine.tessera.mrz.camera/RecognizedLine.toString|toString(){}[0]
