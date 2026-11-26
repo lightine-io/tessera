@@ -164,9 +164,10 @@ fun leaveScreen(read: ChipReadHandle) {
 class ReadActivity : Activity() {
     private var read: ChipReadHandle? = null
 
-    // Called by the person's button. A key is for one read.
+    // Called by the person's button. A key is for one read: after an ending, pass a new key.
     fun onReadButton(key: ChipAccessKey) {
-        if (read == null) read = startRead(this, key)
+        val current = read
+        if (current == null || current.isEnded) read = startRead(this, key)
     }
 
     override fun onDestroy() {
