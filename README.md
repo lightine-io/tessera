@@ -35,13 +35,13 @@ Tessera's own code makes no network calls and logs nothing. On Android, the text
 
 ## Install
 
-Release 1.0.0. Minimums: minSdk 23, Java 17, iOS 15. Modules: [Choose your pieces](https://lightine.youtrack.cloud/articles/TES-A-140).
+Release 1.0.1. Minimums: minSdk 23, Java 17, iOS 15. Modules: [Choose your pieces](https://lightine.youtrack.cloud/articles/TES-A-140).
 
 `build.gradle.kts` (the JVM needs only the first two lines):
 
 ```kotlin
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:1.0.0"))
+    implementation(platform("io.lightine.tessera:tessera-bom:1.0.1"))
     implementation("io.lightine.tessera:tessera-mrz-core")
     implementation("io.lightine.tessera:tessera-mrz-camera")
     implementation("io.lightine.tessera:tessera-mrz-camera-ui")
@@ -56,7 +56,7 @@ dependencies {
         <dependency>
             <groupId>io.lightine.tessera</groupId>
             <artifactId>tessera-bom</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.1</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -73,7 +73,7 @@ dependencies {
 `Package.swift` (iOS):
 
 ```swift
-.package(url: "https://github.com/lightine-io/tessera-swift", exact: "1.0.0"),
+.package(url: "https://github.com/lightine-io/tessera-swift", exact: "1.0.1"),
 .product(name: "Tessera", package: "tessera-swift"),
 .product(name: "TesseraUI", package: "tessera-swift"),
 ```
@@ -96,7 +96,7 @@ android {
 }
 
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:1.0.0"))
+    implementation(platform("io.lightine.tessera:tessera-bom:1.0.1"))
     implementation("io.lightine.tessera:tessera-mrz-camera-ui")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.compose.material3:material3:1.4.0")
@@ -196,7 +196,7 @@ Android. `app/build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:1.0.0"))
+    implementation(platform("io.lightine.tessera:tessera-bom:1.0.1"))
     implementation("io.lightine.tessera:tessera-emrtd-nfc")
 }
 
