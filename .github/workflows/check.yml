@@ -304,6 +304,11 @@ jobs:
       - name: Compile iOS targets, run simulator tests, assemble the XCFramework, check iOS ABI and OpenSSL symbols
         run: ./gradlew iosSimulatorArm64Test compileKotlinIosArm64 :mrz-camera-ios:assembleTesseraCoreDebugXCFramework :mrz-camera-ios:checkTesseraFrameworkHeader :mrz-camera-ios:checkKotlinAbi :emrtd-nfc-ios:checkKotlinAbi :emrtd-core:checkKotlinAbi :mrz-camera-ios:checkOpenSslSymbolClash
 
+      # The framework supports iOS 15: it must not need, at link time, an Objective-C class that
+      # a newer iOS added (the 1.0.0 framework needed one from iOS 26.4, TES-366).
+      - name: No Objective-C class newer than iOS 15 is required by the framework
+        run: scripts/check-ios-framework-symbols.sh mrz-camera-ios/build/XCFrameworks/debug/TesseraCore.xcframework
+
   # Cheap repository checks, hermetic and fast. Required (branch protection), so every
   # rule here can fail a merge. The hook tests use throwaway temp folders and never touch
   # the checkout. Rule homes: .claude/rules/documentation.md, .claude/git-workflow.md,

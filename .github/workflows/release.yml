@@ -128,6 +128,10 @@ jobs:
       - name: Build the TesseraCore XCFramework
         run: ./gradlew :mrz-camera-ios:packTesseraCoreXCFramework
 
+      # The release framework must not need a class newer than iOS 15 at link time (TES-366).
+      - name: No Objective-C class newer than iOS 15 is required by the framework
+        run: scripts/check-ios-framework-symbols.sh mrz-camera-ios/build/XCFrameworks/release/TesseraCore.xcframework
+
       - name: Compute SPM checksum
         id: checksum
         run: |
@@ -353,6 +357,10 @@ jobs:
 
       - name: Build the TesseraCore XCFramework
         run: ./gradlew :mrz-camera-ios:packTesseraCoreXCFramework
+
+      # The same symbol check as the publish job, so the dry run before a tag catches it (TES-366).
+      - name: No Objective-C class newer than iOS 15 is required by the framework
+        run: scripts/check-ios-framework-symbols.sh mrz-camera-ios/build/XCFrameworks/release/TesseraCore.xcframework
 
       - name: Compute SPM checksum (sanity)
         run: |
