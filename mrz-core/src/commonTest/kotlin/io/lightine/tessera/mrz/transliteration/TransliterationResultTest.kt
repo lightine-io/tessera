@@ -7,9 +7,59 @@ import kotlin.test.assertNotEquals
 
 class TransliterationResultTest {
     @Test
-    fun success_equality_by_output() {
+    fun success_equality_includes_replacement_details() {
         assertEquals(TransliterationResult.Success("FOO"), TransliterationResult.Success("FOO"))
         assertNotEquals(TransliterationResult.Success("FOO"), TransliterationResult.Success("BAR"))
+        assertNotEquals(
+            TransliterationResult.Success("F<", listOf(UnmappedCharacter('Ω', 1))),
+            TransliterationResult.Success("F<"),
+        )
+    }
+
+    @Test
+    fun shipped_profiles_report_only_characters_without_a_mapping() {
+        val result = IcaoDefaultTransliterationProfile.toMrzAlphabet("ЬAΩƏ")
+        assertEquals(
+            listOf(
+                UnmappedCharacter('Ь', 0),
+                UnmappedCharacter('Ω', 2),
+                UnmappedCharacter('Ə', 3),
+            ),
+            (result as TransliterationResult.Success).replacedCharacters,
+        )
+
+        assertEquals(
+            emptyList(),
+            (IcaoDefaultTransliterationProfile.toMrzAlphabet("MÜLLER") as TransliterationResult.Success)
+                .replacedCharacters,
+        )
+        assertEquals(
+            emptyList(),
+            (IcaoDefaultTransliterationProfile.toMrzAlphabet("A B-C") as TransliterationResult.Success)
+                .replacedCharacters,
+        )
+    }
+
+    @Test
+    fun overridden_profiles_report_unmapped_characters_after_applying_overrides() {
+        val profile = IcaoDefaultTransliterationProfile.withOverrides("OVERRIDDEN", mapOf('Ω' to "O"))
+
+        val result = profile.toMrzAlphabet("AΩΔ")
+
+        assertEquals(
+            listOf(UnmappedCharacter('Δ', 2)),
+            (result as TransliterationResult.Success).replacedCharacters,
+        )
+    }
+
+    @Test
+    fun the_one_argument_success_constructor_and_copy_remain_available() {
+        val success = TransliterationResult.Success("FOO")
+
+        assertEquals(emptyList(), success.replacedCharacters)
+        assertEquals(TransliterationResult.Success("BAR"), success.copy(output = "BAR"))
+        val (output) = success
+        assertEquals("FOO", output)
     }
 
     @Test

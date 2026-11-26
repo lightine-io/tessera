@@ -20,8 +20,8 @@ import kotlin.math.ceil
  * **What the rescue does - selection, never invention.** A row that looks like MRZ text but is shorter than
  * an exact-width neighbour row is cropped again across the neighbour's full width and read again. Only a
  * re-read of exact width is kept (an exact multiple is split into its rows); a short re-read is dropped.
- * Nothing is padded, guessed, or corrected: every kept line is a string the recognizer actually produced,
- * and the parser's check digits remain the judge of it.
+ * Kept lines are marked as second reads. Nothing is padded, guessed, or corrected: every kept line is a
+ * string the recognizer actually produced, and the parser's check digits remain the judge of it.
  *
  * **What comes after.** When a name line is still short after the rescue, line detection in the shared
  * analyse-frame core may pad it with `<` at the end and report it on the result ([MrzFillerPadding], TES-264).
@@ -276,7 +276,7 @@ public object MrzRowRescue {
             if (centre < plan.rowBox.top || centre > plan.rowBox.bottom) continue
             val confidence = row.mapNotNull { reread[it].confidence }.minOrNull()
             for (text in rescuedLines(rowText(reread, row))) {
-                if (text.length == plan.width) kept.add(RecognizedLine(text = text, confidence = confidence))
+                if (text.length == plan.width) kept.add(RecognizedLine(text = text, confidence = confidence, secondRead = true))
             }
         }
         return kept

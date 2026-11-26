@@ -1,6 +1,7 @@
 package io.lightine.tessera.mrz.transliteration
 
 import io.lightine.tessera.mrz.parsing.isMrzAlphabetCharacter
+import io.lightine.tessera.types.vocabulary.UnmappedCharacter
 
 /**
  * The profile for the issuing state with ISO 3166-1 alpha-3 code `AZE`.
@@ -54,13 +55,27 @@ public object AzeTransliterationProfile : TransliterationProfile {
      * [IcaoDefaultTransliterationProfile].
      *
      * @param normalizedInput The text, already in Unicode NFC.
-     * @return [TransliterationResult.Success] with the mapped text.
+     * @return [TransliterationResult.Success] with the mapped text and any characters with no mapping.
      */
     public override fun toMrzAlphabet(normalizedInput: String): TransliterationResult {
         val output =
             mapToMrzAlphabet(normalizedInput) { char ->
                 mappings[char] ?: if (isMrzAlphabetCharacter(char)) char.toString() else FILLER.toString()
             }
-        return TransliterationResult.Success(output)
+        val replacedCharacters =
+            normalizedInput.mapIndexedNotNull { index, char ->
+                if (
+                    char !in mappings &&
+                    !isMrzAlphabetCharacter(char) &&
+                    !char.isWhitespace() &&
+                    char != '-' &&
+                    char != ','
+                ) {
+                    UnmappedCharacter(char, index)
+                } else {
+                    null
+                }
+            }
+        return TransliterationResult.Success(output, replacedCharacters)
     }
 }

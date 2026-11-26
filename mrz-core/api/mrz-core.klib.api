@@ -675,12 +675,17 @@ sealed class io.lightine.tessera.mrz.transliteration/TransliterationResult { // 
 
     final class Success : io.lightine.tessera.mrz.transliteration/TransliterationResult { // io.lightine.tessera.mrz.transliteration/TransliterationResult.Success|null[0]
         constructor <init>(kotlin/String) // io.lightine.tessera.mrz.transliteration/TransliterationResult.Success.<init>|<init>(kotlin.String){}[0]
+        constructor <init>(kotlin/String, kotlin.collections/List<io.lightine.tessera.types.vocabulary/UnmappedCharacter>) // io.lightine.tessera.mrz.transliteration/TransliterationResult.Success.<init>|<init>(kotlin.String;kotlin.collections.List<io.lightine.tessera.types.vocabulary.UnmappedCharacter>){}[0]
 
         final val output // io.lightine.tessera.mrz.transliteration/TransliterationResult.Success.output|{}output[0]
             final fun <get-output>(): kotlin/String // io.lightine.tessera.mrz.transliteration/TransliterationResult.Success.output.<get-output>|<get-output>(){}[0]
+        final val replacedCharacters // io.lightine.tessera.mrz.transliteration/TransliterationResult.Success.replacedCharacters|{}replacedCharacters[0]
+            final fun <get-replacedCharacters>(): kotlin.collections/List<io.lightine.tessera.types.vocabulary/UnmappedCharacter> // io.lightine.tessera.mrz.transliteration/TransliterationResult.Success.replacedCharacters.<get-replacedCharacters>|<get-replacedCharacters>(){}[0]
 
         final fun component1(): kotlin/String // io.lightine.tessera.mrz.transliteration/TransliterationResult.Success.component1|component1(){}[0]
+        final fun component2(): kotlin.collections/List<io.lightine.tessera.types.vocabulary/UnmappedCharacter> // io.lightine.tessera.mrz.transliteration/TransliterationResult.Success.component2|component2(){}[0]
         final fun copy(kotlin/String = ...): io.lightine.tessera.mrz.transliteration/TransliterationResult.Success // io.lightine.tessera.mrz.transliteration/TransliterationResult.Success.copy|copy(kotlin.String){}[0]
+        final fun copy(kotlin/String = ..., kotlin.collections/List<io.lightine.tessera.types.vocabulary/UnmappedCharacter>): io.lightine.tessera.mrz.transliteration/TransliterationResult.Success // io.lightine.tessera.mrz.transliteration/TransliterationResult.Success.copy|copy(kotlin.String;kotlin.collections.List<io.lightine.tessera.types.vocabulary.UnmappedCharacter>){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // io.lightine.tessera.mrz.transliteration/TransliterationResult.Success.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // io.lightine.tessera.mrz.transliteration/TransliterationResult.Success.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // io.lightine.tessera.mrz.transliteration/TransliterationResult.Success.toString|toString(){}[0]

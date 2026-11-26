@@ -13,16 +13,50 @@ import io.lightine.tessera.types.vocabulary.UnmappedCharacter
  */
 public sealed class TransliterationResult {
     /**
-     * The profile produced output for the whole input. A shipped profile writes `<` for a character
-     * it has no mapping for, but this result does not list those characters; compare the input with
-     * [output] to find them.
+     * The profile produced output for the whole input. [replacedCharacters] lists input characters
+     * that the profile replaced with `<` because it had no mapping for them. Separators that become
+     * `<` by rule are not listed.
      *
      * @property output The mapped text, in the MRZ alphabet.
      * @since 0.1.0
      */
-    public data class Success(
-        val output: String,
+    public class Success(
+        public val output: String,
+        /**
+         * Characters with no mapping in the normalized input.
+         *
+         * @since 1.1.0
+         */
+        public val replacedCharacters: List<UnmappedCharacter>,
     ) : TransliterationResult() {
+        /**
+         * Creates a success without replacement details.
+         *
+         * @param output The mapped text, in the MRZ alphabet.
+         * @since 0.1.0
+         */
+        public constructor(output: String) : this(output, emptyList())
+
+        /** The mapped text. */
+        public operator fun component1(): String = output
+
+        /** The characters replaced for having no mapping. */
+        public operator fun component2(): List<UnmappedCharacter> = replacedCharacters
+
+        /** Copies this result while preserving its replacement details. */
+        public fun copy(output: String = this.output): Success = Success(output, replacedCharacters)
+
+        /** Copies this result with explicit replacement details. */
+        public fun copy(
+            output: String = this.output,
+            replacedCharacters: List<UnmappedCharacter>,
+        ): Success = Success(output, replacedCharacters)
+
+        override fun equals(other: Any?): Boolean =
+            other is Success && output == other.output && replacedCharacters == other.replacedCharacters
+
+        override fun hashCode(): Int = 31 * output.hashCode() + replacedCharacters.hashCode()
+
         /** How long the mapped text is; never the text itself. */
         override fun toString(): String = "Success(outputLength=${output.length})"
     }

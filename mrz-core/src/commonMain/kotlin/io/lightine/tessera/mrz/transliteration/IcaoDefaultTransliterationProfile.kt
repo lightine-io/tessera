@@ -43,10 +43,9 @@ public object IcaoDefaultTransliterationProfile : TransliterationProfile {
      * `<`.
      *
      * @param normalizedInput The text, already in Unicode NFC.
-     * @return [TransliterationResult.Success] with the mapped text.
+     * @return [TransliterationResult.Success] with the mapped text and any characters with no mapping.
      */
-    public override fun toMrzAlphabet(normalizedInput: String): TransliterationResult =
-        TransliterationResult.Success(rules.convert(normalizedInput))
+    public override fun toMrzAlphabet(normalizedInput: String): TransliterationResult = rules.convert(normalizedInput)
 
     /**
      * Builds a profile that applies [overrides] first and follows this profile for every other

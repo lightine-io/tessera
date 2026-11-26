@@ -90,7 +90,7 @@ private fun uprightMatrix(
  * Pass it to [SavedImageMrzReader], which closes it when the reader is closed. A decode or read
  * failure is thrown, and [MrzFrameAnalyzer] reports it as [CameraError.OcrFailed].
  * When a short MRZ-like row is next to an exact-width row, it is read again; an exact-width second
- * read replaces the first-pass row.
+ * read replaces the first-pass row and marks it with [RecognizedLine.secondRead].
  *
  * @param acknowledgement the required saved-image acknowledgement. It has no default.
  * @param context any [Context]; the recognizer keeps its application context.

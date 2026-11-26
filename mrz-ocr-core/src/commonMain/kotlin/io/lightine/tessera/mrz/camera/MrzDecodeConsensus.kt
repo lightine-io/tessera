@@ -34,7 +34,7 @@ public class MrzDecodeConsensus
 
         // Latched once a reading reaches the threshold, so a late duplicate frame re-offered before the caller's
         // own guard trips still returns the settled reading rather than re-counting.
-        private var confirmed: MrzScanResult.Decoded? = null
+        private var confirmed: ConsensusVerdict.Confirmed? = null
 
         /**
          * Records one decoded frame and reports whether a reading has been agreed on.
@@ -48,7 +48,7 @@ public class MrzDecodeConsensus
          *   [ConsensusVerdict.Gathering].
          */
         public fun offer(decoded: MrzScanResult.Decoded): ConsensusVerdict {
-            confirmed?.let { return ConsensusVerdict.Confirmed(it) }
+            confirmed?.let { return it }
 
             val document =
                 decoded.parse.documentOrNull()
@@ -57,8 +57,9 @@ public class MrzDecodeConsensus
             val count = (tally[document] ?: 0) + 1
             tally[document] = count
             return if (count >= threshold) {
-                confirmed = decoded
-                ConsensusVerdict.Confirmed(decoded)
+                ConsensusVerdict.Confirmed(decoded, agreement = count, distinctReadings = tally.size).also {
+                    confirmed = it
+                }
             } else {
                 ConsensusVerdict.Gathering(agreement = count, threshold = threshold)
             }
@@ -113,9 +114,55 @@ public sealed interface ConsensusVerdict {
      * @property decoded the decoded result of the frame that reached the threshold.
      * @since 0.5.0
      */
-    public data class Confirmed(
+    public class Confirmed(
         public val decoded: MrzScanResult.Decoded,
+        /**
+         * How many frames agreed when this reading was confirmed.
+         *
+         * @since 1.1.0
+         */
+        public val agreement: Int,
+        /**
+         * How many different parseable readings were offered in this round.
+         *
+         * @since 1.1.0
+         */
+        public val distinctReadings: Int,
     ) : ConsensusVerdict {
+        /**
+         * Creates a confirmed result for a single reading.
+         *
+         * This compatibility constructor represents one agreeing frame and one distinct reading.
+         *
+         * @param decoded the decoded result.
+         * @since 0.5.0
+         */
+        public constructor(decoded: MrzScanResult.Decoded) : this(decoded, agreement = 1, distinctReadings = 1)
+
+        public operator fun component1(): MrzScanResult.Decoded = decoded
+
+        public operator fun component2(): Int = agreement
+
+        public operator fun component3(): Int = distinctReadings
+
+        /** Copies this result while preserving its agreement facts. */
+        public fun copy(decoded: MrzScanResult.Decoded = this.decoded): Confirmed = Confirmed(decoded, agreement, distinctReadings)
+
+        /** Copies this result with explicit agreement facts. */
+        public fun copy(
+            decoded: MrzScanResult.Decoded = this.decoded,
+            agreement: Int,
+            distinctReadings: Int,
+        ): Confirmed = Confirmed(decoded, agreement, distinctReadings)
+
+        override fun equals(other: Any?): Boolean =
+            other is Confirmed &&
+                decoded == other.decoded &&
+                agreement == other.agreement &&
+                distinctReadings == other.distinctReadings
+
+        override fun hashCode(): Int = 31 * (31 * decoded.hashCode() + agreement) + distinctReadings
+
         /** That a reading was agreed on; never a document value. */
         override fun toString(): String = "Confirmed"
     }

@@ -1,6 +1,7 @@
 package io.lightine.tessera.mrz.transliteration
 
 import io.lightine.tessera.mrz.parsing.isMrzAlphabetCharacter
+import io.lightine.tessera.types.vocabulary.UnmappedCharacter
 
 /**
  * The rules of ICAO Doc 9303 Part 3 Section 6 that the ICAO profiles share: the Latin table (6.A),
@@ -19,19 +20,33 @@ internal class IcaoNameRules(
     private val cyrillicLanguage: CyrillicLanguage? = null,
     private val overrides: Map<Char, String> = emptyMap(),
 ) {
-    fun convert(text: String): String = mapToMrzAlphabetAt(text) { index -> mapAt(text, index) }
+    fun convert(text: String): TransliterationResult.Success {
+        val replacedCharacters = mutableListOf<UnmappedCharacter>()
+        val output =
+            mapToMrzAlphabetAt(text) { index ->
+                val mapping = mapAt(text, index)
+                if (mapping.unmapped) replacedCharacters += UnmappedCharacter(text[index], index)
+                mapping.output
+            }
+        return TransliterationResult.Success(output, replacedCharacters)
+    }
+
+    private data class Mapping(
+        val output: String,
+        val unmapped: Boolean = false,
+    )
 
     private fun mapAt(
         text: String,
         index: Int,
-    ): String {
+    ): Mapping {
         val char = text[index]
-        overrides[char]?.let { return it }
-        if (isMrzAlphabetCharacter(char)) return char.toString()
-        LATIN_MAPPINGS[char]?.let { return it }
-        mapCyrillic(char, cyrillicLanguage, startsNamePart(text, index))?.let { return it }
-        mapArabic(text, index) { mapAt(text, it) }?.let { return it }
-        return FILLER
+        overrides[char]?.let { return Mapping(it) }
+        if (isMrzAlphabetCharacter(char)) return Mapping(char.toString())
+        LATIN_MAPPINGS[char]?.let { return Mapping(it) }
+        mapCyrillic(char, cyrillicLanguage, startsNamePart(text, index))?.let { return Mapping(it) }
+        mapArabic(text, index) { mapAt(text, it).output }?.let { return Mapping(it) }
+        return Mapping(FILLER, unmapped = !char.isWhitespace() && char != '-')
     }
 
     private companion object {

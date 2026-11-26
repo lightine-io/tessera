@@ -11,6 +11,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **Name conversion tells which characters it could not map** (`mrz-core`). `TransliterationResult.Success` has a new `replacedCharacters`: the characters of the normalized input that the profile wrote as `<` because it had no mapping for them, each with its position. A space or a hyphen that becomes `<` by rule is not listed. Every shipped profile fills it; a profile of your own that still uses the one-argument constructor reports an empty list. The SDK already did this replacement in 1.0; it now reports it.
+- **The frame agreement reports its vote** (`mrz-ocr-core`). `ConsensusVerdict.Confirmed` has `agreement` (how many frames agreed when the reading was confirmed) and `distinctReadings` (how many different readings were offered in the round, the confirmed one included). The other readings themselves are not exposed. The counts stay as they were at confirmation and start again after `reset()`.
+- **A recognized MRZ row says when it came from a second read** (`mrz-ocr-core`, `mrz-camera`, `mrz-camera-ios`). When OCR returns an MRZ row shorter than the line width, the SDK has the engine read that row's region again and uses an exact-width second read in its place; it did so in 1.0 without a mark. `RecognizedLine.secondRead` is now `true` for such a row, and the per-frame telemetry event `CameraFrameEvent` has `secondReadRows`, the number of such rows in the frame. Every character is still an engine read, never edited by the SDK.
+
 ### Changed
 
 - **On Android, waiting for a document ends after 2 minutes by default** (`emrtd-nfc`). `NfcReadSettings.waitForDocumentMillis` was "no limit" in 1.0.x, so a read that never found a document never ended and blocked the next read. That includes a read whose reader mode the app switched off behind the SDK's back, which the SDK cannot see. The read now ends by itself as `Failed` with `NfcTimeout` and the limit `WAIT_FOR_DOCUMENT`. Pass `NfcReadSettings.NO_LIMIT` to wait without a limit as before; `cancel()` on the handle stays the way to stop a read.

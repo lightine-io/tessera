@@ -25,7 +25,8 @@ import kotlin.coroutines.resumeWithException
  * recognizer to release the ML Kit client.
  *
  * A short MRZ-like row next to an exact-width row is read again only after [restrictToMrzBand] is
- * called; an exact-width second read replaces the first-pass row.
+ * called; an exact-width second read replaces the first-pass row and marks it with
+ * [RecognizedLine.secondRead].
  *
  * @param recognizer the ML Kit client. The default is the bundled Latin recognizer.
  * @since 0.2.0

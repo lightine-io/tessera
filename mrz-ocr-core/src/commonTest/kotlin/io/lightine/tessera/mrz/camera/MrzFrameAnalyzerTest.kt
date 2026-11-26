@@ -352,7 +352,10 @@ class MrzFrameAnalyzerTest {
         runTest {
             val sink = RecordingSink()
 
-            analyzer(recognizerReturning(textOf("UTOPIA", td3Line1, td3Line2)), telemetry = sink).analyse(FakeFrame())
+            val decoded =
+                assertIs<MrzScanResult.Decoded>(
+                    analyzer(recognizerReturning(textOf("UTOPIA", td3Line1, td3Line2)), telemetry = sink).analyse(FakeFrame()),
+                )
 
             assertEquals(1, sink.events.size)
             val event = assertIs<CameraFrameEvent>(sink.events.single())
@@ -362,6 +365,8 @@ class MrzFrameAnalyzerTest {
             assertTrue(event.mrzRegionFound)
             assertEquals(3, event.recognizedLineCount)
             assertEquals(0, event.fillerPaddingAdded, "a full-width read adds no filler")
+            assertTrue(decoded.recognizedText.lines.none { it.secondRead })
+            assertEquals(0, event.secondReadRows)
             // No document data must leak into telemetry (PII guard).
             val rendered = event.toString()
             assertFalse(rendered.contains("SPECIMEN"), "telemetry leaked the name field")
@@ -388,6 +393,36 @@ class MrzFrameAnalyzerTest {
             assertEquals(padding.addedCount, event.fillerPaddingAdded)
             assertEquals(44 - short.length, event.fillerPaddingAdded)
         }
+
+    @Test
+    fun telemetry_counts_rows_that_came_from_a_second_read() =
+        runTest {
+            val sink = RecordingSink()
+            val recognized =
+                RecognizedText(
+                    listOf(
+                        RecognizedLine(td3Line1, null, secondRead = true),
+                        RecognizedLine(td3Line2, null),
+                    ),
+                )
+
+            val decoded =
+                assertIs<MrzScanResult.Decoded>(
+                    analyzer(recognizerReturning(recognized), telemetry = sink).analyse(FakeFrame()),
+                )
+
+            assertTrue(decoded.recognizedText.lines[0].secondRead)
+            assertFalse(decoded.recognizedText.lines[1].secondRead)
+            val event = assertIs<CameraFrameEvent>(sink.events.single())
+            assertEquals(1, event.secondReadRows)
+        }
+
+    @Test
+    fun the_old_camera_frame_event_constructor_defaults_to_no_second_read_rows() {
+        val event = CameraFrameEvent(CameraFrameOutcome.DECODED, 2, true, null, MrzFormat.TD3, 0)
+
+        assertEquals(0, event.secondReadRows)
+    }
 
     @Test
     fun defaults_telemetry_to_the_registered_sink_when_none_is_passed() =

@@ -1,5 +1,6 @@
 package io.lightine.tessera.mrz.transliteration
 
+import io.lightine.tessera.types.vocabulary.UnmappedCharacter
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -94,11 +95,11 @@ class IcaoDefaultTransliterationProfileTest {
         // Country-specific profiles (e.g., AzeTransliterationProfile) apply
         // their own override per ADR-009.
         assertEquals(
-            TransliterationResult.Success("<"),
+            TransliterationResult.Success("<", listOf(UnmappedCharacter('Ə', 0))),
             IcaoDefaultTransliterationProfile.toMrzAlphabet("Ə"),
         )
         assertEquals(
-            TransliterationResult.Success("<"),
+            TransliterationResult.Success("<", listOf(UnmappedCharacter('ə', 0))),
             IcaoDefaultTransliterationProfile.toMrzAlphabet("ə"),
         )
     }
@@ -187,7 +188,7 @@ class IcaoDefaultTransliterationProfileTest {
     fun unmapped_character_falls_back_to_filler() {
         // Greek letter: Doc 9303 Part 3 Section 6 has no Greek table.
         val result = IcaoDefaultTransliterationProfile.toMrzAlphabet("Ω")
-        assertEquals(TransliterationResult.Success("<"), result)
+        assertEquals(TransliterationResult.Success("<", listOf(UnmappedCharacter('Ω', 0))), result)
     }
 
     @Test

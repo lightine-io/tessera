@@ -6,12 +6,13 @@ import io.lightine.tessera.types.vocabulary.MrzFormat
 /**
  * Telemetry emitted once per analysed frame, with diagnostics and no document data.
  *
- * It holds counts, booleans, a coarse confidence, the detected format, an outcome, and how many
- * fillers the reader added to a short name line. It never holds recognized text or a parsed field.
+ * It holds counts, booleans, a coarse confidence, the detected format, an outcome, how many fillers
+ * the reader added to a short name line, and how many rows came from a second read. It never holds
+ * recognized text or a parsed field.
  *
  * @since 0.2.0
  */
-public data class CameraFrameEvent(
+public class CameraFrameEvent private constructor(
     /** What analysing the frame produced. */
     public val outcome: CameraFrameOutcome,
     /** How many text lines OCR recognized in the frame. */
@@ -30,7 +31,121 @@ public data class CameraFrameEvent(
      * @since 1.0.0
      */
     public val fillerPaddingAdded: Int = 0,
+    /**
+     * How many rows of this frame came from a second read; `0` when none did.
+     *
+     * @since 1.1.0
+     */
+    public val secondReadRows: Int = 0,
+    @Suppress("UNUSED_PARAMETER") marker: Unit,
 ) : TelemetryEvent {
+    /** Creates an event without second-read rows. */
+    public constructor(
+        outcome: CameraFrameOutcome,
+        recognizedLineCount: Int,
+        mrzRegionFound: Boolean,
+        ocrConfidence: Float?,
+        detectedFormat: MrzFormat?,
+        fillerPaddingAdded: Int = 0,
+    ) : this(outcome, recognizedLineCount, mrzRegionFound, ocrConfidence, detectedFormat, fillerPaddingAdded, 0, Unit)
+
+    /** Creates an event with an explicit second-read row count. */
+    public constructor(
+        outcome: CameraFrameOutcome,
+        recognizedLineCount: Int,
+        mrzRegionFound: Boolean,
+        ocrConfidence: Float?,
+        detectedFormat: MrzFormat?,
+        fillerPaddingAdded: Int = 0,
+        secondReadRows: Int,
+    ) : this(
+        outcome,
+        recognizedLineCount,
+        mrzRegionFound,
+        ocrConfidence,
+        detectedFormat,
+        fillerPaddingAdded,
+        secondReadRows,
+        Unit,
+    )
+
+    public operator fun component1(): CameraFrameOutcome = outcome
+
+    public operator fun component2(): Int = recognizedLineCount
+
+    public operator fun component3(): Boolean = mrzRegionFound
+
+    public operator fun component4(): Float? = ocrConfidence
+
+    public operator fun component5(): MrzFormat? = detectedFormat
+
+    public operator fun component6(): Int = fillerPaddingAdded
+
+    public operator fun component7(): Int = secondReadRows
+
+    /** Copies this event while preserving its second-read row count. */
+    public fun copy(
+        outcome: CameraFrameOutcome = this.outcome,
+        recognizedLineCount: Int = this.recognizedLineCount,
+        mrzRegionFound: Boolean = this.mrzRegionFound,
+        ocrConfidence: Float? = this.ocrConfidence,
+        detectedFormat: MrzFormat? = this.detectedFormat,
+        fillerPaddingAdded: Int = this.fillerPaddingAdded,
+    ): CameraFrameEvent =
+        CameraFrameEvent(
+            outcome,
+            recognizedLineCount,
+            mrzRegionFound,
+            ocrConfidence,
+            detectedFormat,
+            fillerPaddingAdded,
+            secondReadRows,
+        )
+
+    /** Copies this event with an explicit second-read row count. */
+    public fun copy(
+        outcome: CameraFrameOutcome = this.outcome,
+        recognizedLineCount: Int = this.recognizedLineCount,
+        mrzRegionFound: Boolean = this.mrzRegionFound,
+        ocrConfidence: Float? = this.ocrConfidence,
+        detectedFormat: MrzFormat? = this.detectedFormat,
+        fillerPaddingAdded: Int = this.fillerPaddingAdded,
+        secondReadRows: Int,
+    ): CameraFrameEvent =
+        CameraFrameEvent(
+            outcome,
+            recognizedLineCount,
+            mrzRegionFound,
+            ocrConfidence,
+            detectedFormat,
+            fillerPaddingAdded,
+            secondReadRows,
+        )
+
+    override fun equals(other: Any?): Boolean =
+        other is CameraFrameEvent &&
+            outcome == other.outcome &&
+            recognizedLineCount == other.recognizedLineCount &&
+            mrzRegionFound == other.mrzRegionFound &&
+            ocrConfidence == other.ocrConfidence &&
+            detectedFormat == other.detectedFormat &&
+            fillerPaddingAdded == other.fillerPaddingAdded &&
+            secondReadRows == other.secondReadRows
+
+    override fun hashCode(): Int {
+        var result = outcome.hashCode()
+        result = 31 * result + recognizedLineCount
+        result = 31 * result + mrzRegionFound.hashCode()
+        result = 31 * result + (ocrConfidence?.hashCode() ?: 0)
+        result = 31 * result + (detectedFormat?.hashCode() ?: 0)
+        result = 31 * result + fillerPaddingAdded
+        result = 31 * result + secondReadRows
+        return result
+    }
+
+    override fun toString(): String =
+        "CameraFrameEvent(outcome=$outcome, recognizedLineCount=$recognizedLineCount, mrzRegionFound=$mrzRegionFound, ocrConfidence=$ocrConfidence, detectedFormat=$detectedFormat, fillerPaddingAdded=$fillerPaddingAdded, secondReadRows=$secondReadRows)"
+
     /** Event name: `mrz.camera.frame`. */
     override val name: String get() = EVENT_NAME
 

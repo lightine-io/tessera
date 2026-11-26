@@ -110,6 +110,5 @@ internal class IcaoCyrillicLanguageProfile(
         overrides: Map<Char, String>,
     ): TransliterationProfile = createOverriddenTransliterationProfile(identifier, overrides, language)
 
-    override fun toMrzAlphabet(normalizedInput: String): TransliterationResult =
-        TransliterationResult.Success(rules.convert(normalizedInput))
+    override fun toMrzAlphabet(normalizedInput: String): TransliterationResult = rules.convert(normalizedInput)
 }
