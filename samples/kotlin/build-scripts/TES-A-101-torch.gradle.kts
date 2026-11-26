@@ -3,7 +3,7 @@
 
 // region TES-A-101 block 1
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:1.0.0"))
+    implementation(platform("io.lightine.tessera:tessera-bom:1.0.1"))
     implementation("io.lightine.tessera:tessera-mrz-camera")
     implementation("androidx.compose.material3:material3:1.4.0")
 }

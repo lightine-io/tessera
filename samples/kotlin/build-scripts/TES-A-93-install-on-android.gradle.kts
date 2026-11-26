@@ -12,7 +12,7 @@ android {
 
 // region TES-A-93 block 2
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:1.0.0"))
+    implementation(platform("io.lightine.tessera:tessera-bom:1.0.1"))
     implementation("io.lightine.tessera:tessera-mrz-camera")
 }
 // endregion
@@ -31,7 +31,7 @@ android {
 
 // region TES-A-93 block 5
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:1.0.0"))
+    implementation(platform("io.lightine.tessera:tessera-bom:1.0.1"))
     implementation("io.lightine.tessera:tessera-mrz-camera-ui")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.compose.material3:material3:1.4.0")
@@ -40,7 +40,7 @@ dependencies {
 
 // region TES-A-93 block 6
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:1.0.0"))
+    implementation(platform("io.lightine.tessera:tessera-bom:1.0.1"))
     implementation("io.lightine.tessera:tessera-mrz-camera")
     implementation("io.lightine.tessera:tessera-mrz-camera-ui")
     implementation("androidx.activity:activity-compose:1.13.0")
