@@ -75,6 +75,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
@@ -111,6 +112,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlin.math.ceil
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -191,6 +193,19 @@ internal val GuidanceBottomReserved: Dp = 64.dp
 
 /** The height of the MRZ guide window in [MrzGuideOverlay]: the dashed box the person lines the MRZ up in. */
 internal val GuideBandHeight: Dp = 96.dp
+
+/**
+ * The share of the analysis crop's height the live recognizer reads: the centred band of
+ * `MlKitMrzTextRecognizer.restrictToMrzBand` (its `MRZ_BAND_HEIGHT_FRACTION`, internal to mrz-camera, so copied
+ * here). [OcrBandCoversGuideTest] writes the same value out and fails if this copy drifts.
+ */
+internal const val OCR_BAND_HEIGHT_FRACTION: Float = 0.18f
+
+/**
+ * The shortest analysis crop, in preview units, whose OCR band ([OCR_BAND_HEIGHT_FRACTION]) is as tall as the guide
+ * box ([GuideBandHeight]): about 533dp. See [rememberPreviewViewport] (TES-342).
+ */
+internal val MinAnalysisCropHeight: Dp = GuideBandHeight / OCR_BAND_HEIGHT_FRACTION
 
 /** The gap between the torch toggle ([TorchButton]) and the top and end edges of the live preview. */
 internal val TorchEdgePadding: Dp = 16.dp
@@ -1527,18 +1542,28 @@ private fun CameraPreview(
  * size: the crop CameraX derives from a viewport depends only on those two, so a resize that keeps the aspect
  * ratio returns the same instance and does not restart the camera.
  *
- * `internal` so the host test can check, without a camera, that a resize yields a new viewport (TES-119).
+ * The viewport is the area's width by at least [MinAnalysisCropHeight] (TES-342). The live recognizer reads the
+ * centred [OCR_BAND_HEIGHT_FRACTION] of the analysis crop, and the guide box is a fixed [GuideBandHeight]. In an
+ * area shorter than [MinAnalysisCropHeight] (a phone in landscape, split screen) a crop of the area itself made
+ * the band shorter than the box, and it cut through the MRZ lines the box showed. A taller viewport keeps the
+ * band at least the box's height. What the person sees does not change: the viewfinder fills the area and
+ * centres the crop (CameraXViewfinder's defaults, ContentScale.Crop and Alignment.Center), so it shows the
+ * crop's middle at the same scale, and the box is the band.
+ *
+ * `internal` so the host test can check, without a camera, that a resize yields a new viewport (TES-119) and
+ * that the band covers the box (TES-342).
  */
 @Composable
 internal fun rememberPreviewViewport(
     constraints: Constraints,
     displayRotation: Int,
 ): ViewPort? {
+    val minCropHeight = with(LocalDensity.current) { MinAnalysisCropHeight.toPx() }
     val aspectRatio =
         if (constraints.hasBoundedWidth && constraints.hasBoundedHeight &&
             constraints.maxWidth > 0 && constraints.maxHeight > 0
         ) {
-            Rational(constraints.maxWidth, constraints.maxHeight)
+            Rational(constraints.maxWidth, maxOf(constraints.maxHeight, ceil(minCropHeight).toInt()))
         } else {
             null
         }
