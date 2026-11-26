@@ -33,15 +33,16 @@ class MainActivity : ComponentActivity() {
         scope.launch {
             scanner.results.collect { result ->
                 if (result !is MrzScanResult.Decoded) return@collect
-                val document = when (val parse = result.parse) {
+                // This accepts the first decoded frame. The how-to on accepting a read after N frames shows agreement.
+                val parse = result.parse
+                val document = when (parse) {
                     is ParseResult.Success -> parse.document
                     is ParseResult.PartialSuccess -> parse.document
                     is ParseResult.Failure -> return@collect
                 }
-                val fields = document.commonFields
-                Log.i(TAG, "Name: ${fields.primaryIdentifier}, ${fields.secondaryIdentifier}")
-                Log.i(TAG, "Document number: ${fields.documentNumber}")
+                // Show the name and document number on your own screen; never write them to the log.
                 Log.i(TAG, "Format: ${document.format}")
+                Log.i(TAG, "Check digits passed: ${parse is ParseResult.Success}")
                 scanner.stop()
             }
         }
