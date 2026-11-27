@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-27
+
+This release fixes the iPhone framework of 1.0.0 and adds facts and settings. Version 1.0.1 was never published.
+
 ### Added
 
 - **Name conversion tells which characters it could not map** (`mrz-core`). `TransliterationResult.Success` has a new `replacedCharacters`: the characters of the normalized input that the profile wrote as `<` because it had no mapping for them, each with its position. A space or a hyphen that becomes `<` by rule is not listed. Every shipped profile fills it; a profile of your own that still uses the one-argument constructor reports an empty list. The SDK already did this replacement in 1.0; it now reports it.
@@ -20,8 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 
 - **On Android, waiting for a document ends after 2 minutes by default** (`emrtd-nfc`). `NfcReadSettings.waitForDocumentMillis` was "no limit" in 1.0.x, so a read that never found a document never ended and blocked the next read. That includes a read whose reader mode the app switched off behind the SDK's back, which the SDK cannot see. The read now ends by itself as `Failed` with `NfcTimeout` and the limit `WAIT_FOR_DOCUMENT`. Pass `NfcReadSettings.NO_LIMIT` to wait without a limit as before; `cancel()` on the handle stays the way to stop a read.
-
-## [1.0.1] - 2026-11-26
+- **A chip read that keeps getting further is no longer ended by the restart limit** (`emrtd-core`, `emrtd-nfc`, `emrtd-nfc-ios`). Under the resume policy a lost link uses a restart only when no new bytes of the data groups were read since the previous loss, so `LinkLost.restartsLeft` stays the same after a loss that made progress, and `ChipReadUpdate.maxAttempts` grows with the attempt number. In 1.0 a read in a shaky position ended as Partial after two restarts although each one had read more. On Android the new `NfcReadSettings.totalTimeLimitMillis` (2 minutes by default, counted from the first link to the document, not from the start of waiting) bounds such a read; after it, a lost link ends the read. On iPhone the system's session limit does that. Code that was compiled against 1.0.0 and builds `NfcReadSettings` with default arguments must be recompiled.
 
 ### Fixed
 
@@ -747,8 +750,8 @@ These are documented commitments that are explicitly *not* in this `[Unreleased]
 - iOS targets, Android targets (waiting on Xcode install / 0.2.0 platform I/O work)
 - Platform I/O modules (`mrz-camera-*`, `emrtd-nfc-*`, `mrz-camera-ui-*`)
 
-[Unreleased]: https://github.com/lightine-io/tessera/compare/v1.0.1...HEAD
-[1.0.1]: https://github.com/lightine-io/tessera/releases/tag/v1.0.1
+[Unreleased]: https://github.com/lightine-io/tessera/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/lightine-io/tessera/releases/tag/v1.1.0
 [1.0.0]: https://github.com/lightine-io/tessera/releases/tag/v1.0.0
 [0.7.0]: https://github.com/lightine-io/tessera/releases/tag/v0.7.0
 [0.6.0]: https://github.com/lightine-io/tessera/releases/tag/v0.6.0

@@ -3,7 +3,7 @@
 
 // region TES-A-29 block 1
 dependencies {
-    implementation(platform("io.lightine.tessera:tessera-bom:1.0.1"))
+    implementation(platform("io.lightine.tessera:tessera-bom:1.1.0"))
     implementation("io.lightine.tessera:tessera-mrz-ocr-core")
 }
 // endregion
