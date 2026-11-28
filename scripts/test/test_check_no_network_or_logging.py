@@ -161,5 +161,47 @@ class Swift(unittest.TestCase):
             self.assertEqual(nl.main(["--root", build({}), "--swift", "/nonexistent-dir-x"]), 2)
 
 
+class LoggingHelperException(unittest.TestCase):
+    LOG = "package p\nimport android.util.Log\nfun f() { Log.d(T, m) }\n"
+
+    def test_log_call_in_the_logging_module_passes(self):
+        code, out = run({"logging/src/androidMain/kotlin/p/L.kt": self.LOG})
+        self.assertEqual(code, 0, out)
+
+    def test_same_log_call_in_another_module_fails(self):
+        code, out = run({"other/src/androidMain/kotlin/p/L.kt": self.LOG})
+        self.assertEqual(code, 1)
+        self.assertIn("logging (android.util.Log)", out)
+
+    def test_log_call_in_a_nested_folder_named_logging_fails(self):
+        code, _ = run({"mod/logging/src/androidMain/kotlin/p/L.kt": self.LOG})
+        self.assertEqual(code, 1)
+
+    def test_network_call_in_the_logging_module_still_fails(self):
+        code, out = run({"logging/src/commonMain/kotlin/p/N.kt": "package p\nimport okhttp3.OkHttpClient\n"})
+        self.assertEqual(code, 1)
+        self.assertIn("okhttp3", out)
+
+    def _swift(self, folder, body):
+        root = build({"Sources/%s/A.swift" % folder: "import Foundation\n" + body + "\n"})
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = nl.main(["--root", build({}), "--swift", root])
+        return code, out.getvalue()
+
+    def test_swift_log_call_in_the_logging_folder_passes(self):
+        code, out = self._swift("TesseraLogging", "os_log(\"x\")\nprint(x)")
+        self.assertEqual(code, 0, out)
+
+    def test_swift_log_call_in_another_folder_fails(self):
+        code, _ = self._swift("Tessera", "os_log(\"x\")")
+        self.assertEqual(code, 1)
+
+    def test_swift_network_call_in_the_logging_folder_still_fails(self):
+        code, out = self._swift("TesseraLogging", "let s = URLSession.shared")
+        self.assertEqual(code, 1)
+        self.assertIn("URLSession", out)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)
