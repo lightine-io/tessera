@@ -39,11 +39,12 @@ class LoggingTelemetrySinkTest {
 
     @Test
     fun printsOneLinePerEvent() {
-        val out = capture {
-            val sink = LoggingTelemetrySink()
-            sink.record(FakeEvent())
-            sink.record(FakeEvent())
-        }
+        val out =
+            capture {
+                val sink = LoggingTelemetrySink()
+                sink.record(FakeEvent())
+                sink.record(FakeEvent())
+            }
         assertEquals(2, out.lines().count { it.isNotEmpty() })
     }
 }

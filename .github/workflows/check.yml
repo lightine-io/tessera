@@ -148,8 +148,8 @@ jobs:
   # explicit escape hatch in the tessera.publishing convention plugin, build-logic/) skips PGP
   # signing, which keyless runners cannot do. macOS runner because K/N publication metadata needs the Apple toolchain.
   # Rule of thumb this enforces: a module that declares a target must produce an artifact for
-  # it; an empty placeholder (logging) declares JVM+Android only - an empty jar/aar is valid, a
-  # missing klib is not.
+  # it; a module with no code for a target does not declare it (logging declares JVM+Android only,
+  # by decision) - a missing klib for a declared target is the failure.
   publish-smoke:
     name: publish · smoke (empty-module guard)
     runs-on: macos-26
