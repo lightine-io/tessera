@@ -62,7 +62,7 @@ Plain top, then `---`, then technical details. The top must make sense to someon
 **Approach:** only if it is already chosen
 ```
 
-A raw item in New may be one line with no template. Triage (Options) is when it gets the template.
+A raw item in New may be one line with no template. Triage is when it gets the template and its fields: a card does not enter Options without them ([how we work](how-we-work.md), "Triage").
 
 **Decision**
 ```
@@ -90,7 +90,7 @@ An epic holds about 3 to 10 children. Check each child against the goal now and 
 
 ## Outcome block (Done issues)
 
-Add at the very top of the description, then a blank line:
+Write it when the pull request opens, or before the move for a card that reaches Done with no pull request. It says what was delivered, which may be less than "Done when" asked. Add at the very top of the description, then a blank line:
 
 ```
 > **Outcome**

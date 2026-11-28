@@ -118,7 +118,7 @@ interface is not its documentation.
 | Work items; how we work (board, limits, classes, roles, releases, reviews) | YouTrack board `TES` · [`.claude/how-we-work.md`](.claude/how-we-work.md). `youtrack-sync.yml` moves cards when a PR opens or merges and after a release |
 | Where content goes; what a feature PR carries | [`.claude/rules/documentation.md`](.claude/rules/documentation.md) (public docs live in the public KB, not the repo; the repo-root `llms.txt` links them) · [PR template](.github/pull_request_template.md) |
 | Engineering rules by area (load on touch) | [`.claude/rules/`](.claude/rules/): API design, types module, platform work, documentation |
-| Writing issues; checking the board | [`.claude/issue-style.md`](.claude/issue-style.md) · [`.claude/skills/board-check/SKILL.md`](.claude/skills/board-check/SKILL.md) |
+| Writing issues; triage; checking the board | [`.claude/issue-style.md`](.claude/issue-style.md) · [`.claude/skills/triage/SKILL.md`](.claude/skills/triage/SKILL.md) · [`.claude/skills/board-check/SKILL.md`](.claude/skills/board-check/SKILL.md) |
 | Git/PR mechanics, merge strategy, required checks | [`.claude/git-workflow.md`](.claude/git-workflow.md) |
 | Release ritual (tech-stack review, review agents, doc checks, pre-tag gates) | [`.claude/skills/release-gate/SKILL.md`](.claude/skills/release-gate/SKILL.md) |
 | Dependency cadence (Apr 1 / Oct 1; CI opens the issue) | [`.claude/skills/dependency-upgrade-cadence/SKILL.md`](.claude/skills/dependency-upgrade-cadence/SKILL.md), including the CLAUDE.md health review |
