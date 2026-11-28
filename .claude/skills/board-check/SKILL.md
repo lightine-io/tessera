@@ -24,6 +24,8 @@ Never trust a write's success reply: read the issue back. There is no local toke
    - Goal on product cards (a card with a Service; process work has neither):
      `project: TES Stage: Options, Next has: Service has: -Goal`
    - Due Date: `project: TES {Class of service}: {Fixed Date} has: -{Due Date}`
+   One `has:` clause per query: clauses joined with `or` have returned nothing while cards
+   were missing fields. Read the field values in the result, not only the hit list.
    A query that returns nothing is suspect: run one positive control, such as
    `project: TES Area: UI`, and confirm it returns issues.
 2. **Outcome blocks.** `project: TES Stage: Done updated: {minus 14d} .. *`. For each, read it

@@ -83,6 +83,9 @@ jobs:
           if [ "$code" = "200" ]; then
             echo "Moved $issue to $stage."
           else
+            # A refusal by the board's own rules (the triage gate) lands here too: say so
+            # where a person will see it, since the job stays green.
+            echo "::warning title=Board not updated::$issue did not move to $stage: YouTrack returned $code. If the card lacks required content (fields, the Outcome block), add it and move the card by hand."
             echo "YouTrack returned $code; board not updated (soft-fail by design):"
             cat /tmp/yt-resp.json 2>/dev/null || true
           fi

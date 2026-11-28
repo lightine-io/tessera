@@ -325,6 +325,7 @@ jobs:
           python3 -I scripts/test/test_check_docs.py
           python3 -I scripts/test/test_check_no_network_or_logging.py
           bash scripts/test/session-banner.test.sh
+          bash scripts/test/board-check-filters.test.sh
           bash scripts/test/stop-handoff-check.test.sh
           bash scripts/test/private-content-scan.test.sh
           bash scripts/test/outward-content-scan.test.sh

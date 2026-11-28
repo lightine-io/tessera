@@ -22,10 +22,10 @@ YouTrack project TES, board TES. GitHub shows the code and the pull requests; CI
 
 | Column | Holds | WIP limit | Leave when | Goes to |
 |---|---|---|---|---|
-| New | Anything, one raw line, untriaged | none | The owner triages it | Options or Rejected |
+| New | Anything, one raw line, untriaged | none | The owner triages it and the card is complete (see Triage) | Options or Rejected |
 | Options | Triaged, not promised. Field "Goal": 1.0 or Later | none | The owner pulls it into Next | Next or Rejected |
 | Next | Committed, in order. The entry to Next is the commitment point | 3 | A worker takes it | Develop |
-| Develop | In progress | 1 per worker | A pull request is open and its checklist is done (a Decision: recorded) | Review (a Decision: Done) |
+| Develop | In progress | 1 per worker | A pull request is open, its checklist is done and the card has its Outcome block (a Decision: recorded) | Review (a Decision: Done) |
 | Review | Pull request open | 2 | Required checks are green and it is merged | Test if labelled `device-qa`; else Staging if it ships to users; else Done |
 | Test | Merged, needs device QA | 2 | Device QA passed and is recorded on the card | Staging |
 | Staging | Merged, waits for a release | 8 | Released | Done |
@@ -43,12 +43,24 @@ Type, service (SDK, vulnerability response, questions and bug reports, contribut
 1. Read the board from right to left: Staging, Test, Review, Develop, Next.
 2. For each item, ask: what keeps it from moving? Clear that first. Raise any item that has been more than 14 days in Next, Develop, Review or Test.
 3. Read open GitHub issues, outside pull requests and Dependabot alerts. Each new one becomes a card in New with a link back (security reports: see Vulnerabilities). Reply on GitHub within 7 days; close the GitHub issue when its card is Done or Rejected.
-4. If Next holds fewer than 3 items, tell the owner.
-5. Only then pull new work.
+4. If New holds cards, prepare them for the owner (see Triage).
+5. If Next holds fewer than 3 items, tell the owner.
+6. Only then pull new work.
 
 If the owner is not in the session, the worker holds the meeting alone and leaves blockers as comments on the cards.
 
-CI counts part of this every Monday (`board-check.yml`): the column limits, cards with no change for 14 days in Next, Develop, Review or Test, and the share of process work since the last release. It fails when a limit or the aging rule is broken. Its log shows card ids and numbers only, because the board is private and the repository is public.
+CI counts part of this every Monday (`board-check.yml`): the column limits, cards with no change for 14 days in Next, Develop, Review or Test, triaged cards with an empty Type, Platform, class of service or Goal, Done cards with no Outcome block, and the share of process work since the last release. It fails when a limit, the aging rule or the required content is broken. Its log shows card ids and numbers only, because the board is private and the repository is public.
+
+## Triage
+
+A card leaves New complete, or it stays in New. The [triage skill](skills/triage/SKILL.md) is the gate.
+
+- Whoever writes a card sets what is a fact: Type, Platform, Service, and Area when one fits.
+- At triage the session reads the whole board and proposes for each new card: duplicates, related cards, the parent, the description in its template, the `failure-demand` tag, and a class of service and Goal with a reason.
+- The owner decides: Options or Rejected, the Goal, the class of service, the place in Options.
+- The session writes what the owner accepted and moves the card last.
+- A card that reaches Done without a pull request gets its Outcome block before the move.
+- The board itself refuses a move with required content missing (`.claude/youtrack/triage-gate.js`). When the automation's move is refused, the card stays where it was and the pull request's `board · stage sync` check shows a warning: add what is missing and move the card by hand.
 
 ## Pulling work
 

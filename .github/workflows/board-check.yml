@@ -2,8 +2,10 @@
 # the column limits (Next 3, Review 2, Test 2, Staging 8), the 14-day aging rule for Next,
 # Develop, Review and Test, and one health indicator, the share of merged pull requests
 # since the last release that are process work (the `no-changelog` label; target 30% or
-# less). It prints the numbers every Monday and fails when a limit or the aging rule is
-# broken, so GitHub notifies the owner.
+# less). It also lists triaged cards with an empty Type, Platform, class of service or Goal,
+# and Done cards with no Outcome block (the triage gate, TES-389). It prints the numbers
+# every Monday and fails when a limit, the aging rule or the required content is broken,
+# so GitHub notifies the owner.
 #
 # Privacy: the board is private and this repository is public, so the log shows card ids
 # and counts only, never a card's title or text. Card ids are public already (branch names
@@ -31,7 +33,13 @@ jobs:
     name: board · limits and aging
     runs-on: ubuntu-latest
     steps:
-      - name: Count the columns, aging cards and the process share
+      # The filters for required content live in scripts/ so they can be tested.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Count the columns, aging cards, required content and the process share
         env:
           YOUTRACK_TOKEN: ${{ secrets.YOUTRACK_TOKEN }}
           GH_TOKEN: ${{ github.token }}
@@ -69,6 +77,42 @@ jobs:
           else
             echo "Aging: none."
           fi
+          # Required content (the triage gate, TES-389). The values are read from the cards and
+          # tested here, because a `has: -Field` search has returned wrong results.
+          cards() { # cards <YouTrack query>: JSON array of cards with their fields; [] on any error
+            curl -sS -G -H "Authorization: Bearer $YOUTRACK_TOKEN" -H 'Accept: application/json' \
+              --data-urlencode "query=$1" --data-urlencode '$top=500' \
+              --data-urlencode 'fields=idReadable,description,customFields(name,value(name))' \
+              "$api/issues" | jq -c 'if type == "array" then . else [] end' 2>/dev/null || true
+          }
+          seen() { # seen <label> <cards>: print how many cards were read; fail the job when none
+            local count
+            count=$(printf '%s' "$2" | jq 'length' 2>/dev/null || true)
+            if [ -z "$count" ] || [ "$count" -eq 0 ]; then
+              echo "::error::$1: no cards could be read (a failed request, an expired token, or an empty answer), so required content was not checked."
+              broken=1
+            else
+              echo "$1: $count cards read."
+            fi
+          }
+          report() { # report <what is missing> <ids>
+            if [ -n "$2" ]; then
+              echo "::error::$1: $(echo $2)"
+              broken=1
+            else
+              echo "$1: none."
+            fi
+          }
+          open=$(cards "project: TES Stage: Options, Next, Develop, Review, Test, Staging")
+          seen "Triaged cards" "$open"
+          for field in Type Platform "Class of service"; do
+            report "No $field on a triaged card" "$(printf '%s' "$open" | jq -r --arg f "$field" -f scripts/board-missing-field.jq 2>/dev/null)"
+          done
+          report "No Goal on a product card in Options or Next" "$(printf '%s' "$open" | jq -r -f scripts/board-missing-goal.jq 2>/dev/null)"
+          # Done cards from the day the gate started. Older cards are not counted.
+          done_cards=$(cards "project: TES Stage: Done resolved date: 2026-11-14 .. *")
+          seen "Done cards since the gate started" "$done_cards"
+          report "Done with no Outcome block" "$(printf '%s' "$done_cards" | jq -r -f scripts/board-missing-outcome.jq 2>/dev/null)"
           # Health indicator: share of process work among pull requests merged since the last release.
           since=$(gh release view -R "$REPO" --json publishedAt --jq .publishedAt 2>/dev/null || true)
           if [ -n "$since" ]; then
