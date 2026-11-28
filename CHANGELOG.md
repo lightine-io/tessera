@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - **A helper that prints SDK events to the log** (`tessera-logging`, Kotlin on JVM and Android). `LoggingTelemetrySink` is a telemetry sink for debugging: register it with `TelemetrySinkRegistry.register(LoggingTelemetrySink())` and each SDK event is printed as one line, the event name followed by the event's own text, to Logcat on Android or to standard output on the JVM. It is opt-in: the SDK itself still never logs. The module had no content before. On iOS the same helper is `TesseraLogging`, a separate product of the Swift package that an app adds on purpose; the iOS framework holds no log-writing code.
 
+### Changed
+
+- **VoiceOver moves to the title of each new iOS scanner screen** (the iOS `TesseraUI`; behaviour change for screen reader users, no API change). When the scanner switches to a screen that has a title, VoiceOver focus now moves to that title and VoiceOver reads it. On the live camera, which has no title, VoiceOver moves to the first element as before. The scanner used to pass the title as text to the screen-change notification, a form that Apple's documentation does not describe; it now uses only documented forms. The visible screens are unchanged.
+
 ## [1.1.0] - 2026-11-27
 
 This release fixes the iPhone framework of 1.0.0 and adds facts and settings. Version 1.0.1 was never published.
