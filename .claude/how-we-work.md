@@ -60,6 +60,7 @@ A card leaves New complete, or it stays in New. The [triage skill](skills/triage
 - The owner decides: Options or Rejected, the Goal, the class of service, the place in Options.
 - The session writes what the owner accepted and moves the card last.
 - A card that reaches Done without a pull request gets its Outcome block before the move.
+- The board itself refuses a move with required content missing (`.claude/youtrack/triage-gate.js`). When the automation's move is refused, the card stays where it was and the pull request's `board · stage sync` check shows a warning: add what is missing and move the card by hand.
 
 ## Pulling work
 

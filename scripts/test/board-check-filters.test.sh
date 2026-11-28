@@ -34,6 +34,14 @@ expect "absent class of service" "$(missing 'Class of service')" "T-2 "
 expect "Goal on product cards" "$(printf '%s' "$cards" | jq -r -f "$here/../board-missing-goal.jq" | tr '\n' ' ')" "T-1 "
 # Outcome: the block must be the first thing in the description.
 expect "Outcome block" "$(printf '%s' "$cards" | jq -r -f "$here/../board-missing-outcome.jq" | tr '\n' ' ')" "T-2 T-3 "
+# A multi-value field with an empty list is empty; a card with no fields at all lacks every field.
+more='[{"idReadable":"T-4","customFields":[{"name":"Platform","value":[]}]},{"idReadable":"T-5"},
+ {"idReadable":"T-6","description":"\n> **Outcome**","customFields":[
+   {"name":"Stage","value":{"name":"Next"}},{"name":"Service","value":{"name":"SDK"}},{"name":"Goal","value":null}]}]'
+expect "empty list and no fields" "$(printf '%s' "$more" | jq -r --arg f Platform -f "$here/../board-missing-field.jq" | tr '\n' ' ')" "T-4 T-5 T-6 "
+expect "Goal in Next" "$(printf '%s' "$more" | jq -r -f "$here/../board-missing-goal.jq" | tr '\n' ' ')" "T-6 "
+# A blank line before the block, or no description, is not an Outcome block.
+expect "Outcome not first" "$(printf '%s' "$more" | jq -r -f "$here/../board-missing-outcome.jq" | tr '\n' ' ')" "T-4 T-5 T-6 "
 expect "no cards" "$(printf '[]' | jq -r --arg f Type -f "$here/../board-missing-field.jq")" ""
 
 [ "$fail" -eq 0 ] && echo "board-check-filters: all passed." || exit 1

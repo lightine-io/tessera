@@ -90,7 +90,7 @@ An epic holds about 3 to 10 children. Check each child against the goal now and 
 
 ## Outcome block (Done issues)
 
-Write it when the pull request opens, or before the move for a card that reaches Done with no pull request. It says what was delivered, which may be less than "Done when" asked. Add at the very top of the description, then a blank line:
+Write it before the pull request opens (the board refuses the move to Review without it), or before the move for a card that reaches Done with no pull request. It says what was delivered, which may be less than "Done when" asked. Add at the very top of the description, then a blank line:
 
 ```
 > **Outcome**
