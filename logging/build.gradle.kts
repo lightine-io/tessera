@@ -1,5 +1,6 @@
 plugins {
     id("tessera.android-library")
+    id("tessera.public-api")
     id("tessera.kmp-publishing")
 }
 
@@ -9,8 +10,8 @@ mavenPublishing {
     pom {
         name.set("tessera-logging")
         description.set(
-            "Placeholder module reserving the tessera-logging artifactId for the Tessera logging " +
-                "subsystem. Currently empty; do not depend on this module yet.",
+            "Opt-in helper for Tessera: a telemetry sink that prints each SDK diagnostic event to " +
+                "the platform log, for debugging.",
         )
     }
 }
@@ -22,18 +23,22 @@ kotlin {
     // manifest package.
     android {
         namespace = "io.lightine.tessera.logging"
-        // The API-level lint (tessera.android-library) reports "no .class files" as an error on a
-        // module with no source. Off while this module is an empty placeholder; remove with its first source.
-        lint { disable += "LintError" }
     }
 
-    // No iOS (Kotlin/Native) targets while this module is an empty placeholder: a module with no
-    // source produces no `.klib`, so publishing its iOS artifact fails
-    // (generateMetadataFileForIosArm64Publication → FileNotFoundException on the missing klib). The
-    // iOS targets are added back with this module's first real source — the same "add platform support
-    // when the code lands" policy used for explicitApi()/abiValidation. See ADR-017.
+    // No iOS (Kotlin/Native) targets, by decision: on iOS the logging helper is a separate Swift product in
+    // the Swift package (tessera-swift), so the iOS framework stays free of log-writing code. Do not add
+    // iOS targets here.
 
-    // No sourceSets block while this module is an empty placeholder: there is no source, so test
-    // dependencies only pollute the test classpath. Dependencies return with the first real source —
-    // the same "when the code lands" policy as the iOS targets / explicitApi / abiValidation above.
+    sourceSets {
+        commonMain {
+            dependencies {
+                api(project(":telemetry"))
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
+    }
 }

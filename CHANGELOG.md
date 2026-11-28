@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **A helper that prints SDK events to the log** (`tessera-logging`, Kotlin on JVM and Android). `LoggingTelemetrySink` is a telemetry sink for debugging: register it with `TelemetrySinkRegistry.register(LoggingTelemetrySink())` and each SDK event is printed as one line, the event name followed by the event's own text, to Logcat on Android or to standard output on the JVM. It is opt-in: the SDK itself still never logs. The module had no content before. On iOS the same helper is `TesseraLogging`, a separate product of the Swift package that an app adds on purpose; the iOS framework holds no log-writing code.
+
 ## [1.1.0] - 2026-11-27
 
 This release fixes the iPhone framework of 1.0.0 and adds facts and settings. Version 1.0.1 was never published.

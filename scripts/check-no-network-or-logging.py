@@ -14,6 +14,11 @@ package lives in a sibling repo; CI runs the Kotlin part only).
 Telemetry goes through the SDK's own sink (ADR-015), which is not a log call and is not flagged.
 There is no per-line escape: a real need changes this file, in review.
 
+One exception, by module: the logging patterns (not the network ones) are skipped for the opt-in
+logging helper, the top-level `logging/` Kotlin module (`tessera-logging`) and, in the --swift scan,
+`Sources/TesseraLogging/`. Its job is to write SDK events to the platform log, and the app opts in.
+Every other module is still checked.
+
 Exit 0: clean. Exit 1: findings (listed as path:line: reason). Exit 2: could not run.
 """
 
@@ -72,6 +77,9 @@ LOGGING_SWIFT = [
 ]
 KOTLIN_RULES = [(re.compile(p, re.M), r) for p, r in NETWORK + LOGGING]
 SWIFT_RULES = [(re.compile(p, re.M), r) for p, r in NETWORK + NETWORK_SWIFT + LOGGING + LOGGING_SWIFT]
+# The logging helper (see the docstring) is checked for network calls only.
+KOTLIN_NET_ONLY = [(re.compile(p, re.M), r) for p, r in NETWORK]
+SWIFT_NET_ONLY = [(re.compile(p, re.M), r) for p, r in NETWORK + NETWORK_SWIFT]
 
 
 def is_main_kotlin(parts):
@@ -114,12 +122,14 @@ def main(argv=None):
         parts = rel.split(os.sep)
         if rel.endswith(".kt") and is_main_kotlin(parts):
             count += 1
-            findings += scan(os.path.join(args.root, rel), rel.replace(os.sep, "/"), KOTLIN_RULES)
+            rules = KOTLIN_NET_ONLY if parts[0] == "logging" else KOTLIN_RULES
+            findings += scan(os.path.join(args.root, rel), rel.replace(os.sep, "/"), rules)
     if args.swift:
         for rel in walk(args.swift):
             if rel.endswith(".swift") and rel.split(os.sep)[0] == "Sources":
                 count += 1
-                findings += scan(os.path.join(args.swift, rel), "swift:" + rel.replace(os.sep, "/"), SWIFT_RULES)
+                rules = SWIFT_NET_ONLY if rel.split(os.sep)[1:2] == ["TesseraLogging"] else SWIFT_RULES
+                findings += scan(os.path.join(args.swift, rel), "swift:" + rel.replace(os.sep, "/"), rules)
     if findings:
         print("\n".join(findings))
         print("check-no-network-or-logging: %d finding(s) in %d main source files." % (len(findings), count))
