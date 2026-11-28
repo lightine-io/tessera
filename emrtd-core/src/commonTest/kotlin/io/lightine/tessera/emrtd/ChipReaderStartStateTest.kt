@@ -331,4 +331,64 @@ class ChipReaderStartStateTest {
                 assertEquals(0x6985, event.statusWord)
             }
         }
+
+    /** Answers 6999 to the SELECT of each master-file EF in [fids] (a chip seen failing EF.ATR/INFO 2F01 and EF.CardAccess 011C). */
+    private fun refusingWith6999(vararg fids: Int) =
+        FakeCommandHandler { _, command ->
+            val hit = fids.any { command.data.contentEquals(byteArrayOf((it shr 8).toByte(), it.toByte())) }
+            if (command.ins == ChipCommands.INS_SELECT && hit) ResponseApdu(ByteArray(0), 0x6999) else null
+        }
+
+    @Test
+    fun aChipThatAnswers6999ToTheCardAccessProbeIsStillReadOverBacWithoutARestart() =
+        runTest {
+            withChips { c, keys ->
+                val flow =
+                    FakeReadFlowChip.build(
+                        c,
+                        keys,
+                        FlowAccess.PACE_AND_BAC,
+                        leadingHandlers = listOf(refusingWith6999(LdsIds.EF_CARD_ACCESS)),
+                    )
+                val recorder = Recorder()
+                val heard = mutableListOf<ChipReadUpdate>()
+                val options = ChipReadOptions(FakeReadFlowChip.mrzKey(), setOf(1, 2), listOf(flow.anchor), checkTime)
+                val result = ChipReader(recorder).read(flow.chip, options) { heard += it }
+                val read = complete(result, "6999")
+                assertEquals(ChipAccessProtocol.BAC, read.access.protocol)
+                assertFalse(read.access.cardAccessRead)
+                val probe = recorder.events.single { it.step == ChipReadStep.READ_FILE && it.fileId == LdsIds.EF_CARD_ACCESS }
+                assertEquals(ChipReadStepOutcome.FAILED, probe.outcome)
+                assertEquals(0x6999, probe.statusWord)
+                assertTrue(heard.isNotEmpty() && heard.all { it.attempt == 1 && it.maxAttempts == 1 }, "a restart was used")
+                assertNotNull(read.dg1)
+            }
+        }
+
+    @Test
+    fun aChipThatAnswers6999ToBothProbeReadsIsStillReadOverBacWithoutARestart() =
+        runTest {
+            withChips { c, keys ->
+                val flow =
+                    FakeReadFlowChip.build(
+                        c,
+                        keys,
+                        FlowAccess.PACE_AND_BAC,
+                        supportsExtendedLength = true,
+                        leadingHandlers = listOf(refusingWith6999(0x2F01, LdsIds.EF_CARD_ACCESS)),
+                    )
+                val recorder = Recorder()
+                val heard = mutableListOf<ChipReadUpdate>()
+                val options = ChipReadOptions(FakeReadFlowChip.mrzKey(), setOf(1, 2), listOf(flow.anchor), checkTime)
+                val read = complete(ChipReader(recorder).read(flow.chip, options) { heard += it }, "6999 twice")
+                assertEquals(ChipAccessProtocol.BAC, read.access.protocol)
+                for (fid in listOf(0x2F01, LdsIds.EF_CARD_ACCESS)) {
+                    val probe = recorder.events.single { it.step == ChipReadStep.READ_FILE && it.fileId == fid }
+                    assertEquals(ChipReadStepOutcome.FAILED, probe.outcome, "file $fid")
+                    assertEquals(0x6999, probe.statusWord, "file $fid")
+                }
+                assertTrue(heard.all { it.attempt == 1 && it.maxAttempts == 1 }, "a restart was used")
+                assertNotNull(read.dg1)
+            }
+        }
 }
