@@ -46,6 +46,7 @@ kotlin {
         jvmMain {
             dependencies {
                 implementation(project(":emrtd-pcsc"))
+                implementation(project(":logging"))
             }
         }
         androidMain {
